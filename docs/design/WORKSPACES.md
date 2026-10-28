@@ -33,6 +33,7 @@ later request; the interface only displays the result.
 
 - **Where.** A button in the TopBar labelled with the active workspace ("مساحة العمل: الأمانة"), opening a menu; and
   the page `/workspaces` with the same list (works without JavaScript; the button links there when scripts are off).
+- **Evidence attributes.** The control carries `data-testid="workspace-switcher"` and `data-workspace-code` (ADR-013).
 - **Content.** Only workspaces where the persona has an **active** membership, each with the role held there. The
   active one is marked with `aria-current="true"`, a check glyph and the word "الحالية" (not colour alone). No
   greyed-out workspaces the persona cannot enter (no existence hint).

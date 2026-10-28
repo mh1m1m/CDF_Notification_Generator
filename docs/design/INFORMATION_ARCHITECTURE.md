@@ -117,8 +117,8 @@ the URL — never a remembered or "last opened" case.
 7. **Workspace switch closes case pages.** After switching, the user lands on My Work of the new workspace; a case page
    open in another tab re-checks access on its next request (WORKSPACES.md §4).
 
-These rules are what the Case Context Sentinel (QA) checks; each component carries `data-case-id` where it renders
-case-scoped content (DESIGN_SYSTEM.md §4).
+These rules are what the Case Context Sentinel (QA) checks; each element that owns case content carries `data-case-id`
+and `data-case-ref`, and case pages sit inside the `case-workspace` root (ADR-013; DESIGN_SYSTEM.md §4).
 
 ## 6. Labelling and language
 

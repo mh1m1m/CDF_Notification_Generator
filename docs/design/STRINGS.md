@@ -5,7 +5,7 @@ for `lib/i18n/common` and `lib/i18n/shell` (files created when V13-ARCH-001 fixe
 English is a faithful twin, not a separate text. `{x}` marks a variable, inserted by the formatter (never by string
 concatenation). Keys are stable; text may be refined by review.
 
-Text for the screen namespaces (`portfolio`, `case`, `my-work`, `notifications`, `workspaces`) is FE's; SCREENS.md gives
+Text for the screen namespaces (`portfolio`, `case`, `myWork`, `notifications`, `workspaces`) is FE's; SCREENS.md gives
 UX's proposed wording for them.
 
 ## `shell`

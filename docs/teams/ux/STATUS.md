@@ -19,7 +19,8 @@ Updated: 2026-10-28 · Branch: `docs/V13-UX-004-ia-and-screen-specs` · Base: `d
 | — | No code yet: documentation only. No test has been run. | — | — |
 
 ## Unresolved defects
-- None in code. Open design items D1–D8 in `docs/design/DESIGN_SYSTEM.md` §6.
+- None in code. Open design items in `docs/design/DESIGN_SYSTEM.md` §6.
+- QA `REVIEW: CHANGES 1bf99bd` (11 items): all addressed in the follow-up commit (ADR-013 DOM contract).
 
 ## Dependencies and requests
 - ARCH answered 28 Oct (ADR-013): Tailwind 4; i18n `lib/i18n/<ns>/{ar,en}.ts`; `renderToStaticMarkup` tests; inline SVG

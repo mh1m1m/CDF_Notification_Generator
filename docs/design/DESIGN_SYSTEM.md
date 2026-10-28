@@ -85,12 +85,13 @@ pages choose the namespace); layout uses logical properties only (`ms-`, `pe-`, 
 | `AppShell` | `{ banner: ReactNode; topBar: ReactNode; sideNav?: ReactNode; breadcrumbs?: ReactNode; children }` | Skip link "انتقل إلى المحتوى" first in tab order; landmarks `header`, `nav`, `main#main`; on < 768 px SideNav becomes a horizontal scroll row under the TopBar (PLT pattern), no hamburger needed for ≤ 5 items | `app-shell`, `skip-link` |
 | `SyntheticDataBanner` | `{ label: string }` | Always rendered, not dismissible, `role="note"`, glyph (flask) + text; Chardonnay fill + Cinder text; never hidden in screenshots | `synthetic-banner` |
 | `TopBar` | `{ productName; logo: { src; alt }; workspace: ReactNode; language: ReactNode; persona: ReactNode }` | 48 px, Warm Gray, product name H2 Regular (DG p. 29); logo 152×26 at the start edge; controls ≥ 44 px targets | `top-bar` |
-| `SideNav` | `{ label: string; items: { key; href; label; count?; countLabel? }[]; current?: string }` | `nav aria-label`; `aria-current="page"` + 4 px inline-start bar + selected tint (not colour alone); counts "9+" cap with sr-only label (PLT) | `app-sidebar`, `nav-<key>` |
-| `WorkspaceSwitcher` | `{ label; current: { code; name; role }; options: { code; name; role; current: boolean }[]; action: (formData) => Promise<void> \| string; pageHref: "/workspaces" }` | Client component (disclosure). Single option → plain text. Each option is a `<form>` submit. Escape closes, focus returns. Without JS: a link to `pageHref`. Active option: check glyph + "الحالية" + `aria-current="true"` | `workspace-switcher`, `workspace-option-<CODE>`, `workspace-current` |
+| `SideNav` | `{ label: string; items: { key; href; label; count?; countLabel? }[]; current?: string }` | `nav aria-label`; `aria-current="page"` + 4 px inline-start bar + selected tint (not colour alone); counts "9+" cap with sr-only label (PLT). Each count badge carries `data-testid="count-nav-<key>"` and `data-count` = the **real** number (the persona's own items, already authorised); "9+" is display only | `app-sidebar`, `nav-<key>`, `count-nav-<key>` |
+| `WorkspaceSwitcher` | `{ label; current: { code; name; role }; options: { code; name; role; current: boolean }[]; action: (formData) => Promise<void> \| string; pageHref: "/workspaces" }` | Client component (disclosure). The control (button, or plain text with one membership) carries `data-testid="workspace-switcher"` and `data-workspace-code` = active code (ADR-013); each option carries `data-workspace-code` too. Single option → plain text. Each option is a `<form>` submit. Escape closes, focus returns. Without JS: a link to `pageHref`. Active option: check glyph + "الحالية" + `aria-current="true"` | `workspace-switcher`, `workspace-option-<CODE>`, `workspace-current` |
 | `LanguageSwitch` | `{ current: "ar" \| "en"; action; labels }` | Form submit setting the locale cookie; the option is labelled in its own language ("English", "العربية") with `lang` attribute | `language-switch` |
 | `PersonaMenu` | `{ name; roleLabel; signOutAction; labels }` | Disclosure (`<details>` works without JS); shows synthetic persona name and role; sign out | `persona-menu`, `sign-out` |
 | `Breadcrumbs` | `{ label; items: { href?; label }[] }` | `nav aria-label="مسار التنقل"`, ordered list, last item `aria-current="page"` without link; separators are CSS, mirrored in RTL | `breadcrumbs` |
-| `CaseHeader` | `{ caseId; displayNumber; title; stage: StatusBadgeProps; recordsState: { code; label }; restricted?: { label }; capacity?: string; labels }` | `header` with `data-case-id={caseId}`; display number in `<bdi dir="ltr">`; indicators by shape + glyph; closed case shows a read-only notice slot | `case-header`, `case-number`, `case-stage` |
+| `CaseWorkspace` | `{ caseId; caseRef; children }` | The root that wraps **all** `/cases/[caseId]/*` content: CaseHeader, tab links, tab body and the `?n=` notification preview. Carries `data-testid="case-workspace"`, `data-case-id` (UUID) and `data-case-ref` (display number) (ADR-013). The Sentinel scopes "no other case inside" to this element | `case-workspace` |
+| `CaseHeader` | `{ caseId; caseRef; title; stage: StatusBadgeProps; recordsState: { code; label }; restricted?: { label }; capacity?: string; labels }` | `header` inside `CaseWorkspace`, also with `data-case-id` and `data-case-ref` (same values, allowed by the Sentinel rule); display number in `<bdi dir="ltr">`; indicators by shape + glyph; closed case shows a read-only notice slot | `case-header`, `case-number`, `case-stage` |
 | `PageHeading` | `{ title; subtitle?; actions? }` | the page's only `h1`; actions at the inline-end | `page-heading` |
 
 Keyboard paths to verify (acceptance): skip link → main; Tab order banner → TopBar controls → SideNav → main; switcher
@@ -108,16 +109,24 @@ event:
 
 ```ts
 type StatusBadgeProps =
-  | { variant: "actual"; state: LayerAState; label: string; evidence: { eventId: string; recordedAt: string } }
-  | { variant: "expected"; label: string }
-  | { variant: "conditional"; label: string; condition: string }
-  | { variant: "awaiting-approval"; label: string; approver?: string };
-// LayerAState = COMPLETED | IN_PROGRESS | PENDING | SUSPENDED | RETURNED | CANCELLED | FAILED | NOT_APPLICABLE
+  | { epistemic: "recorded"; statusKind: StatusKind; status: string; label: string;
+      evidence: { eventId: string; recordedAt: string } }
+  | { epistemic: "expected"; statusKind: StatusKind; status: string; label: string }
+  | { epistemic: "conditional"; statusKind: StatusKind; status: string; label: string; condition: string }
+  | { epistemic: "awaiting_approval"; statusKind: StatusKind; status: string; label: string; approver?: string };
+// StatusKind = the status domain (procedure, task, meeting, decision, notification, delivery, … from PROC's lib/domain).
+// For "recorded", status is a Layer A state: COMPLETED | IN_PROGRESS | PENDING | SUSPENDED | RETURNED | CANCELLED |
+// FAILED | NOT_APPLICABLE (or the domain's own recorded status code).
 ```
 
-Rendered attributes for the Procedural Truth Inspector: `data-epistemic` (`RECORDED_FACT` for actual,
-`EXPECTED_PROCESS` for expected and awaiting-approval, `CONDITIONAL_STEP` for conditional), `data-state`, and for
-actual `data-event-id`. Domain tone (info/success/…) for actual badges comes from one registry per status domain, as in
+Rendered attributes (ADR-013, the contract the Procedural Truth Inspector reads): `data-epistemic` with exactly one of
+the four DOM values `recorded` · `expected` · `conditional` · `awaiting_approval` (awaiting approval is its own value,
+never folded into expected); `data-status-kind` and `data-status`; and `data-event-id` **exactly when** the value is
+`recorded` (never on the other three). The same attributes are written by Timeline entries and progress marks. PROC maps
+its seven domain epistemic classes onto these four in `lib/domain` (`RECORDED_FACT`, `DERIVED_FROM_VERIFIED_FACTS` →
+`recorded`; `EXPECTED_PROCESS` → `expected`; `CONDITIONAL_STEP` → `conditional`; approval-bound expected steps →
+`awaiting_approval`) and refuses the other three (`PROPOSED_ACTION`, `UNVERIFIED_INFORMATION`, `NOT_APPLICABLE`), which
+are never rendered as a badge. Domain tone (info/success/…) for recorded badges comes from one registry per status kind, as in
 PLT `STATUS_TONES` (unknown code → neutral, never red).
 
 **Four variants, distinct without colour** (each differs from every other in at least two of glyph, outline, fill,
@@ -125,13 +134,13 @@ words):
 
 | Variant | Meaning | Glyph | Outline | Fill | Visible words | aria suffix |
 | ------- | ------- | ----- | ------- | ---- | ------------- | ----------- |
-| actual | a recorded event set this state | Layer A symbol (✔ ● ○ ⏸ ↩ ✕ ⚠ —) | solid 1 px (2 px for IN_PROGRESS) | tone tint | the state label, e.g. "اكتمل" | "— تم تسجيله" with recorded time |
+| recorded | a recorded event set this state | Layer A symbol (✔ ● ○ ⏸ ↩ ✕ ⚠ —) | solid 1 px (2 px for IN_PROGRESS) | tone tint | the state label, e.g. "اكتمل" | "— تم تسجيله" with recorded time |
 | expected | the process says this step is next; nothing recorded | ◇ | dashed 1 px `--cdf-expected-border` | none | label + "(متوقع)" | "— لم يحدث بعد" |
 | conditional | may happen depending on a condition | ◇ | dotted 2 px `--cdf-expected-border` | none | "مشروط: " + label + " — بحسب " + condition | "— خطوة محتملة، لم تحدث" |
-| awaiting-approval | the step needs an approval that has not been given | ◇ followed by a stamp glyph | dashed 1 px + 4 px inline-start bar | none | label + "(رهن الاعتماد)" | "— بانتظار الاعتماد، لم يُعتمد" |
+| awaiting_approval | the step needs an approval that has not been given | ◇ followed by a stamp glyph | dashed 1 px + 4 px inline-start bar | none | label + "(رهن الاعتماد)" | "— بانتظار الاعتماد، لم يُعتمد" |
 
 Forbidden (unit-tested negatives): an expected/conditional/awaiting badge containing ✔ or ●, or the words سُجل /
-اكتُمل / تم (V13 `LAYER_B_FORBIDDEN_WORDS`), in either language's label; an actual badge without `evidence.eventId`
+اكتُمل / تم (V13 `LAYER_B_FORBIDDEN_WORDS`), in either language's label; `data-event-id` on a non-recorded badge; a recorded badge without `evidence.eventId`
 (compile error, plus a runtime guard that renders nothing and logs a content-free warning if called from untyped
 code). Greyscale and unstyled screenshots must still show the four as different (QA, following the V13 legend page).
 
@@ -152,14 +161,16 @@ M5 are added when PROC fixes the lifecycle (V13-PROC-005).
 
 | Component | Props sketch | Rules | Test ids |
 | --------- | ------------ | ----- | -------- |
-| `DataTable<Row>` | `{ caption; columns: { key; header; cell(row); rowHeader?; sort?: { href; direction? } }[]; rows; rowKey(row); rowCaseId?(row); empty: ReactNode; pagination?: { prevHref?; nextHref?; summary? } }` | Native `<table>`; DG p. 42–44: Cinder header with white text, alternate rows `--cdf-surface-subtle`, 12 px cell padding, radius 0; sort headers are links with `aria-sort`; `data-case-id` on each `tr` when `rowCaseId` is given; horizontal scroll inside a focusable `region` with a label on narrow screens (PLT `scroll-region`), never page-level overflow | `<testId>`, `<testId>-row-<key>` |
-| `Pagination` | `{ label; prevHref?; nextHref?; summary? }` | links, not buttons; arrows mirror in RTL | `pagination-prev`, `pagination-next` |
+| `DataTable<Row>` | `{ caption; columns: { key; header; cell(row); rowHeader?; sort?: { href; direction? } }[]; rows; rowKey(row); empty: ReactNode; pagination?: PaginationProps } & ({ scope: "case"; rowCaseId(row): string; rowCaseRef(row): string } \| { scope: "none" })` — `scope: "case"` is **mandatory** for every table listing case-scoped rows (portfolio, My Work, case tasks, case notifications, Notification Operations Center); the type then requires both accessors, so a missing attribute is a compile error, not a review find. `scope: "none"` only for tables with no case content | Native `<table>`; DG p. 42–44: Cinder header with white text, alternate rows `--cdf-surface-subtle`, 12 px cell padding, radius 0; sort headers are links with `aria-sort`; with `scope: "case"` each `tr` carries `data-case-id` and `data-case-ref`; horizontal scroll inside a focusable `region` with a label on narrow screens (PLT `scroll-region`), never page-level overflow | `<testId>`, `<testId>-row-<key>` |
+| `Pagination` | `{ label; prevHref?; nextHref?; summary?: { from; to; total; name } }` | links, not buttons; arrows mirror in RTL; the summary is shown only when `total` is authorised, and its total is wrapped in an element with `data-testid="count-<name>-total"` and `data-count={total}` | `pagination-prev`, `pagination-next`, `count-<name>-total` |
+| `Count` | `{ name; value; children }` | the one way to show a number: renders `data-testid="count-<name>"` and `data-count={value}` around the formatted text (ADR-013) | `count-<name>` |
+| `RecordedEventDate` | `{ eventId; statusKind; status; at; labels }` | a date that states a recorded event (e.g. the portfolio "last recorded event" column): a `time` element with `data-epistemic="recorded"`, `data-event-id`, `data-status-kind`, `data-status`, so the Inspector can check it | `recorded-event-date` |
 | `FilterBar` | `{ action: string; children }` | GET form; submit button "تطبيق"; "مسح" link resets URL | `filter-bar` |
-| `Timeline` | `{ label; entries: { eventId; caseId; title; occurredAt; recordedAt; actor?; badge: actual StatusBadgeProps }[] }` | Ordered list, newest first; **only actual entries** (type: badge.variant = "actual"); shows "وقع في / سُجّل في" when the times differ; each `li` has `data-event-id` and `data-case-id` | `timeline`, `timeline-entry-<eventId>` |
-| `ExpectedSteps` | `{ label; steps: (expected \| conditional \| awaiting-approval StatusBadgeProps)[] }` | Separate list from Timeline, heading "الخطوات المتوقعة"; never merged with actual entries (PLAN M3 rule "actual and expected never merged") | `expected-steps` |
+| `Timeline` | `{ label; entries: { eventId; caseId; caseRef; title; occurredAt; recordedAt; actor?; badge: recorded StatusBadgeProps }[] }` | Ordered list, newest first; **only recorded entries** (type: `badge.epistemic = "recorded"`); shows "وقع في / سُجّل في" when the times differ; each `li` has `data-epistemic="recorded"`, `data-event-id`, `data-status-kind`, `data-status`, `data-case-id` and `data-case-ref` | `timeline`, `timeline-entry-<eventId>` |
+| `ExpectedSteps` | `{ label; steps: (expected \| conditional \| awaiting_approval StatusBadgeProps)[] }` | Separate list from Timeline, heading "الخطوات المتوقعة"; never merged with actual entries (PLAN M3 rule "actual and expected never merged") | `expected-steps` |
 | `EmptyState` | `{ title; body?; action? }` | neutral, outline glyph, no illustration; text says what is empty and why it may be empty | `empty-state` |
 | `ErrorState` | `{ title; body; correlationId; correlationLabel; retryHref? }` | generic words only ("تعذّر عرض هذه الصفحة الآن"), correlation id in `<code>` with a copy button (progressive), no stack, SQL or ids other than the correlation id; `role="alert"` only for errors after a user action, otherwise a normal region | `error-state`, `correlation-id` |
-| `NotFoundState` | `{ title; body; backHref; correlationId }` | the single page for unknown / unauthorised / restricted / other workspace; identical markup apart from correlation id | `not-found-state` |
+| `NotFoundState` | `{ title; body; backHref; correlationId }` | the single page for unknown / unauthorised / restricted / other workspace; byte-identical markup apart from the correlation id (QA asserts this across an unknown UUID, restricted 0009 and an other-workspace case) | `not-found-state` |
 | `LoadingState` | `{ label; rows? }` | skeleton blocks with `aria-busy="true"` on the region and a visually hidden "جارٍ التحميل…"; no spinner-only states; respects reduced motion | `loading-state` |
 | `DeadlineText` | `{ due: string; now: string; labels }` | date + words ("متأخر ٣ أيام", "يستحق اليوم", "خلال ٥ أيام"), warning glyph when overdue; `now` comes from the server `ClockPort`, never `Date.now()` in the component | `deadline` |
 | `Button` | `{ variant: "primary" \| "secondary" \| "tertiary" \| "text"; … }` | DG p. 33: primary Cinder/white, secondary white with Cinder 1 px border (0.5 px in DG, rendered 1 px), tertiary 2 px bottom stroke, text plain; radius 0; height ≥ 44 px; `critical` only inside a confirm dialog (PLT) | `data-testid` passed through |
@@ -168,7 +179,7 @@ M5 are added when PROC fixes the lifecycle (V13-PROC-005).
 ### 3.5 Tests (V13-UX-002/003 acceptance)
 
 Unit (`tests/unit/components/`): render each component in ar and en; assert landmarks, `aria-current`, `aria-sort`,
-`data-case-id` / `data-event-id` / `data-epistemic` attributes, logical-property classes only (no `left`/`right`/
+`data-case-id` / `data-case-ref` / `data-event-id` / `data-epistemic` / `data-status-kind` / `data-status` / `data-count` / `data-workspace-code` attributes, logical-property classes only (no `left`/`right`/
 `ml-`/`mr-`), and the StatusBadge negatives in §3.1. A11y and screenshots of composed pages are QA's (`tests/a11y`,
 `tests/visual`); UX supplies a component gallery route (`/dev/components`, only when `V13_PERSONA_SIGNIN=enabled`,
 PROPOSAL to ARCH/FE) so QA can run axe and screenshot every component state in both directions.
@@ -177,9 +188,13 @@ PROPOSAL to ARCH/FE) so QA can run axe and screenshot every component state in b
 
 ## 4. Case Context Sentinel hooks
 
-Every component that renders case-scoped content accepts the case id and writes it as `data-case-id`: CaseHeader, rows
-of DataTable (via `rowCaseId`), Timeline entries, notification rows. QA's Sentinel asserts that on a `/cases/[id]`
-page every `data-case-id` in `main` equals `id`, and on cross-case lists each row's `data-case-id` matches its case
+ADR-013 contract. Every element that owns a case's content writes `data-case-id` (UUID) **and** `data-case-ref`
+(display number): the `CaseWorkspace` root (`data-testid="case-workspace"`, wrapping header, tabs, tab body and the
+notification preview), CaseHeader, DataTable rows with `scope: "case"` (portfolio, My Work, case tasks, case
+notifications, Notification Operations Center), Timeline entries, notification rows and the preview. Every count goes
+through `Count` (`count-<name>` + `data-count`); the switcher writes `data-workspace-code`. QA's Sentinel asserts that
+inside an element with `data-case-id=X` no descendant carries another `data-case-id` and no text contains another
+case's reference, and on cross-case lists each row's `data-case-id` and `data-case-ref` match its case
 link. A component that shows case content without a case id is a defect.
 
 ## 5. RTL rules
