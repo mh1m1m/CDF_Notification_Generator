@@ -103,7 +103,7 @@ erDiagram
 | `api_create_notification_draft(uuid, uuid, text, text, uuid)` | definer command | yes | §6 |
 | `verify_audit_chain()` | definer | **no** (owner/administrator) | recomputes the chain; counts and first broken `seq` only |
 | `_append_audit`, `_audit_row_hash`, `_reject_mutation`, `_task_transition_allowed`, `_case_owning_visibility`, `_template_version_hash` | internal | no | — |
-| `_is_colleague(uuid)` | internal definer | yes (used inside the `persona` policy) | persona has an active membership in the current workspace |
+| `_is_colleague(uuid)` | internal definer | yes (used inside the `persona` policy) | persona is active and has an active membership in the current workspace (an inactive persona is never listed as a colleague) |
 
 PUBLIC holds `EXECUTE` on no V13 function (default privileges from 0000; isolation check C11).
 

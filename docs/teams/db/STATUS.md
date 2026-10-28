@@ -1,6 +1,6 @@
 # DB status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 02:00 UTC · Branch: feature/V13-DB-001-m1-database-core · Head: see the branch
+Updated: 2026-10-28 03:50 UTC · Branch: feature/V13-DB-001-m1-database-core (local prep on V13-ARCH-001, not yet pushed) · Head: see the branch
 
 ## Completed
 - V13-DB-001 — migration 0001 (identity/access core, claims helpers, audit ledger, deny-all on schema_migrations) — DRAFT, no PR yet (waits for V13-ARCH-001 tooling)
@@ -15,6 +15,8 @@ Updated: 2026-10-28 02:00 UTC · Branch: feature/V13-DB-001-m1-database-core · 
 - Reviewed SEC PR #2: `REVIEW: ACCEPT 7c78b82` with 9 notes (https://github.com/mh1m1m/CDF_Notification_Generator/pull/2#issuecomment-6458548001).
 
 - Chief Architect rulings of 02:35 applied: seed notifications all DRAFT with DRAFT_CREATED only (no APPROVED/DISPATCHED rows or events); `notification_event.provenance` added (COMMAND / SEED_SYNTHETIC); definer discipline documented (DATA_MODEL §6a). Rehearsal re-run PASS; seed idempotent.
+
+- 03:50 prep on the foundation (V13-ARCH-001 head 5c53ec4, not yet in develop): app-side claims MAC and key install in `lib/db/security-context.ts`; seed split into identity (`0001_m1_synthetic.sql`) and cases (`0002_m1_cases.sql`); DB-001 integration suites `identity-claims.spec.ts` (38) and `catalog-audit.spec.ts` (20) with helpers in `tests/integration/support/`. Defect found by the new suite and fixed in 0001 (not applied anywhere): `_is_colleague` listed the deactivated Persona Zeta as a colleague; it now requires an active persona.
 
 ## Changed files
 - database/migrations/0001_identity_access_audit.sql, 0002_case_registry.sql, 0003_procedural_core.sql, 0004_notification_core.sql
@@ -31,6 +33,11 @@ No Vitest suite exists yet (needs V13-ARCH-001: package.json, Vitest, `pnpm db:l
 | Claims MAC checks (scratch cluster, 01:56 UTC) | as expected | HMAC equals Node `crypto.createHmac` on 3 vectors; install → INSTALLED, again → ALREADY_INSTALLED, other key → V1409; forged claims without MAC, claims rewritten after MAC, MAC replayed from another transaction → 0 cases; as `cdf_v13_app` → 42501; persona `email` column → 42501, own e-mail via `current_persona()`; correlation id in 3 audit rows; reset script clears the key and the chain still verifies | this branch |
 | Rehearsal re-run after the MAC changes | REHEARSAL PASS | isolation 27 / 0 / 0, F0 = F1 = F2 | this branch |
 | Manual psql checks on a scratch PostgreSQL 16 cluster (superuser, `set local role cdf_v13_user`) | as expected | visibility table in DATA_MODEL §5 (9 contexts); commands: 14 refusals with the expected SQLSTATE (V1404 unknown/other case/restricted/other role, V1409 stale and duplicate key, V1422 terminal, V1423 closed, 42501 outbox/audit/verify/_append_audit, V1403 audit UPDATE/TRUNCATE and event DELETE) and 4 allowed calls; chain valid under two time zones, tamper detected | this branch |
+
+| `pnpm lint`, `pnpm typecheck`, `pnpm test` (prep branch, 03:50) | pass | unit 261 / 261 | local |
+| `pnpm db:reset` + `pnpm db:lint` + `V13_DB_TESTS_REQUIRED=1 pnpm test:db`, twice without reset (03:50) | pass | db:lint 0 findings (22 rules); test:db 95 / 95 both runs | local |
+| Same with only migration 0001 and seed part 1 (the PR (a) state) | pass | test:db 95 / 95 | local |
+| `node scripts/db/rehearse-shared.mjs` after the seed split | REHEARSAL PASS | | local |
 
 These manual checks become Vitest suites in `tests/integration/` once ARCH-001 lands; they are not a substitute.
 

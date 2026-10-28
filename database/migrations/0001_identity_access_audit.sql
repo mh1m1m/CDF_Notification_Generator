@@ -295,13 +295,16 @@ security definer
 set search_path = ''
 as $fn$
   select exists (
-    select 1 from cdf_notifications_v13.persona_workspace_membership m
+    select 1
+      from cdf_notifications_v13.persona_workspace_membership m
+      join cdf_notifications_v13.persona p on p.id = m.persona_id
      where m.persona_id = p_persona_id
+       and p.is_active
        and m.workspace_id = cdf_notifications_v13.current_workspace_id()
        and m.valid_from <= now()
        and (m.valid_to is null or m.valid_to > now()))
 $fn$;
-comment on function cdf_notifications_v13._is_colleague(uuid) is 'Internal: the persona holds an active membership in the current workspace.';
+comment on function cdf_notifications_v13._is_colleague(uuid) is 'Internal: the persona is active and holds an active membership in the current workspace.';
 
 -- ---------------------------------------------------------------------------------------------------------------------
 -- 4. Read policies on identity tables (SELECT only; no write grants).
