@@ -1,0 +1,291 @@
+/*
+ * V13 Enterprise — global styles and design tokens (owned by UX).
+ * Rules: logical properties only (inline/block, start/end; never left/right), colours from tokens, Arabic (RTL)
+ * first with English (LTR) mirrored automatically by the logical properties. Contrast of every text/background
+ * pair below is at least 4.5:1 (WCAG 2.2 AA).
+ */
+/* Utility classes are generated only from app/ and components/ (explicit sources: no scanning of tests, scripts or
+ * the local database directories). */
+@import "tailwindcss" source(none);
+@source "../app";
+@source "../components";
+
+:root {
+  /* Colour */
+  --v13-color-bg: #f6f7f5;
+  --v13-color-surface: #ffffff;
+  --v13-color-text: #1a1c1e;
+  --v13-color-text-muted: #4b5157;
+  --v13-color-border: #c9ccd0;
+  --v13-color-accent: #0b5d4b;
+  --v13-color-accent-hover: #084638;
+  --v13-color-accent-contrast: #ffffff;
+  --v13-color-focus: #1f4fd1;
+  --v13-color-banner-bg: #6b2c06;
+  --v13-color-banner-text: #ffffff;
+  --v13-color-notice-bg: #fff4e0;
+  --v13-color-notice-text: #5a3300;
+  --v13-color-notice-border: #d98e04;
+  --v13-color-danger-bg: #fdecec;
+  --v13-color-danger-text: #8a1414;
+
+  /* Spacing (4px scale) */
+  --v13-space-1: 0.25rem;
+  --v13-space-2: 0.5rem;
+  --v13-space-3: 0.75rem;
+  --v13-space-4: 1rem;
+  --v13-space-6: 1.5rem;
+  --v13-space-8: 2rem;
+  --v13-space-12: 3rem;
+
+  /* Shape */
+  --v13-radius-sm: 0.25rem;
+  --v13-radius-md: 0.5rem;
+  --v13-border-width: 1px;
+  --v13-focus-ring: 3px solid var(--v13-color-focus);
+
+  /* Typography: system fonts only (no font download at build or run time). */
+  --v13-font-sans: "Noto Sans Arabic", "Noto Sans", "Segoe UI", Tahoma, Arial, system-ui, sans-serif;
+  --v13-font-size-sm: 0.875rem;
+  --v13-font-size-md: 1rem;
+  --v13-font-size-lg: 1.25rem;
+  --v13-font-size-xl: 1.75rem;
+  --v13-line-height: 1.6;
+
+  /* Layout */
+  --v13-content-max: 72rem;
+  --v13-target-min: 2.75rem;
+}
+
+/* Tokens exposed to Tailwind utilities (bg-v13-accent, text-v13-muted, …). */
+@theme inline {
+  --color-v13-bg: var(--v13-color-bg);
+  --color-v13-surface: var(--v13-color-surface);
+  --color-v13-text: var(--v13-color-text);
+  --color-v13-muted: var(--v13-color-text-muted);
+  --color-v13-border: var(--v13-color-border);
+  --color-v13-accent: var(--v13-color-accent);
+  --font-v13: var(--v13-font-sans);
+}
+
+@layer base {
+  html {
+    font-family: var(--v13-font-sans);
+    font-size: 100%;
+    line-height: var(--v13-line-height);
+    background-color: var(--v13-color-bg);
+    color: var(--v13-color-text);
+  }
+
+  body {
+    margin: 0;
+    min-block-size: 100vh;
+  }
+
+  h1 {
+    font-size: var(--v13-font-size-xl);
+    line-height: 1.3;
+    margin-block: 0 var(--v13-space-4);
+  }
+
+  :focus-visible {
+    outline: var(--v13-focus-ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .v13-skip-link {
+    position: absolute;
+    inset-inline-start: var(--v13-space-3);
+    inset-block-start: var(--v13-space-3);
+    z-index: 10;
+    padding-block: var(--v13-space-2);
+    padding-inline: var(--v13-space-4);
+    background-color: var(--v13-color-surface);
+    color: var(--v13-color-accent);
+    border: var(--v13-border-width) solid var(--v13-color-accent);
+    border-radius: var(--v13-radius-sm);
+  }
+
+  .v13-skip-link:not(:focus) {
+    clip-path: inset(50%);
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .v13-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--v13-space-2) var(--v13-space-4);
+    padding-block: var(--v13-space-2);
+    padding-inline: var(--v13-space-4);
+    background-color: var(--v13-color-banner-bg);
+    color: var(--v13-color-banner-text);
+  }
+
+  .v13-banner {
+    margin: 0;
+    font-weight: 600;
+    font-size: var(--v13-font-size-sm);
+  }
+
+  .v13-locale-toggle {
+    min-block-size: var(--v13-target-min);
+    padding-inline: var(--v13-space-4);
+    background-color: transparent;
+    color: var(--v13-color-banner-text);
+    border: var(--v13-border-width) solid var(--v13-color-banner-text);
+    border-radius: var(--v13-radius-sm);
+    font: inherit;
+    font-size: var(--v13-font-size-sm);
+    cursor: pointer;
+  }
+
+  .v13-main {
+    max-inline-size: var(--v13-content-max);
+    margin-inline: auto;
+    padding-block: var(--v13-space-8);
+    padding-inline: var(--v13-space-4);
+  }
+
+  .v13-lead {
+    color: var(--v13-color-text-muted);
+    margin-block: 0 var(--v13-space-6);
+  }
+
+  .v13-persona-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: var(--v13-space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .v13-persona-button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--v13-space-1);
+    inline-size: 100%;
+    min-block-size: var(--v13-target-min);
+    padding-block: var(--v13-space-4);
+    padding-inline: var(--v13-space-4);
+    text-align: start;
+    background-color: var(--v13-color-surface);
+    color: var(--v13-color-text);
+    border: var(--v13-border-width) solid var(--v13-color-border);
+    border-radius: var(--v13-radius-md);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .v13-persona-button:hover {
+    border-color: var(--v13-color-accent);
+  }
+
+  .v13-persona-name {
+    font-weight: 700;
+    color: var(--v13-color-accent);
+  }
+
+  .v13-persona-meta {
+    font-size: var(--v13-font-size-sm);
+    color: var(--v13-color-text-muted);
+  }
+
+  .v13-notice {
+    padding-block: var(--v13-space-3);
+    padding-inline: var(--v13-space-4);
+    background-color: var(--v13-color-notice-bg);
+    color: var(--v13-color-notice-text);
+    border-inline-start: 4px solid var(--v13-color-notice-border);
+    border-radius: var(--v13-radius-sm);
+  }
+
+  .v13-error {
+    padding-block: var(--v13-space-3);
+    padding-inline: var(--v13-space-4);
+    background-color: var(--v13-color-danger-bg);
+    color: var(--v13-color-danger-text);
+    border-radius: var(--v13-radius-sm);
+  }
+
+  .v13-session-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--v13-space-2) var(--v13-space-6);
+    padding-block: var(--v13-space-3);
+    padding-inline: var(--v13-space-4);
+    background-color: var(--v13-color-surface);
+    border-block-end: var(--v13-border-width) solid var(--v13-color-border);
+  }
+
+  .v13-app-name {
+    margin: 0;
+    font-weight: 700;
+  }
+
+  .v13-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--v13-space-1) var(--v13-space-6);
+    margin: 0;
+  }
+
+  .v13-facts dt {
+    font-size: var(--v13-font-size-sm);
+    color: var(--v13-color-text-muted);
+  }
+
+  .v13-facts dd {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .v13-button {
+    min-block-size: var(--v13-target-min);
+    padding-inline: var(--v13-space-4);
+    background-color: var(--v13-color-accent);
+    color: var(--v13-color-accent-contrast);
+    border: 0;
+    border-radius: var(--v13-radius-sm);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .v13-button:hover {
+    background-color: var(--v13-color-accent-hover);
+  }
+
+  .v13-button-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--v13-target-min);
+    color: var(--v13-color-accent);
+    font-weight: 600;
+    text-decoration: underline;
+  }
+
+  .v13-facts-block {
+    margin-block: var(--v13-space-4) var(--v13-space-6);
+  }
+}
