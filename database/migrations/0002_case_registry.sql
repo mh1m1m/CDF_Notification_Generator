@@ -134,58 +134,9 @@ grant select on cdf_notifications_v13.case_record, cdf_notifications_v13.case_wo
                 cdf_notifications_v13.case_assignment to cdf_v13_user;
 
 -- ---------------------------------------------------------------------------------------------------------------------
--- Portfolio reads. SECURITY INVOKER: they run as cdf_v13_user, so RLS filters rows BEFORE pagination and counts.
--- Keyset pagination on display_number (unique). Filters are optional; search matches the display number or a title.
+-- Case header. SECURITY INVOKER: it runs as cdf_v13_user, so RLS decides. The portfolio reads (portfolio_page,
+-- portfolio_count) are in 0003, because their rows also summarise tasks and procedural events.
 -- ---------------------------------------------------------------------------------------------------------------------
-create function cdf_notifications_v13.portfolio_page(
-  p_after_display_number text default null,
-  p_limit                integer default 25,
-  p_stage                text default null,
-  p_records_state        text default null,
-  p_search               text default null)
-returns table (
-  id uuid, display_number text, title_ar text, title_en text, stage text, is_restricted boolean,
-  records_state text, owning_workspace_id uuid, opened_at timestamptz, closed_at timestamptz, row_version integer,
-  updated_at timestamptz, source_system text, source_ref text)
-language sql
-stable
-security invoker
-set search_path = ''
-as $fn$
-  select c.id, c.display_number, c.title_ar, c.title_en, c.stage, c.is_restricted, c.records_state,
-         c.owning_workspace_id, c.opened_at, c.closed_at, c.row_version, c.updated_at, c.source_system, c.source_ref
-    from cdf_notifications_v13.case_record c
-   where (p_after_display_number is null or c.display_number > p_after_display_number)
-     and (p_stage is null or c.stage = p_stage)
-     and (p_records_state is null or c.records_state = p_records_state)
-     and (p_search is null or p_search = ''
-          or strpos(lower(c.display_number), lower(p_search)) > 0
-          or strpos(lower(c.title_en), lower(p_search)) > 0
-          or strpos(c.title_ar, p_search) > 0)
-   order by c.display_number
-   limit least(greatest(coalesce(p_limit, 25), 1), 100)
-$fn$;
-comment on function cdf_notifications_v13.portfolio_page(text, integer, text, text, text) is 'Authorised Case Portfolio page (RLS applies before filtering, ordering and limit). Keyset on display_number; limit 1..100.';
-
-create function cdf_notifications_v13.portfolio_count(
-  p_stage text default null, p_records_state text default null, p_search text default null)
-returns bigint
-language sql
-stable
-security invoker
-set search_path = ''
-as $fn$
-  select count(*)
-    from cdf_notifications_v13.case_record c
-   where (p_stage is null or c.stage = p_stage)
-     and (p_records_state is null or c.records_state = p_records_state)
-     and (p_search is null or p_search = ''
-          or strpos(lower(c.display_number), lower(p_search)) > 0
-          or strpos(lower(c.title_en), lower(p_search)) > 0
-          or strpos(c.title_ar, p_search) > 0)
-$fn$;
-comment on function cdf_notifications_v13.portfolio_count(text, text, text) is 'Count of authorised cases matching the filters (never counts a case the persona cannot see).';
-
 create function cdf_notifications_v13.case_header(p_case_id uuid)
 returns table (
   id uuid, display_number text, title_ar text, title_en text, stage text, is_restricted boolean,
@@ -205,8 +156,6 @@ comment on function cdf_notifications_v13.case_header(uuid) is 'Case header by U
 
 grant execute on function cdf_notifications_v13.is_assigned_to_case(uuid) to cdf_v13_user;
 grant execute on function cdf_notifications_v13.can_access_case(uuid)     to cdf_v13_user;
-grant execute on function cdf_notifications_v13.portfolio_page(text, integer, text, text, text) to cdf_v13_user;
-grant execute on function cdf_notifications_v13.portfolio_count(text, text, text)                to cdf_v13_user;
 grant execute on function cdf_notifications_v13.case_header(uuid)                                to cdf_v13_user;
 
 reset role;

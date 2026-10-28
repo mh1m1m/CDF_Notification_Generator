@@ -96,8 +96,7 @@ comment on function cdf_notifications_v13._task_transition_allowed(text, text) i
 create function cdf_notifications_v13.api_update_task_status(
   p_task_id          uuid,
   p_new_status       text,
-  p_expected_version integer,
-  p_correlation_id   uuid default null)
+  p_expected_version integer)
 returns table (task_id uuid, case_id uuid, status text, row_version integer)
 language plpgsql
 volatile
@@ -151,14 +150,13 @@ begin
 
   perform cdf_notifications_v13._append_audit('TASK_STATUS_CHANGED', 'task', v_task.id, v_task.case_id,
     jsonb_build_object('from', v_task.status, 'to', p_new_status, 'row_version', v_task.row_version + 1,
-                       'procedural_event_id', v_event),
-    p_correlation_id);
+                       'procedural_event_id', v_event));
 
   task_id := v_task.id; case_id := v_task.case_id; status := p_new_status; row_version := v_task.row_version + 1;
   return next;
 end
 $fn$;
-comment on function cdf_notifications_v13.api_update_task_status(uuid, text, integer, uuid) is 'Command: change a task''s status (assignee or case-assigned persona; active case; expected row_version; allowed transition). Writes task, procedural event and audit event in one transaction. V1404 for unknown and unauthorised alike.';
+comment on function cdf_notifications_v13.api_update_task_status(uuid, text, integer) is 'Command: change a task''s status (assignee or case-assigned persona; active case; expected row_version; allowed transition). Writes task, procedural event and audit event in one transaction. V1404 for unknown and unauthorised alike.';
 
 -- My Work: tasks assigned to the current persona, across cases it can access in the current workspace (RLS applies).
 create function cdf_notifications_v13.my_work_tasks(p_include_closed boolean default false)
@@ -179,7 +177,87 @@ as $fn$
 $fn$;
 comment on function cdf_notifications_v13.my_work_tasks(boolean) is 'My Work: the current persona''s tasks in cases visible to it in the current workspace.';
 
-grant execute on function cdf_notifications_v13.api_update_task_status(uuid, text, integer, uuid) to cdf_v13_user;
+-- ---------------------------------------------------------------------------------------------------------------------
+-- Portfolio reads (FE-003, UX S2). SECURITY INVOKER: they run as cdf_v13_user, so RLS filters cases, tasks and events
+-- BEFORE filtering, pagination, counts and per-row summaries. Keyset pagination on display_number (unique).
+-- Filters are optional and identical for page and count:
+--   p_stage, p_records_state   exact codes
+--   p_search                   display number or a title (substring)
+--   p_assigned_to_me           only cases where the current persona holds an active case assignment
+-- Per row: the last recorded procedural event of the case (id and occurred_at) and the number of the current
+-- persona's own open tasks in the case. Both come from rows the persona may already read.
+-- ---------------------------------------------------------------------------------------------------------------------
+create function cdf_notifications_v13.portfolio_page(
+  p_after_display_number text default null,
+  p_limit                integer default 25,
+  p_stage                text default null,
+  p_records_state        text default null,
+  p_search               text default null,
+  p_assigned_to_me       boolean default false)
+returns table (
+  id uuid, display_number text, title_ar text, title_en text, stage text, is_restricted boolean,
+  records_state text, owning_workspace_id uuid, opened_at timestamptz, closed_at timestamptz, row_version integer,
+  updated_at timestamptz, source_system text, source_ref text,
+  last_event_id uuid, last_event_at timestamptz, my_open_task_count integer)
+language sql
+stable
+security invoker
+set search_path = ''
+as $fn$
+  select c.id, c.display_number, c.title_ar, c.title_en, c.stage, c.is_restricted, c.records_state,
+         c.owning_workspace_id, c.opened_at, c.closed_at, c.row_version, c.updated_at, c.source_system, c.source_ref,
+         e.id, e.occurred_at,
+         (select count(*)::integer
+            from cdf_notifications_v13.task t
+           where t.case_id = c.id
+             and t.assignee_persona_id = cdf_notifications_v13.current_persona_id()
+             and t.status not in ('DONE', 'CANCELLED'))
+    from cdf_notifications_v13.case_record c
+    left join lateral (
+      select pe.id, pe.occurred_at
+        from cdf_notifications_v13.procedural_event pe
+       where pe.case_id = c.id
+       order by pe.occurred_at desc, pe.recorded_at desc, pe.id desc
+       limit 1) e on true
+   where (p_after_display_number is null or c.display_number > p_after_display_number)
+     and (p_stage is null or c.stage = p_stage)
+     and (p_records_state is null or c.records_state = p_records_state)
+     and (p_search is null or p_search = ''
+          or strpos(lower(c.display_number), lower(p_search)) > 0
+          or strpos(lower(c.title_en), lower(p_search)) > 0
+          or strpos(c.title_ar, p_search) > 0)
+     and (not coalesce(p_assigned_to_me, false) or cdf_notifications_v13.is_assigned_to_case(c.id))
+   order by c.display_number
+   limit least(greatest(coalesce(p_limit, 25), 1), 100)
+$fn$;
+comment on function cdf_notifications_v13.portfolio_page(text, integer, text, text, text, boolean) is 'Authorised Case Portfolio page (RLS applies before filtering, ordering, limit and row summaries). Keyset on display_number; limit 1..100; optional assigned-to-me filter; per row the last recorded event and the caller''s own open-task count.';
+
+create function cdf_notifications_v13.portfolio_count(
+  p_stage          text default null,
+  p_records_state  text default null,
+  p_search         text default null,
+  p_assigned_to_me boolean default false)
+returns bigint
+language sql
+stable
+security invoker
+set search_path = ''
+as $fn$
+  select count(*)
+    from cdf_notifications_v13.case_record c
+   where (p_stage is null or c.stage = p_stage)
+     and (p_records_state is null or c.records_state = p_records_state)
+     and (p_search is null or p_search = ''
+          or strpos(lower(c.display_number), lower(p_search)) > 0
+          or strpos(lower(c.title_en), lower(p_search)) > 0
+          or strpos(c.title_ar, p_search) > 0)
+     and (not coalesce(p_assigned_to_me, false) or cdf_notifications_v13.is_assigned_to_case(c.id))
+$fn$;
+comment on function cdf_notifications_v13.portfolio_count(text, text, text, boolean) is 'Count of authorised cases matching exactly the portfolio_page filters (never counts a case the persona cannot see).';
+
+grant execute on function cdf_notifications_v13.api_update_task_status(uuid, text, integer) to cdf_v13_user;
+grant execute on function cdf_notifications_v13.portfolio_page(text, integer, text, text, text, boolean) to cdf_v13_user;
+grant execute on function cdf_notifications_v13.portfolio_count(text, text, text, boolean)                to cdf_v13_user;
 grant execute on function cdf_notifications_v13.my_work_tasks(boolean)                           to cdf_v13_user;
 
 reset role;

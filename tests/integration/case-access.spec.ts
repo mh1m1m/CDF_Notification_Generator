@@ -221,6 +221,115 @@ describe.skipIf(!seeded)("case access, tasks and notifications (migrations 0002â
       expect(await codeOf(insert("seed:m1:0099"))).toBe("OK");
     });
 
+    const ASSIGNED: [string, string, WorkspaceCode, number[]][] = [
+      ["Alpha @ Secretariat", PERSONA.alpha, "SECRETARIAT", [1, 3, 4, 7, 8, 10]],
+      ["Beta @ Investigations", PERSONA.beta, "INVESTIGATIONS", [1, 3, 5, 6, 9]],
+      ["Gamma @ Investigations", PERSONA.gamma, "INVESTIGATIONS", [2, 6, 10]],
+      ["Delta @ Governance", PERSONA.delta, "GOVERNANCE", [8]],
+      ["Delta @ Secretariat", PERSONA.delta, "SECRETARIAT", [8]],
+      ["Delta @ Investigations (no membership)", PERSONA.delta, "INVESTIGATIONS", []],
+    ];
+
+    it.each(ASSIGNED)(
+      "assigned-to-me filter: %s, page and count agree (FE-003 a, d)",
+      async (_n, persona, ws, expected) => {
+        const rows = await asPersona(
+          app,
+          persona,
+          ws,
+          (tx) =>
+            tx<{ display_number: string }[]>`
+          select display_number from cdf_notifications_v13.portfolio_page(null, 100, null, null, null, true)`,
+        );
+        expect(rows.map((r) => r.display_number)).toEqual(demo(expected));
+        const [count] = await asPersona(
+          app,
+          persona,
+          ws,
+          (tx) =>
+            tx<{ n: string }[]>`select cdf_notifications_v13.portfolio_count(null, null, null, true) as n`,
+        );
+        expect(Number(count?.n)).toBe(expected.length);
+      },
+    );
+
+    it("count takes exactly the page's filter set (stage, records state, search, assigned-to-me)", async () => {
+      const combos: [string | null, string | null, string | null, boolean][] = [
+        ["INVESTIGATION", null, null, false],
+        [null, "ACTIVE", null, true],
+        [null, null, "joint", false],
+        ["CLOSURE", "CLOSED", "0010", true],
+      ];
+      for (const [stage, state, search, mine] of combos) {
+        const page = await asPersona(
+          app,
+          PERSONA.beta,
+          "INVESTIGATIONS",
+          (tx) =>
+            tx`select id from cdf_notifications_v13.portfolio_page(null, 100, ${stage}, ${state}, ${search}, ${mine})`,
+        );
+        const [count] = await asPersona(
+          app,
+          PERSONA.beta,
+          "INVESTIGATIONS",
+          (tx) =>
+            tx<
+              { n: string }[]
+            >`select cdf_notifications_v13.portfolio_count(${stage}, ${state}, ${search}, ${mine}) as n`,
+        );
+        expect(Number(count?.n), JSON.stringify([stage, state, search, mine])).toBe(page.length);
+      }
+    });
+
+    it("each row carries the case's last recorded event and the persona's own open-task count (FE-003 b, c)", async () => {
+      const rows = await asPersona(
+        app,
+        PERSONA.beta,
+        "INVESTIGATIONS",
+        (tx) =>
+          tx<{ id: string; last_event_id: string; last_event_at: Date; my_open_task_count: number }[]>`
+          select id, last_event_id, last_event_at, my_open_task_count
+            from cdf_notifications_v13.portfolio_page(null, 100)`,
+      );
+      const expectedLast = await asOwner(
+        admin,
+        (tx) =>
+          tx<{ case_id: string; id: string; occurred_at: Date }[]>`
+          select distinct on (case_id) case_id, id, occurred_at from cdf_notifications_v13.procedural_event
+           order by case_id, occurred_at desc, recorded_at desc, id desc`,
+      );
+      const last = new Map(expectedLast.map((e) => [e.case_id, e]));
+      for (const row of rows) {
+        expect(row.last_event_id, row.id).toBe(last.get(row.id)?.id);
+        expect(row.last_event_at.toISOString()).toBe(last.get(row.id)?.occurred_at.toISOString());
+      }
+      expect(rows.find((r) => r.id === CASE(10))?.last_event_id).toBe("0e000000-0000-4000-8000-000000000110");
+      expect(Object.fromEntries(rows.map((r) => [r.id, r.my_open_task_count]))).toEqual({
+        [CASE(1)]: 1,
+        [CASE(2)]: 0,
+        [CASE(3)]: 1,
+        [CASE(5)]: 2,
+        [CASE(6)]: 1,
+        [CASE(9)]: 2,
+        [CASE(10)]: 0,
+      });
+    });
+
+    it("row summaries follow a command in the same transaction: new last event, one open task fewer", async () => {
+      const after = await rolledBack(PERSONA.beta, "INVESTIGATIONS", async (tx) => {
+        const [changed] = await tx<{ row_version: number }[]>`
+          select row_version from cdf_notifications_v13.api_update_task_status(${TASK(1)}, 'DONE', 1)`;
+        const [row] = await tx<{ last_event_id: string; my_open_task_count: number }[]>`
+          select last_event_id, my_open_task_count from cdf_notifications_v13.portfolio_page(null, 1)`;
+        const [event] = await tx<{ id: string }[]>`
+          select id from cdf_notifications_v13.procedural_event
+           where subject_id = ${TASK(1)} and provenance = 'RECORDED_IN_V13'`;
+        return { changed, row, event };
+      });
+      expect(after.changed?.row_version).toBe(2);
+      expect(after.row).toEqual({ last_event_id: after.event?.id, my_open_task_count: 0 });
+    });
+
     it("search, filters and counts never reveal a hidden case", async () => {
       const [hidden] = await asPersona(
         app,
@@ -450,6 +559,20 @@ describe.skipIf(!seeded)("case access, tasks and notifications (migrations 0002â
       expect(await codeOf(rolledBack(persona, ws, command))).toBe(expected);
     });
 
+    it("takes no correlation id argument: the audit row uses the claims' id (the old signature does not exist)", async () => {
+      expect(
+        await codeOf(
+          rolledBack(
+            PERSONA.beta,
+            "INVESTIGATIONS",
+            (tx) =>
+              tx`select * from cdf_notifications_v13.api_update_task_status(${TASK(1)}, 'BLOCKED', 1,
+                 '6f1c2a9e-3b7d-4c1e-9a2f-0d8e7b6a5c42'::uuid)`,
+          ),
+        ),
+      ).toBe("42883");
+    });
+
     it("refuses without any claims (V1401) and writes nothing when refused", async () => {
       expect(await codeOf(asRaw(app, {}, update(TASK(1), "BLOCKED", 1)))).toBe("V1401");
       const [row] = await asOwner(
@@ -523,6 +646,20 @@ describe.skipIf(!seeded)("case access, tasks and notifications (migrations 0002â
         },
       ]);
       expect(inspected.outbox).toBe(0);
+    });
+
+    it("takes no correlation id argument (the old five-argument signature does not exist)", async () => {
+      expect(
+        await codeOf(
+          rolledBack(
+            PERSONA.alpha,
+            "SECRETARIAT",
+            (tx) =>
+              tx`select * from cdf_notifications_v13.api_create_notification_draft(${CASE(1)}, ${TEMPLATE_VERSION(2)},
+                 'CASE_TEAM', ${key("corr")}, '6f1c2a9e-3b7d-4c1e-9a2f-0d8e7b6a5c42'::uuid)`,
+          ),
+        ),
+      ).toBe("42883");
     });
 
     it("an investigator may draft on the restricted case it is assigned to", async () => {

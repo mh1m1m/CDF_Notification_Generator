@@ -166,8 +166,7 @@ create function cdf_notifications_v13.api_create_notification_draft(
   p_case_id              uuid,
   p_template_version_id  uuid,
   p_recipient_class      text,
-  p_idempotency_key      text,
-  p_correlation_id       uuid default null)
+  p_idempotency_key      text)
 returns table (notification_id uuid, case_id uuid, lifecycle_status text, row_version integer)
 language plpgsql
 volatile
@@ -222,14 +221,13 @@ begin
   values (v_id, p_case_id, 'DRAFT_CREATED', v_persona);
 
   perform cdf_notifications_v13._append_audit('NOTIFICATION_DRAFT_CREATED', 'notification', v_id, p_case_id,
-    jsonb_build_object('template_version_id', p_template_version_id, 'recipient_class', p_recipient_class),
-    p_correlation_id);
+    jsonb_build_object('template_version_id', p_template_version_id, 'recipient_class', p_recipient_class));
 
   notification_id := v_id; case_id := p_case_id; lifecycle_status := 'DRAFT'; row_version := 1;
   return next;
 end
 $fn$;
-comment on function cdf_notifications_v13.api_create_notification_draft(uuid, uuid, text, text, uuid) is 'Command: create a DRAFT notification for an authorised ACTIVE case (secretary or investigator role). Idempotency key used once (V1409). Writes notification, notification event and audit event in one transaction.';
+comment on function cdf_notifications_v13.api_create_notification_draft(uuid, uuid, text, text) is 'Command: create a DRAFT notification for an authorised ACTIVE case (secretary or investigator role). Idempotency key used once (V1409). Writes notification, notification event and audit event in one transaction.';
 
 -- Notification history of one case (RLS applies; an unauthorised or unknown case yields no rows).
 create function cdf_notifications_v13.case_notifications(p_case_id uuid)
@@ -251,7 +249,7 @@ as $fn$
 $fn$;
 comment on function cdf_notifications_v13.case_notifications(uuid) is 'Notifications of one case (newest first). Empty for unknown and unauthorised cases alike.';
 
-grant execute on function cdf_notifications_v13.api_create_notification_draft(uuid, uuid, text, text, uuid) to cdf_v13_user;
+grant execute on function cdf_notifications_v13.api_create_notification_draft(uuid, uuid, text, text) to cdf_v13_user;
 grant execute on function cdf_notifications_v13.case_notifications(uuid) to cdf_v13_user;
 
 reset role;
