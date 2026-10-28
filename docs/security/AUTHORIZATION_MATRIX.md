@@ -134,6 +134,7 @@ changed (row counts, `row_version`, audit tail).
 | SEC-DB-27 | Persona reads never expose other personas' e-mail or attributes beyond the matrix | TM-I1 |
 | SEC-DB-28 | Claims MAC: missing, empty, malformed, copied from another transaction, computed for other claims → NULL; the key table is unreadable by `cdf_v13_user`/`cdf_v13_app`; the install command refuses a second different key, is idempotent for the same key, and audits without key material | TM-S4 |
 | SEC-DB-29 | No V13 function returns, raises or logs a MAC or key material (catalog scan of function results plus error-text checks) | TM-S4 |
+| SEC-DB-30 | Catalog test: every V13 view has `security_invoker = true`; no `SECURITY DEFINER` function outside the allowed list (`api_*`, claims helpers, key install); each allowed one calls the access check | TM-T10 |
 
 ### 6.2 Application (V13-SEC-003)
 

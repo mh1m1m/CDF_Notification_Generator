@@ -5,7 +5,7 @@ Updated: 28 Oct 2026 02:00 UTC · Branch: `docs/V13-SEC-001-threat-model` · Bas
 ## Completed
 - V13-SEC-001 — threat model (`docs/security/THREAT_MODEL.md`) and authorisation matrix with the planned test
   catalogue (`docs/security/AUTHORIZATION_MATRIX.md`): 8 subjects × 4 case variants, 17 read objects, 7 command rows,
-  16 application surfaces; 29 planned database tests (SEC-DB-01..29), 17 planned application tests (SEC-APP-01..17);
+  16 application surfaces; 30 planned database tests (SEC-DB-01..30), 17 planned application tests (SEC-APP-01..17);
   4 recommendations SEC-REC-01..04 (all ACCEPTED, ADR-014); ruling D6 — IN_REVIEW (reviewer: DB)
 
 ## Changed files
