@@ -179,3 +179,9 @@ an e2e check that the sandboxed `srcdoc` preview renders under the page policy w
 event. Open question to verify then: whether `frame-src 'none'` blocks an `about:srcdoc` frame in Chromium, Firefox and
 WebKit (a srcdoc document is not a network fetch and inherits the parent's policy). If any engine blocks it, FE raises
 it with ARCH before any policy change; SEC decides.
+
+Probe (28 Oct 03:30 UTC, local Chromium from the sandbox, throwaway page, not a test of the app): with
+`frame-src 'none'` a `sandbox=""` + `srcdoc` iframe **rendered**; the srcdoc document **inherited the parent CSP**, so
+its inline styles were blocked when the probe policy had no `style-src` allowing inline. Consequence for FE-006: the
+preview's e-mail HTML must style itself within what the page's `style-src` allows (inline `style` attributes, per
+ARCH), or the policy question goes to SEC. Firefox and WebKit are not installed in this sandbox; not checked.
