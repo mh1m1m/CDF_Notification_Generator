@@ -201,7 +201,13 @@ describe("tokens.css — lineage and structure", () => {
 });
 
 describe("colour literals live only in tokens.css (board V13-UX-001: no literal colours in components)", () => {
-  const LITERAL = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\boklch\(/;
+  // A hex colour is #RGB, #RGBA, #RRGGBB or #RRGGBBAA standing alone; a link fragment such as href="#add" is not one
+  // (QA review of PR #8).
+  const LITERAL =
+    /(?<!href=["'])(?<![\w&/])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])|\brgba?\(|\bhsla?\(|\boklch\(/;
+  /** Removes comments; a `//` right after `:` (as in https://) is part of a string, not a comment. */
+  const stripComments = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
   function files(dir: string, exts: string[]): string[] {
     const out: string[] = [];
     let entries: string[] = [];
@@ -222,12 +228,12 @@ describe("colour literals live only in tokens.css (board V13-UX-001: no literal 
     const offenders = [
       ...files(join(ROOT, "components"), [".ts", ".tsx", ".css"]),
       ...files(join(ROOT, "app"), [".ts", ".tsx", ".css"]),
-    ].filter((f) => LITERAL.test(readFileSync(f, "utf8").replace(/\/\/.*$|\/\*[\s\S]*?\*\//gm, "")));
+    ].filter((f) => LITERAL.test(stripComments(readFileSync(f, "utf8"))));
     expect(offenders).toEqual([]);
   });
 
   it("has none in styles/globals.css", () => {
-    const globals = readFileSync(join(ROOT, "styles/globals.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    const globals = stripComments(readFileSync(join(ROOT, "styles/globals.css"), "utf8"));
     expect(globals).not.toMatch(LITERAL);
     expect(globals).toContain('@import "./tokens.css";');
   });
@@ -236,5 +242,20 @@ describe("colour literals live only in tokens.css (board V13-UX-001: no literal 
     expect(LITERAL.test("color: #101820;")).toBe(true);
     expect(LITERAL.test("background: rgb(0 0 0);")).toBe(true);
     expect(LITERAL.test("color: var(--cdf-text);")).toBe(false);
+    expect(LITERAL.test("color: #fff;")).toBe(true);
+    expect(LITERAL.test("fill: #101820cc;")).toBe(true);
+    expect(LITERAL.test('<a href="#add">')).toBe(false);
+    expect(LITERAL.test("<a href='#face'>")).toBe(false);
+    expect(LITERAL.test("#12345")).toBe(false);
+  });
+
+  it("strips comments without eating a URL inside a string (negative control)", () => {
+    expect(stripComments('const u = "https://example.test"; // note #101820')).toBe(
+      'const u = "https://example.test"; ',
+    );
+    expect(LITERAL.test(stripComments('const u = "https://example.test/#x"; const c = "#101820";'))).toBe(
+      true,
+    );
+    expect(stripComments("/* #101820 */ a")).toBe(" a");
   });
 });
