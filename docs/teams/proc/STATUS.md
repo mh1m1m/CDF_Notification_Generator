@@ -33,7 +33,7 @@ Updated: 2026-10-28 ~02:00 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | JR-05 | FAIL | reads `work/new_event_types.md` (lead ruling L-05 list), not present |
 | JR-17 | FAIL | reads the `work/` V12 → V13 traceability CSV, not present |
 | JR-18 | FAIL | reads the `work/` assignment and journey-change CSVs, not present |
-| `tests/regression.test.js` (file) | FAIL | the file aborts at load: `out/demo/MANIFEST.json` (generated demo) and the V12 sibling folders are missing, so its 13 tests are not counted (726 − 13 = 713) |
+| `tests/regression.test.js` (file) | FAIL | the file aborts at load: `out/demo/MANIFEST.json` (generated demo) and the V12 sibling folders are missing, so its 14 tests do not run and the file counts as one failed test (726 − 14 + 1 = 713) |
 | ST-18 | SKIPPED | `work/V13-02_concepts.csv` not present |
 | ST-22 | SKIPPED | `../../journeys/level2_journeys.json` (V12 evidence) not reachable |
 | ST-33 | SKIPPED | the owner's directive text under `work/owner_messages_2026-10-27/` not reachable |
