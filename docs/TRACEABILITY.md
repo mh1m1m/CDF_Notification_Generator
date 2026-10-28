@@ -80,14 +80,13 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 
 | Code | Team | Rows |
 |---|---|---|
-| ARCH | Chief Architect & Orchestrator | 84 |
+| ARCH | Chief Architect & Orchestrator, DevOps & Deployment | 133 |
 | DB | Database & Supabase | 55 |
 | FE | Frontend Engineering | 69 |
 | UX | UX/UI Design | 39 |
 | PROC | Procedural Intelligence | 36 |
 | QA | Playwright & Visual QA | 77 |
 | SEC | Security & Adversarial Testing | 39 |
-| ARCH | DevOps & Deployment | 49 |
 
 ## 4. Gate crosswalk
 
