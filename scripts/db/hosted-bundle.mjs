@@ -1,0 +1,194 @@
+#!/usr/bin/env node
+// @ts-check
+// Prints the SQL to apply ONE migration on the hosted project (pnpm db:hosted-bundle <version> [--dry-run]).
+//
+// It connects nowhere and contains no credentials: a reviewer pastes the printed text into one SQL session on the
+// hosted project as the administrator (postgres, not a superuser there). The text is:
+//
+//   begin; lock_timeout, search_path = '', the migration advisory lock;
+//   guards: refuse if this version is already applied; refuse unless the previous version is the latest applied and
+//           every recorded predecessor matches the repository (name + sha256);
+//   the migration file, verbatim;
+//   SET LOCAL ROLE cdf_v13_owner; the history insert with runner 'hosted'; RESET ROLE;
+//   commit;  (--dry-run: rollback;)
+//
+// Run the --dry-run text first. The output is deterministic for a given migration set, so it can be reviewed in a PR.
+import { pathToFileURL } from "node:url";
+import {
+  MIGRATION_LOCK_SQL,
+  MIGRATION_LOCK_TIMEOUT,
+  MIGRATIONS_DIR,
+  readMigrations,
+  V13_OWNER,
+  V13_SCHEMA,
+} from "./lib/migrations.mjs";
+import { formatFinding, lintMigrationsDir } from "./lint-migrations.mjs";
+
+/** @typedef {import("./lib/migrations.mjs").MigrationFile} MigrationFile */
+
+export class HostedBundleError extends Error {
+  /** @param {string} message */
+  constructor(message) {
+    super(message);
+    this.name = "HostedBundleError";
+  }
+}
+
+const VERSION_PATTERN = /^\d{4}$/;
+
+/** A SQL string literal. Inputs are file names, versions and hex checksums validated before they get here. */
+const literal = (/** @type {string} */ value) => `'${value.replaceAll("'", "''")}'`;
+
+const HISTORY_PRESENT = `exists (
+    select 1
+      from pg_catalog.pg_class c
+      join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = ${literal(V13_SCHEMA)} and c.relname = 'schema_migrations' and c.relkind = 'r'
+  )`;
+
+/** @param {MigrationFile} m */
+function bootstrapGuard(m) {
+  return `-- Guard: version ${m.version} is not applied yet (no history table). The bootstrap also refuses existing V13 roles.
+do $v13_bundle_guard$
+begin
+  if ${HISTORY_PRESENT} then
+    raise exception 'V13 bundle ${m.version} refused: the V13 migration history already exists' using errcode = 'P0001';
+  end if;
+end
+$v13_bundle_guard$;`;
+}
+
+/**
+ * @param {MigrationFile} m
+ * @param {MigrationFile[]} predecessors
+ */
+function historyGuard(m, predecessors) {
+  const previous = /** @type {MigrationFile} */ (predecessors[predecessors.length - 1]);
+  const expected = predecessors
+    .map((p) => `      (${literal(p.version)}, ${literal(p.name)}, ${literal(p.checksum)})`)
+    .join(",\n");
+  return `-- Guard 1: the V13 history exists (the bootstrap is applied).
+do $v13_bundle_guard$
+begin
+  if not ${HISTORY_PRESENT} then
+    raise exception 'V13 bundle ${m.version} refused: the V13 bootstrap (0000) is not applied' using errcode = 'P0001';
+  end if;
+end
+$v13_bundle_guard$;
+
+-- Guards 2–4 read the history as its owner (the administrator holds no privilege on it).
+set local role ${V13_OWNER};
+do $v13_bundle_history_guard$
+declare
+  latest text;
+begin
+  -- Guard 2: this version is not applied yet.
+  if exists (select 1 from cdf_notifications_v13.schema_migrations where version = ${literal(m.version)}) then
+    raise exception 'V13 bundle ${m.version} refused: version ${m.version} is already applied' using errcode = 'P0001';
+  end if;
+  -- Guard 3: the previous version is the latest applied.
+  select max(version) into latest from cdf_notifications_v13.schema_migrations;
+  if latest is distinct from ${literal(previous.version)} then
+    raise exception 'V13 bundle ${m.version} refused: the latest applied version is %, expected ${previous.version}',
+      coalesce(latest, 'none') using errcode = 'P0001';
+  end if;
+  -- Guard 4: every recorded predecessor matches the repository this bundle was generated from.
+  if exists (
+    select 1
+      from (values
+${expected}
+      ) as expected (version, name, checksum_sha256)
+      full join cdf_notifications_v13.schema_migrations as recorded on recorded.version = expected.version
+     where recorded.version is null
+        or expected.version is null
+        or recorded.name is distinct from expected.name
+        or recorded.checksum_sha256 is distinct from expected.checksum_sha256
+  ) then
+    raise exception 'V13 bundle ${m.version} refused: the recorded history differs from the repository (name or sha256)'
+      using errcode = 'P0001';
+  end if;
+end
+$v13_bundle_history_guard$;
+reset role;`;
+}
+
+/**
+ * Builds the bundle text for one version.
+ * @param {{ version: string, dir?: string, dryRun?: boolean }} options
+ * @returns {string}
+ */
+export function buildHostedBundle(options) {
+  const dir = options.dir ?? MIGRATIONS_DIR;
+  const dryRun = options.dryRun ?? false;
+  if (!VERSION_PATTERN.test(options.version))
+    throw new HostedBundleError("the version is four digits, for example 0001");
+
+  const lint = lintMigrationsDir(dir);
+  if (lint.findings.length > 0) {
+    const details = lint.findings.map((f) => formatFinding(f, dir)).join("\n");
+    throw new HostedBundleError(
+      `db:lint reports ${lint.findings.length} finding(s); no bundle is produced:\n${details}`,
+    );
+  }
+  const files = readMigrations(dir);
+  const index = files.findIndex((f) => f.version === options.version);
+  const m = files[index];
+  if (!m) throw new HostedBundleError(`no migration with version ${options.version} in ${dir}`);
+  const predecessors = files.slice(0, index);
+  const fileText = m.sql.endsWith("\n") ? m.sql : `${m.sql}\n`;
+
+  return `-- V13 hosted migration bundle${dryRun ? " (DRY RUN: ends in ROLLBACK)" : ""}
+-- Migration: database/migrations/${m.file}
+-- sha256:    ${m.checksum}
+-- Classification: SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.
+-- Generated by scripts/db/hosted-bundle.mjs. Contains no credentials and connects nowhere.
+-- Paste the whole text into ONE SQL session on the hosted project as the administrator. Any failing statement aborts
+-- the transaction and nothing is applied (send ROLLBACK if the client keeps the session open).
+
+begin;
+set local lock_timeout = ${literal(MIGRATION_LOCK_TIMEOUT)};
+set local search_path = '';
+${MIGRATION_LOCK_SQL};
+
+${predecessors.length === 0 ? bootstrapGuard(m) : historyGuard(m, predecessors)}
+
+-- ---- ${m.file} (verbatim) ----
+${fileText}-- ---- end of ${m.file} ----
+
+-- History row, written as the owner in the same transaction.
+set local role ${V13_OWNER};
+insert into cdf_notifications_v13.schema_migrations (version, name, checksum_sha256, runner)
+values (${literal(m.version)}, ${literal(m.name)}, ${literal(m.checksum)}, 'hosted');
+reset role;
+
+${dryRun ? "rollback;" : "commit;"}
+`;
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  const dirFlag = args.indexOf("--migrations-dir");
+  const dir = dirFlag === -1 ? MIGRATIONS_DIR : args[dirFlag + 1];
+  const positional = args.filter((a, k) => !a.startsWith("--") && !(dirFlag !== -1 && k === dirFlag + 1));
+  const unknownFlags = args.filter(
+    (a) => a.startsWith("--") && a !== "--dry-run" && a !== "--migrations-dir",
+  );
+  if (positional.length !== 1 || unknownFlags.length > 0 || !dir) {
+    console.error("usage: node scripts/db/hosted-bundle.mjs <version> [--dry-run] [--migrations-dir <dir>]");
+    process.exit(2);
+  }
+  try {
+    process.stdout.write(
+      buildHostedBundle({
+        version: /** @type {string} */ (positional[0]),
+        dir,
+        dryRun: args.includes("--dry-run"),
+      }),
+    );
+  } catch (error) {
+    console.error(`✗ db:hosted-bundle: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) main();

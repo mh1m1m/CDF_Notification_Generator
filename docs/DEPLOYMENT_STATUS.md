@@ -4,7 +4,7 @@
 through the connected integrations at the time given. Nothing here is a plan presented as a fact. Production is blocked
 by the hosting gate (ADR-005); staging holds synthetic data only.
 
-Last checked: **28 Oct 2026 01:30 UTC** by the Chief Architect.
+Last checked: **28 Oct 2026 02:02 UTC** by the Chief Architect.
 
 ## 1. GitHub
 
@@ -24,7 +24,7 @@ Last checked: **28 Oct 2026 01:30 UTC** by the Chief Architect.
 | Organisation / plan | "CDF", free plan (project limit reached; no project created for V13, by owner decision) | E01 §1.2 |
 | Project | **CDF GC Review**, ref `jeseeznffxlxmcljpmiu`, region `eu-central-1`, PostgreSQL 17.11, shared with the GC Review application (ADR-012) | 01:24 |
 | V13 schema | `cdf_notifications_v13`, owned by `cdf_v13_owner`; ACL `{cdf_v13_owner=UC/cdf_v13_owner,cdf_v13_user=U/cdf_v13_owner}` | 01:28 |
-| V13 roles | `cdf_v13_owner` (NOLOGIN), `cdf_v13_app` (LOGIN, connection limit 8, **no password set yet** — nobody can log in), `cdf_v13_user` (NOLOGIN) | 01:28 |
+| V13 roles | `cdf_v13_owner` (NOLOGIN), `cdf_v13_app` (LOGIN, connection limit 8, **no password**: nobody can log in; the owner sets it with `database/hosted/owner_set_app_login.sql`), `cdf_v13_user` (NOLOGIN) | 01:42 |
 | V13 migrations applied | 1: `0000 bootstrap` (sha256 `0f80be82…5c01`) at 01:03:21, runner `hosted` | 01:24 |
 | Isolation | PASS, 27 checks, 0 breaches (`docs/TEST_EVIDENCE.md` §2) | 01:28 |
 | GC Review objects | fingerprint of all 648 non-V13 objects identical to the baseline, TOTAL `40c9efe5697d19552d15f5ef85c2f85f` | 01:18 |
@@ -41,7 +41,7 @@ Last checked: **28 Oct 2026 01:30 UTC** by the Chief Architect.
 | Deployment protection | Vercel Authentication on all deployments except custom domains (no custom domain exists); password protection off; trusted IPs off | 01:10 |
 | Production domain | `cdfnotificationgenerator-malsalehs-projects.vercel.app` — serves nothing (no successful deployment) | 01:10 |
 | Staging (develop) alias | `cdfnotificationgenerator-git-develop-malsalehs-projects.vercel.app` | 01:10 |
-| Environment variables | **none set** | 01:29 |
+| Environment variables | `V13_PERSONA_SIGNIN`, `V13_ISOLATION_PROBE` (plain, Preview, branch `develop`); the two sensitive values wait for the owner step | 02:00 |
 
 Deployments so far:
 
@@ -56,10 +56,10 @@ Planned for the staging (`develop` preview) and development environments; produc
 
 | Name | Type in Vercel | Purpose | Status |
 | ---- | -------------- | ------- | ------ |
-| `V13_DATABASE_URL` | sensitive | `cdf_v13_app` login through the Supabase pooler (transaction mode) | not set (V13-ARCH-003) |
-| `V13_SESSION_SECRET` | sensitive | signs the persona session cookie (≥ 32 bytes) | not set |
-| `V13_PERSONA_SIGNIN` | plain | `enabled` turns on synthetic persona sign-in | not set |
-| `V13_ISOLATION_PROBE` | plain | `enabled` turns on `/api/health/isolation` (counts only) | not set |
+| `V13_DATABASE_URL` | sensitive | `cdf_v13_app` login through the Supabase pooler (transaction mode) | not set: owner step (`docs/hosted/OWNER_STEP_APP_LOGIN.md`) |
+| `V13_SESSION_SECRET` | sensitive | signs the persona session cookie (≥ 32 bytes); the request-claims key is derived from it (ADR-014) | not set: owner step |
+| `V13_PERSONA_SIGNIN` | plain | `enabled` turns on synthetic persona sign-in | `enabled`, Preview, branch `develop` (02:00) |
+| `V13_ISOLATION_PROBE` | plain | `enabled` turns on `/api/health/isolation` (counts only) | `enabled`, Preview, branch `develop` (02:00) |
 
 There is no Supabase URL, anon key or service-role key: V13 does not use the Supabase client or Data API.
 

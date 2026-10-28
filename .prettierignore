@@ -1,0 +1,12 @@
+pnpm-lock.yaml
+node_modules
+.next
+.local
+coverage
+playwright-report
+test-results
+blob-report
+next-env.d.ts
+*.sql
+# Documentation is not format-gated (prettier would rewrite its tables).
+*.md
