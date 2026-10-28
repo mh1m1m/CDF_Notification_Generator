@@ -157,27 +157,29 @@ insert into cdf_notifications_v13.notification_template_version (id, template_id
 on conflict (id) do nothing;
 
 -- Notifications (history for 0001, 0003, 0009, 0010) -----------------------------------------------------------------
+-- All five are DRAFT with a DRAFT_CREATED event only. The seed holds no APPROVED or DISPATCHED notification and no
+-- APPROVED or DISPATCHED event: dispatch state comes only from the outbox path (REQ-DISP-001, M5) and approval is a
+-- decision right that arrives with the M5 approval command (REQ-DISP-009, REQ-GOV-014). Other lifecycle chips are
+-- tested with component fixtures, not database rows.
 insert into cdf_notifications_v13.notification
   (id, case_id, template_version_id, recipient_class, lifecycle_status, idempotency_key, created_by_persona_id, created_at)
 select ('2f000000-0000-4000-8000-0000000000' || n)::uuid, ('0c000000-0000-4000-8000-0000000000' || c)::uuid,
-       ('1f000000-0000-4000-8000-00000000000' || tv)::uuid, rc, st,
+       ('1f000000-0000-4000-8000-00000000000' || tv)::uuid, rc, 'DRAFT',
        encode(sha256(convert_to('seed-m1:' || n, 'UTF8')), 'hex'),
        ('0b000000-0000-4000-8000-00000000000' || p)::uuid, at::timestamptz
-  from (values ('01', '01', '1', 'CASE_TEAM',         'DRAFT',    '1', '2026-10-01T09:00:00Z'),
-               ('02', '03', '3', 'COMMITTEE_MEMBERS', 'APPROVED', '1', '2026-10-02T09:00:00Z'),
-               ('03', '03', '4', 'COMMITTEE_MEMBERS', 'DRAFT',    '1', '2026-10-03T09:00:00Z'),
-               ('04', '09', '1', 'CASE_TEAM',         'DRAFT',    '2', '2026-10-04T09:00:00Z'),
-               ('05', '10', '3', 'COMMITTEE_MEMBERS', 'DISPATCHED','1', '2026-06-20T09:00:00Z'))
-       as v (n, c, tv, rc, st, p, at)
+  from (values ('01', '01', '1', 'CASE_TEAM',         '1', '2026-10-01T09:00:00Z'),
+               ('02', '03', '3', 'COMMITTEE_MEMBERS', '1', '2026-10-02T09:00:00Z'),
+               ('03', '03', '4', 'COMMITTEE_MEMBERS', '1', '2026-10-03T09:00:00Z'),
+               ('04', '09', '1', 'CASE_TEAM',         '2', '2026-10-04T09:00:00Z'),
+               ('05', '10', '3', 'COMMITTEE_MEMBERS', '1', '2026-06-20T09:00:00Z'))
+       as v (n, c, tv, rc, p, at)
 on conflict (id) do nothing;
 
--- Lifecycle events matching each seeded status (DRAFT_CREATED, then APPROVED, then DISPATCHED_STUB).
-insert into cdf_notifications_v13.notification_event (id, notification_id, case_id, event_code, occurred_at, actor_persona_id)
-select ('2e000000-0000-4000-8000-0000000' || e.step || '00' || right(n.id::text, 2))::uuid, n.id, n.case_id, e.code,
-       n.created_at + (e.step::int * interval '1 hour'), n.created_by_persona_id
+insert into cdf_notifications_v13.notification_event
+  (id, notification_id, case_id, event_code, occurred_at, actor_persona_id, provenance)
+select ('2e000000-0000-4000-8000-0000000100' || right(n.id::text, 2))::uuid, n.id, n.case_id, 'DRAFT_CREATED',
+       n.created_at, n.created_by_persona_id, 'SEED_SYNTHETIC'
   from cdf_notifications_v13.notification n
-  join (values ('1', 'DRAFT_CREATED', 1), ('2', 'APPROVED', 2), ('3', 'DISPATCHED_STUB', 3)) as e (step, code, rank)
-    on e.rank <= case n.lifecycle_status when 'DRAFT' then 1 when 'APPROVED' then 2 when 'DISPATCHED' then 3 end
  where n.id::text like '2f000000-0000-4000-8000-%'
 on conflict (id) do nothing;
 

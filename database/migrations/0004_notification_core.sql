@@ -102,11 +102,12 @@ create table cdf_notifications_v13.notification_event (
   event_code       text        not null check (event_code ~ '^[A-Z][A-Z0-9_]{2,60}$'),
   occurred_at      timestamptz not null default clock_timestamp(),
   actor_persona_id uuid        references cdf_notifications_v13.persona (id),
+  provenance       text        not null default 'COMMAND' check (provenance in ('COMMAND', 'SEED_SYNTHETIC')),
   constraint notification_event_notification_fk foreign key (notification_id, case_id)
     references cdf_notifications_v13.notification (id, case_id)
 );
 create index notification_event_notification_idx on cdf_notifications_v13.notification_event (notification_id, occurred_at);
-comment on table cdf_notifications_v13.notification_event is 'Append-only lifecycle events of a notification. (notification_id, case_id) must match the notification.';
+comment on table cdf_notifications_v13.notification_event is 'Append-only lifecycle events of a notification. (notification_id, case_id) must match the notification. provenance: COMMAND (written by an api_* command) or SEED_SYNTHETIC.';
 create trigger notification_event_no_update_delete
   before update or delete on cdf_notifications_v13.notification_event
   for each row execute function cdf_notifications_v13._reject_mutation();

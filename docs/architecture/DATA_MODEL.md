@@ -77,7 +77,7 @@ erDiagram
 | 0004 | `notification_template` | `id`, `code` unique | `is_active` |
 | 0004 | `notification_template_version` | (`template_id`, `version`, `language`) unique | immutable; `content_sha256` computed by trigger; `basis` = source reference |
 | 0004 | `notification` | `id`, `idempotency_key` unique; unique (`id`, `case_id`) | lifecycle DRAFT…SUPERSEDED; `supersedes_id` same case |
-| 0004 | `notification_event` | `id`; FK (`notification_id`, `case_id`) | append-only |
+| 0004 | `notification_event` | `id`; FK (`notification_id`, `case_id`) | append-only; `provenance` COMMAND (default) / SEED_SYNTHETIC |
 | 0004 | `dispatch_outbox` | `id`; FK (`notification_id`, `case_id`); unique per channel | content-free; restrictive deny-all, no grant (ADR-010, used from M5) |
 
 ## 4. Functions
@@ -140,6 +140,19 @@ violation · `V1500` audit append outside READ COMMITTED.
 | ------- | --- | ------ | ------------------------ |
 | `api_update_task_status` | the task's assignee, or a persona with an active assignment on the case | context; task exists and `can_access_case`; case ACTIVE; expected `row_version`; allowed transition (DONE, CANCELLED terminal) | task (+1 version), `procedural_event` TASK_STATUS_CHANGED, `audit_event` TASK_STATUS_CHANGED |
 | `api_create_notification_draft` | COMMITTEE_SECRETARY or INVESTIGATOR in the current workspace with case access | context; `can_access_case`; role; case ACTIVE; recipient class and active template version exist; key is 64 hex and unused (serialised by advisory lock in the V13 namespace) | `notification` DRAFT with the authorised `case_id`, `notification_event` DRAFT_CREATED, `audit_event` NOTIFICATION_DRAFT_CREATED |
+
+## 6a. Definer discipline (TM-T10, SEC-DB-30)
+
+Read functions are `SECURITY INVOKER`; any future view is `WITH (security_invoker = true)`; no table uses FORCE RLS.
+`SECURITY DEFINER` is used only for: `api_*` commands (each calls `can_access_case` itself when case-keyed); the claims
+and access-rule helpers and the `_case_owning_visibility` trigger; `current_persona()`; `_append_audit` and
+`verify_audit_chain` (never granted to `cdf_v13_user`). A new definer function outside these groups needs ARCH and SEC.
+
+## 6b. Seed notifications
+
+All five seeded notifications are DRAFT with one DRAFT_CREATED event (provenance SEED_SYNTHETIC). No APPROVED or
+DISPATCHED state exists in the seed: dispatch comes only from the outbox path (REQ-DISP-001, M5) and approval is a
+decision right of the M5 approval command (REQ-DISP-009, REQ-GOV-014).
 
 ## 7. Audit ledger
 

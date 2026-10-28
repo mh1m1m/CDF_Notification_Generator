@@ -7,12 +7,14 @@ Updated: 2026-10-28 02:00 UTC · Branch: feature/V13-DB-001-m1-database-core · 
 - V13-DB-002 — migration 0002 (case registry, `can_access_case`, portfolio reads) — DRAFT
 - V13-DB-003 — migration 0003 (procedural events, tasks, `api_update_task_status`, `my_work_tasks`) — DRAFT
 - V13-DB-004 — migration 0004 (templates, notifications, events, `api_create_notification_draft`, content-free outbox) — DRAFT
-- V13-DB-005 — seed `database/seed/0001_m1_synthetic.sql` (3 workspaces, 3 roles, 6 personas incl. 2 negative, 10 cases, 15 assignments, 20 tasks, 17 events, 2 templates × 2 languages, 5 notifications) — DRAFT
+- V13-DB-005 — seed `database/seed/0001_m1_synthetic.sql` (3 workspaces, 3 roles, 6 personas incl. 2 negative, 10 cases, 15 assignments, 20 tasks, 17 events, 2 templates × 2 languages, 5 notifications, all DRAFT) — DRAFT
 - V13-DB-006 — `scripts/db/rehearse-shared.mjs` (Supabase-like cluster; dry run, apply, fingerprint, isolation, four planted faults, refused and clean rollback) — DRAFT, CI job needs ARCH
 - E03 — `docs/architecture/DATA_MODEL.md` — DRAFT
 
 - Chief Architect rulings of 01:53 applied to the drafts: claims v1 contract, claims MAC with owner-only key and `api_install_claims_key` (ADR-014, SEC-REC-01), `current_user = 'cdf_v13_user'` in every policy (SEC-REC-02), persona e-mail hidden from the request role, correlation id from claims into audit; `database/hosted/reset_claims_key.sql` proposed for ARCH.
 - Reviewed SEC PR #2: `REVIEW: ACCEPT 7c78b82` with 9 notes (https://github.com/mh1m1m/CDF_Notification_Generator/pull/2#issuecomment-6458548001).
+
+- Chief Architect rulings of 02:35 applied: seed notifications all DRAFT with DRAFT_CREATED only (no APPROVED/DISPATCHED rows or events); `notification_event.provenance` added (COMMAND / SEED_SYNTHETIC); definer discipline documented (DATA_MODEL §6a). Rehearsal re-run PASS; seed idempotent.
 
 ## Changed files
 - database/migrations/0001_identity_access_audit.sql, 0002_case_registry.sql, 0003_procedural_core.sql, 0004_notification_core.sql
