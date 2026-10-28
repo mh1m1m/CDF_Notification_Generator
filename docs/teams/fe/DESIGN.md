@@ -185,3 +185,11 @@ Probe (28 Oct 03:30 UTC, local Chromium from the sandbox, throwaway page, not a 
 its inline styles were blocked when the probe policy had no `style-src` allowing inline. ARCH correction (03:28 UTC): the page
 policy is `style-src 'self' 'unsafe-inline'`, so inline `style` attributes and `<style>` elements both work in the
 inherited preview; scripts cannot run (no nonce, plus the sandbox). Firefox and WebKit are not installed in this sandbox; not checked.
+
+## 14. Server Action rule (SEC review of PR #6, TM-E4, test SEC-APP-18; relayed by ARCH 03:32 UTC) — binding
+
+Every state-changing Server Action FE adds (FE-002..006) begins, before any other work, with `getCurrentSession()`
+(no session → generic refusal, nothing changes) and the `lib/authz` pre-check for its action and target; the
+database checks again. The `proxy.ts` gate is never relied on (it holds today only because of how Next routes
+actions). SEC-APP-18 calls every exported action with no session and with another persona's session and expects no
+change. Only `signOut` and `switchLocale` need no session. FE adds the same two negative unit tests per action.
