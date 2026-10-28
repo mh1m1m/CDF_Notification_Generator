@@ -74,7 +74,7 @@ erDiagram
 | 0001 | `persona_workspace_membership` | persona × workspace × role, `valid_from`/`valid_to` | active when `valid_from <= now() < valid_to` |
 | 0001 | `claims_key` | `key_version` = 1 | ipad/opad keys + sha256 of K; restrictive deny-all, no grant; cleared only by `database/hosted/reset_claims_key.sql` |
 | 0001 | `audit_event` | `id`, `seq` identity, `row_hash` unique | append-only, hash chain (`prev_hash` → `row_hash`), no reader grant |
-| 0002 | `case_record` | `id`, `display_number` unique | stage, `is_restricted`, `records_state` ACTIVE/CLOSED (+`closed_at` consistency), `owning_workspace_id`, `source_system` = `V13_SYNTHETIC`, `source_ref`, `row_version` |
+| 0002 | `case_record` | `id`, `display_number` unique | stage, `is_restricted`, `records_state` ACTIVE/CLOSED (+`closed_at` consistency), `owning_workspace_id`, `source_system` = `V13_SYNTHETIC`, `source_ref` NOT NULL (pattern-checked; seed `seed:m1:NNNN`), `row_version`, `updated_at` |
 | 0002 | `case_workspace_visibility` | (`case_id`, `workspace_id`) | owning workspace inserted by trigger |
 | 0002 | `case_assignment` | persona × case × capacity, window | capacities LEAD_INVESTIGATOR, INVESTIGATOR, SECRETARY, GOVERNANCE_REVIEWER |
 | 0003 | `procedural_event` | `id`; unique (`id`, `case_id`) | append-only Layer A record; `occurred_at`/`recorded_at`; provenance RECORDED_IN_V13 / SEED_SYNTHETIC; `causation_id` same case |
@@ -99,8 +99,8 @@ erDiagram
 | `current_role_codes()`, `has_role(text)` | definer, stable | yes | roles in the current workspace |
 | `is_assigned_to_case(uuid)` | definer, stable | yes | active assignment on the case |
 | `can_access_case(uuid)` | definer, stable | yes | **the single case-access rule** (§5) |
-| `portfolio_page(...)`, `portfolio_count(...)` | invoker | yes | keyset page (limit 1..100) and count; RLS filters before filters, order, limit and count |
-| `case_header(uuid)` | invoker | yes | one case by UUID; no row for unknown or unauthorised |
+| `portfolio_page(...)`, `portfolio_count(...)` | invoker | yes | keyset page (limit 1..100) and count; RLS filters before filters, order, limit and count; rows carry `updated_at`, `source_system`, `source_ref` (FE contract ruling 28 Oct) |
+| `case_header(uuid)` | invoker | yes | one case by UUID, same columns as a portfolio row; no row for unknown or unauthorised |
 | `my_work_tasks(boolean)` | invoker | yes | the persona's tasks in accessible cases |
 | `case_notifications(uuid)` | invoker | yes | notification history of one case |
 | `api_update_task_status(uuid, text, int, uuid)` | definer command | yes | §6 |
