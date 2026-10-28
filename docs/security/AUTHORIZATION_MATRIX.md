@@ -133,8 +133,8 @@ changed (row counts, `row_version`, audit tail).
 | SEC-DB-26 | Memberships of the V13 roles are exactly those of `0000_bootstrap` | TM-E1 |
 | SEC-DB-27 | Persona reads never expose other personas' e-mail or attributes beyond the matrix | TM-I1 |
 | SEC-DB-28 | Claims MAC: missing, empty, malformed, copied from another transaction, computed for other claims → NULL; the key table is unreadable by `cdf_v13_user`/`cdf_v13_app`; the install command refuses a second different key, is idempotent for the same key, and audits without key material | TM-S4 |
-| SEC-DB-29 | No V13 function returns, raises or logs a MAC or key material (catalog scan of function results plus error-text checks) | TM-S4 |
-| SEC-DB-30 | Catalog test: every V13 view has `security_invoker = true`; no `SECURITY DEFINER` function outside the allowed list (`api_*`, claims helpers, key install); each allowed one calls the access check | TM-T10 |
+| SEC-DB-29 | No V13 function returns, raises or logs a MAC or key material; `_claims_hmac` and `_verified_claims` are not executable by `cdf_v13_user` or `cdf_v13_app` (otherwise a signing oracle) | TM-S4 |
+| SEC-DB-30 | Catalog test: every V13 view has `security_invoker = true`; every read function is `SECURITY INVOKER`; `SECURITY DEFINER` only in the four groups of E02 §5.1 — `api_*` commands (each case-keyed one calls `can_access_case()`), claims and access-rule helpers (`_claims_hmac`, `_verified_claims`, `_claim_uuid`, `current_*`, `has_role`, `_is_colleague`, `is_assigned_to_case`, `can_access_case`, trigger `_case_owning_visibility`), `current_persona()`, audit internals (`_append_audit`, `verify_audit_chain`, not granted to `cdf_v13_user`) | TM-T10 |
 
 ### 6.2 Application (V13-SEC-003)
 
