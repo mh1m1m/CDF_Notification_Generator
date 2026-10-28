@@ -170,3 +170,12 @@ REQ-NOTIF-001/002/003/006/011 and E10's list; REQ-NOTIF-013..016 are M4; REQ-NOT
 - `policy_v13.json` and `authority_v13.json` stay in server-only modules (`import 'server-only'`) and never reach a
   client bundle. FE-006 adds a unit test that its client components import nothing from `lib/disclosure`,
   `lib/authority` or `lib/server`.
+
+## 13. CSP constraint for FE-006 (ARCH, 03:25 UTC; foundation PR #6 head 5c53ec4)
+
+Pages run under a per-request nonce CSP: `script-src 'self' 'nonce-…' 'strict-dynamic'`, `frame-src 'none'`,
+`object-src 'none'`. No inline scripts or `eval` in FE components; inline `style` attributes stay allowed. FE-006 adds
+an e2e check that the sandboxed `srcdoc` preview renders under the page policy with no `securitypolicyviolation`
+event. Open question to verify then: whether `frame-src 'none'` blocks an `about:srcdoc` frame in Chromium, Firefox and
+WebKit (a srcdoc document is not a network fetch and inherits the parent's policy). If any engine blocks it, FE raises
+it with ARCH before any policy change; SEC decides.
