@@ -159,3 +159,14 @@ M1 portfolio = UX SCREENS S2 only: table, FilterBar (search, stage, records stat
 Moved to M2: REQ-SRCH-001/004 (shell search), REQ-CASE-009/010 (recent cases, bookmarks, quick switcher),
 REQ-PORT-001/005/006/007 (cards and recently viewed, full filters, full columns, case preview). Notifications in M1:
 REQ-NOTIF-001/002/003/006/011 and E10's list; REQ-NOTIF-013..016 are M4; REQ-NOTIF-004/005/012 are M5.
+
+## 12. Notification detail rules (REQ-NOTIF-011, M1; SEC review of PROC PR #3, relayed by ARCH 02:38 UTC)
+
+- The rendered e-mail preview is shown only in a sandboxed `<iframe srcdoc=…>` with an empty `sandbox` attribute (no
+  `allow-scripts`, no `allow-same-origin`). Never `dangerouslySetInnerHTML` or any other HTML injection.
+- View models and components carrying notification content accept only the branded `Projected<T>` type from
+  `lib/disclosure` (PROC). No unprojected notification model is passed to a client component (it would land in the
+  RSC payload); FE-006 keeps notification view models in server components and passes only projected fields down.
+- `policy_v13.json` and `authority_v13.json` stay in server-only modules (`import 'server-only'`) and never reach a
+  client bundle. FE-006 adds a unit test that its client components import nothing from `lib/disclosure`,
+  `lib/authority` or `lib/server`.
