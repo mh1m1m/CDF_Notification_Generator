@@ -1,11 +1,12 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 28 Oct 2026 02:00 UTC · Branch: `docs/V13-SEC-001-threat-model` · Base: `develop` `38dc495`
+Updated: 28 Oct 2026 03:40 UTC · Branch: `docs/V13-SEC-001-threat-model` · Base: `develop` `38dc495`
 
 ## Completed
+- Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
 - V13-SEC-001 — threat model (`docs/security/THREAT_MODEL.md`) and authorisation matrix with the planned test
   catalogue (`docs/security/AUTHORIZATION_MATRIX.md`): 8 subjects × 4 case variants, 17 read objects, 7 command rows,
-  16 application surfaces; 30 planned database tests (SEC-DB-01..30), 17 planned application tests (SEC-APP-01..17);
+  16 application surfaces; 30 planned database tests (SEC-DB-01..30), 18 planned application tests (SEC-APP-01..18);
   4 recommendations SEC-REC-01..04 (all ACCEPTED, ADR-014); ruling D6 — IN_REVIEW (reviewer: DB)
 
 ## Changed files
@@ -15,6 +16,7 @@ Updated: 28 Oct 2026 02:00 UTC · Branch: `docs/V13-SEC-001-threat-model` · Bas
 | Command | Result | Counts | Commit |
 | ------- | ------ | ------ | ------ |
 | Local PostgreSQL 16.x, `0000_bootstrap.sql` applied, then as `cdf_v13_user` inside one transaction: `select set_config('request.v13.claims', '{"persona_id":"FORGED"}', true)` | **succeeds**, `current_user = cdf_v13_user` — confirms TM-S4: the request role can rewrite its own claims, so the claims are only as trustworthy as the SQL the BFF sends | 1 probe | `b02e672` |
+| Local, ARCH-001 head `5c53ec4`: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, then manual probes against `next start` (synthetic secret, no DB) | lint 0, typecheck 0, unit **251 passed / 17 files**, build ok; signOut action by id: runs via `/my-work` with cookie, refused cross-origin (500, digest only), **not run** via public `/sign-in` without cookie; health has resource CSP + no-store | 251 + 8 probes | `5c53ec4` |
 
 No SEC-DB or SEC-APP test exists yet: they need V13-ARCH-001 (tooling) and DB-001..004 / FE-001..006.
 

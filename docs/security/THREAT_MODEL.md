@@ -84,6 +84,7 @@ Severity is the impact if the control failed, on the CRITICAL / HIGH / MEDIUM / 
 | TM-S5 | Claims missing, empty, malformed JSON, unknown persona, inactive persona, persona whose membership or assignment window has ended | HIGH | the claims helper returns NULL on anything invalid and every policy and command treats NULL as "nobody" (fail closed) | SEC-DB-01, -02, -05 | — |
 | TM-S6 | Workspace claim names a workspace the persona is not a member of | HIGH | the database checks membership of persona × workspace × role in its active window; never trusts the workspace claim alone | SEC-DB-06 | — |
 | TM-S7 | Login CSRF: a third-party page signs the victim in as another persona | LOW | sign-in is a POST Server Action; Origin must equal the host (Next.js Server Action check) | SEC-APP-09 | — |
+| TM-S8 | Sign-out cannot revoke a stateless session: a copied cookie stays valid until `exp` (≤ 8 h) | LOW | short lifetime; HttpOnly `__Host-` cookie; Vercel Authentication outer gate | — (documented) | ACCEPTED for synthetic data; `PRODUCTION_SUBSTITUTION_REQUIRED` IdP sessions with server-side revocation |
 
 ### 4.2 Tampering
 
@@ -141,6 +142,7 @@ Severity is the impact if the control failed, on the CRITICAL / HIGH / MEDIUM / 
 | TM-E2 | A V13 function is executable by PUBLIC or a non-V13 role | HIGH | default privileges revoke EXECUTE from PUBLIC (0000); C11 | SEC-DB-16 | — |
 | TM-E3 | Workspace switching widens access (a persona switches to a workspace where it has no membership, or keeps the old workspace's cases after switching) | HIGH | the database computes access from the active workspace claim and membership on every request | SEC-DB-06, SEC-APP-05 | — |
 | TM-E4 | A UI-only permission (button hidden, command still accepted) | HIGH | every command checked in `lib/authz` **and** in the database; tests call the command directly | SEC-DB-08..11, SEC-APP-11 | — |
+| TM-E5 | A Server Action reached without the proxy gate (actions are addressed by id; Next routes an action to the page that owns it) | HIGH | every state-changing action calls `getCurrentSession()` and the `lib/authz` pre-check itself; the database checks again. Probed on ARCH-001 `5c53ec4`: an action POSTed to public `/sign-in` without a cookie did not run | SEC-APP-18 | depends on Next.js action routing for actions that skip the rule |
 
 ## 5. Recommendations (all four ACCEPTED by the Chief Architect, 28 Oct 2026, ADR-014)
 

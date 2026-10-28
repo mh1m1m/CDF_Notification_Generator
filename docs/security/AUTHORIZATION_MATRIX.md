@@ -83,6 +83,7 @@ answer for an unknown id (SEC-DB-19).
 | Sign-in flag off / absent / any value other than `enabled` | sign-in refused | A | SEC-APP-06 |
 | Portfolio, My Work, Notification Center | lists and counts only authorised rows; page size capped | A, P | SEC-APP-07 |
 | Notification Operations Center (`/notifications`) for **INV-R** (ruling D6, below) | not offered: absent from navigation; the route gives the same 404-equivalent as an unknown route; investigators use the case Notifications tab of cases they can access | A (+ P on every row in any case) | SEC-APP-17 |
+| SEC-APP-18 | Every exported Server Action, called by action id without a session, with an expired or foreign-secret cookie, and with another persona's session, changes nothing and returns the generic answer; also called through the public `/sign-in` path | TM-E5 |
 | Security headers | CSP (`frame-ancestors 'none'`, no `unsafe-eval`), `X-Content-Type-Options`, `Referrer-Policy`, HSTS, no `X-Powered-By` | A (proxy.ts) | SEC-APP-08 |
 | Server Actions | cross-origin `Origin` refused; GET cannot change state | A (Next.js) | SEC-APP-09 |
 | Errors | generic message + correlation id; no stack, SQL text, constraint or role name | A | SEC-APP-10 |
