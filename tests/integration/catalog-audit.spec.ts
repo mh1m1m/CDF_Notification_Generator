@@ -6,7 +6,18 @@ import type postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Tx } from "@/lib/db/security-context";
 import { clusterAvailable, PRIMARY_ADMIN_URL } from "./support/clusters";
-import { adminClient, appClient, asOwner, asPersona, identitySeedPresent, PERSONA } from "./support/context";
+import {
+  adminClient,
+  appClient,
+  asOwner,
+  asPersona,
+  asRaw,
+  claimsText,
+  CORRELATION,
+  identitySeedPresent,
+  PERSONA,
+  WORKSPACE,
+} from "./support/context";
 
 const available = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
 const seeded = available && (await identitySeedPresent(adminClient()));
@@ -42,7 +53,7 @@ const DEFINER_ALLOWED = new Set([
 
 /** Functions the request role must never execute. */
 const OWNER_ONLY = [
-  "_append_audit(text, text, uuid, uuid, jsonb, uuid)",
+  "_append_audit(text, text, uuid, uuid, jsonb)",
   "_claims_hmac(bytea)",
   "_verified_claims()",
   "_claim_uuid(text)",
@@ -241,6 +252,48 @@ describe.skipIf(!seeded)("catalog invariants and the audit ledger", () => {
       });
       expect(result).not.toBeNull();
       expect(result!.row).toMatchObject({ is_valid: false, first_broken_seq: result!.next });
+    });
+
+    it("takes the correlation id from the verified claims only; there is no argument to override it", async () => {
+      const appendAndRead = async (tx: Tx) => {
+        const [appended] = await tx<{ id: string }[]>`
+          select cdf_notifications_v13._append_audit('TEST_CORRELATION', 'test', null, null) as id`;
+        const [row] = await tx<
+          { correlation_id: string | null; actor_persona_id: string | null; workspace_id: string | null }[]
+        >`
+          select a.correlation_id, a.actor_persona_id, a.workspace_id
+            from cdf_notifications_v13.audit_event a where a.id = ${appended!.id}`;
+        return row;
+      };
+      const withClaims = await asRaw(
+        admin,
+        { claims: claimsText(PERSONA.alpha, WORKSPACE.SECRETARIAT), mac: "valid" },
+        async (tx) => {
+          await tx.unsafe("reset role");
+          await tx.unsafe("set local role cdf_v13_owner");
+          return appendAndRead(tx);
+        },
+      );
+      expect(withClaims).toEqual({
+        correlation_id: CORRELATION,
+        actor_persona_id: PERSONA.alpha,
+        workspace_id: WORKSPACE.SECRETARIAT,
+      });
+      expect(await asOwner(admin, appendAndRead)).toEqual({
+        correlation_id: null,
+        actor_persona_id: null,
+        workspace_id: null,
+      });
+      expect(
+        await codeOf(
+          asOwner(
+            admin,
+            (tx) =>
+              tx`select cdf_notifications_v13._append_audit('TEST_CORRELATION', 'test', null, null, '{}'::jsonb,
+                 '6f1c2a9e-3b7d-4c1e-9a2f-0d8e7b6a5c42'::uuid)`,
+          ),
+        ),
+      ).toBe("42883");
     });
 
     it("refuses to append outside READ COMMITTED (V1500)", async () => {

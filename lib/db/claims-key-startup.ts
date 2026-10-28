@@ -7,7 +7,9 @@
 //     timeout): logs ONE line with a code only (never the URL, the key, the secret or an error message) and returns.
 //     Requests then fail closed: their claims MAC does not verify, so they see nothing, and withRequestContext
 //     retries the install on the next request.
-// Rotation after a mismatch: database/hosted/reset_claims_key.sql (Chief Architect), then redeploy.
+// Rotation: set the new V13_SESSION_SECRET and redeploy first, then run database/hosted/reset_claims_key.sql
+// (Chief Architect); the next request installs the new key. The reverse order lets the old deployment re-install the
+// old key on a cold start.
 //
 // PRODUCTION_SUBSTITUTION_REQUIRED: production holds the key in CDF KMS; there is no install from the application.
 import "server-only";

@@ -3,13 +3,16 @@
 --
 -- Run as the project administrator on the Chief Architect's procedure only. It deletes the one row of
 -- cdf_notifications_v13.claims_key and writes an audit event in the same transaction; it touches nothing else.
--- Effect: from commit until the application installs the new key (api_install_claims_key), every request resolves
--- to "no claims" and sees nothing (fail closed). Then rotate V13_SESSION_SECRET in Vercel and redeploy; the server
--- installs the key derived from the new secret at start (instrumentation.ts), and the first request retries if that
--- failed.
+-- Rotation order (never the other way round):
+--   1. Set the new V13_SESSION_SECRET in Vercel and redeploy. The new deployment logs CLAIMS_KEY_MISMATCH at start
+--      and its requests fail closed (they see nothing) while the old key is still installed.
+--   2. Then run this script. From its commit, the next request of the new deployment installs the key derived from
+--      the new secret (withRequestContext retries the install).
+-- Running it before the redeploy would let a cold start of the old deployment re-install the old key.
 
 begin;
 set local lock_timeout = '5s';
+set local search_path = '';
 set local role cdf_v13_owner;
 
 do $reset$
