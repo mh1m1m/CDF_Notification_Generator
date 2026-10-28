@@ -21,8 +21,10 @@ on it) · **SUPERSEDED**.
 | [ADR-010](#adr-010--notification-dispatch-through-a-transactional-outbox) | Notification dispatch through a transactional outbox | ACCEPTED (scheduler: owner decision) | Chief Architect |
 | [ADR-011](#adr-011--append-only-hash-chained-audit-ledger) | Append-only hash-chained audit ledger | ACCEPTED | Chief Architect |
 | [ADR-012](#adr-012--v13-inside-the-shared-cdf-gc-review-supabase-project) | V13 inside the shared CDF GC Review Supabase project | ACCEPTED | Owner decision, 28 Oct 2026 00:29 UTC |
+| [ADR-013](#adr-013--ui-localisation-and-dom-evidence-conventions) | UI, localisation and DOM evidence conventions | ACCEPTED | Chief Architect, on UX, FE, PROC and QA requests |
+| [ADR-014](#adr-014--identity-and-request-claims-contract-with-authenticated-claims) | Identity and request-claims contract, with authenticated claims | ACCEPTED | Chief Architect, on SEC finding TM-S4 |
 
-Next free number: **ADR-013**.
+Next free number: **ADR-015**.
 
 ---
 
@@ -204,3 +206,81 @@ Next free number: **ADR-013**.
 - **Consequences.** Residual risks that cannot be removed while one database is shared are listed in the plan §9
   (catalog metadata visibility, shared CPU/memory/connections, shared administrator, project-level settings).
   `PRODUCTION_SUBSTITUTION_REQUIRED`: a dedicated database in the CDF Alibaba Cloud Riyadh RDS PostgreSQL instance.
+
+## ADR-013 — UI, localisation and DOM evidence conventions
+
+- **Status:** ACCEPTED. Chief Architect, 28 Oct 2026, answering the questions of UX (styling, strings, component
+  tests, icons), FE and PROC (string namespaces) and QA (attribute contracts, `docs/qa/TEST_ARCHITECTURE.md` §5).
+- **Decision.**
+  - **Styling.** Tailwind CSS 4 (`tailwindcss` with `@tailwindcss/postcss`, the only CSS tooling). Design tokens are
+    CSS custom properties in `styles/tokens.css`, exposed through `@theme` (ADR-009; UX owns `styles/**`). Logical CSS
+    properties only (lint-checked). UX ruling D1 applies: square corners for buttons, cards, inputs and tables (CDF
+    Design Guide pp. 33, 37), pill shape only for status chips.
+  - **Icons.** Inline SVG React components in `components/icons`; no icon library; decorative icons are `aria-hidden`.
+  - **Strings.** One folder per namespace: `lib/i18n/<namespace>/ar.ts` exports a flat `as const` object and
+    `lib/i18n/<namespace>/en.ts` is typed `Record<keyof typeof ar, string>`, so a missing or extra English key fails
+    typecheck. Namespace ids are camelCase: `common`, `shell` (UX); `status`, `journeys` (PROC); `auth`, `portfolio`,
+    `case`, `myWork`, `notifications`, `workspaces` (FE); `persona` (ARCH). `lib/i18n/index.ts` (ARCH) registers all of
+    them; keys are addressed `<namespace>.<key>`. Arabic is the default locale (`dir="rtl"`). A new namespace goes
+    through ARCH.
+  - **Component tests.** `react-dom/server` `renderToStaticMarkup` in Vitest's node environment
+    (`tests/unit/**/*.spec.{ts,tsx}`); interaction behaviour is tested with Playwright. No Testing Library or jsdom
+    unless a later PR shows the need, with its reason in `docs/DEPENDENCIES.md`.
+  - **DOM evidence attributes** (the contract the Case Context Sentinel and the Procedural Truth Inspector read):
+    - every element that owns a case's content (case workspace root, portfolio row, My Work task row, notification
+      row, preview) carries `data-case-id` (the case UUID) and `data-case-ref` (its display number); the case workspace
+      root also carries `data-testid="case-workspace"`;
+    - the workspace switcher carries `data-testid="workspace-switcher"` and `data-workspace-code`;
+    - every count shown carries `data-testid="count-<name>"` and `data-count`;
+    - every StatusBadge, Timeline entry and progress mark carries `data-epistemic` (`recorded` · `expected` ·
+      `conditional` · `awaiting_approval`), `data-event-id` (required exactly when `recorded`), `data-status-kind` and
+      `data-status`; the component's type makes a `recorded` badge without an event id impossible.
+
+    These attributes repeat only what the element already shows to a viewer who may see it. They are
+    production-safe and never a test bypass.
+- **Consequences.** The Sentinel enforces: inside an element with `data-case-id=X`, no descendant carries another
+  `data-case-id` and no text contains another case's reference. A component that renders case content without these
+  attributes fails review.
+
+## ADR-014 — Identity and request-claims contract, with authenticated claims
+
+- **Status:** ACCEPTED. Chief Architect, 28 Oct 2026, on SEC finding TM-S4 (HIGH) and recommendations SEC-REC-01..04
+  (`docs/security/THREAT_MODEL.md`), aligned with DB's migration 0001 draft. Extends ADR-003 and ADR-004.
+- **Context.** `request.v13.claims` is an ordinary setting: any SQL running inside the request transaction (for
+  example through an injection in the BFF) can overwrite it, or `reset role`, and act as any persona. The foundation
+  and DB's draft also used different claim shapes.
+- **Decision.**
+  1. **Authority.** The database is the authority for personas, workspaces, memberships (persona × workspace × role,
+     with a validity window) and roles. `lib/contracts` mirrors the seed's fixed ids (personas `0b…`, workspaces
+     `0a…`) and memberships, for sign-in and the application pre-check. A unit test pins the mirror; a DB integration
+     test compares it with the seed.
+  2. **Session.** The cookie (ADR-004) carries `persona_id` and `active_workspace` (its code). A workspace switch
+     re-issues the cookie and is allowed only to a workspace in which the persona holds a membership; the database
+     re-checks the membership on every request. The negative-test personas (expired membership, inactive persona)
+     exist in the seed and the registry but are not offered on the sign-in page.
+  3. **Claims.** Each request transaction sets `request.v13.claims` to exactly
+     `{"v":1,"persona_id":"<uuid>","workspace_id":"<uuid>","correlation_id":"<uuid>"}`. Roles are never sent; the
+     database derives them from active memberships.
+  4. **Claims MAC (SEC-REC-01).** The server also sets `request.v13.claims_mac` = base64url(HMAC-SHA256(K, claims ‖
+     "|" ‖ a value unique to the transaction)), for example `pg_current_xact_id()` read in the same transaction.
+     K = HKDF-SHA256 of `V13_SESSION_SECRET` with info `cdf-v13/request-claims/v1`, so no new secret exists. The
+     database keeps K in an owner-only table (RLS on, deny-all, no grants). The claims helpers (`SECURITY DEFINER`,
+     owned by `cdf_v13_owner`, core SQL only, no extension) recompute the MAC and resolve to NULL on any mismatch, so
+     a forged or replayed claim grants nothing. The application installs K through one command that succeeds only
+     while no key exists (idempotent for the same key; audited without key material). Rotation: the Chief Architect
+     clears the key with a reviewed hosted script and the application installs the new one.
+  5. **Role check (SEC-REC-02).** Policies also require `current_user = 'cdf_v13_user'`; `cdf_v13_app` holds no
+     privilege of its own.
+  6. **Audit chain (SEC-REC-03).** `verify_audit_chain()` runs after every hosted migration and in the staging checks;
+     the hosted isolation checks gain a check that the audit trigger is enabled.
+  7. **Deployments (SEC-REC-04).** Vercel Git fork protection stays on, and the database URL and session secret are
+     scoped to the `develop` branch preview only, so previews of forked pull requests never receive them.
+- **Consequences.**
+  - Built by DB in V13-DB-001 (migration 0001 and `lib/db/security-context.ts`) and reviewed by SEC. Until it is
+    merged, TM-S4 stays HIGH and the control is parameterised SQL only (no `unsafe` calls outside migration tooling,
+    lint-enforced).
+  - Residual risk: an injection that ran before the first key install could plant its own key; the real application's
+    MACs would then fail and every request would see nothing, so the plant is detected at once. Reading the
+    transaction value costs one extra round trip per request.
+  - `PRODUCTION_SUBSTITUTION_REQUIRED`: the CDF corporate IdP issues signed tokens, and the ASP.NET Core API on CDF
+    Alibaba Cloud Riyadh sets the database context with a key held in KMS.

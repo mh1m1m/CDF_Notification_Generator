@@ -1,0 +1,60 @@
+{
+  "name": "cdf-v13-enterprise",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CDF Case & Notification Intelligence Platform — V13 Enterprise: synthetic-data reference implementation (not CDF production)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12.0 <23",
+    "pnpm": ">=10.28.0 <11"
+  },
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint . --max-warnings=0 && node scripts/ci/check-logical-css.mjs && node scripts/ci/check-env-example.mjs",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --project unit",
+    "test:db": "vitest run --project integration",
+    "test:e2e": "playwright test",
+    "test:e2e:staging": "playwright test --project=staging",
+    "db:local": "node scripts/db/local-pg.mjs",
+    "db:reset": "node scripts/db/reset-local.mjs",
+    "db:migrate": "node scripts/db/migrate.mjs",
+    "db:lint": "node scripts/db/lint-migrations.mjs",
+    "db:hosted-bundle": "node scripts/db/hosted-bundle.mjs"
+  },
+  "dependencies": {
+    "jose": "6.2.12",
+    "next": "16.4.2",
+    "postgres": "3.4.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-hook-form": "7.91.0",
+    "server-only": "0.0.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@eslint/js": "9.39.5",
+    "@next/eslint-plugin-next": "16.4.0",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "prettier": "3.9.9",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
+  }
+}
