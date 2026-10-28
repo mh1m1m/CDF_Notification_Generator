@@ -95,7 +95,7 @@ Phase A runs now. Phase B starts when V13-ARCH-001 is merged into `develop`. Pha
 | -- | ---- | ---- | ---------- | ---------- | ------ |
 | V13-ARCH-005 | Apply each accepted migration to the hosted schema with the plan's procedure; update evidence | ARCH | each DB PR | fingerprint unchanged; isolation PASS; advisors clean | NOT_STARTED |
 | V13-QA-006 | Staging verification (UXQA-16, Gate J): smoke, case isolation and Scenarios A–E against the staging preview | QA + ARCH | ARCH-003, QA-002 | results recorded with deployment id and commit | NOT_STARTED |
-| V13-ARCH-006 | E02 conceptual architecture | ARCH | — | `docs/architecture/CONCEPTUAL_ARCHITECTURE.md` | NOT_STARTED |
+| V13-ARCH-006 | E02 conceptual architecture | ARCH | — | `docs/architecture/CONCEPTUAL_ARCHITECTURE.md`; SEC reviews §5 (authorisation) | IN_REVIEW |
 | V13-ARCH-007 | M1 milestone PR `develop` → `main` for the owner's merge, with gate evidence | ARCH | all M1 tasks | every M1 gate reported as measured | NOT_STARTED |
 
 ## 4. Later milestones
