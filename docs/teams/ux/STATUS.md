@@ -26,7 +26,7 @@ Updated: 2026-10-28 · Branch: `docs/V13-UX-004-ia-and-screen-specs` · Base: `d
 - ARCH answered 28 Oct (ADR-013): Tailwind 4; i18n `lib/i18n/<ns>/{ar,en}.ts`; `renderToStaticMarkup` tests; inline SVG
   icons. Waiting for the V13-ARCH-001 PR head to start tokens.css and the shell.
 - ARCH/FE: a component gallery route for QA's axe and screenshot runs (PROPOSAL, DESIGN_SYSTEM.md §3.5).
-- SEC (routed by ARCH): confirm whether investigators see the Notification Operations Center (D6).
+- SEC ruled D6 (28 Oct): investigators use the case Notifications tab only; recorded.
 - PROC: e-mail token snapshot agreed (DESIGN_SYSTEM.md §6 D9).
 - Owner (SOURCE_REQUIRED, via ARCH): brand Arabic font files and licence (OI-005); brand confirmation of logo position
   in English (D2).

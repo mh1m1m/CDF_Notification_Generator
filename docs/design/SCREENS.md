@@ -118,7 +118,7 @@ byte-identical `not-found-state` markup apart from the correlation id.
 
 **Purpose.** Operational view of notifications across the cases the persona may see: what was drafted, approved,
 sent, failed or superseded.
-**Who.** Committee Secretary (operate), Governance Officer (read). Not in the investigator's navigation (PROPOSAL).
+**Who.** Committee Secretary (operate), Governance Officer (read). Not in the investigator's navigation; for an investigator the route answers like an unknown route (RULED by SEC, D6, test SEC-APP-17).
 
 **Layout.** `h1` "مركز عمليات الإشعارات". FilterBar (lifecycle status, template, case number, date range). DataTable.
 

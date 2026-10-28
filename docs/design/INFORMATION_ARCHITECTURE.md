@@ -89,8 +89,9 @@ list is a convenience, never an authorisation (pages re-check).
 | Case Portfolio · محفظة القضايا | ✓ | ✓ | ✓ |
 | Notification Operations Center · مركز عمليات الإشعارات | ✓ | — (case tab only) | ✓ (read) |
 
-PROPOSAL (FE + SEC to confirm against the authorisation matrix V13-SEC-001): the investigator reaches notifications
-only through the Notifications tab of a case assigned to them.
+RULED (SEC, authorization matrix §7, test SEC-APP-17): in M1 the investigator reaches notifications only through the
+Notifications tab of a case assigned to them; `/notifications` is not in their navigation and, for them, answers like
+an unknown route (the shared not-found state). RLS still filters every row (defence in depth).
 
 Counts beside an area show only the persona's own items that need action (e.g. open tasks), never a number of cases
 (PLT `CDFNavItem.count` rule; avoids leaking portfolio size).

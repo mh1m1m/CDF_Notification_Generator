@@ -214,7 +214,7 @@ full-text `title` or a visible expansion, never for case numbers.
 | D3 | Expected-step outline colour | V13 reference `#878B8F` (3.43:1) → neutral-70 `#5E646B` (5.98:1 on white) | RULING (UX), accessibility |
 | D4 | Arabic brand font | fallback stack, labelled | SOURCE_REQUIRED (OI-005, owner) |
 | D5 | Dark mode in M1 | tokens complete; no theme switch in M1, follows `prefers-color-scheme` | PROPOSAL |
-| D6 | Investigator access to the Notification Operations Center | case tab only | PROPOSAL (SEC matrix) |
+| D6 | Investigator access to the Notification Operations Center | M1: case Notifications tab only; `/notifications` not in their navigation and answers like an unknown route; Secretary and Governance Officer keep it over their authorised cases; RLS still filters every row | RULED (SEC), authorization matrix §7 (PR #2 `a623b60`), test SEC-APP-17 |
 | D7 | Styling technology | Tailwind 4 + `@theme` in `styles/tokens.css` | CLOSED: ARCH, ADR-013 (develop `38dc495`) |
 | D8 | Component test tooling | `react-dom/server` `renderToStaticMarkup` in the node environment, `tests/unit/**/*.spec.{ts,tsx}`; behaviour in Playwright | CLOSED: ARCH, 28 Oct |
 | D9 | E-mail tokens | PROC keeps a frozen e-mail token snapshot in `lib/notifications/render` (literal values for inline e-mail styles); once `styles/tokens.css` exists, a PROC unit test pins every colour the two share to the `tokens.css` value, and e-mail-only tokens stay in PROC's file | AGREED UX + PROC (via ARCH) |
