@@ -97,6 +97,8 @@ describe("rowToCaseSummary", () => {
       records_state: "CLOSED",
       updated_at: "2026-10-28T00:00:00.000Z",
       source_system: "V13_SYNTHETIC",
+      synthetic_title: { ar: "قضية تجريبية 10", en: "Demo case 10" },
+      title_key: null,
     });
   });
 
@@ -104,6 +106,8 @@ describe("rowToCaseSummary", () => {
     ["missing updated_at", { updated_at: null }],
     ["missing source_ref", { source_ref: null }],
     ["missing source_system", { source_system: null }],
+    ["source_ref the database would refuse", { source_ref: "has space" }],
+    ["missing English title", { title_en: "" }],
     ["bad uuid", { id: "1" }],
     ["unknown records state", { records_state: "DELETED" }],
   ])("refuses a row with %s", (_n, extra) => {
