@@ -4,13 +4,13 @@
 -- Runs inside the migration runner's single transaction as the administrator, then acts as cdf_v13_owner so every
 -- object below is owned by the V13 owner role (ADR-012). Creates only new objects inside cdf_notifications_v13.
 --
--- Security model (ADR-003):
---   * The web app logs in as cdf_v13_app and, inside each transaction, runs
---       select set_config('request.v13.claims', '{"persona_id":"<uuid>","workspace_id":"<uuid>"}', true);
---       set local role cdf_v13_user;
---   * The claims are only a request: every helper below re-checks them against the tables (persona exists and is
---     active; the persona holds an active membership in the claimed workspace). A forged or stale claim resolves to
---     NULL, and NULL grants nothing.
+-- Security model (ADR-003, ADR-014):
+--   * The web app logs in as cdf_v13_app and, inside each transaction, sets request.v13.claims (v1 shape),
+--     request.v13.claims_mac (HMAC bound to the transaction id) and the role cdf_v13_user (§3).
+--   * The claims are only a request: every helper verifies the MAC, then re-checks the tables (persona exists and is
+--     active; the persona holds an active membership in the claimed workspace). A forged, replayed or stale claim
+--     resolves to NULL, and NULL grants nothing. Every policy also requires current_user = 'cdf_v13_user'
+--     (SEC-REC-02).
 --   * cdf_v13_user gets SELECT where a policy needs it and EXECUTE on named functions. It never gets INSERT, UPDATE,
 --     DELETE or TRUNCATE on any table; writes happen in api_* SECURITY DEFINER commands (migrations 0003+).
 --
@@ -80,35 +80,149 @@ alter table cdf_notifications_v13.persona                      enable row level 
 alter table cdf_notifications_v13.persona_workspace_membership enable row level security;
 
 -- ---------------------------------------------------------------------------------------------------------------------
--- 3. Claims helpers. SECURITY DEFINER (they read identity tables without recursing through RLS), search_path = '',
---    STABLE, schema-qualified. They never raise on bad input: a malformed claim is treated as "no claim".
+-- 3. Authenticated claims (ADR-014). The server sets, in the request transaction:
+--      request.v13.claims     = {"v":1,"persona_id":"<uuid>","workspace_id":"<uuid>","correlation_id":"<uuid>"}
+--      request.v13.claims_mac = base64url(HMAC-SHA256(K, claims || '|' || pg_current_xact_id()::text)), no padding
+--    K = HKDF-SHA256(V13_SESSION_SECRET, info 'cdf-v13/request-claims/v1'), installed once by
+--    api_install_claims_key. Every helper verifies the MAC first; any mismatch, missing part, extra key, other
+--    version or another transaction's MAC resolves to "no claim" (NULL), and NULL grants nothing. So SQL running as
+--    cdf_v13_user cannot forge or replay a persona: it cannot read K (TM-S4, SEC-REC-01).
+--    Core SQL only (sha256); no pgcrypto, because V13 roles have no USAGE on schema extensions (ADR-012).
 -- ---------------------------------------------------------------------------------------------------------------------
-create function cdf_notifications_v13._claim_uuid(p_key text)
-returns uuid
+create table cdf_notifications_v13.claims_key (
+  key_version  integer     primary key check (key_version = 1),
+  ipad_key     bytea       not null check (length(ipad_key) = 64),
+  opad_key     bytea       not null check (length(opad_key) = 64),
+  key_sha256   bytea       not null check (length(key_sha256) = 32),
+  installed_at timestamptz not null default now()
+);
+alter table cdf_notifications_v13.claims_key enable row level security;
+create policy claims_key_deny_all on cdf_notifications_v13.claims_key
+  as restrictive for all to public using (false) with check (false);
+comment on table cdf_notifications_v13.claims_key is 'HMAC key for request claims (ADR-014), stored as the two padded HMAC keys. Owner only: RLS deny-all, no grants. Never exported, logged or audited. PRODUCTION_SUBSTITUTION_REQUIRED: key held in CDF KMS.';
+
+-- Internal: HMAC-SHA256 with the installed key (RFC 2104 with the pads precomputed at install).
+create function cdf_notifications_v13._claims_hmac(p_message bytea)
+returns bytea
+language sql
+stable
+security definer
+set search_path = ''
+as $fn$
+  select pg_catalog.sha256(k.opad_key || pg_catalog.sha256(k.ipad_key || p_message))
+    from cdf_notifications_v13.claims_key k
+   where k.key_version = 1
+$fn$;
+comment on function cdf_notifications_v13._claims_hmac(bytea) is 'Internal: HMAC-SHA256 under the installed claims key; NULL when no key is installed.';
+
+-- Internal: the verified claims object, or NULL.
+create function cdf_notifications_v13._verified_claims()
+returns jsonb
 language plpgsql
 stable
 security definer
 set search_path = ''
 as $fn$
 declare
-  v_raw  text := pg_catalog.current_setting('request.v13.claims', true);
-  v_text text;
+  v_raw    text := pg_catalog.current_setting('request.v13.claims', true);
+  v_mac    text := pg_catalog.current_setting('request.v13.claims_mac', true);
+  v_json   jsonb;
+  v_expect text;
+  v_uuid   constant text := '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
 begin
-  if v_raw is null or v_raw = '' then
+  if v_raw is null or v_raw = '' or v_mac is null or v_mac = '' or length(v_raw) > 512 then
     return null;
   end if;
-  begin
-    v_text := (v_raw::jsonb) ->> p_key;
-  exception when others then
-    return null;                          -- malformed JSON: no claim
-  end;
-  if v_text is null or v_text !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' then
-    return null;                          -- missing or not a UUID: no claim
+  v_expect := pg_catalog.rtrim(pg_catalog.translate(pg_catalog.encode(cdf_notifications_v13._claims_hmac(
+                pg_catalog.convert_to(v_raw || '|' || pg_catalog.pg_current_xact_id()::text, 'UTF8')), 'base64'),
+                '+/', '-_'), '=');
+  if v_expect is null or v_expect <> v_mac then
+    return null;                                   -- no key, forged, tampered or another transaction's MAC
   end if;
-  return v_text::uuid;
+  begin
+    v_json := v_raw::jsonb;
+  exception when others then
+    return null;
+  end;
+  if jsonb_typeof(v_json) <> 'object'
+     or (select array_agg(k order by k) from jsonb_object_keys(v_json) k)
+        <> array['correlation_id', 'persona_id', 'v', 'workspace_id']
+     or v_json -> 'v' <> '1'::jsonb
+     or coalesce(v_json ->> 'persona_id', '') !~ v_uuid
+     or coalesce(v_json ->> 'workspace_id', '') !~ v_uuid
+     or coalesce(v_json ->> 'correlation_id', '') !~ v_uuid then
+    return null;                                   -- exactly the v1 shape, lower-case UUIDs, nothing else
+  end if;
+  return v_json;
 end
 $fn$;
-comment on function cdf_notifications_v13._claim_uuid(text) is 'Internal: reads one UUID from request.v13.claims (transaction-local). NULL when absent or malformed.';
+comment on function cdf_notifications_v13._verified_claims() is 'Internal: request.v13.claims if its MAC verifies for this transaction and it has exactly the v1 shape (ADR-014); otherwise NULL.';
+
+create function cdf_notifications_v13._claim_uuid(p_key text)
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $fn$
+  select (cdf_notifications_v13._verified_claims() ->> p_key)::uuid
+   where p_key in ('persona_id', 'workspace_id', 'correlation_id')
+$fn$;
+comment on function cdf_notifications_v13._claim_uuid(text) is 'Internal: one UUID from the verified claims; NULL when claims are absent, unverified or malformed.';
+
+create function cdf_notifications_v13.current_correlation_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $fn$
+  select cdf_notifications_v13._claim_uuid('correlation_id')
+$fn$;
+comment on function cdf_notifications_v13.current_correlation_id() is 'Correlation id of the verified claims (written to audit events).';
+
+-- Install K once. Succeeds while no key exists; repeating with the same key is a no-op; any other key is refused.
+-- Audited without key material. Rotation: database/hosted/reset_claims_key.sql (Chief Architect), then install again.
+create function cdf_notifications_v13.api_install_claims_key(p_key bytea)
+returns text
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $fn$
+declare
+  v_existing bytea;
+  v_k        bytea;
+  v_ipad     bytea;
+  v_opad     bytea;
+  i          integer;
+begin
+  if p_key is null or length(p_key) <> 32 then
+    raise exception 'invalid key' using errcode = 'V1422';
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('cdf_notifications_v13'), 2);
+  select k.key_sha256 into v_existing from cdf_notifications_v13.claims_key k where k.key_version = 1;
+  if found then
+    if v_existing = pg_catalog.sha256(p_key) then
+      return 'ALREADY_INSTALLED';
+    end if;
+    raise exception 'a different key is installed' using errcode = 'V1409';
+  end if;
+  v_k := p_key || pg_catalog.decode(repeat('00', 32), 'hex');      -- pad to the 64-byte SHA-256 block
+  v_ipad := v_k;
+  v_opad := v_k;
+  for i in 0 .. 63 loop
+    v_ipad := pg_catalog.set_byte(v_ipad, i, pg_catalog.get_byte(v_k, i) # 54);   -- 0x36
+    v_opad := pg_catalog.set_byte(v_opad, i, pg_catalog.get_byte(v_k, i) # 92);   -- 0x5c
+  end loop;
+  insert into cdf_notifications_v13.claims_key (key_version, ipad_key, opad_key, key_sha256)
+  values (1, v_ipad, v_opad, pg_catalog.sha256(p_key));
+  perform cdf_notifications_v13._append_audit('CLAIMS_KEY_INSTALLED', 'claims_key', null, null,
+    jsonb_build_object('key_version', 1));
+  return 'INSTALLED';
+end
+$fn$;
+comment on function cdf_notifications_v13.api_install_claims_key(bytea) is 'Command: installs the 32-byte claims HMAC key while none exists (ADR-014). Same key again: ALREADY_INSTALLED. Other key: V1409. Audited as CLAIMS_KEY_INSTALLED without key material.';
 
 create function cdf_notifications_v13.current_persona_id()
 returns uuid
@@ -195,7 +309,7 @@ comment on function cdf_notifications_v13._is_colleague(uuid) is 'Internal: the 
 -- Workspaces: only those the persona is an active member of (feeds the Workspace Switcher).
 create policy workspace_select_member on cdf_notifications_v13.workspace
   for select to cdf_v13_user
-  using (exists (
+  using (current_user = 'cdf_v13_user' and exists (
     select 1 from cdf_notifications_v13.persona_workspace_membership m
      where m.persona_id = cdf_notifications_v13.current_persona_id()
        and m.workspace_id = workspace.id
@@ -205,20 +319,37 @@ create policy workspace_select_member on cdf_notifications_v13.workspace
 -- Roles: reference data, visible to any valid persona.
 create policy role_select_signed_in on cdf_notifications_v13.role
   for select to cdf_v13_user
-  using (cdf_notifications_v13.current_persona_id() is not null);
+  using (current_user = 'cdf_v13_user' and cdf_notifications_v13.current_persona_id() is not null);
 
 -- Personas: oneself, and personas holding an active membership in the current workspace (assignee names).
 create policy persona_select_self_or_colleague on cdf_notifications_v13.persona
   for select to cdf_v13_user
-  using (id = cdf_notifications_v13.current_persona_id() or cdf_notifications_v13._is_colleague(id));
+  using (current_user = 'cdf_v13_user'
+         and (id = cdf_notifications_v13.current_persona_id() or cdf_notifications_v13._is_colleague(id)));
 
 -- Memberships: only one's own.
 create policy membership_select_own on cdf_notifications_v13.persona_workspace_membership
   for select to cdf_v13_user
-  using (persona_id = cdf_notifications_v13.current_persona_id());
+  using (current_user = 'cdf_v13_user' and persona_id = cdf_notifications_v13.current_persona_id());
 
-grant select on cdf_notifications_v13.workspace, cdf_notifications_v13.role, cdf_notifications_v13.persona,
+grant select on cdf_notifications_v13.workspace, cdf_notifications_v13.role,
                 cdf_notifications_v13.persona_workspace_membership to cdf_v13_user;
+-- Persona e-mail addresses are not readable by the request role (SEC-DB-27); a persona reads its own via
+-- current_persona().
+grant select (id, code, display_name_ar, display_name_en, is_active) on cdf_notifications_v13.persona to cdf_v13_user;
+
+create function cdf_notifications_v13.current_persona()
+returns table (id uuid, code text, display_name_ar text, display_name_en text, email text)
+language sql
+stable
+security definer
+set search_path = ''
+as $fn$
+  select p.id, p.code, p.display_name_ar, p.display_name_en, p.email
+    from cdf_notifications_v13.persona p
+   where p.id = cdf_notifications_v13.current_persona_id()
+$fn$;
+comment on function cdf_notifications_v13.current_persona() is 'The current persona, including its own e-mail address. No row without verified claims.';
 
 -- ---------------------------------------------------------------------------------------------------------------------
 -- 5. Audit ledger (ADR-011): append-only, hash-chained, serialised in the V13 advisory-lock namespace.
@@ -291,6 +422,7 @@ declare
   v_actor  uuid := cdf_notifications_v13.current_persona_id();
   v_ws     uuid := cdf_notifications_v13.current_workspace_id();
   v_meta   jsonb := coalesce(p_metadata, '{}'::jsonb);
+  v_corr   uuid := coalesce(p_correlation_id, cdf_notifications_v13.current_correlation_id());
 begin
   -- The chain reads the latest committed row; that needs a fresh snapshot per statement.
   if pg_catalog.current_setting('transaction_isolation') <> 'read committed' then
@@ -312,10 +444,10 @@ begin
      metadata, prev_hash, row_hash)
   overriding system value
   values
-    (v_id, v_seq, v_at, v_actor, v_ws, p_action, p_entity_type, p_entity_id, p_case_id, p_correlation_id,
+    (v_id, v_seq, v_at, v_actor, v_ws, p_action, p_entity_type, p_entity_id, p_case_id, v_corr,
      v_meta, v_prev,
      cdf_notifications_v13._audit_row_hash(v_seq, v_at, v_actor, v_ws, p_action, p_entity_type, p_entity_id,
-                                           p_case_id, p_correlation_id, v_meta, v_prev));
+                                           p_case_id, v_corr, v_meta, v_prev));
   return v_id;
 end
 $fn$;
@@ -387,6 +519,9 @@ grant execute on function cdf_notifications_v13.current_persona_id()   to cdf_v1
 grant execute on function cdf_notifications_v13.current_workspace_id() to cdf_v13_user;
 grant execute on function cdf_notifications_v13.current_role_codes()   to cdf_v13_user;
 grant execute on function cdf_notifications_v13.has_role(text)         to cdf_v13_user;
+grant execute on function cdf_notifications_v13.current_persona()      to cdf_v13_user;
+grant execute on function cdf_notifications_v13.current_correlation_id() to cdf_v13_user;
+grant execute on function cdf_notifications_v13.api_install_claims_key(bytea) to cdf_v13_user;
 -- Policies evaluated for cdf_v13_user call these internal helpers, so the request role needs EXECUTE on them too.
 grant execute on function cdf_notifications_v13._is_colleague(uuid)    to cdf_v13_user;
 

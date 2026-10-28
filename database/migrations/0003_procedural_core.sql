@@ -66,9 +66,9 @@ alter table cdf_notifications_v13.procedural_event enable row level security;
 alter table cdf_notifications_v13.task             enable row level security;
 
 create policy procedural_event_select on cdf_notifications_v13.procedural_event
-  for select to cdf_v13_user using (cdf_notifications_v13.can_access_case(case_id));
+  for select to cdf_v13_user using (current_user = 'cdf_v13_user' and cdf_notifications_v13.can_access_case(case_id));
 create policy task_select on cdf_notifications_v13.task
-  for select to cdf_v13_user using (cdf_notifications_v13.can_access_case(case_id));
+  for select to cdf_v13_user using (current_user = 'cdf_v13_user' and cdf_notifications_v13.can_access_case(case_id));
 
 grant select on cdf_notifications_v13.procedural_event, cdf_notifications_v13.task to cdf_v13_user;
 

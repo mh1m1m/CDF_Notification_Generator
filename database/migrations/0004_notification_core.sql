@@ -138,15 +138,15 @@ alter table cdf_notifications_v13.notification_event            enable row level
 alter table cdf_notifications_v13.dispatch_outbox               enable row level security;
 
 create policy notification_recipient_class_select on cdf_notifications_v13.notification_recipient_class
-  for select to cdf_v13_user using (cdf_notifications_v13.current_persona_id() is not null);
+  for select to cdf_v13_user using (current_user = 'cdf_v13_user' and cdf_notifications_v13.current_persona_id() is not null);
 create policy notification_template_select on cdf_notifications_v13.notification_template
-  for select to cdf_v13_user using (cdf_notifications_v13.current_workspace_id() is not null);
+  for select to cdf_v13_user using (current_user = 'cdf_v13_user' and cdf_notifications_v13.current_workspace_id() is not null);
 create policy notification_template_version_select on cdf_notifications_v13.notification_template_version
-  for select to cdf_v13_user using (cdf_notifications_v13.current_workspace_id() is not null);
+  for select to cdf_v13_user using (current_user = 'cdf_v13_user' and cdf_notifications_v13.current_workspace_id() is not null);
 create policy notification_select on cdf_notifications_v13.notification
-  for select to cdf_v13_user using (cdf_notifications_v13.can_access_case(case_id));
+  for select to cdf_v13_user using (current_user = 'cdf_v13_user' and cdf_notifications_v13.can_access_case(case_id));
 create policy notification_event_select on cdf_notifications_v13.notification_event
-  for select to cdf_v13_user using (cdf_notifications_v13.can_access_case(case_id));
+  for select to cdf_v13_user using (current_user = 'cdf_v13_user' and cdf_notifications_v13.can_access_case(case_id));
 create policy dispatch_outbox_deny_all on cdf_notifications_v13.dispatch_outbox
   as restrictive for all to public using (false) with check (false);
 

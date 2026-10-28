@@ -123,12 +123,12 @@ $fn$;
 comment on function cdf_notifications_v13.can_access_case(uuid) is 'The single case-access rule: valid persona and workspace, case visible in that workspace, and (not restricted or assigned). False for unknown ids, exactly as for unauthorised ones.';
 
 create policy case_record_select on cdf_notifications_v13.case_record
-  for select to cdf_v13_user using (cdf_notifications_v13.can_access_case(id));
+  for select to cdf_v13_user using (current_user = 'cdf_v13_user' and cdf_notifications_v13.can_access_case(id));
 create policy case_workspace_visibility_select on cdf_notifications_v13.case_workspace_visibility
   for select to cdf_v13_user
-  using (workspace_id = cdf_notifications_v13.current_workspace_id() and cdf_notifications_v13.can_access_case(case_id));
+  using (current_user = 'cdf_v13_user' and workspace_id = cdf_notifications_v13.current_workspace_id() and cdf_notifications_v13.can_access_case(case_id));
 create policy case_assignment_select on cdf_notifications_v13.case_assignment
-  for select to cdf_v13_user using (cdf_notifications_v13.can_access_case(case_id));
+  for select to cdf_v13_user using (current_user = 'cdf_v13_user' and cdf_notifications_v13.can_access_case(case_id));
 
 grant select on cdf_notifications_v13.case_record, cdf_notifications_v13.case_workspace_visibility,
                 cdf_notifications_v13.case_assignment to cdf_v13_user;
