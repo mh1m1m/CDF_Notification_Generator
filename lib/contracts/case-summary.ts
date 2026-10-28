@@ -1,0 +1,60 @@
+// Case summary: the list/detail header shape every case source returns. Synthetic data only.
+import { z } from "zod";
+import { CaseIdSchema } from "./ids";
+
+/** Display identifier of a synthetic case. Never a key: lookups always use case_id and are authorised. */
+export const CASE_NUMBER_PATTERN = /^CDF-DEMO-2026-\d{4}$/;
+
+/** Upper-snake code, e.g. a lifecycle stage or source system. The stage catalogue belongs to lib/domain (PROC). */
+const CODE = /^[A-Z][A-Z0-9_]{1,63}$/;
+/** i18n message key "<namespace>.<key>", dotted camelCase segments, e.g. "case.title.procurementReview" (lib/i18n). */
+export const I18N_KEY_PATTERN = /^[a-z][A-Za-z0-9]*(\.[a-z][A-Za-z0-9]*)+$/;
+// Printable text without control characters (synthetic titles and source references).
+// eslint-disable-next-line no-control-regex
+const NO_CONTROL_CHARS = /^[^\u0000-\u001f\u007f]*$/;
+
+export const RecordsStateSchema = z.enum(["ACTIVE", "CLOSED"]);
+export type RecordsState = z.infer<typeof RecordsStateSchema>;
+
+export const LifecycleStageSchema = z.string().regex(CODE, "must be an upper-snake stage code");
+export type LifecycleStage = z.infer<typeof LifecycleStageSchema>;
+
+export const SourceSystemSchema = z.string().regex(CODE, "must be an upper-snake source system code");
+
+export const CaseSummarySchema = z
+  .strictObject({
+    case_id: CaseIdSchema,
+    case_number: z.string().regex(CASE_NUMBER_PATTERN, "must look like CDF-DEMO-2026-0001"),
+    /** Exactly one of title_key (dictionary key) or synthetic_title (synthetic free text) is set. */
+    title_key: z.string().regex(I18N_KEY_PATTERN, "must be an i18n key").nullable(),
+    synthetic_title: z.string().trim().min(1).max(200).regex(NO_CONTROL_CHARS).nullable(),
+    lifecycle_stage: LifecycleStageSchema,
+    is_restricted: z.boolean(),
+    records_state: RecordsStateSchema,
+    source_system: SourceSystemSchema,
+    source_ref: z.string().min(1).max(200).regex(NO_CONTROL_CHARS),
+    updated_at: z.iso.datetime({ offset: true }),
+  })
+  .refine((c) => (c.title_key === null) !== (c.synthetic_title === null), {
+    message: "exactly one of title_key or synthetic_title must be set",
+    path: ["title_key"],
+  });
+export type CaseSummary = z.infer<typeof CaseSummarySchema>;
+
+/** Filter for listing cases. Authorisation is applied by the adapter before filtering, counting or paging. */
+export const CaseListFilterSchema = z.strictObject({
+  records_state: RecordsStateSchema.optional(),
+  lifecycle_stage: LifecycleStageSchema.optional(),
+  /** Free-text match on case number or title; applied only to cases the identity may already see. */
+  text: z.string().trim().min(1).max(100).regex(NO_CONTROL_CHARS).optional(),
+  limit: z.number().int().min(1).max(100).default(25),
+  /** Opaque cursor returned by the previous page. */
+  cursor: z.string().min(1).max(512).optional(),
+});
+export type CaseListFilter = z.input<typeof CaseListFilterSchema>;
+
+/** One page of authorised cases. There is deliberately no total count (counts must not leak unauthorised cases). */
+export interface CaseListPage {
+  readonly items: readonly CaseSummary[];
+  readonly next_cursor: string | null;
+}
