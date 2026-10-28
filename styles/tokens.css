@@ -1,0 +1,284 @@
+/*
+ * CDF design tokens for V13 Enterprise — the single token source (ADR-009, ADR-013). Owned by UX.
+ * SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.
+ *
+ * Lineage: CDF Design Guide → CDF_Design_Tokens.json v1.1 → the case platform's AA-adjusted tokens.css
+ * (mh1m1m/cdf_case_management packages/ui/src/tokens.css at feffabe) → this file. Copied values are pinned to the
+ * platform by tests/unit/components/tokens.spec.ts; V13 additions are marked "V13". docs/design/DESIGN_SYSTEM.md §1.
+ *
+ * Only this file holds colour literals. Components and globals.css use the semantic tokens (or the Tailwind
+ * utilities generated from them below).
+ *
+ * BRAND FONT SOURCE_REQUIRED (OI-005): the Arabic brand font is not supplied; the fallback stacks below are in use.
+ *
+ * Theme: light by default; dark follows prefers-color-scheme unless <html data-theme="light">, and
+ * <html data-theme="dark"> forces dark. The two dark blocks must stay identical (tested).
+ */
+:root {
+  /* primitives (TOK v1.1, immutable) */
+  --cdf-cinder-black: #101820;
+  --cdf-warm-gray: #d7d2cb;
+  --cdf-powder-blue: #bbdde6;
+  --cdf-wistful-blue: #a5b0e3;
+  --cdf-chardonnay-yellow: #fdd086;
+  --cdf-light-salmon: #fa9370;
+  --cdf-jetstream-green: #b5e1c4;
+  --cdf-neutral-dark: #19212b;
+  --cdf-neutral-90: #303841;
+  --cdf-neutral-70: #5e646b;
+  --cdf-neutral-50: #8b9095;
+  --cdf-neutral-30: #babdc0;
+  --cdf-neutral-10: #e8e9ea;
+  --cdf-neutral-5: #f3f4f4;
+  --cdf-white: #ffffff;
+
+  /* semantic: light (platform values) */
+  --cdf-bg: #f3f4f4;
+  --cdf-surface: #ffffff;
+  --cdf-surface-subtle: #f8f8f7;
+  --cdf-text: #101820;
+  --cdf-text-secondary: #5e646b;
+  --cdf-text-muted: #5e646b; /* TOK textMuted #8B9095 fails AA on white for body text; secondary used instead */
+  --cdf-border-control: #5e646b; /* neutral-70: >= 3:1 on every background (WCAG 2.2 1.4.11) */
+  --cdf-border: #d7d2cb; /* decorative dividers only (1.50:1): never the boundary of a control */
+  --cdf-primary: #101820;
+  --cdf-primary-text: #ffffff;
+  --cdf-primary-hover: #303841; /* V13: hover of primary buttons (white text on it 11.6:1) */
+  --cdf-focus: #4b6fff;
+  --cdf-success: #22633d;
+  --cdf-warning: #7a4a00;
+  --cdf-danger: #8a2f1b;
+  --cdf-info: #245667;
+  --cdf-success-bg: #e6f4ea;
+  --cdf-warning-bg: #fdf3df;
+  --cdf-danger-bg: #fbe9e4;
+  --cdf-info-bg: #e5f2f6;
+  --cdf-critical: #8a2f1b;
+  --cdf-critical-text: #ffffff;
+  --cdf-selected-bg: #e5f2f6;
+  --cdf-hover-bg: #f8f8f7;
+  --cdf-pressed-bg: #e8e9ea;
+  --cdf-disabled-bg: #e8e9ea;
+  --cdf-disabled-text: #5e646b;
+  --cdf-surface-elevated: #ffffff;
+  --cdf-table-header-bg: #101820;
+  --cdf-table-header-text: #ffffff;
+  --cdf-indicator-text: #101820;
+  --cdf-indicator-outline: #101820;
+  --cdf-class-internal: #e8e9ea;
+  --cdf-class-restricted: #bbdde6;
+  --cdf-class-confidential: #fdd086;
+  --cdf-class-secret: #fa9370;
+  --cdf-named-access: #ffffff;
+  --cdf-legal-hold: #a5b0e3;
+  --cdf-elevation: 0 8px 24px rgba(16, 24, 32, 0.08);
+  --cdf-overlay: rgba(16, 24, 32, 0.6);
+
+  /* V13: header (DG p. 29: 48 px Warm Gray, Cinder title) and the synthetic-data banner (Chardonnay, Cinder text) */
+  --cdf-header-bg: #d7d2cb;
+  --cdf-header-text: #101820;
+  --cdf-banner-bg: #fdd086;
+  --cdf-banner-text: #101820;
+  /* V13: Layer B (expected / conditional / awaiting approval) outline and text. neutral-70, not the V13 reference
+     #878B8F (3.43:1), so the dashed outline reaches 3:1 on every surface (ruling D3). */
+  --cdf-expected-border: #5e646b;
+  --cdf-expected-text: #5e646b;
+
+  /* shape: DG pp. 33, 37, 42 — square buttons, cards, inputs, tables; pill only for status chips (D1, ADR-013) */
+  --cdf-radius-control: 0;
+  --cdf-radius-pill: 9999px;
+  --cdf-border-hairline: 1px;
+  --cdf-border-strong: 2px;
+
+  /* spacing (TOK scale, px → rem) */
+  --cdf-space-1: 0.25rem;
+  --cdf-space-2: 0.5rem;
+  --cdf-space-3: 0.75rem;
+  --cdf-space-4: 1rem;
+  --cdf-space-5: 1.25rem;
+  --cdf-space-6: 1.5rem;
+  --cdf-space-7: 2rem;
+  --cdf-space-8: 2.5rem;
+  --cdf-space-9: 3rem;
+  --cdf-space-10: 4rem;
+
+  /* type scale (TOK; Body 3 10 px is not used for content: the app floor is Body 2, 12 px) */
+  --cdf-text-display: 2rem;
+  --cdf-text-display-lh: 2.4375rem;
+  --cdf-text-h1: 1.5rem;
+  --cdf-text-h1-lh: 1.8125rem;
+  --cdf-text-h2: 1.25rem;
+  --cdf-text-h2-lh: 1.5rem;
+  --cdf-text-h3: 1rem;
+  --cdf-text-h3-lh: 1.25rem;
+  --cdf-text-body1: 0.875rem;
+  --cdf-text-body2: 0.75rem;
+  --cdf-line-height: 1.6;
+
+  /* fonts — BRAND FONT SOURCE_REQUIRED (OI-005): fallback stacks, nothing downloaded */
+  --cdf-font-ar: "Segoe UI", Tahoma, "Noto Sans Arabic", "Geeza Pro", Arial, sans-serif;
+  --cdf-font-latin: Calibri, Carlito, "Segoe UI", Arial, sans-serif;
+
+  /* motion */
+  --cdf-motion-fast: 120ms;
+  --cdf-motion-standard: 180ms;
+  --cdf-motion-slow: 240ms;
+
+  /* layout */
+  --cdf-header-height: 3rem;
+  --cdf-touch-min: 2.75rem;
+  --cdf-content-max: 80rem;
+  --cdf-focus-width: 3px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --cdf-bg: #101820;
+    --cdf-surface: #19212b;
+    --cdf-surface-subtle: #303841;
+    --cdf-text: #ffffff;
+    --cdf-text-secondary: #d8dadd;
+    --cdf-text-muted: #babdc0;
+    --cdf-border: #46505a;
+    --cdf-border-control: #8b9095;
+    --cdf-primary: #ffffff;
+    --cdf-primary-text: #101820;
+    --cdf-primary-hover: #d8dadd;
+    --cdf-focus: #bbdde6;
+    --cdf-success: #b5e1c4;
+    --cdf-warning: #fdd086;
+    --cdf-danger: #ffb19a;
+    --cdf-info: #bbdde6;
+    --cdf-success-bg: #1d3327;
+    --cdf-warning-bg: #3a2f1a;
+    --cdf-danger-bg: #3d241d;
+    --cdf-info-bg: #1b3038;
+    --cdf-critical: #ffb19a;
+    --cdf-critical-text: #101820;
+    --cdf-selected-bg: #1b3038;
+    --cdf-hover-bg: #303841;
+    --cdf-pressed-bg: #46505a;
+    --cdf-disabled-bg: #303841;
+    --cdf-disabled-text: #babdc0;
+    --cdf-surface-elevated: #252e38;
+    --cdf-table-header-bg: #303841;
+    --cdf-table-header-text: #ffffff;
+    --cdf-elevation: 0 10px 28px rgba(0, 0, 0, 0.28);
+    --cdf-overlay: rgba(0, 0, 0, 0.7);
+    --cdf-header-bg: #303841;
+    --cdf-header-text: #ffffff;
+    --cdf-banner-bg: #3a2f1a;
+    --cdf-banner-text: #fdd086;
+    --cdf-expected-border: #8b9095;
+    --cdf-expected-text: #babdc0;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --cdf-bg: #101820;
+  --cdf-surface: #19212b;
+  --cdf-surface-subtle: #303841;
+  --cdf-text: #ffffff;
+  --cdf-text-secondary: #d8dadd;
+  --cdf-text-muted: #babdc0;
+  --cdf-border: #46505a;
+  --cdf-border-control: #8b9095;
+  --cdf-primary: #ffffff;
+  --cdf-primary-text: #101820;
+  --cdf-primary-hover: #d8dadd;
+  --cdf-focus: #bbdde6;
+  --cdf-success: #b5e1c4;
+  --cdf-warning: #fdd086;
+  --cdf-danger: #ffb19a;
+  --cdf-info: #bbdde6;
+  --cdf-success-bg: #1d3327;
+  --cdf-warning-bg: #3a2f1a;
+  --cdf-danger-bg: #3d241d;
+  --cdf-info-bg: #1b3038;
+  --cdf-critical: #ffb19a;
+  --cdf-critical-text: #101820;
+  --cdf-selected-bg: #1b3038;
+  --cdf-hover-bg: #303841;
+  --cdf-pressed-bg: #46505a;
+  --cdf-disabled-bg: #303841;
+  --cdf-disabled-text: #babdc0;
+  --cdf-surface-elevated: #252e38;
+  --cdf-table-header-bg: #303841;
+  --cdf-table-header-text: #ffffff;
+  --cdf-elevation: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --cdf-overlay: rgba(0, 0, 0, 0.7);
+  --cdf-header-bg: #303841;
+  --cdf-header-text: #ffffff;
+  --cdf-banner-bg: #3a2f1a;
+  --cdf-banner-text: #fdd086;
+  --cdf-expected-border: #8b9095;
+  --cdf-expected-text: #babdc0;
+  color-scheme: dark;
+}
+
+/* Tailwind utilities generated from the semantic tokens (bg-cdf-surface, text-cdf-text, rounded-cdf-control, …). */
+@theme inline {
+  --color-cdf-bg: var(--cdf-bg);
+  --color-cdf-surface: var(--cdf-surface);
+  --color-cdf-surface-subtle: var(--cdf-surface-subtle);
+  --color-cdf-surface-elevated: var(--cdf-surface-elevated);
+  --color-cdf-text: var(--cdf-text);
+  --color-cdf-text-secondary: var(--cdf-text-secondary);
+  --color-cdf-text-muted: var(--cdf-text-muted);
+  --color-cdf-border: var(--cdf-border);
+  --color-cdf-border-control: var(--cdf-border-control);
+  --color-cdf-primary: var(--cdf-primary);
+  --color-cdf-primary-text: var(--cdf-primary-text);
+  --color-cdf-primary-hover: var(--cdf-primary-hover);
+  --color-cdf-focus: var(--cdf-focus);
+  --color-cdf-success: var(--cdf-success);
+  --color-cdf-warning: var(--cdf-warning);
+  --color-cdf-danger: var(--cdf-danger);
+  --color-cdf-info: var(--cdf-info);
+  --color-cdf-success-bg: var(--cdf-success-bg);
+  --color-cdf-warning-bg: var(--cdf-warning-bg);
+  --color-cdf-danger-bg: var(--cdf-danger-bg);
+  --color-cdf-info-bg: var(--cdf-info-bg);
+  --color-cdf-critical: var(--cdf-critical);
+  --color-cdf-critical-text: var(--cdf-critical-text);
+  --color-cdf-selected: var(--cdf-selected-bg);
+  --color-cdf-hover: var(--cdf-hover-bg);
+  --color-cdf-pressed: var(--cdf-pressed-bg);
+  --color-cdf-disabled: var(--cdf-disabled-bg);
+  --color-cdf-disabled-text: var(--cdf-disabled-text);
+  --color-cdf-table-header: var(--cdf-table-header-bg);
+  --color-cdf-table-header-text: var(--cdf-table-header-text);
+  --color-cdf-indicator-text: var(--cdf-indicator-text);
+  --color-cdf-indicator-outline: var(--cdf-indicator-outline);
+  --color-cdf-class-internal: var(--cdf-class-internal);
+  --color-cdf-class-restricted: var(--cdf-class-restricted);
+  --color-cdf-class-confidential: var(--cdf-class-confidential);
+  --color-cdf-class-secret: var(--cdf-class-secret);
+  --color-cdf-named-access: var(--cdf-named-access);
+  --color-cdf-legal-hold: var(--cdf-legal-hold);
+  --color-cdf-header: var(--cdf-header-bg);
+  --color-cdf-header-text: var(--cdf-header-text);
+  --color-cdf-banner: var(--cdf-banner-bg);
+  --color-cdf-banner-text: var(--cdf-banner-text);
+  --color-cdf-expected-border: var(--cdf-expected-border);
+  --color-cdf-expected-text: var(--cdf-expected-text);
+  --color-cdf-overlay: var(--cdf-overlay);
+  --radius-cdf-control: var(--cdf-radius-control);
+  --radius-cdf-pill: var(--cdf-radius-pill);
+  --shadow-cdf: var(--cdf-elevation);
+  --font-cdf-ar: var(--cdf-font-ar);
+  --font-cdf-latin: var(--cdf-font-latin);
+  --text-cdf-display: var(--cdf-text-display);
+  --text-cdf-display--line-height: var(--cdf-text-display-lh);
+  --text-cdf-h1: var(--cdf-text-h1);
+  --text-cdf-h1--line-height: var(--cdf-text-h1-lh);
+  --text-cdf-h2: var(--cdf-text-h2);
+  --text-cdf-h2--line-height: var(--cdf-text-h2-lh);
+  --text-cdf-h3: var(--cdf-text-h3);
+  --text-cdf-h3--line-height: var(--cdf-text-h3-lh);
+  --text-cdf-body1: var(--cdf-text-body1);
+  --text-cdf-body2: var(--cdf-text-body2);
+}
