@@ -22,9 +22,10 @@ Updated: 2026-10-28 · Branch: `docs/V13-UX-004-ia-and-screen-specs` · Base: `d
 - None in code. Open design items D1–D8 in `docs/design/DESIGN_SYSTEM.md` §6.
 
 ## Dependencies and requests
-- ARCH (asked 28 Oct): styling technology (Tailwind 4 recommended), i18n file shape for `lib/i18n/{common,shell}`,
-  component test tooling (Testing Library + jsdom, or no-dependency `renderToStaticMarkup`), inline SVG icons.
+- ARCH answered 28 Oct (ADR-013): Tailwind 4; i18n `lib/i18n/<ns>/{ar,en}.ts`; `renderToStaticMarkup` tests; inline SVG
+  icons. Waiting for the V13-ARCH-001 PR head to start tokens.css and the shell.
 - ARCH/FE: a component gallery route for QA's axe and screenshot runs (PROPOSAL, DESIGN_SYSTEM.md §3.5).
-- SEC: confirm whether investigators see the Notification Operations Center (D6).
+- SEC (routed by ARCH): confirm whether investigators see the Notification Operations Center (D6).
+- PROC: e-mail token snapshot agreed (DESIGN_SYSTEM.md §6 D9).
 - Owner (SOURCE_REQUIRED, via ARCH): brand Arabic font files and licence (OI-005); brand confirmation of logo position
   in English (D2).

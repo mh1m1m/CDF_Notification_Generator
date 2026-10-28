@@ -16,7 +16,7 @@ CDF Design Guide (DG, pages)  →  CDF_Design_Tokens.json v1.1 (TOK)  →  case 
 `styles/tokens.css` copies the PLT primitives and semantic layer **unchanged in value** (light and dark), keeps the PLT
 comments that record each AA deviation from TOK, and adds only what V13 needs (§1.3). The copy is deliberate: the PLT
 package is private to its monorepo (`docs/CURRENT_STATE_ARCHITECTURE.md` §5). Drift control: a unit test
-(`tests/unit/components/tokens.test.ts`) pins every copied value to the PLT value at `feffabe`; a change to either side
+(`tests/unit/components/tokens.spec.ts`) pins every copied value to the PLT value at `feffabe`; a change to either side
 must update the pin in the same PR, with a reason.
 
 ### 1.2 Kept from PLT (FACT, values measured there)
@@ -61,13 +61,12 @@ must update the pin in the same PR, with a reason.
 
 ### 1.5 Delivery format
 
-PROPOSAL to ARCH (asked 28 Oct): Tailwind 4 with an `@theme inline` block mapping tokens to utilities, as PLT does, so
-PLT components port with minimal change. Fallback if ARCH chooses plain CSS: the same custom properties with CSS
-Modules; the token names do not change.
+DECIDED (ADR-013): Tailwind 4 with an `@theme inline` block in `styles/tokens.css` mapping tokens to utilities, as PLT
+does, so PLT components port with minimal change; `globals.css` imports it.
 
 ### 1.6 Tests (V13-UX-001 acceptance)
 
-`tests/unit/components/tokens.test.ts` parses `styles/tokens.css` and asserts, for light and dark:
+`tests/unit/components/tokens.spec.ts` parses `styles/tokens.css` and asserts, for light and dark:
 text on bg/surface/surface-subtle ≥ 4.5:1; secondary text ≥ 4.5:1; border-control ≥ 3:1 on every background and tint
 (PLT set); status inks on their tints ≥ 4.5:1; banner and header text ≥ 4.5:1; expected border ≥ 3:1 on surface and
 surface-subtle; focus colour ≥ 3:1 on bg and surface; PLT pin (§1.1). Negative: a test that the decorative border is
@@ -201,5 +200,6 @@ full-text `title` or a visible expansion, never for case numbers.
 | D4 | Arabic brand font | fallback stack, labelled | SOURCE_REQUIRED (OI-005, owner) |
 | D5 | Dark mode in M1 | tokens complete; no theme switch in M1, follows `prefers-color-scheme` | PROPOSAL |
 | D6 | Investigator access to the Notification Operations Center | case tab only | PROPOSAL (SEC matrix) |
-| D7 | Styling technology | Tailwind 4 + `@theme` | asked ARCH, 28 Oct |
-| D8 | Component test tooling | Testing Library + jsdom, or `renderToStaticMarkup` without new dependency | asked ARCH, 28 Oct |
+| D7 | Styling technology | Tailwind 4 + `@theme` in `styles/tokens.css` | CLOSED: ARCH, ADR-013 (develop `38dc495`) |
+| D8 | Component test tooling | `react-dom/server` `renderToStaticMarkup` in the node environment, `tests/unit/**/*.spec.{ts,tsx}`; behaviour in Playwright | CLOSED: ARCH, 28 Oct |
+| D9 | E-mail tokens | PROC keeps a frozen e-mail token snapshot in `lib/notifications/render` (literal values for inline e-mail styles); once `styles/tokens.css` exists, a PROC unit test pins every colour the two share to the `tokens.css` value, and e-mail-only tokens stay in PROC's file | AGREED UX + PROC (via ARCH) |
