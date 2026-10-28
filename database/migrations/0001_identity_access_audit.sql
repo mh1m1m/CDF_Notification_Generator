@@ -409,8 +409,7 @@ comment on function cdf_notifications_v13._audit_row_hash(bigint, timestamptz, u
 
 -- The only way to write the ledger. Not granted to cdf_v13_user: api_* commands (owned by cdf_v13_owner) call it.
 create function cdf_notifications_v13._append_audit(
-  p_action text, p_entity_type text, p_entity_id uuid, p_case_id uuid, p_metadata jsonb default '{}'::jsonb,
-  p_correlation_id uuid default null)
+  p_action text, p_entity_type text, p_entity_id uuid, p_case_id uuid, p_metadata jsonb default '{}'::jsonb)
 returns uuid
 language plpgsql
 volatile
@@ -425,7 +424,8 @@ declare
   v_actor  uuid := cdf_notifications_v13.current_persona_id();
   v_ws     uuid := cdf_notifications_v13.current_workspace_id();
   v_meta   jsonb := coalesce(p_metadata, '{}'::jsonb);
-  v_corr   uuid := coalesce(p_correlation_id, cdf_notifications_v13.current_correlation_id());
+  -- Always the verified claims' correlation id: a caller cannot label an audit row with another request's id.
+  v_corr   uuid := cdf_notifications_v13.current_correlation_id();
 begin
   -- The chain reads the latest committed row; that needs a fresh snapshot per statement.
   if pg_catalog.current_setting('transaction_isolation') <> 'read committed' then
@@ -454,7 +454,7 @@ begin
   return v_id;
 end
 $fn$;
-comment on function cdf_notifications_v13._append_audit(text, text, uuid, uuid, jsonb, uuid) is 'Internal: appends one hash-chained audit row in the caller''s transaction. Callable only by cdf_v13_owner (commands).';
+comment on function cdf_notifications_v13._append_audit(text, text, uuid, uuid, jsonb) is 'Internal: appends one hash-chained audit row in the caller''s transaction; correlation id from the verified claims only. Callable only by cdf_v13_owner (commands).';
 
 -- Append-only enforcement for every role, including the owner.
 create function cdf_notifications_v13._reject_mutation()

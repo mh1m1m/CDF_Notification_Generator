@@ -91,7 +91,7 @@ erDiagram
 | Function | Kind | Granted to `cdf_v13_user` | Purpose |
 | -------- | ---- | ------------------------- | ------- |
 | `_verified_claims()`, `_claims_hmac(bytea)`, `_claim_uuid(text)` | internal definer | no | MAC check and v1 shape (§1) |
-| `current_correlation_id()` | definer, stable | yes | correlation id of the verified claims; default for audit rows |
+| `current_correlation_id()` | definer, stable | yes | correlation id of the verified claims; the only source of an audit row's correlation id (no override argument) |
 | `current_persona()` | definer, stable | yes | own persona row incl. e-mail |
 | `api_install_claims_key(bytea)` | definer command | yes | installs K while none exists; same key → `ALREADY_INSTALLED`; other key → `V1409`; audited `CLAIMS_KEY_INSTALLED` without key material |
 | `current_persona_id()` | definer, stable | yes | claimed persona if it exists and is active, else NULL |
