@@ -1,0 +1,42 @@
+// Next.js configuration — CDF Case & Notification Intelligence Platform, V13 Enterprise.
+// Classification: SYNTHETIC-DATA REFERENCE IMPLEMENTATION (not CDF production).
+import type { NextConfig } from "next";
+import { RESOURCE_CONTENT_SECURITY_POLICY, RESOURCE_PATHS } from "./lib/http/csp";
+
+/**
+ * Security headers sent on every response. Content-Security-Policy is not among them: proxy.ts sets a per-request
+ * nonce policy on every page, and headers() below gives the paths proxy.ts never sees the resource policy, so each
+ * response carries exactly one policy (lib/http/csp.ts).
+ * PRODUCTION_SUBSTITUTION_REQUIRED: in production the CDF gateway (Alibaba Cloud WAF / SLB) terminates TLS and owns
+ * HSTS (including any preload decision); these headers stay as defence in depth.
+ */
+export function securityHeaders(): { key: string; value: string }[] {
+  return [
+    { key: "X-Content-Type-Options", value: "nosniff" },
+    { key: "X-Frame-Options", value: "DENY" },
+    { key: "Referrer-Policy", value: "no-referrer" },
+    { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+    // Browsers ignore HSTS on plain-HTTP responses, so local runs over http://127.0.0.1 are unaffected.
+    { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+    { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+    { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+  ];
+}
+
+const config: NextConfig = {
+  poweredByHeader: false,
+  reactStrictMode: true,
+  // The postgres driver stays a Node.js runtime dependency of the server bundle (lib/db only).
+  serverExternalPackages: ["postgres"],
+  async headers() {
+    return [
+      { source: "/:path*", headers: securityHeaders() },
+      ...RESOURCE_PATHS.map((source) => ({
+        source,
+        headers: [{ key: "Content-Security-Policy", value: RESOURCE_CONTENT_SECURITY_POLICY }],
+      })),
+    ];
+  },
+};
+
+export default config;
