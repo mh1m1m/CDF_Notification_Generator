@@ -291,7 +291,7 @@ function Results({
                     data-case-id={c.case_id}
                     data-case-ref={c.case_number}
                   >
-                    <th scope="row">
+                    <th scope="row" className={styles.nowrap}>
                       <Link href={`/cases/${c.case_id}`} data-testid={`portfolio-open-${c.case_id}`}>
                         <bdi dir="ltr">{c.case_number}</bdi>
                       </Link>
