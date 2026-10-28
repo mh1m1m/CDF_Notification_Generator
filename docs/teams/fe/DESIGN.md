@@ -144,3 +144,11 @@ Fixed ids: personas `0b…0001`–`0004` (0005/0006 are negative-test personas, 
 `0a…0001`–`0003`; Delta holds GOVERNANCE and SECRETARIAT (Scenario C). ADR-013 DOM attributes on every case-owning
 element: `data-case-id`, `data-case-ref`; the switcher carries `data-workspace-code`; counts are `count-<name>` with
 `data-count`. FE starts on the ARCH-001 branch head when ARCH says the PR is up.
+
+## 10. SEC ruling D6 (authorization matrix §7, SEC PR #2 head a623b60; relayed by ARCH 28 Oct 2026 01:56 UTC)
+
+For M1, Investigators get only the case Notifications tab (`/cases/[caseId]/notifications`). `/notifications` is not
+in their navigation, and for an Investigator it answers exactly like an unknown route: same not-found page and status.
+Enforced by the `lib/authz` pre-check (`notification.center.read` denied for INVESTIGATOR), and the database still
+filters every row. Committee Secretary and Governance Officer keep the Center over their authorised cases. FE-006
+ships the route guard with a negative test (Investigator -> same 404 as an unknown path); SEC-APP-17 covers it.
