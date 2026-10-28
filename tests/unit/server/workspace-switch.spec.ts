@@ -7,10 +7,12 @@ import { createSessionToken, SESSION_COOKIE_NAME, verifySessionToken } from "@/l
 import { ctxFor, DELTA, GOVERNANCE, SECRETARY } from "./support/identities";
 
 const jar = new Map<string, string>();
+const written = new Map<string, unknown>();
 const store = {
   get: (name: string) => (jar.has(name) ? { name, value: jar.get(name) as string } : undefined),
-  set: (name: string, value: string) => {
+  set: (name: string, value: string, options?: unknown) => {
     jar.set(name, value);
+    written.set(name, options);
   },
 };
 vi.mock("next/headers", () => ({ cookies: async () => store }));
@@ -45,6 +47,7 @@ async function callSwitch(workspace: unknown): Promise<string> {
 
 beforeEach(() => {
   jar.clear();
+  written.clear();
   vi.resetModules();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
   for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v);
@@ -115,5 +118,20 @@ describe("switchWorkspace Server Action", () => {
     expect(await callSwitch("SECRETARIAT")).toBe("/my-work?switched=1");
     const claims = await verifySessionToken(jar.get(SESSION_COOKIE_NAME), { env });
     expect(claims).toMatchObject({ persona_id: DELTA, active_workspace: "SECRETARIAT" });
+  });
+
+  it("keeps the session's expiry: a switch 3 hours after sign-in leaves 5 hours, cookie included", async () => {
+    const signedInAt = new Date(Date.now() - 3 * 3_600_000);
+    const original = await createSessionToken(
+      { persona_id: DELTA, active_workspace: "GOVERNANCE" },
+      { env, now: signedInAt },
+    );
+    const before = await verifySessionToken(original, { env });
+    jar.set(SESSION_COOKIE_NAME, original);
+    expect(await callSwitch("SECRETARIAT")).toBe("/my-work?switched=1");
+    const after = await verifySessionToken(jar.get(SESSION_COOKIE_NAME), { env });
+    expect(after?.exp).toBe(before?.exp);
+    const maxAge = (written.get(SESSION_COOKIE_NAME) as { maxAge: number }).maxAge;
+    expect(Math.abs(maxAge - 5 * 3600)).toBeLessThanOrEqual(2);
   });
 });
