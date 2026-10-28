@@ -3,4 +3,7 @@ export const ar = {
   "name.secretariat": "أمانة اللجنة",
   "name.investigations": "التحقيقات",
   "name.governance": "الحوكمة",
+  "nav.label": "التنقل في المنصة",
+  "switcher.label": "مساحة العمل",
+  "switcher.submit": "تبديل مساحة العمل",
 } as const;

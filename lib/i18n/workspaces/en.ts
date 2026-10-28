@@ -5,4 +5,7 @@ export const en: Record<keyof typeof ar, string> = {
   "name.secretariat": "Committee Secretariat",
   "name.investigations": "Investigations",
   "name.governance": "Governance",
+  "nav.label": "Platform navigation",
+  "switcher.label": "Workspace",
+  "switcher.submit": "Switch workspace",
 };
