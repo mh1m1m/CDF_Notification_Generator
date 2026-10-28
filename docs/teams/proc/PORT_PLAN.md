@@ -112,11 +112,11 @@ ST-34 lists 12 scenarios whose declared object status is not what the domain fol
 
   | Scenario | Before | After | Rule that required it |
   | -------- | ------ | ----- | --------------------- |
-  | EC-01 | REPORT COMPLETED from `evt-EC-01-08` (a case-code event) | REPORT OPEN from `evt-EC-01-01` (`REPORT_RECEIVED`) | a procedural status comes only from the object's own driving events, never from the case code (charter §3.2; FI rules) |
+  | EC-01 | REPORT COMPLETED from `evt-EC-01-08` (a case-code event) | REPORT OPEN from `evt-EC-01-01` (`REPORT_RECEIVED`) | a procedural object's status comes only from its own driving events (charter §2 domain B; `drivingEvents` in `lib/domain/status`), never from the case code (backlog BL-45) |
   | SUM-01 | REFERRAL IN_PROGRESS from `evt-SUM-01-09` (a case-code event) | no declared status (`null`): no recorded event drives the referral | same |
-  | WIT-01 | HEARING SCHEDULED from `evt-WIT-01-01` (`STATEMENT_REQUESTED`) | no declared status (`null`): a statement request drives a TASK, never a hearing | same |
-  | CF-35 | `AUTHORITY_DECISION_RECORDED` names the recommendation by a bare id | the same event carries the typed reference `{type: RECOMMENDATION, id}`; the fold then gives the declared DECIDED from `evt-CF-35-09` | events name their object by typed reference (charter §3.3) |
-  | CF-37 | DECISION DECIDED from its notice `evt-CF-37-01` | adds `evt-CF-37-00a` `PACKAGE_SUBMITTED_TO_AUTHORITY` and `evt-CF-37-00b` `AUTHORITY_DECISION_RECORDED` (outcome APPROVE) before the notice; DECIDED from `evt-CF-37-00b` | a decision is DECIDED only on its own record, never on its notice (FI-03) |
+  | WIT-01 | HEARING SCHEDULED from `evt-WIT-01-01` (`STATEMENT_REQUESTED`) | no declared status (`null`): a statement request drives a TASK, never a hearing | same (`STATEMENT_REQUESTED` drives TASK → ASSIGNED only) |
+  | CF-35 | `AUTHORITY_DECISION_RECORDED` names the recommendation by a bare id | the same event carries the typed reference `{type: RECOMMENDATION, id}`; the fold then gives the declared DECIDED from `evt-CF-35-09` | the RECOMMENDATION table's decision rows match a typed `payload.target` (backlog BL-45: "a typed reference from the decision event to the recommendation") |
+  | CF-37 | DECISION DECIDED from its notice `evt-CF-37-01` | adds `evt-CF-37-00a` `PACKAGE_SUBMITTED_TO_AUTHORITY` and `evt-CF-37-00b` `AUTHORITY_DECISION_RECORDED` (outcome APPROVE) before the notice; DECIDED from `evt-CF-37-00b` | FI-11: a decision is never inferred from the issue or delivery of its notice |
 
 - **BL-46 (seven journey-bound procedures: CF-15 … CF-19, CF-23b, CF-36)** — ON HOLD (Chief Architect, 28 Oct): new
   PROCEDURE rows change status semantics and need the owner's approval (REQ-GOV-014). The proposal is in
