@@ -37,32 +37,74 @@ function recorder(rows: CaseRow[]) {
   return { calls, adapter: createV13RecordsCaseSource(run) };
 }
 
+/** Rows as the joined portfolio statement returns them: the total on every row, one null row for an empty page. */
+const counted = (total: number | string, rows: CaseRow[]): CaseRow[] =>
+  rows.length === 0
+    ? [{ total, id: null } as unknown as CaseRow]
+    : rows.map((r) => ({ ...r, total }) as unknown as CaseRow);
+
 describe("listCases", () => {
-  it("calls portfolio_page with bound values, inside the identity's context", async () => {
-    const { calls, adapter } = recorder([row(1), row(3)]);
+  it("calls portfolio_count and portfolio_page in one statement with bound values, inside the identity's context", async () => {
+    const { calls, adapter } = recorder(counted("2", [row(1), row(3)]));
     const page = await adapter.listCases(SECRETARY, { limit: 25, text: "x'); drop table t; --" });
     expect(calls).toHaveLength(1);
     const call = calls[0]!;
     expect(call.identity).toBe(SECRETARY);
+    expect(call.text).toMatch(/cdf_notifications_v13\.portfolio_count\(/);
     expect(call.text).toMatch(/cdf_notifications_v13\.portfolio_page\(/);
     expect(call.text).not.toContain("drop table");
-    expect(call.values).toEqual([null, 26, null, null, "x'); drop table t; --"]);
+    const text = "x'); drop table t; --";
+    expect(call.values).toEqual([null, null, text, null, 26, null, null, text]);
     expect(page.items.map((c) => c.case_number)).toEqual(["CDF-DEMO-2026-0001", "CDF-DEMO-2026-0003"]);
     expect(page.next_cursor).toBeNull();
+    expect(page.total).toBe(2);
+  });
+
+  it("passes the same filters to the count and to the page", async () => {
+    const { calls, adapter } = recorder(counted(1, [row(10, { records_state: "CLOSED", stage: "CLOSURE" })]));
+    await adapter.listCases(SECRETARY, { lifecycle_stage: "CLOSURE", records_state: "CLOSED", text: "0010" });
+    expect(calls[0]?.values).toEqual(["CLOSURE", "CLOSED", "0010", null, 26, "CLOSURE", "CLOSED", "0010"]);
+  });
+
+  it("returns an empty page with its total when no case matches", async () => {
+    const { adapter } = recorder(counted("0", []));
+    const page = await adapter.listCases(SECRETARY, { text: "nothing" });
+    expect(page).toEqual({ items: [], next_cursor: null, total: 0 });
+  });
+
+  it("keeps the total of all matching cases on a later page", async () => {
+    const { adapter } = recorder(counted(7, [row(6), row(7)]));
+    const page = await adapter.listCases(SECRETARY, { limit: 5, cursor: encodeCursor("CDF-DEMO-2026-0005") });
+    expect(page.total).toBe(7);
+  });
+
+  it.each([
+    ["negative", -1],
+    ["not a number", "many"],
+    ["fractional", 1.5],
+    ["missing", undefined],
+  ])("refuses a %s total", async (_n, total) => {
+    const { adapter } = recorder(counted(total as number, [row(1)]));
+    await expect(adapter.listCases(SECRETARY, {})).rejects.toThrow();
+  });
+
+  it("refuses a page larger than its authorised total", async () => {
+    const { adapter } = recorder(counted(1, [row(1), row(2)]));
+    await expect(adapter.listCases(SECRETARY, {})).rejects.toThrow();
   });
 
   it("returns an opaque next cursor only when an extra row exists", async () => {
-    const { calls, adapter } = recorder([row(1), row(2), row(3)]);
+    const { calls, adapter } = recorder(counted(3, [row(1), row(2), row(3)]));
     const page = await adapter.listCases(SECRETARY, { limit: 2 });
     expect(page.items).toHaveLength(2);
     expect(page.next_cursor).not.toContain("CDF-DEMO");
     expect(decodeCursor(page.next_cursor ?? undefined)).toBe("CDF-DEMO-2026-0002");
     await adapter.listCases(SECRETARY, { limit: 2, cursor: page.next_cursor ?? undefined });
-    expect(calls[1]?.values[0]).toBe("CDF-DEMO-2026-0002");
+    expect(calls[1]?.values[3]).toBe("CDF-DEMO-2026-0002");
   });
 
   it("refuses the whole page when any row breaks the contract", async () => {
-    const { adapter } = recorder([row(1), row(2, { display_number: "CASE-1" })]);
+    const { adapter } = recorder(counted(2, [row(1), row(2, { display_number: "CASE-1" })]));
     await expect(adapter.listCases(SECRETARY, {})).rejects.toThrow();
   });
 

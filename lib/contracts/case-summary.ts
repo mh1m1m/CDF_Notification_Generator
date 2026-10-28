@@ -61,8 +61,13 @@ export const CaseListFilterSchema = z.strictObject({
 });
 export type CaseListFilter = z.input<typeof CaseListFilterSchema>;
 
-/** One page of authorised cases. There is deliberately no total count (counts must not leak unauthorised cases). */
+/**
+ * One page of authorised cases. `total` counts only cases the identity may see that match the same filters (cursor
+ * aside): it is computed after authorisation, in the same request transaction as the page, so it never reveals an
+ * unauthorised case (§40; ARCH, 28 Oct 2026).
+ */
 export interface CaseListPage {
   readonly items: readonly CaseSummary[];
   readonly next_cursor: string | null;
+  readonly total: number;
 }

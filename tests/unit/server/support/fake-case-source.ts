@@ -53,12 +53,17 @@ export function createFakeCaseSource(): CaseSourceAdapter & { calls: string[] } 
       calls.push("listCases");
       const f = CaseListFilterSchema.parse(filter);
       const after = f.cursor ?? "";
-      const rows = visibleTo(identity)
-        .filter((c) => c.case_number > after)
+      const matching = visibleTo(identity)
         .filter((c) => !f.records_state || c.records_state === f.records_state)
+        .filter((c) => !f.lifecycle_stage || c.lifecycle_stage === f.lifecycle_stage)
         .filter((c) => !f.text || c.case_number.includes(f.text));
+      const rows = matching.filter((c) => c.case_number > after);
       const items = rows.slice(0, f.limit);
-      return { items, next_cursor: rows.length > f.limit ? (items.at(-1)?.case_number ?? null) : null };
+      return {
+        items,
+        next_cursor: rows.length > f.limit ? (items.at(-1)?.case_number ?? null) : null,
+        total: matching.length,
+      };
     },
     async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null> {
       calls.push("getCase");

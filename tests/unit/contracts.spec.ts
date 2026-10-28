@@ -188,8 +188,8 @@ describe("AuditEventSchema (shaped like cdf_notifications_v13.audit_event)", () 
 });
 
 describe("CaseSourceAdapter contract", () => {
-  // A minimal in-memory adapter honouring the contract: authorisation before filtering, null for unknown and for
-  // unauthorised ids alike, no total count.
+  // A minimal in-memory adapter honouring the contract: authorisation before filtering and counting, null for
+  // unknown and for unauthorised ids alike.
   const visible = CaseSummarySchema.parse(summary());
   const hidden = CaseSummarySchema.parse(
     summary({ case_id: "0c000000-0000-4000-8000-000000000009", case_number: "CDF-DEMO-2026-0009" }),
@@ -201,7 +201,7 @@ describe("CaseSourceAdapter contract", () => {
       const allowed = [visible, hidden].filter(
         (c) => identity.active_workspace === "INVESTIGATIONS" || c === visible,
       );
-      return { items: allowed.slice(0, f.limit), next_cursor: null };
+      return { items: allowed.slice(0, f.limit), next_cursor: null, total: allowed.length };
     },
     async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null> {
       const allowed = [visible, hidden].filter(
@@ -223,9 +223,10 @@ describe("CaseSourceAdapter contract", () => {
     expect(unauthorised).toBeNull();
   });
 
-  it("lists pages without a total count", async () => {
+  it("lists pages whose total counts only cases the identity may see", async () => {
     const page = await adapter.listCases(secretary, {});
     expect(page.items.map((c) => c.case_number)).toEqual(["CDF-DEMO-2026-0001"]);
-    expect(Object.keys(page).sort()).toEqual(["items", "next_cursor"]);
+    expect(Object.keys(page).sort()).toEqual(["items", "next_cursor", "total"]);
+    expect(page.total).toBe(1);
   });
 });

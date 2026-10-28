@@ -2,7 +2,7 @@
 //
 // Every call runs inside the per-transaction security context (withRequestContext: claims + SET LOCAL ROLE
 // cdf_v13_user), so RLS (can_access_case) filters rows before filters, ordering, paging or counting. Only the
-// SECURITY INVOKER read functions portfolio_page and case_header are called; nothing here reads a table directly
+// SECURITY INVOKER read functions portfolio_page, portfolio_count and case_header are called; nothing here reads a table directly
 // or builds SQL from strings. Rows that do not satisfy the CaseSummary contract are refused as a whole (the call
 // fails; the BFF answers UNAVAILABLE) rather than partly shown.
 //
@@ -41,6 +41,13 @@ export interface CaseRow {
   updated_at?: Date | string | null;
 }
 
+/** bigint count → number; anything that is not a non-negative safe integer is refused. */
+function toCount(value: string | number | bigint | undefined): number {
+  const n = typeof value === "bigint" ? Number(value) : typeof value === "string" ? Number(value) : value;
+  if (n === undefined || !Number.isSafeInteger(n) || n < 0) throw new Error("portfolio_count: bad count");
+  return n;
+}
+
 const iso = (value: Date | string | null | undefined): string | undefined =>
   value instanceof Date ? value.toISOString() : (value ?? undefined);
 
@@ -71,19 +78,30 @@ export function createV13RecordsCaseSource(run: RequestContextRunner): CaseSourc
     async listCases(identity: RequestIdentity, filter: CaseListFilter): Promise<CaseListPage> {
       const f = CaseListFilterSchema.parse(filter);
       const after = decodeCursor(f.cursor);
-      // One extra row tells whether another page exists; never more than 101 rows per call.
-      const rows = await run(
+      // One extra row tells whether another page exists; never more than 101 rows per call. The authorised total
+      // comes from the same statement (one snapshot, same filters, RLS before the count), so page and total agree.
+      // The count row is always present; when the page is empty its case columns are null.
+      const joined = await run(
         identity,
         (tx) =>
-          tx<CaseRow[]>`
-          select * from cdf_notifications_v13.portfolio_page(
-            ${after}, ${f.limit + 1}, ${f.lifecycle_stage ?? null}, ${f.records_state ?? null}, ${f.text ?? null})`,
+          tx<(CaseRow & { total: string | number | bigint })[]>`
+          select t.total, p.*
+            from (select cdf_notifications_v13.portfolio_count(
+                    ${f.lifecycle_stage ?? null}, ${f.records_state ?? null}, ${f.text ?? null}) as total) t
+            left join lateral cdf_notifications_v13.portfolio_page(
+                    ${after}, ${f.limit + 1}, ${f.lifecycle_stage ?? null}, ${f.records_state ?? null},
+                    ${f.text ?? null}) p on true`,
       );
-      const page = rows.slice(0, f.limit).map(rowToCaseSummary);
-      const last = page.at(-1);
+      const total = toCount(joined[0]?.total);
+      const rows = joined.filter((r) => r.id !== null);
+      const items = rows.slice(0, f.limit).map(rowToCaseSummary);
+      // A page larger than its own authorised total is inconsistent: refuse it rather than show it.
+      if (items.length > total) throw new Error("portfolio_count: total below page size");
+      const last = items.at(-1);
       return {
-        items: page,
+        items,
         next_cursor: rows.length > f.limit && last ? encodeCursor(last.case_number) : null,
+        total,
       };
     },
 
