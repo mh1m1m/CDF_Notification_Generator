@@ -1,29 +1,36 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 ~03:45 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` b02e672
+Updated: 2026-10-28 ~04:25 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 2990c28
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
 - `docs/teams/proc/PORT_PLAN.md` — module mapping, porting rules, test carry-over, fixture fixes BL-45/BL-46,
-  requests to ARCH — IN_REVIEW.
+  requests to ARCH — COMPLETE (PR #3 merged into `develop` 2990c28).
+- Full port of all five modules on a scratch copy: tsc 0 errors, 734 pass, 0 skipped (lands PR by PR, below).
 
 ## In progress / next
 | Task | State | Note |
 | ---- | ----- | ---- |
-| V13-PROC-001 domain status model | READY after V13-ARCH-001 | no code in the repository until the app skeleton is on `develop` |
+| V13-PROC-001 domain status model | IN_REVIEW | `lib/domain` + `tests/unit/domain` (203 tests); badge mapping (ADR-013) and rule T5 list; format gate waits ARCH-002 (`__evidence__` ignores) |
 | V13-PROC-002 journeys + BL-45/BL-46 fixture fixes | NOT_STARTED | fixtures fixed before DB-005 seeds from them |
 | V13-PROC-003 disclosure | NOT_STARTED | |
 | V13-PROC-004 authority | NOT_STARTED | |
 | V13-PROC-005 notifications | NOT_STARTED | |
 
 ## Changed files
-- `docs/teams/proc/PORT_PLAN.md`, `docs/teams/proc/STATUS.md`
+- PR #3: `docs/teams/proc/PORT_PLAN.md`, `docs/teams/proc/STATUS.md`
+- PROC-001: `lib/domain/{badge,concepts,epistemic,index,invariants,nil,status,types}.ts`,
+  `tests/unit/domain/{badge,evidence-scan,invariants,status}.spec.ts`, `tests/unit/domain/__evidence__/` (4 files),
+  `docs/teams/proc/EVIDENCE_MANIFEST.md`, `docs/teams/proc/PORT_PLAN.md` (§5 note), this file
 
 ## Test evidence
 | Command | Result | Counts | Commit |
 | ------- | ------ | ------ | ------ |
 | `node --test "tests/**/*.test.js"` in a scratch copy of `/mnt/project-files/notifications/v13` with `journeys/`, `generator/` and the built demo | PASS | 726 tests · 726 pass · 0 fail · 0 skipped | reference package (not this repository) |
 | `pnpm lint` · `pnpm typecheck` · `pnpm format:check` · `pnpm test` on this branch after merging `develop` f0a7220 (no PROC code yet) | PASS | lint 0 errors/warnings; typecheck 0 errors; format clean; unit 17 files · 251 tests · 251 pass | 8e8236c |
+| PROC-001: `pnpm lint` · `pnpm typecheck` · `pnpm test` (develop 2990c28 + PROC-001) | PASS | lint exit 0; typecheck exit 0; unit 22 files · 541 tests · 541 pass, of which `tests/unit/domain` 4 files · 203 pass · 0 skipped | PROC-001 head |
+| PROC-001: `pnpm format:check` | FAIL (expected until ARCH-002) | only `tests/unit/domain/__evidence__/{level2_journeys,v9_data}.json`, byte-exact copies that ARCH-002 puts in `.prettierignore` | PROC-001 head |
+| PROC-001: copy-time scan `tests/unit/domain/evidence-scan.spec.ts` (EVS-01/02) | PASS | 4 evidence files · 0 hits · 0 allowed | PROC-001 head |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
 
 ### Baseline without sibling evidence (`src/` + `tests/` only): causes
@@ -58,4 +65,10 @@ evidence); with the V12 siblings and the demo built, 726 / 726.
 - SEC review of PR #3 (`REVIEW: CHANGES 1c9d826`): disclosure boundary (`Projected<T>`, sandboxed preview), policy and
   authority JSON server-only, copy-time evidence scan: added to PORT_PLAN §3.3 and §5.
 - BL-46 held for the owner (OI-020); proposal in `docs/teams/proc/PROPOSALS.md`.
-- Waiting: V13-ARCH-001 on `develop`.
+- ARCH 28 Oct ~03:47–04:05: rule T5 list (`COMPLETED_CLASS_STATUSES`, 11 entries) owned by PROC in `lib/domain`; QA
+  imports it once PROC-001 merges. ADR-016: domain {ar,en} labels stay in `lib/domain`; `lib/i18n` status/journeys hold
+  the UI keys, pinned equal by a unit test (lands with the first UI keys). Evidence check accepted; `v9_data.json` copy
+  renamed `CDF-IC-2026-0001` → `CDF-DEMO-2026-0001`, scan allowance dropped.
+- Checks moved out of the domain specs because they read other modules' data: ST-29b, ST-32b, ST-34 land with PROC-002;
+  ST-28b with PROC-004; ST-07b with PROC-005. Each is strict (a missing file fails).
+- Waiting: ARCH-002 (`tests/unit/**/__evidence__/` in `.prettierignore` and ESLint ignores); SEC review of PROC-001.

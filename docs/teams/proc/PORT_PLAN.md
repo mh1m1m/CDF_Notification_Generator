@@ -130,6 +130,10 @@ reference). To get there, the V12 hash-ledger copy was cut to the 100 rows REG-1
 `generator/source/`): the other rows' byte sizes matched the national-ID pattern, and one sha256 contained a 10-digit
 run, which the boundary rule now excludes.
 
+Update (ARCH, 28 Oct 04:05): the allowance is dropped. The repository copy of `v9_data.json` carries `CDF-DEMO-2026-0001`
+in that rule text instead, like the charter and `ui_v9.js` copies; `docs/teams/proc/EVIDENCE_MANIFEST.md` records each
+difference from the source and the sha256 of the committed bytes. The scan now runs with no allowance: 15 files, 0 hits.
+
 ## 6. Fixture fixes before any seed reads the scenarios (BL-45, BL-46; gate G2)
 
 ST-34 lists 12 scenarios whose declared object status is not what the domain fold of their own events gives.
