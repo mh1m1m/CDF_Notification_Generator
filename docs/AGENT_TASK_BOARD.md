@@ -50,7 +50,7 @@ Phase A runs now. Phase B starts when V13-ARCH-001 is merged into `develop`. Pha
 
 | Id | Task | Team | Depends on | Acceptance | Status |
 | -- | ---- | ---- | ---------- | ---------- | ------ |
-| V13-ARCH-001 | Repository foundation: Next.js 16 app shell, configs, `lib/contracts` (incl. `CaseSourceAdapter`), `lib/db` security context, `lib/auth` session, `proxy.ts`, health and isolation-probe routes, local PostgreSQL tooling and migration runner/linter, CI, Playwright smoke | ARCH | — | lint, typecheck, format, db:lint, unit, DB integration, build and e2e smoke all green locally; CI green | IN_PROGRESS |
+| V13-ARCH-001 | Repository foundation: Next.js 16 app shell, configs, `lib/contracts` (incl. `CaseSourceAdapter`), `lib/db` security context, `lib/auth` session, `proxy.ts`, health and isolation-probe routes, local PostgreSQL tooling and migration runner/linter, CI, Playwright smoke | ARCH | — | lint, typecheck, format, db:lint, unit, DB integration, build and e2e smoke all green locally; CI green | IN_REVIEW |
 | V13-ARCH-002 | Shared documentation: CLAUDE.md, plan, board, ADRs, status, evidence, open issues, deployment status, E01 | ARCH | — | files present on `develop`, facts verified | IN_PROGRESS |
 | V13-ARCH-003 | Staging connection: app-login verifier (SCRAM, set out of band), Vercel environment variables (sensitive), `develop` preview deployed, `/api/health` and `/api/health/isolation` PASS from the deployed app login | ARCH | ARCH-001 | plan §6 steps 6–7 recorded with evidence; DEPLOYMENT_STATUS updated | NOT_STARTED |
 | V13-ARCH-004 | Requirements register and traceability (E-, UXQA-, QG-, Gate ids → tasks → tests) | ARCH | — | `docs/REQUIREMENTS_REGISTER.csv` + `docs/TRACEABILITY.md` | IN_PROGRESS |

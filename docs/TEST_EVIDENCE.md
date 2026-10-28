@@ -119,12 +119,41 @@ The password is now set only by the owner with `database/hosted/owner_set_app_lo
 
 ## 3. Application tests
 
-None yet: the application foundation (V13-ARCH-001) is being built. Lint, typecheck, unit, DB integration, build and
-Playwright results will be recorded here with the commit and real counts.
+### 3.1 V13-ARCH-001 foundation, local run — 28 Oct 2026 ≈ 03:12–03:22 UTC, commit `3756b4e`
+
+Node.js 22.22.0, pnpm 10.28.0, local PostgreSQL 16.15 clusters from `pnpm db:local` (primary on 54329, hosted
+simulation on 54330), the container's Chromium (`PW_CHROMIUM_PATH=/opt/pw-browsers/chromium`), Playwright 1.63.0. The
+commit that records this evidence changes documentation only.
+
+| Command                                                | Result                                                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`                                            | clean: ESLint 0 problems, logical-css 15 files, env-example 18 names                                                            |
+| `pnpm typecheck`                                       | clean                                                                                                                           |
+| `pnpm format:check`                                    | clean                                                                                                                           |
+| `pnpm db:lint`                                         | 1 migration file, 0 findings, 22 rules                                                                                          |
+| `pnpm test`                                            | 17 files, 251 tests passed                                                                                                      |
+| `pnpm db:reset`, then `V13_DB_TESTS_REQUIRED=1 pnpm test:db` | 4 files passed, 1 skipped; 35 tests passed, 2 skipped (persona registry: its tables and seed arrive with V13-DB-001/DB-005) |
+| `pnpm build`                                           | Next.js 16.4.2 (Turbopack): every route dynamic (`ƒ`), proxy present                                                            |
+| `pnpm test:e2e`                                        | 12 passed: 9 smoke, 3 axe accessibility                                                                                         |
+
+Mutation checks (not committed, each reverted and rebuilt before the final run):
+
+- Nonce removed from `script-src`: the e2e test "the app runs under the nonce policy" fails (scripts blocked, persona
+  sign-in never reaches My work). The suite therefore detects a page that runs without its nonce.
+- Policy no longer forwarded on the request (response header only): no e2e test fails, because `next start` also
+  copies proxy response headers onto the request. The forward is kept (it is the documented Next.js pattern and does
+  not depend on that copy) and pinned by `tests/unit/proxy.spec.ts`.
 
 ## 4. CI
 
-No CI workflow exists on `develop` yet (V13-ARCH-001).
+Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6).
+
+| Run                                                                                              | Commit    | Result                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [40626543282](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40626543282) #1 | `5c53ec4` | success, 5 of 5 jobs: lint/typecheck/format/db:lint clean; unit 17 files, 251 passed; integration 35 passed, 2 skipped (persona registry, as locally); build; Playwright 12 passed (13.4 s) |
+
+Every pinned action SHA resolved. Warnings: the pinned versions target Node.js 20 and ran on Node.js 24 (OI-021); the
+dependency cache could not be saved (GitHub service message), which does not affect results.
 
 ## 5. Deployment checks
 
