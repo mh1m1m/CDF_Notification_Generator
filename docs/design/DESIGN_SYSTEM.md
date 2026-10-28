@@ -94,6 +94,23 @@ pages choose the namespace); layout uses logical properties only (`ms-`, `pe-`, 
 | `CaseHeader` | `{ caseId; caseRef; title; stage: StatusBadgeProps; recordsState: { code; label }; restricted?: { label }; capacity?: string; labels }` | `header` inside `CaseWorkspace`, also with `data-case-id` and `data-case-ref` (same values, allowed by the Sentinel rule); display number in `<bdi dir="ltr">`; indicators by shape + glyph; closed case shows a read-only notice slot | `case-header`, `case-number`, `case-stage` |
 | `PageHeading` | `{ title; subtitle?; actions? }` | the page's only `h1`; actions at the inline-end | `page-heading` |
 
+**As built (V13-UX-002).** The components above are in `components/shell/`, with `Count` in `components/data/` (the
+SideNav needs it) and icons in `components/icons/`. Shell chrome text comes from the `t` translator, as in the
+foundation's components. Content strings (area names, tab names, case title) arrive as props from the page. Where the
+build differs from the table:
+
+| Item | As built |
+| ---- | -------- |
+| `AppShell` | Has two forms while V13-FE-002 is open. The frame form takes `topBar`, `sideNav?` and `breadcrumbs?`. The session-bar form is the foundation's, still used by `app/(platform)/layout.tsx`, and goes when FE-002 lands. The root layout keeps the skip link and the banner. |
+| Banner | Keeps the foundation's name `SyntheticBanner` and key `common.banner.synthetic`. It now has the flask glyph. |
+| `LanguageSwitch` | The foundation's `LocaleToggle` (test id `locale-toggle`, already used by e2e) fills this role. No second component. |
+| `TopBar` | `logo` is optional. Until the brand asset arrives (SOURCE_REQUIRED) the organisation name is a text wordmark. The product name is styled H2 Regular but is a `<p>`, so `<main>` holds the only heading level 1. Under 640 px the product name is hidden. |
+| `WorkspaceSwitcher`, `PersonaMenu` | Server components over a small client `Disclosure`. It uses `<details>`, so it opens without JavaScript. With JavaScript it adds Escape (closes and returns focus), Arrow Up and Down, and click-outside. Options are `<form>` submits with the field `workspace`. The panel always links to `pageHref`. The PersonaMenu test ids are `persona-menu`, `persona-menu-button`, `persona-menu-name`, `persona-menu-role` and `sign-out`. |
+| `CaseHeader` | `stage` is a slot for the recorded StatusBadge of V13-UX-003. Indicators (named access, capacity) sit in their own row. Test ids `case-records-state` (with `data-records-state`), `case-restricted` and `case-capacity` are added. |
+| `CaseTabs` | New. Tabs are links in `nav aria-label="أقسام القضية"`, with test ids `case-tab-<key>`. |
+| Case identity | `CaseWorkspace` and `CaseHeader` refuse to render unless `caseId` is a UUID and `caseRef` is a display number. A swapped or empty identity throws. |
+| Unsaved-input confirmation | Belongs to FE's forms. The string `shell.workspace.unsavedConfirm` is ready. |
+
 Keyboard paths to verify (acceptance): skip link → main; Tab order banner → TopBar controls → SideNav → main; switcher
 fully operable by keyboard; visible 3 px focus ring on every control in both themes.
 
