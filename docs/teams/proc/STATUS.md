@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 ~02:45 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` b02e672
+Updated: 2026-10-28 ~03:45 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` b02e672
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -23,6 +23,7 @@ Updated: 2026-10-28 ~02:45 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | Command | Result | Counts | Commit |
 | ------- | ------ | ------ | ------ |
 | `node --test "tests/**/*.test.js"` in a scratch copy of `/mnt/project-files/notifications/v13` with `journeys/`, `generator/` and the built demo | PASS | 726 tests · 726 pass · 0 fail · 0 skipped | reference package (not this repository) |
+| `pnpm lint` · `pnpm typecheck` · `pnpm format:check` · `pnpm test` on this branch after merging `develop` f0a7220 (no PROC code yet) | PASS | lint 0 errors/warnings; typecheck 0 errors; format clean; unit 17 files · 251 tests · 251 pass | 8e8236c |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
 
 ### Baseline without sibling evidence (`src/` + `tests/` only): causes
@@ -46,7 +47,7 @@ evidence); with the V12 siblings and the demo built, 726 / 726.
   BL-46). Fixed in PROC-002 (plan §6).
 
 ## Dependencies and requests
-- V13-ARCH-001 on `develop` (skeleton, Vitest, tsconfig).
+- V13-ARCH-001 merged into `develop` (f0a7220, 28 Oct); merged into this branch.
 - Plan §7 answered by ARCH (28 Oct ~01:53 UTC): `server-only` 0.0.1 and `resolveJsonModule` in the foundation; tests
   named `*.spec.ts`; port shapes proposed under `lib/contracts/ports/` (ARCH + SEC accept), reusing `CaseSourceAdapter`,
   `ClockPort`, `IdGeneratorPort`, `AuditSinkPort`; i18n per ADR-013 (`lib/i18n/{status,journeys}/{ar,en}.ts`); e-mail
