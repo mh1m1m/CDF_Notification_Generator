@@ -1,12 +1,12 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 28 Oct 2026 · Branch: `docs/V13-SEC-001-threat-model` · Base: `develop` `b02e672`
+Updated: 28 Oct 2026 02:00 UTC · Branch: `docs/V13-SEC-001-threat-model` · Base: `develop` `38dc495`
 
 ## Completed
 - V13-SEC-001 — threat model (`docs/security/THREAT_MODEL.md`) and authorisation matrix with the planned test
   catalogue (`docs/security/AUTHORIZATION_MATRIX.md`): 8 subjects × 4 case variants, 17 read objects, 7 command rows,
-  16 application surfaces; 27 planned database tests (SEC-DB-01..27), 16 planned application tests (SEC-APP-01..16);
-  4 recommendations for ARCH/DB (SEC-REC-01..04) — IN_REVIEW (reviewer: DB)
+  16 application surfaces; 29 planned database tests (SEC-DB-01..29), 17 planned application tests (SEC-APP-01..17);
+  4 recommendations SEC-REC-01..04 (all ACCEPTED, ADR-014); ruling D6 — IN_REVIEW (reviewer: DB)
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/teams/sec/STATUS.md`
@@ -19,12 +19,12 @@ Updated: 28 Oct 2026 · Branch: `docs/V13-SEC-001-threat-model` · Base: `develo
 No SEC-DB or SEC-APP test exists yet: they need V13-ARCH-001 (tooling) and DB-001..004 / FE-001..006.
 
 ## Unresolved defects
-- TM-S4 (HIGH, design): claims forgeable by any SQL running as `cdf_v13_user`. Proposed fix SEC-REC-01 (HMAC-bound
-  claims verified by an owner-only helper). Decision: ARCH + DB, in V13-DB-001. Until then SEC-APP-12 (no string-built
-  SQL) is the only control.
+- TM-S4 / OI-018 (HIGH, design, IN_PROGRESS): claims forgeable by SQL running as `cdf_v13_user`. Fix accepted as
+  ADR-014 §4 (claims MAC); DB builds it in DB-001, SEC reviews it against THREAT_MODEL §7. Until merged, the only
+  control is parameterised SQL (no `unsafe` calls outside migration tooling, lint-enforced by ARCH-001).
 
 ## Dependencies and requests
-- ARCH: decide SEC-REC-01..04; tell SEC when V13-ARCH-001 is on `develop` (SEC-002/003 start then).
-- DB: confirm the four assumptions in THREAT_MODEL §6 in DB-001/002; publish the per-persona visibility table with
-  DB-005 (the tests read it).
-- FE: Zod `.strict()` on command inputs; one 404-equivalent path for unknown and unauthorised.
+- ARCH: SEC-REC-01..04 accepted (ADR-014); SEC-REC-04 checked by ARCH in ARCH-003. SEC reviews ARCH-001
+  (`lib/auth/session.ts`, `lib/db/security-context.ts`, `proxy.ts`, `app/api/health/**`, CI workflow).
+- DB: confirm or correct THREAT_MODEL §6 assumptions 2–4 in DB-001/002; visibility matrix in DATA_MODEL §5.
+- FE/UX: ruling D6 (investigators: case Notifications tab only, no Notification Operations Center in M1).

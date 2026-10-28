@@ -16,7 +16,7 @@ Nothing here has been executed yet; results go to `docs/TEST_EVIDENCE.md` (UXQA-
 | **OW** | Persona whose claimed workspace does **not** show the case (case of **another workspace**) | `cdf_v13_user` + valid claims |
 | **XM** | Claims name a workspace the persona is **not a member of** (forged workspace) | `cdf_v13_user` + forged claims |
 | **EX** | Persona, membership or assignment **outside its active window** or persona inactive | `cdf_v13_user` + valid-looking claims |
-| **NC** | **No claims**, empty, malformed or unknown persona id | `cdf_v13_user` without valid claims |
+| **NC** | **No claims**, empty, malformed or unknown persona id, **missing or wrong claims MAC** (ADR-014) | `cdf_v13_user` without valid claims |
 | **AP** | `cdf_v13_app` with no `SET ROLE` (query escaped the request context) | login role only |
 | **FR** | Foreign roles: `anon`, `authenticated`, `service_role`, `authenticator`, `cdf_app`, PUBLIC | other application's roles |
 
@@ -82,6 +82,7 @@ answer for an unknown id (SEC-DB-19).
 | Persona in cookie later deactivated | next request gets no data | P | SEC-APP-05 |
 | Sign-in flag off / absent / any value other than `enabled` | sign-in refused | A | SEC-APP-06 |
 | Portfolio, My Work, Notification Center | lists and counts only authorised rows; page size capped | A, P | SEC-APP-07 |
+| Notification Operations Center (`/notifications`) for **INV-R** (ruling D6, below) | not offered: absent from navigation; the route gives the same 404-equivalent as an unknown route; investigators use the case Notifications tab of cases they can access | A (+ P on every row in any case) | SEC-APP-17 |
 | Security headers | CSP (`frame-ancestors 'none'`, no `unsafe-eval`), `X-Content-Type-Options`, `Referrer-Policy`, HSTS, no `X-Powered-By` | A (proxy.ts) | SEC-APP-08 |
 | Server Actions | cross-origin `Origin` refused; GET cannot change state | A (Next.js) | SEC-APP-09 |
 | Errors | generic message + correlation id; no stack, SQL text, constraint or role name | A | SEC-APP-10 |
@@ -106,7 +107,7 @@ changed (row counts, `row_version`, audit tail).
 | -- | -------------- | ------- |
 | SEC-DB-01 | No claims / empty / malformed JSON / missing keys → zero rows on every V13 table and view, every command refused | TM-S5 |
 | SEC-DB-02 | Unknown persona UUID, inactive persona → same as SEC-DB-01 | TM-S5 |
-| SEC-DB-03 | `set_config('request.v13.claims', …)` issued inside the transaction as `cdf_v13_user` — documents today's behaviour (expected: succeeds = TM-S4 open) and becomes a must-refuse test if SEC-REC-01 is adopted | TM-S4 |
+| SEC-DB-03 | `set_config('request.v13.claims', …)` rewritten inside the transaction as `cdf_v13_user` (other persona, other workspace, `v` changed) without a matching MAC → every helper NULL, zero rows, commands refused (ADR-014 §4) | TM-S4 |
 | SEC-DB-04 | `reset role` / `set role none` / `set role cdf_v13_owner` / `set session authorization` inside the request → no V13 data, owner refused | TM-S4, TM-E1 |
 | SEC-DB-05 | Reference reads (`workspace`, `role`, `persona`) show only what the matrix allows | TM-I1 |
 | SEC-DB-06 | Forged workspace claim (XM) and switching to a non-member workspace → nothing; switching never keeps the previous workspace's cases | TM-S6, TM-E3 |
@@ -131,6 +132,8 @@ changed (row counts, `row_version`, audit tail).
 | SEC-DB-25 | Login settings hold (statement, idle, lock timeouts; connection limit); a held chain lock times out instead of hanging | TM-D1, TM-D2 |
 | SEC-DB-26 | Memberships of the V13 roles are exactly those of `0000_bootstrap` | TM-E1 |
 | SEC-DB-27 | Persona reads never expose other personas' e-mail or attributes beyond the matrix | TM-I1 |
+| SEC-DB-28 | Claims MAC: missing, empty, malformed, copied from another transaction, computed for other claims → NULL; the key table is unreadable by `cdf_v13_user`/`cdf_v13_app`; the install command refuses a second different key, is idempotent for the same key, and audits without key material | TM-S4 |
+| SEC-DB-29 | No V13 function returns, raises or logs a MAC or key material (catalog scan of function results plus error-text checks) | TM-S4 |
 
 ### 6.2 Application (V13-SEC-003)
 
@@ -152,8 +155,17 @@ changed (row counts, `row_version`, audit tail).
 | SEC-APP-14 | `Cache-Control: no-store` on authenticated responses | TM-I11 |
 | SEC-APP-15 | After a full Playwright walk, browser storage holds no case data | TM-I12 |
 | SEC-APP-16 | Workflow review checklist for every `.github/**` change (SEC reviews ARCH) | TM-T9 |
+| SEC-APP-17 | Signed in as an Investigator, `/notifications` and its BFF list are absent and answer like an unknown route (D6) | TM-I4 |
 
-## 7. Ownership of the tests
+## 7. Rulings
+
+- **D6 (UX open item, ruled by SEC 28 Oct 2026):** Investigators do **not** get the Notification Operations Center in
+  M1; they see notifications only in the Notifications tab of a case they can access. Reason: need-to-know and least
+  privilege; a cross-case list adds no investigator task in M1 and widens what one screen shows. This is defence in
+  depth, not the only control: RLS still limits every notification row to authorised cases. Committee Secretary and
+  Governance Officer keep the Center over their authorised cases. Revisit only with a stated investigator task.
+
+## 8. Ownership of the tests
 
 SEC writes and runs all `SEC-DB-*` and `SEC-APP-*` tests in `tests/security/**`. QA's Case Context Sentinel covers the
 UI half of TM-I1; its DB half reuses SEC-DB-18. Hosted isolation (C00–C12) stays with ARCH. PROC owns disclosure unit

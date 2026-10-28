@@ -80,7 +80,7 @@ Severity is the impact if the control failed, on the CRITICAL / HIGH / MEDIUM / 
 | TM-S1 | Forged or tampered session cookie (changed persona id, workspace, expiry; `alg: none`; other algorithm; key from another environment) | CRITICAL | jose HS256 with an explicit algorithm allow-list, `V13_SESSION_SECRET` ≥ 32 bytes, `exp`/`iat` checked, cookie `__Host-` HttpOnly Secure SameSite=Lax (B2); the database re-checks that the persona exists and is active (B5) | SEC-APP-03, -04, -05 | none known |
 | TM-S2 | Persona sign-in used when the flag is off or missing | HIGH | sign-in refuses unless `V13_PERSONA_SIGNIN=enabled` exactly (fail closed) | SEC-APP-06 | — |
 | TM-S3 | Any team member can sign in as any persona | MEDIUM | accepted by ADR-004 for synthetic data only; outer gate B1 | — (documented) | ACCEPTED; `PRODUCTION_SUBSTITUTION_REQUIRED` CDF OIDC |
-| TM-S4 | **Claims forgery inside the database**: `request.v13.claims` is an ordinary custom setting; any SQL running as `cdf_v13_user` (for example through an injection in the BFF) can call `set_config('request.v13.claims', …)` and become any persona, or `reset role` | CRITICAL | (a) parameterised SQL only, no string-built SQL in `lib/**` (lint + test); (b) `cdf_v13_app` holds no privilege, so `reset role` gains nothing; (c) **proposed hardening** SEC-REC-01 below | SEC-DB-03, SEC-DB-04, SEC-APP-12 | HIGH until SEC-REC-01 is decided; the same trust model as Supabase's `request.jwt.claims` |
+| TM-S4 | **Claims forgery inside the database** (OI-018): `request.v13.claims` is an ordinary custom setting; any SQL running as `cdf_v13_user` (for example through an injection in the BFF) can call `set_config('request.v13.claims', …)` and become any persona, or `reset role` | CRITICAL | (a) parameterised SQL only, no string-built SQL in `lib/**` (lint + test); (b) `cdf_v13_app` holds no privilege, so `reset role` gains nothing; (c) claims MAC bound to the transaction (ADR-014 §4, SEC-REC-01), built in DB-001 | SEC-DB-03, -04, -28, -29, SEC-APP-12 | HIGH until DB-001 is merged; then key plant before first install (ADR-014 residual, detected because every request then sees nothing) |
 | TM-S5 | Claims missing, empty, malformed JSON, unknown persona, inactive persona, persona whose membership or assignment window has ended | HIGH | the claims helper returns NULL on anything invalid and every policy and command treats NULL as "nobody" (fail closed) | SEC-DB-01, -02, -05 | — |
 | TM-S6 | Workspace claim names a workspace the persona is not a member of | HIGH | the database checks membership of persona × workspace × role in its active window; never trusts the workspace claim alone | SEC-DB-06 | — |
 | TM-S7 | Login CSRF: a third-party page signs the victim in as another persona | LOW | sign-in is a POST Server Action; Origin must equal the host (Next.js Server Action check) | SEC-APP-09 | — |
@@ -141,24 +141,41 @@ Severity is the impact if the control failed, on the CRITICAL / HIGH / MEDIUM / 
 | TM-E3 | Workspace switching widens access (a persona switches to a workspace where it has no membership, or keeps the old workspace's cases after switching) | HIGH | the database computes access from the active workspace claim and membership on every request | SEC-DB-06, SEC-APP-05 | — |
 | TM-E4 | A UI-only permission (button hidden, command still accepted) | HIGH | every command checked in `lib/authz` **and** in the database; tests call the command directly | SEC-DB-08..11, SEC-APP-11 | — |
 
-## 5. Recommendations needing a decision (sent to the Chief Architect)
+## 5. Recommendations (all four ACCEPTED by the Chief Architect, 28 Oct 2026, ADR-014)
 
-| Id | Recommendation | Why | Proposed default |
+| Id | Recommendation | Why | Status |
 | -- | -------------- | --- | ---------------- |
-| SEC-REC-01 | Bind the claims to the transaction with an HMAC: the server adds `sig = HMAC(secret, claims ‖ txid)`; the claims helper (`SECURITY DEFINER`, owned by `cdf_v13_owner`) verifies it with a key held in a V13 table only the owner can read, and returns NULL on mismatch | closes TM-S4: an injection as `cdf_v13_user` could no longer forge a persona, because it cannot read the key | **PROPOSED, not built**: ARCH and DB decide in V13-DB-001. Until then TM-S4 stays HIGH and SEC-APP-12 (no string-built SQL) is the only control |
-| SEC-REC-02 | Fail closed when the role is not `cdf_v13_user`: every policy and command also requires `current_user = 'cdf_v13_user'` (or the owner inside a definer function) | a query that escaped `withRequestContext` runs as `cdf_v13_app`, which already holds nothing; this makes the rule explicit and testable | PROPOSED for DB-001 |
-| SEC-REC-03 | Audit chain verification as a scheduled read plus a hosted check after every migration, and an event-trigger-free alert when the audit trigger is disabled (`pg_trigger.tgenabled`) | an owner-level change could disable the trigger; detection is the only control left inside a shared database | PROPOSED for DB-001 / ARCH-005 |
-| SEC-REC-04 | Vercel "Git fork protection" stays enabled and preview deployments of forked PRs never receive environment variables | the repository is public (OI-006) | verify in ARCH-003 |
+| SEC-REC-01 | Bind the claims to the transaction with an HMAC: the server adds `sig = HMAC(secret, claims ‖ txid)`; the claims helper (`SECURITY DEFINER`, owned by `cdf_v13_owner`) verifies it with a key held in a V13 table only the owner can read, and returns NULL on mismatch | closes TM-S4: an injection as `cdf_v13_user` could no longer forge a persona, because it cannot read the key | ACCEPTED (ADR-014 §4): HMAC-SHA256 over claims ‖ `|` ‖ a transaction-unique value; key = HKDF of `V13_SESSION_SECRET`; owner-only key table; install-once audited command. Built by DB in DB-001, reviewed by SEC |
+| SEC-REC-02 | Fail closed when the role is not `cdf_v13_user`: every policy and command also requires `current_user = 'cdf_v13_user'` (or the owner inside a definer function) | a query that escaped `withRequestContext` runs as `cdf_v13_app`, which already holds nothing; this makes the rule explicit and testable | ACCEPTED (ADR-014 §5), DB-001 |
+| SEC-REC-03 | Audit chain verification as a scheduled read plus a hosted check after every migration, and an event-trigger-free alert when the audit trigger is disabled (`pg_trigger.tgenabled`) | an owner-level change could disable the trigger; detection is the only control left inside a shared database | ACCEPTED (ADR-014 §6), DB-001 / ARCH-005 |
+| SEC-REC-04 | Vercel "Git fork protection" stays enabled and preview deployments of forked PRs never receive environment variables | the repository is public (OI-006) | ACCEPTED (ADR-014 §7); ARCH verifies in ARCH-003; database URL and session secret scoped to the `develop` preview only |
 
 ## 6. Assumptions to confirm (DB, FE, ARCH)
 
-1. Claims JSON carries `persona_id` (UUID), `workspace_id` (UUID) and `role` only; the database derives everything else.
+1. **Settled by ADR-014 §3:** claims are exactly `{"v":1,"persona_id","workspace_id","correlation_id"}`, with the MAC
+   in `request.v13.claims_mac`. No role is sent; the database derives roles from active memberships.
 2. Access to a case = active persona **and** active membership in the claimed workspace **and** the case visible in
    that workspace **and** (if the case is restricted) an active assignment of the persona on the case. Exact rule and
    the per-persona visibility table come from DB-002 and DB-005; the matrix tests read that table instead of
    hard-coding it.
 3. Closed cases are readable by those with access and refuse every command.
 4. Governance Officer oversight in M1 is read-only over its workspace's cases and never includes the restricted case
-   without assignment.
+   without assignment; it changes a task only when assigned (DB note, 28 Oct).
+5. A duplicate idempotency key is refused, even for an identical replay (DB note, 28 Oct).
+6. `verify_audit_chain()` is callable by the owner/administrator only, not by `cdf_v13_user` (DB note, 28 Oct).
+
+Assumptions 2–4 are confirmed or corrected by DB in its DB-001/002 PR; DB's `docs/architecture/DATA_MODEL.md` §5 holds
+the visibility matrix the tests read.
+
+## 7. Review points SEC will check on the ADR-014 build (DB-001)
+
+1. The helpers return only ids or a boolean: no function returns, logs or raises the computed MAC or any part of the
+   key (otherwise an injection could use it as a signing oracle).
+2. The transaction-unique value is read inside the same transaction the claims are used in; a MAC copied from
+   another transaction (for example seen in `pg_stat_activity` query text) resolves to NULL.
+3. Missing MAC, empty MAC, wrong length, wrong encoding, MAC for other claims, MAC with `v` other than 1 → NULL.
+4. The key table has RLS on, no policy that admits `cdf_v13_user`, no grant; the install command refuses a second,
+   different key and writes an audit event without key material.
+5. No `pgcrypto` or other extension (ADR-012); HMAC built from the core `sha256()` function.
 
 A different rule in the build is not a defect by itself; an undocumented one is.
