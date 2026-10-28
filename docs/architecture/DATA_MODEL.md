@@ -1,7 +1,7 @@
 # E03 — Enterprise data model (Milestone M1)
 
 **SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Owner: team DB. Schema `cdf_notifications_v13` in the
-shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0004`; seed in two parts:
+shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0005`; seed in two parts:
 `database/seed/0001_m1_synthetic.sql` (identity: workspaces, personas, memberships; needs migration 0001 only; audit row
 `SEED_M1_LOADED`) and `database/seed/0002_m1_cases.sql` (cases and their history; needs 0001–0004; audit row
 `SEED_M1_CASES_LOADED`).
@@ -11,7 +11,7 @@ ledger), seed part 1, the app-side claims MAC (`lib/db/security-context.ts`) and
 (`instrumentation.ts` → `lib/db/claims-key-startup.ts`). PR (b) brings 0002–0004 and seed part 2; until it merges, the
 sections on cases, tasks and notifications below describe that PR, not `develop`. Tested on a local PostgreSQL 16
 cluster (`pnpm test:db`); not yet reviewed, not applied to the hosted schema (the Chief Architect applies merged
-migrations).
+migrations). PR `[V13-DB-007]`, stacked on PR (b), adds migration 0005 (`api_switch_workspace`).
 
 ## 1. Principles
 
@@ -105,6 +105,7 @@ erDiagram
 | `case_notifications(uuid)` | invoker | yes | notification history of one case |
 | `api_update_task_status(uuid, text, int)` | definer command | yes | §6 |
 | `api_create_notification_draft(uuid, uuid, text, text)` | definer command | yes | §6 |
+| `api_switch_workspace(uuid)` (migration 0005) | definer command | yes | §6; returns the target workspace id, code and the persona's role codes there |
 | `verify_audit_chain()` | definer | **no** (owner/administrator) | recomputes the chain; counts and first broken `seq` only |
 | `_append_audit`, `_audit_row_hash`, `_reject_mutation`, `_task_transition_allowed`, `_case_owning_visibility`, `_template_version_hash` | internal | no | — |
 | `_is_colleague(uuid)` | internal definer | yes (used inside the `persona` policy) | persona is active and has an active membership in the current workspace (an inactive persona is never listed as a colleague) |
@@ -146,6 +147,7 @@ violation · `V1500` audit append outside READ COMMITTED.
 | ------- | --- | ------ | ------------------------ |
 | `api_update_task_status` | the task's assignee, or a persona with an active assignment on the case | context; task exists and `can_access_case`; case ACTIVE; expected `row_version`; allowed transition (DONE, CANCELLED terminal) | task (+1 version), `procedural_event` TASK_STATUS_CHANGED, `audit_event` TASK_STATUS_CHANGED |
 | `api_create_notification_draft` | COMMITTEE_SECRETARY or INVESTIGATOR in the current workspace with case access | context; `can_access_case`; role; case ACTIVE; recipient class and active template version exist; key is 64 hex and unused (serialised by advisory lock in the V13 namespace) | `notification` DRAFT with the authorised `case_id`, `notification_event` DRAFT_CREATED, `audit_event` NOTIFICATION_DRAFT_CREATED |
+| `api_switch_workspace` | any verified persona | context (V1401 otherwise); target workspace exists and is active, and the persona holds a membership there that is valid now (`valid_from <= now()`, `valid_to` null or later); NULL, unknown, inactive and non-member targets all give the same V1404. Switching to the current workspace is allowed. The BFF issues the new cookie only after the command commits | `audit_event` WORKSPACE_SWITCHED (entity `workspace` = target; metadata ids only: `from_workspace_id` = the claimed workspace when the persona can use it, else null, and `to_workspace_id`); nothing else |
 
 ## 6a. Definer discipline (TM-T10, SEC-DB-30)
 

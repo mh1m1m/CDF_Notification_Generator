@@ -39,6 +39,7 @@ const DEFINER_ALLOWED = new Set([
   "_verified_claims",
   "api_create_notification_draft",
   "api_install_claims_key",
+  "api_switch_workspace",
   "api_update_task_status",
   "can_access_case",
   "current_correlation_id",
