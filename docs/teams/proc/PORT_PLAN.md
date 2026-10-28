@@ -45,9 +45,21 @@ the data's shape once at load and fails closed on a mismatch.
 2. **Strict TypeScript.** No `any` in exported signatures; `unknown` + narrowing at the data boundary. Discriminated
    unions for status objects, epistemic classes, Layer A states and Layer B kinds, so "actual" and "expected" cannot be
    assigned to each other. Frozen data stays frozen (`as const` + `Object.freeze`).
-3. **Server-only.** `lib/disclosure`, `lib/authority`, `lib/notifications/render` and `lib/notifications/lifecycle`
-   start with `import 'server-only'` (needs the `server-only` package: request to ARCH, §7). Node built-ins used:
-   `node:crypto` only.
+3. **Server-only and the disclosure boundary.** `lib/disclosure`, `lib/authority`, `lib/notifications/render`,
+   `lib/notifications/next-action` and `lib/notifications/lifecycle` start with `import 'server-only'` (package
+   `server-only` 0.0.1, in the foundation). Node built-ins used: `node:crypto` only. `server-only` blocks imports
+   only: a Server Component could still hand an unprojected model to a client component, and the model would then
+   travel in the RSC payload. Therefore (SEC review of PR #3):
+   - `lib/disclosure` `project()` returns a branded type `Projected<T>` (a compile-time brand on top of the runtime
+     `_disclosure_applied` marker and registry); renderers and every app view model built from a notification accept
+     only `Projected<T>`, so an unprojected model does not type-check, and `assertProjected` still refuses it at run time;
+   - the e-mail preview is shown only in a sandboxed `<iframe srcdoc>` with no `allow-scripts` and no
+     `allow-same-origin`, never through `dangerouslySetInnerHTML` (FE builds the page; REQ-NOTIF-011). PROC's renderer
+     returns the HTML string and never a React element;
+   - `policy_v13.json` and `authority_v13.json` are imported only by `lib/disclosure/project.ts` and
+     `lib/authority/check.ts` (both server-only) and are never re-exported through `lib/domain`, `lib/journeys` or any
+     module without `import 'server-only'`, so neither file can reach a client bundle. A unit test asserts that no
+     other `lib/` file imports either JSON file.
 4. **SOURCE_REQUIRED stays.** No value marked SOURCE_REQUIRED, PROPOSED or UNVERIFIED in the package becomes a fact in
    the port. Level 1 still refuses without the V8 mapping (OI-004). The seven open owner decisions (OI-012) stay on
    their safe defaults.
@@ -102,6 +114,21 @@ comparison ran on: journey outputs (`resolveLevel1`, `resolveLevel2_3`, `buildPr
 13 recipient classes; `decide()` over every recipient × field × channel × context (42,840 combinations); the in-memory
 demo build against the reference `out/demo/MANIFEST.json` (516 files, sha256). Scenarios changed by the BL-45 fixture
 corrections are listed as expected differences with their reason.
+
+### Copy-time scan of the evidence files
+
+Every file under a PROC `tests/unit/**/__evidence__/` folder (including the charter and `work/` excerpts) is scanned
+before its sha256 manifest is taken, and again on every test run (a unit spec in the PROC test folders). Patterns:
+e-mail addresses not `@example.test`; `gov.sa`; national-ID-like numbers (10 digits starting 1 or 2, not inside a
+longer alphanumeric run); `+966` / `00966` and `05` phone numbers; SA IBANs; case references outside `CDF-DEMO`. A
+reviewed false positive is allowed only by an exact entry (file name, pattern, matched text) with its reason. Each PR
+records the command and its result.
+
+Scratch run (28 Oct ~02:45 UTC, 15 files): 0 hits, 1 allowed — `v9_data.json` line 4252 `CDF-IC-2026-0001`, inside the
+V12 synthetic rule text "do not use the former CDF-IC-2026-0001 as a fact without checking" (a superseded synthetic
+reference). To get there, the V12 hash-ledger copy was cut to the 100 rows REG-14 reads (header + `journeys/` +
+`generator/source/`): the other rows' byte sizes matched the national-ID pattern, and one sha256 contained a 10-digit
+run, which the boundary rule now excludes.
 
 ## 6. Fixture fixes before any seed reads the scenarios (BL-45, BL-46; gate G2)
 

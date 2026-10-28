@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 ~02:00 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` b02e672
+Updated: 2026-10-28 ~02:45 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` b02e672
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -52,6 +52,9 @@ evidence); with the V12 siblings and the demo built, 726 / 726.
   `ClockPort`, `IdGeneratorPort`, `AuditSinkPort`; i18n per ADR-013 (`lib/i18n/{status,journeys}/{ar,en}.ts`); e-mail
   token snapshot accepted as interim (UX to confirm); unit fixtures may use other `CDF-DEMO-2026-NNNN` numbers, never
   seeded; PRs from `claude/project-thread-94r9g5` one at a time.
-- Open: how the package's seven epistemic classes and Layer A states map to ADR-013's four `data-epistemic` values
-  (asked of ARCH).
+- Answered: the epistemic mapping (seven domain classes → ADR-013's four `data-epistemic` values) is ruled in
+  `docs/MASTER_EXECUTION_PLAN.md` §8 "Epistemic mapping"; built as `lib/domain/badge.ts` with 9 tests in the port.
+- SEC review of PR #3 (`REVIEW: CHANGES 1c9d826`): disclosure boundary (`Projected<T>`, sandboxed preview), policy and
+  authority JSON server-only, copy-time evidence scan: added to PORT_PLAN §3.3 and §5.
+- BL-46 held for the owner (OI-020); proposal in `docs/teams/proc/PROPOSALS.md`.
 - Waiting: V13-ARCH-001 on `develop`.
