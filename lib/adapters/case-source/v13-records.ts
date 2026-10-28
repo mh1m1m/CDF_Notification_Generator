@@ -27,7 +27,7 @@ export const V13_SOURCE_SYSTEM = "V13_SYNTHETIC";
 /** Runs `fn` in one request-context transaction for `identity` (normally lib/db withRequestContext). */
 export type RequestContextRunner = <T>(identity: RequestIdentity, fn: (tx: Tx) => Promise<T>) => Promise<T>;
 
-/** A row of portfolio_page / case_header as FE expects it once DB returns the CaseSummary columns (see mapping). */
+/** A row of portfolio_page / case_header (migration 0002). */
 export interface CaseRow {
   id: string;
   display_number: string;
@@ -45,18 +45,16 @@ const iso = (value: Date | string | null | undefined): string | undefined =>
   value instanceof Date ? value.toISOString() : (value ?? undefined);
 
 /**
- * Row → CaseSummary, validated by the contract schema (throws on any mismatch).
- *
- * OPEN (FE → ARCH/DB, 28 Oct 2026): CaseSummary has one synthetic_title while case_record stores title_ar and
- * title_en, and 0002's read functions do not yet return updated_at, source_system, source_ref. Until that is ruled,
- * the Arabic title (primary language) is used and rows without the other columns are refused.
+ * Row → CaseSummary, validated by the contract schema (throws on any mismatch). Both title languages are carried; the
+ * page picks one (ARCH ruling on FE-OPEN-1, 28 Oct 2026). Rows without updated_at, source_system or source_ref are
+ * refused (0002's read functions return them from DB PR (b) on).
  */
 export function rowToCaseSummary(row: CaseRow): CaseSummary {
   return CaseSummarySchema.parse({
     case_id: row.id,
     case_number: row.display_number,
     title_key: null,
-    synthetic_title: row.title_ar,
+    synthetic_title: { ar: row.title_ar, en: row.title_en },
     lifecycle_stage: row.stage,
     is_restricted: row.is_restricted,
     records_state: row.records_state,
