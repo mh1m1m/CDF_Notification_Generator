@@ -48,8 +48,11 @@ The browser suites that read `.next` (action manifest, bundle scan) skip themsel
 | SEC-INFO-1 | A session token with trailing whitespace (`<token> `, `<token>\n`) verifies (jose 6.2.12 with Node's base64url). | Same signed claims; no key-less party can change the payload; cookie values cannot carry it.                         | `session-forgery.spec.ts` (INFO test)      |
 | SEC-INFO-2 | Next.js 16 runs a Server Action whose request has **no** `Origin` header; it checks Origin only when present.   | Browsers send `Origin` on every POST, and the session cookie is SameSite=Lax, so browser-driven CSRF cannot use it. | `server-actions.spec.ts` (INFO test)       |
 
-Either pin fails if the behaviour changes, so a change is reviewed rather than missed. Refusing action requests
-without `Origin` in `proxy.ts` would close SEC-INFO-2 completely; that is an FE/ARCH choice, not required.
+Either pin fails if the behaviour changes, so a change is reviewed rather than missed.
+
+Status (ARCH, 28 Oct 2026): SEC-INFO-1 agreed as INFO. SEC-INFO-2 **ACCEPTED by ARCH**, no change to `proxy.ts`:
+a cross-site request cannot carry the session (SameSite=Lax), and a client that already holds the cookie can send
+any `Origin` it likes, so requiring one adds nothing. The pin test stays.
 
 ## Evidence (local, 28 Oct 2026, branch `test/V13-SEC-003-app-adversarial` on develop `f0a7220`)
 
