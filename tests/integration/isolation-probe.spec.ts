@@ -96,6 +96,25 @@ describe.skipIf(!available)("isolation probe on the hosted simulation", () => {
     expect(checks.set_role).toMatchObject({ allowed: 2, allowed_targets_ok: false });
   });
 
+  it("a lock held on a GC Review table never stalls the probe: the wait ends at 2 s and fails the verdict", async () => {
+    const holder = client(sim.superuserUrl);
+    try {
+      const started = Date.now();
+      // GC Review holds an exclusive lock (as a migration would) for the whole probe run.
+      const result = await holder.begin(async (tx) => {
+        await tx`lock table public.gc_review_item in access exclusive mode`;
+        return verdict();
+      });
+      expect(Date.now() - started).toBeLessThan(12_000);
+      expect(result.verdict).toBe("FAIL");
+      // public is the one foreign schema PUBLIC may use, so only its table is reached and waited on, once per pass.
+      expect(result.checks.foreign_select.app).toEqual({ refused: 4, allowed: 0, inconclusive: 1 });
+      expect(result.checks.foreign_select.user).toEqual({ refused: 4, allowed: 0, inconclusive: 1 });
+    } finally {
+      await holder.end({ timeout: 5 });
+    }
+  });
+
   it("the probe's transaction leaves nothing behind", async () => {
     await verdict();
     const [row] = await run(

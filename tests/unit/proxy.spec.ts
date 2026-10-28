@@ -1,11 +1,12 @@
-// proxy.ts, the first of the two session checks: which paths it gates, and what it does with valid, missing and
-// invalid session cookies. Pages and layouts re-check the session on the server (app/(platform)/layout.tsx).
+// proxy.ts: the first of the two session checks (which paths it gates, and what it does with valid, missing and
+// invalid session cookies) and the per-request page CSP (threat TM-I13). Pages and layouts re-check the session on the
+// server (app/(platform)/layout.tsx).
 import { base64url } from "jose";
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { config, proxy } from "@/proxy";
+import { config, proxy, PUBLIC_PAGES } from "@/proxy";
 
 const ORIGIN = "http://localhost:3100";
 const secret = () => base64url.encode(crypto.getRandomValues(new Uint8Array(32)));
@@ -22,9 +23,9 @@ const token = (
 ) =>
   createSessionToken({ persona_id, active_workspace }, { env: options.env ?? signingEnv, now: options.now });
 
-const request = (path: string, cookie?: string) =>
+const request = (path: string, cookie?: string, headers: Record<string, string> = {}) =>
   new NextRequest(new URL(path, ORIGIN), {
-    headers: cookie === undefined ? {} : { cookie: `${SESSION_COOKIE_NAME}=${cookie}` },
+    headers: cookie === undefined ? headers : { ...headers, cookie: `${SESSION_COOKIE_NAME}=${cookie}` },
   });
 
 const isPassThrough = (response: Response) => response.headers.get("x-middleware-next") === "1";
@@ -44,6 +45,20 @@ function expectSignInRedirect(response: Response, { cookieExpired }: { cookieExp
   expect(setCookie).toMatch(/Path=\//);
   expect(setCookie).toMatch(/Secure/);
   expect(setCookie).toMatch(/HttpOnly/);
+}
+
+/** One directive's value in a policy ("" when the directive is absent). */
+const directive = (csp: string | null, name: string) =>
+  (csp ?? "")
+    .split("; ")
+    .find((d) => d === name || d.startsWith(`${name} `))
+    ?.slice(name.length + 1) ?? "";
+
+/** The nonce in a page CSP; fails the test if the policy has none. */
+function nonceOf(csp: string | null): string {
+  const nonce = /'nonce-([A-Za-z0-9+/]{22}==)'/.exec(csp ?? "")?.[1];
+  expect(nonce, `no nonce in ${csp}`).toBeDefined();
+  return nonce!;
 }
 
 beforeEach(() => {
@@ -111,12 +126,90 @@ describe("proxy: session gate", () => {
   });
 });
 
+describe("proxy: public pages", () => {
+  it("has exactly one public page", () => {
+    expect([...PUBLIC_PAGES]).toEqual(["/sign-in"]);
+  });
+
+  it("passes /sign-in without a session, with or without a query string, and sets no cookie", async () => {
+    for (const path of ["/sign-in", "/sign-in?locale=en"]) {
+      const response = await proxy(request(path));
+      expect(isPassThrough(response), path).toBe(true);
+      expect(response.headers.get("set-cookie"), path).toBeNull();
+    }
+  });
+
+  it("gates look-alikes of /sign-in", async () => {
+    for (const path of ["/sign-in/", "/sign-in/x", "/sign-in-x", "/sign-inx", "/SIGN-IN", "/x/sign-in"]) {
+      expectSignInRedirect(await proxy(request(path)), { cookieExpired: false });
+    }
+  });
+});
+
+describe("proxy: page Content-Security-Policy (TM-I13)", () => {
+  it("puts a nonce policy on every response it sends: pass-through, public page and both redirects", async () => {
+    const responses = [
+      await proxy(request("/my-work", await token(ALPHA, "SECRETARIAT"))),
+      await proxy(request("/sign-in")),
+      await proxy(request("/my-work")),
+      await proxy(request("/my-work", "not-a-jwt")),
+    ];
+    for (const response of responses) {
+      const csp = response.headers.get("content-security-policy");
+      const nonce = nonceOf(csp);
+      expect(directive(csp, "script-src")).toBe(`'self' 'nonce-${nonce}' 'strict-dynamic'`);
+      expect(directive(csp, "frame-ancestors")).toBe("'none'");
+      expect(directive(csp, "object-src")).toBe("'none'");
+    }
+  });
+
+  it("forwards the same policy to Next.js on the request, overriding any policy the client sent", async () => {
+    for (const response of [
+      await proxy(
+        request("/my-work", await token(ALPHA, "SECRETARIAT"), {
+          "content-security-policy": "script-src 'nonce-AAAAAAAAAAAAAAAAAAAAAA=='",
+        }),
+      ),
+      await proxy(request("/sign-in", undefined, { "content-security-policy": "script-src *" })),
+    ]) {
+      const csp = response.headers.get("content-security-policy");
+      expect(response.headers.get("x-middleware-request-content-security-policy")).toBe(csp);
+      expect(response.headers.get("x-middleware-override-headers")?.split(",")).toContain(
+        "content-security-policy",
+      );
+      expect(nonceOf(csp)).not.toBe("AAAAAAAAAAAAAAAAAAAAAA==");
+    }
+  });
+
+  it("uses a fresh nonce for every request", async () => {
+    const cookie = await token(ALPHA, "SECRETARIAT");
+    const nonces = new Set<string>();
+    for (let i = 0; i < 20; i += 1) {
+      nonces.add(nonceOf((await proxy(request("/my-work", cookie))).headers.get("content-security-policy")));
+      nonces.add(nonceOf((await proxy(request("/my-work"))).headers.get("content-security-policy")));
+    }
+    expect(nonces.size).toBe(40);
+  });
+
+  it("allows eval only under next dev, and upgrades insecure requests only on Vercel", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const dev = (await proxy(request("/sign-in"))).headers.get("content-security-policy");
+    expect(dev).toContain("'unsafe-eval'");
+    expect(dev).not.toContain("upgrade-insecure-requests");
+
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL", "1");
+    const vercel = (await proxy(request("/sign-in"))).headers.get("content-security-policy");
+    expect(vercel).not.toContain("unsafe-eval");
+    expect(vercel).toContain("upgrade-insecure-requests");
+  });
+});
+
 describe("proxy: matcher", () => {
   const matches = (url: string) => unstable_doesMiddlewareMatch({ config, url });
 
-  it("leaves exactly the public paths alone", () => {
+  it("leaves exactly the resource paths alone (next.config.ts gives them the resource CSP)", () => {
     for (const url of [
-      "/sign-in",
       "/api/health",
       "/api/health/isolation",
       "/favicon.ico",
@@ -128,9 +221,11 @@ describe("proxy: matcher", () => {
     }
   });
 
-  it("gates every other path, including look-alikes of the public ones", () => {
+  it("runs on every other path, the sign-in page and look-alikes of the resource paths included", () => {
     for (const url of [
       "/",
+      "/sign-in",
+      "/sign-in/x",
       "/my-work",
       "/cases/0c000000-0000-4000-8000-000000000001",
       "/sign-in-other",

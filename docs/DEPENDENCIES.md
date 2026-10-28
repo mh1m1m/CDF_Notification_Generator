@@ -47,10 +47,15 @@ SDK, any ORM, any dotenv loader (Next.js loads `.env.local` itself; scripts read
 
 ## Decisions to review (Chief Architect)
 
-1. **Static CSP with `'unsafe-inline'` in `script-src`** (`next.config.ts`). App Router streams inline bootstrap
-   scripts; a static header cannot allow them by hash. The alternative is a per-request nonce set in `proxy.ts`, which
-   forces dynamic rendering of every page. `'unsafe-eval'` is present only under `next dev`. `frame-ancestors 'none'`,
-   `object-src 'none'`, `base-uri 'self'` and `form-action 'self'` hold in every mode.
+1. **Per-request nonce CSP** (threat TM-I13; `lib/http/csp.ts`, set by `proxy.ts`). Every page gets
+   `script-src 'self' 'nonce-…' 'strict-dynamic'` with a fresh 16-byte nonce; Next.js reads it from the forwarded
+   request header and puts it on its own scripts, so `script-src` never needs `'unsafe-inline'`. The cost, dynamic
+   rendering of every page, is already paid: the root layout reads the locale cookie. `'unsafe-eval'` and `ws:` are
+   present only under `next dev`; `upgrade-insecure-requests` only on Vercel. Paths the proxy never sees (health API,
+   static files, images) get `default-src 'none'` from `next.config.ts`, so every response carries exactly one policy.
+   `frame-ancestors 'none'`, `object-src 'none'`, `frame-src 'none'`, `base-uri 'self'` and `form-action 'self'` hold
+   in every mode. `style-src` keeps `'unsafe-inline'` (inline style attributes run no code). Known follow-up: the
+   FE-006 notification preview must not need a frame, or `frame-src` is revisited with SEC.
 2. **`db:migrate` refuses non-loopback targets.** The hosted project is changed only by pasting the reviewed output of
    `pnpm db:hosted-bundle <version>` (dry run first). The bundle connects nowhere and holds no credentials.
 3. **Runner and bundle set `lock_timeout = '5s'` and `search_path = ''`** inside each migration transaction, and
@@ -74,5 +79,12 @@ SDK, any ORM, any dotenv loader (Next.js loads `.env.local` itself; scripts read
 11. **db:lint exemption**: a policy may say `TO public` only when it is
     `AS RESTRICTIVE … USING (false) [WITH CHECK (false)]`, which grants nothing. DB's 0000–0004 lint clean under all 22
     rules. New rule `notify-listen` enforces the coexistence rule "V13 never uses NOTIFY/LISTEN".
-12. **`proxy.ts` matcher is anchored**: only `/sign-in`, `/api/health`, `/api/health/isolation`, `/favicon.ico`,
-    `/robots.txt`, `/_next/image` and `/_next/static/*` skip the session gate; look-alike paths do not.
+12. **`proxy.ts` matcher is anchored**: only `/api/health`, `/api/health/isolation`, `/favicon.ico`, `/robots.txt`,
+    `/_next/image` and `/_next/static/*` bypass the proxy; look-alike paths do not. `/sign-in` goes through the proxy
+    (for its CSP) and is the one page that needs no session (`PUBLIC_PAGES`, exact path).
+13. **The isolation probe sets `lock_timeout = '2s'` and `statement_timeout = '15s'`**, because the database is shared
+    with GC Review: a lock wait counts as inconclusive (FAIL), and the probe never holds up the other application.
+14. **Application code never imports from `tests/`** (ESLint `no-restricted-imports` regex on `app/`, `components/`,
+    `lib/`, `proxy.ts`, `next.config.ts`). SEC's suites live in `tests/security/app` (unit project),
+    `tests/security/db` (integration project, may use the postgres driver and raw SQL) and `tests/security/e2e`
+    (Playwright).

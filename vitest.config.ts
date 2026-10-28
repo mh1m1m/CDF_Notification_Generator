@@ -25,7 +25,8 @@ export default defineConfig({
         test: {
           name: "unit",
           // Component tests render with react-dom/server in the node environment (no jsdom).
-          include: ["tests/unit/**/*.spec.{ts,tsx}"],
+          // tests/security/app: SEC's application-layer security suites (no database).
+          include: ["tests/unit/**/*.spec.{ts,tsx}", "tests/security/app/**/*.spec.{ts,tsx}"],
           environment: "node",
           setupFiles: ["tests/support/next-runtime.ts"],
         },
@@ -34,7 +35,8 @@ export default defineConfig({
         extends: true,
         test: {
           name: "integration",
-          include: ["tests/integration/**/*.spec.ts"],
+          // tests/security/db: SEC's database security suites (RLS, grants, claims MAC, audit chain).
+          include: ["tests/integration/**/*.spec.ts", "tests/security/db/**/*.spec.ts"],
           environment: "node",
           setupFiles: ["tests/support/next-runtime.ts"],
           fileParallelism: false,

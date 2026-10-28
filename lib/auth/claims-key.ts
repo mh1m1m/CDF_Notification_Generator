@@ -2,8 +2,10 @@
 // and must stay free of Node.js built-ins.
 //
 // HKDF-SHA256 over the decoded V13_SESSION_SECRET bytes (IKM), an empty salt and the info string below, 32 bytes. The
-// session-signing key and this key are therefore independent: knowing one does not give the other. Not used yet: DB
-// wires it into lib/db/security-context.ts in V13-DB-001.
+// session-signing key is those decoded bytes themselves, so the derivation is one-way only: the claims key (the one
+// the database is given) does not reveal the session-signing key, but the secret yields both. V13_SESSION_SECRET is
+// therefore the single root secret to protect and rotate. Not used yet: DB wires it into lib/db/security-context.ts
+// in V13-DB-001.
 //
 // PRODUCTION_SUBSTITUTION_REQUIRED: production derives keys inside KMS/HSM; no key material lives in environment
 // variables there.

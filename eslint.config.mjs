@@ -14,7 +14,8 @@ const NO_SUPABASE = {
 };
 const NO_POSTGRES = {
   group: ["postgres"],
-  message: "The postgres driver is imported only inside lib/db/** (plus scripts/db and integration tests).",
+  message:
+    "The postgres driver is imported only inside lib/db/** (plus scripts/db and the database test suites).",
 };
 const PURE_LAYER = {
   group: [
@@ -42,6 +43,20 @@ const EDGE_SAFE = {
   group: ["@/lib/db", "@/lib/db/*", "server-only", "node:*"],
   message: "proxy.ts stays edge-safe: no database access, no Node.js built-ins.",
 };
+const NO_TESTS = {
+  // @/tests/…, ./tests/… (root files) and ../tests/… at any depth.
+  regex: "^(?:@/tests|\\./tests|(?:\\.\\./)+tests)(?:/|$)",
+  message:
+    "Application code never imports from tests/: fixtures, test keys and test helpers stay out of the app bundle.",
+};
+/** Application code: everything that ships in the Next.js build. */
+const APP_CODE = [
+  "app/**/*.{ts,tsx}",
+  "components/**/*.{ts,tsx}",
+  "lib/**/*.{ts,tsx}",
+  "proxy.ts",
+  "next.config.ts",
+];
 
 const NO_UNSAFE_SQL_MESSAGE =
   "Raw SQL (`unsafe`) is allowed only in scripts/db and integration tests: SEC finding TM-S4 (claims forgery through SQL injection). Use postgres tagged templates with bound parameters.";
@@ -85,22 +100,36 @@ export default tseslint.config(
     },
   },
   {
-    // The only places that may hold a postgres connection.
-    files: ["lib/db/**/*.ts", "scripts/db/**/*.mjs", "tests/integration/**/*.ts"],
+    // Rule options do not merge across blocks, so every block below restates the full pattern list for its files.
+    files: APP_CODE,
+    rules: { "no-restricted-imports": ["error", { patterns: [NO_SUPABASE, NO_POSTGRES, NO_TESTS] }] },
+  },
+  {
+    // The only places that may hold a postgres connection: lib/db in the app ...
+    files: ["lib/db/**/*.{ts,tsx}"],
+    rules: { "no-restricted-imports": ["error", { patterns: [NO_SUPABASE, NO_TESTS] }] },
+  },
+  {
+    // ... and the migration tooling and database test suites outside it.
+    files: ["scripts/db/**/*.mjs", "tests/integration/**/*.ts", "tests/security/db/**/*.ts"],
     rules: { "no-restricted-imports": ["error", { patterns: [NO_SUPABASE] }] },
   },
   {
-    // Migration tooling and database integration tests run reviewed SQL files and fixtures as raw SQL.
-    files: ["scripts/db/**/*.mjs", "tests/integration/**/*.ts"],
+    // Migration tooling and database test suites run reviewed SQL files and fixtures as raw SQL.
+    files: ["scripts/db/**/*.mjs", "tests/integration/**/*.ts", "tests/security/db/**/*.ts"],
     rules: { "no-restricted-syntax": "off" },
   },
   {
     files: ["lib/contracts/**/*.ts", "lib/domain/**/*.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [NO_SUPABASE, NO_POSTGRES, PURE_LAYER] }] },
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [NO_SUPABASE, NO_POSTGRES, PURE_LAYER, NO_TESTS] }],
+    },
   },
   {
     files: ["proxy.ts"],
-    rules: { "no-restricted-imports": ["error", { patterns: [NO_SUPABASE, NO_POSTGRES, EDGE_SAFE] }] },
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [NO_SUPABASE, NO_POSTGRES, EDGE_SAFE, NO_TESTS] }],
+    },
   },
   {
     // Developer and CI command-line scripts report progress on stdout.

@@ -10,7 +10,8 @@
 //   4. own_schema     as cdf_v13_user, USAGE on cdf_notifications_v13 must be granted.
 // Object names come from the catalogs and are quoted with format('%I'); there is no input of any kind. Only counts
 // leave the database: never object names, row data or error text. SQLSTATE 42501 counts as refused; any other
-// error counts as inconclusive, which fails the verdict (fail closed).
+// error counts as inconclusive, which fails the verdict (fail closed). The transaction sets lock_timeout 2 s and
+// statement_timeout 15 s, so the probe never holds up the shared database.
 import "server-only";
 import { z } from "zod";
 import type postgres from "postgres";
@@ -171,6 +172,10 @@ export async function runIsolationProbe(sql: Sql = getSql()): Promise<IsolationP
   let raw: string | null = null;
   try {
     await sql.begin(async (tx) => {
+      // The database is shared with GC Review: never wait long on its locks, never run long. A lock wait past 2 s
+      // counts as inconclusive (fails the verdict); past 15 s in total the block is cancelled and the probe throws.
+      await tx`set local lock_timeout = '2s'`;
+      await tx`set local statement_timeout = '15s'`;
       await executeProbeBlock(tx);
       const [row] = await tx<{ result: string | null }[]>`
         select pg_catalog.current_setting('v13.isolation_probe', true) as result`;

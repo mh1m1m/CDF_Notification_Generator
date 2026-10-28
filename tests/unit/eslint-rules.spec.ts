@@ -1,6 +1,6 @@
 // The repository's ESLint boundaries, checked through the ESLint API with the real eslint.config.mjs: raw SQL
-// (`unsafe`, SEC finding TM-S4), Supabase SDKs, the postgres driver outside lib/db, pure layers, edge-safe proxy, and
-// hard-coded text in components.
+// (`unsafe`, SEC finding TM-S4), Supabase SDKs, the postgres driver outside lib/db, pure layers, edge-safe proxy, no
+// imports from tests/ in application code, and hard-coded text in components.
 import { fileURLToPath } from "node:url";
 import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
@@ -89,6 +89,36 @@ describe("import boundaries", () => {
     ).toBe(true);
     const node = 'import { readFileSync } from "node:fs";\nexport const r = readFileSync;\n';
     expect((await messagesFor("proxy.ts", node)).some((m) => m.includes("edge-safe"))).toBe(true);
+  });
+});
+
+describe("application code never imports from tests/", () => {
+  const importing = (source: string) => `import { x } from "${source}";\nexport const y = x;\n`;
+  const fromTests = (messages: string[]) => messages.some((m) => m.includes("never imports from tests/"));
+
+  it.each([
+    ["app/page-example.tsx", "@/tests/support/fixtures"],
+    ["app/(platform)/example/page.tsx", "../../../tests/support/fixtures"],
+    ["components/Example.tsx", "../tests/e2e/helpers"],
+    ["lib/auth/example.ts", "../../tests/support/keys"],
+    ["lib/db/example.ts", "../../tests/integration/support/clusters"],
+    ["lib/domain/example.ts", "@/tests/support/fixtures"],
+    ["lib/contracts/example.ts", "@/tests"],
+    ["proxy.ts", "./tests/support/keys"],
+    ["next.config.ts", "./tests/support/headers"],
+  ])("is an error in %s (%s)", async (file, source) => {
+    expect(fromTests(await messagesFor(file, importing(source))), `${file} ← ${source}`).toBe(true);
+  });
+
+  it("leaves test files and look-alike paths alone", async () => {
+    for (const [file, source] of [
+      ["tests/unit/x.spec.ts", "@/tests/support/fixtures"],
+      ["tests/integration/x.spec.ts", "../support/server-only"],
+      ["lib/auth/example.ts", "@/lib/testsuite"],
+      ["lib/auth/example.ts", "@/testsuite/x"],
+    ] as const) {
+      expect(fromTests(await messagesFor(file, importing(source))), `${file} ← ${source}`).toBe(false);
+    }
   });
 });
 

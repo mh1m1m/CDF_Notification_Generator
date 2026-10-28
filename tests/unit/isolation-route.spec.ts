@@ -166,8 +166,12 @@ describe("runIsolationProbe", () => {
     const fake = fakeSql(JSON.stringify(passing));
     await expect(probe.runIsolationProbe(fake.sql)).resolves.toEqual(passing);
     expect(fake.rolledBack()).toBe(true);
-    expect(fake.calls).toHaveLength(2);
-    expect(fake.calls[0]?.text.trimStart().startsWith("do $v13_isolation_probe$")).toBe(true);
+    expect(fake.calls).toHaveLength(4);
+    // Time limits first: the database is shared with GC Review.
+    expect(fake.calls[0]?.text).toBe("set local lock_timeout = '2s'");
+    expect(fake.calls[1]?.text).toBe("set local statement_timeout = '15s'");
+    expect(fake.calls[2]?.text.trimStart().startsWith("do $v13_isolation_probe$")).toBe(true);
+    expect(fake.calls[3]?.text).toContain("current_setting('v13.isolation_probe', true)");
     expect(fake.calls.every((c) => c.values.length === 0)).toBe(true);
   });
 

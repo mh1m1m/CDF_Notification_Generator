@@ -1,11 +1,22 @@
 // End-to-end smoke (desktop-ar): Arabic RTL by default with the synthetic-data banner, persona sign-in to My work,
-// the session gate, cookie tampering, sign-out, the language switch and the security headers of a production build.
+// the session gate, cookie tampering, sign-out, the language switch and the security headers of a production build,
+// including the per-request script nonce (threat TM-I13).
 import { expect, test, type Page } from "@playwright/test";
+import { RESOURCE_CONTENT_SECURITY_POLICY } from "@/lib/http/csp";
 import { messagesFor } from "@/lib/i18n";
 
 const ar = messagesFor("ar");
 const en = messagesFor("en");
 const SESSION_COOKIE = "__Host-v13_session";
+
+/** One directive's value in a policy ("" when the directive is absent). */
+const directive = (csp: string | undefined, name: string) =>
+  (csp ?? "")
+    .split("; ")
+    .find((d) => d === name || d.startsWith(`${name} `))
+    ?.slice(name.length + 1) ?? "";
+
+const nonceOf = (csp: string | undefined) => /'nonce-([A-Za-z0-9+/]{22}==)'/.exec(csp ?? "")?.[1];
 
 async function signInAsAlpha(page: Page) {
   await page.goto("/sign-in");
@@ -25,15 +36,50 @@ test("sign-in page: Arabic, right to left, synthetic banner, synthetic personas 
   await expect(page.getByTestId("persona-persona-zeta")).toHaveCount(0);
 });
 
-test("production build sends the security headers", async ({ page }) => {
+test("production build sends the security headers and a fresh script nonce on every page", async ({
+  page,
+}) => {
   const response = await page.goto("/sign-in");
   const headers = response?.headers() ?? {};
-  expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
-  expect(headers["content-security-policy"]).not.toContain("unsafe-eval");
+  const csp = headers["content-security-policy"];
+  const nonce = nonceOf(csp);
+  expect(nonce).toBeDefined();
+  expect(directive(csp, "script-src")).toBe(`'self' 'nonce-${nonce}' 'strict-dynamic'`);
+  expect(directive(csp, "frame-ancestors")).toBe("'none'");
+  expect(directive(csp, "object-src")).toBe("'none'");
   expect(headers["x-frame-options"]).toBe("DENY");
   expect(headers["x-content-type-options"]).toBe("nosniff");
   expect(headers["referrer-policy"]).toBe("no-referrer");
   expect(headers["x-powered-by"]).toBeUndefined();
+
+  // Next.js put this request's nonce on every script tag it rendered.
+  const scriptTags = (await response!.text()).match(/<script\b[^>]*>/g) ?? [];
+  expect(scriptTags.length).toBeGreaterThan(0);
+  for (const tag of scriptTags) expect(tag).toContain(`nonce="${nonce}"`);
+
+  const again = nonceOf((await page.goto("/sign-in"))?.headers()["content-security-policy"]);
+  expect(again).toBeDefined();
+  expect(again).not.toBe(nonce);
+});
+
+test("the app runs under the nonce policy: no CSP violation from sign-in to My work", async ({ page }) => {
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    Object.defineProperty(window, "__cspViolations", { value: seen });
+    document.addEventListener("securitypolicyviolation", (event) => {
+      seen.push(`${event.violatedDirective} ${event.blockedURI}`);
+    });
+  });
+  await signInAsAlpha(page);
+  await page.goto("/sign-in");
+  await expect(page).toHaveURL(/\/my-work$/);
+  // React's inline flight data ran, so the nonce reached Next.js' inline scripts.
+  expect(await page.evaluate(() => Array.isArray((self as unknown as { __next_f?: unknown }).__next_f))).toBe(
+    true,
+  );
+  expect(
+    await page.evaluate(() => (window as unknown as { __cspViolations: string[] }).__cspViolations),
+  ).toEqual([]);
 });
 
 test("without a session, protected pages redirect to sign-in", async ({ page }) => {
@@ -101,4 +147,21 @@ test("health endpoint is uncached and the isolation probe is off by default", as
   expect(body).toMatchObject({ app: "v13-enterprise" });
   expect(response.headers()["cache-control"]).toBe("no-store");
   expect((await request.get("/api/health/isolation")).status()).toBe(404);
+});
+
+test("responses the proxy never sees carry the resource policy, once", async ({ page, request }) => {
+  await page.goto("/sign-in");
+  const script = await page.locator('script[src^="/_next/static/"]').first().getAttribute("src");
+  expect(script).toBeTruthy();
+  for (const path of ["/api/health", "/api/health/isolation", script!]) {
+    const response = await request.get(path);
+    const policies = response
+      .headersArray()
+      .filter((h) => h.name.toLowerCase() === "content-security-policy");
+    expect(
+      policies.map((h) => h.value),
+      path,
+    ).toEqual([RESOURCE_CONTENT_SECURITY_POLICY]);
+    expect(response.headers()["x-content-type-options"], path).toBe("nosniff");
+  }
 });
