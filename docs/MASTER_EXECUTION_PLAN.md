@@ -155,6 +155,19 @@ result; **E** notification generated in case A never appears as case B's record.
 | **Procedural Truth Inspector** (مدقق الحقيقة الإجرائية) | Every status badge, progress mark and notification statement maps to a recorded event, or is labelled expected, conditional or awaiting approval | UI + domain + DB | `tests/truth/` (QA with PROC) |
 | **Autonomous Design Critic** (الناقد البصري المستقل) | Specific, evidenced design findings from screenshots, page structure and the CDF design guide; each correction on its own branch, re-tested before it is proposed | UI | `tests/critic/` + `docs/design/critic/` (UX with QA) |
 
+Epistemic mapping (Chief Architect ruling, 28 Oct 2026, on PROC, UX and QA questions; DOM values from ADR-013). The
+domain keeps the reference package's seven classes; `lib/domain` maps them to the four DOM values:
+
+- `RECORDED_FACT` → `recorded`, with its event id.
+- `DERIVED_FROM_VERIFIED_FACTS` → `recorded`, only when the shown status is exactly what the PROC-001 fold yields from
+  the case's recorded events. Its `data-event-id` is the latest recorded event of the same case that the derivation
+  rests on. Other derivations (counts, percentages, forecasts) are plain text with `data-count`, never a badge.
+- `EXPECTED_PROCESS` → `expected`.
+- `CONDITIONAL_STEP` → `conditional`.
+- `SUBJECT_TO_APPROVAL` → `awaiting_approval`.
+- `PROPOSED_ACTION` and `UNVERIFIED_INFORMATION` are refused: never a badge in M1. A new DOM value needs a new ADR
+  with its Inspector rule.
+
 ## 9. Working cycle and teams
 
 Plan → delegate → execute in parallel → review → integrate → test → correct → deploy to staging → verify → continue.

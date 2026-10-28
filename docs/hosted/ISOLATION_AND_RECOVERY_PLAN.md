@@ -207,4 +207,7 @@ estate, roles issued by the CDF DBA, credentials in KMS, and the CDF corporate I
 | 01:18 | Re-verification | fingerprint identical (TOTAL 648 `40c9efe5…`); isolation PASS 27 / 0 / 0 | `docs/TEST_EVIDENCE.md` §2 |
 | 01:27 | Step 0 repeated with the committed files | F1 = F0, PASS, four planted faults detected, rollback refused with a planted dependency, F2 = F0 | `docs/TEST_EVIDENCE.md` §1.2 |
 | ≈ 01:28 | Isolation checks after a wording-only fix in C06's detail text (`84f8fffd…`) | PASS 27 / 0 / 0 | `docs/TEST_EVIDENCE.md` §2 |
-| _pending_ | Steps 6–7 (app login verifier, deployment, app-login probes) | waits for the foundation build | |
+| ≈ 01:34 | Step 6 attempt | a SCRAM verifier was set on `cdf_v13_app`; passing the URL to Vercel was refused, because Claude may not handle the staging credentials. The plaintext was discarded unused | `docs/TEST_EVIDENCE.md` §2 |
+| ≈ 01:42 | Step 6 reset | `alter role cdf_v13_app with password null`: no password, nobody can log in | `docs/TEST_EVIDENCE.md` §2 |
+| ≈ 02:00 | Step 6 redesigned | owner-run `database/hosted/owner_set_app_login.sql` generates the password and session secret inside the database; local test 16 / 16 PASS; flags `V13_PERSONA_SIGNIN`, `V13_ISOLATION_PROBE` set on the `develop` preview | `docs/TEST_EVIDENCE.md` §1.3; `docs/hosted/OWNER_STEP_APP_LOGIN.md` |
+| _pending_ | Step 6 owner run, then step 7 (deployment, app-login probes) | waits for the owner step and the foundation build | |
