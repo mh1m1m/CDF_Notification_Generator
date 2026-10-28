@@ -11,10 +11,10 @@ acceptance evidence) · PRODUCTION_SUBSTITUTION_REQUIRED.
 
 | Team | Role | Owns (only this team edits) | Its PRs are reviewed by |
 | ---- | ---- | --------------------------- | ----------------------- |
-| **ARCH** | Chief Architect, integration, DevOps, hosted database operations | `package.json`, `pnpm-lock.yaml`, all root configs (`tsconfig.json`, `next.config.ts`, `eslint.config.mjs`, `vitest.config.ts`, `postcss.config.mjs`, prettier), `.github/**`, `.env.example`, `CLAUDE.md`, `README.md`, `docs/*.md` master files, `docs/architecture/CONCEPTUAL_ARCHITECTURE.md`, `docs/hosted/**`, `database/hosted/**`, `lib/contracts/**`, `lib/auth/**`, `lib/i18n/index.ts`, `proxy.ts`, `app/layout.tsx`, `app/api/health/**`, `scripts/ci/**` | SEC (security-relevant parts) |
+| **ARCH** | Chief Architect, integration, DevOps, hosted database operations | `package.json`, `pnpm-lock.yaml`, all root configs (`tsconfig.json`, `next.config.ts`, `eslint.config.mjs`, `vitest.config.ts`, `postcss.config.mjs`, prettier), `.github/**`, `.env.example`, `CLAUDE.md`, `README.md`, `docs/*.md` master files, `docs/architecture/CONCEPTUAL_ARCHITECTURE.md`, `docs/hosted/**`, `database/hosted/**`, `lib/contracts/**`, `lib/auth/**`, `lib/i18n/index.ts`, `lib/i18n/persona/**`, `proxy.ts`, `app/layout.tsx`, `app/api/health/**`, `scripts/ci/**` | SEC (security-relevant parts) |
 | **DB** | Database and backend | `database/migrations/0001+`, `database/seed/**`, `lib/db/**`, `scripts/db/**`, `tests/integration/**`, `docs/architecture/DATA_MODEL.md` | SEC |
 | **PROC** | Procedural intelligence | `lib/domain/**`, `lib/journeys/**`, `lib/disclosure/**`, `lib/authority/**`, `lib/notifications/**`, `tests/unit/{domain,journeys,disclosure,authority,notifications}/**`, i18n namespaces `status`, `journeys` | SEC |
-| **FE** | Frontend and BFF | `app/(auth)/**`, `app/(platform)/**`, `app/api/**` except `app/api/health/**`, `lib/server/**`, `lib/adapters/**`, `lib/authz/**`, `tests/unit/{server,authz}/**`, i18n namespaces `portfolio`, `case`, `my-work`, `notifications`, `workspaces` | QA (UI) and SEC (`lib/server`, `lib/adapters`, `lib/authz`) |
+| **FE** | Frontend and BFF | `app/(auth)/**`, `app/(platform)/**`, `app/api/**` except `app/api/health/**`, `lib/server/**`, `lib/adapters/**`, `lib/authz/**`, `tests/unit/{server,authz}/**`, i18n namespaces `auth`, `portfolio`, `case`, `myWork`, `notifications`, `workspaces` | QA (UI) and SEC (`lib/server`, `lib/adapters`, `lib/authz`) |
 | **UX** | Design system, RTL, accessibility by design | `styles/**`, `components/**`, `lib/i18n/{common,shell}/**`, `docs/design/**`, `tests/unit/components/**` | QA |
 | **QA** | Playwright, visual QA, the Sentinel, Truth Inspector and Design Critic harness | `playwright.config.ts`, `tests/e2e/**`, `tests/a11y/**`, `tests/visual/**`, `tests/sentinel/**`, `tests/truth/**`, `tests/critic/**`, `tests/fixtures/**`, `docs/qa/**` | ARCH |
 | **SEC** | Security and adversarial testing | `tests/security/**`, `docs/security/**` | DB |
@@ -22,13 +22,15 @@ acceptance evidence) · PRODUCTION_SUBSTITUTION_REQUIRED.
 Every team also owns `docs/teams/<team>/` (its `STATUS.md`, template in `docs/teams/README.md`).
 
 Rules: never edit a path another team owns; ask its owner through ARCH. A new dependency, a root config change or a
-new i18n namespace goes through ARCH. A PR may add several consecutive migrations; applied migrations are never edited.
+new i18n namespace goes through ARCH. A change to `lib/contracts/**` proposed inside a team PR (new ports, command schemas)
+needs ARCH's `REVIEW: ACCEPT` as well as the board reviewer's. String files follow ADR-013. A PR may add several consecutive migrations; applied migrations are never edited.
 ARCH applies migrations to the hosted schema only after the PR is merged into `develop`, with the plan's procedure
 (`docs/hosted/ISOLATION_AND_RECOVERY_PLAN.md` §6). No team runs SQL on the hosted project.
 
 ## 2. How a task moves
 
-1. Branch from `develop`: `<feature|fix|security|docs|test>/V13-<TEAM>-<NNN>-<slug>`.
+1. Branch from `develop`: `<feature|fix|security|docs|test>/V13-<TEAM>-<NNN>-<slug>`. A team session that can push only to its own
+   session branch (PROC) opens its PRs from that branch, one at a time; the PR title carries the task id.
 2. Build with tests (positive and negative). Run locally: `pnpm lint && pnpm typecheck && pnpm db:lint && pnpm test`,
    plus `pnpm test:db` and `pnpm test:e2e` when the task touches them. Record real counts.
 3. Open a PR into `develop` titled `[V13-<TEAM>-<NNN>] …` with the CEOM sections (CLAUDE.md §6).
@@ -48,7 +50,7 @@ Phase A runs now. Phase B starts when V13-ARCH-001 is merged into `develop`. Pha
 
 | Id | Task | Team | Depends on | Acceptance | Status |
 | -- | ---- | ---- | ---------- | ---------- | ------ |
-| V13-ARCH-001 | Repository foundation: Next.js 16 app shell, configs, `lib/contracts` (incl. `CaseSourceAdapter`), `lib/db` security context, `lib/auth` session, `proxy.ts`, health and isolation-probe routes, local PostgreSQL tooling and migration runner/linter, CI, Playwright smoke | ARCH | — | lint, typecheck, format, db:lint, unit, DB integration, build and e2e smoke all green locally; CI green | IN_PROGRESS |
+| V13-ARCH-001 | Repository foundation: Next.js 16 app shell, configs, `lib/contracts` (incl. `CaseSourceAdapter`), `lib/db` security context, `lib/auth` session, `proxy.ts`, health and isolation-probe routes, local PostgreSQL tooling and migration runner/linter, CI, Playwright smoke | ARCH | — | lint, typecheck, format, db:lint, unit, DB integration, build and e2e smoke all green locally; CI green | IN_REVIEW |
 | V13-ARCH-002 | Shared documentation: CLAUDE.md, plan, board, ADRs, status, evidence, open issues, deployment status, E01 | ARCH | — | files present on `develop`, facts verified | IN_PROGRESS |
 | V13-ARCH-003 | Staging connection: app-login verifier (SCRAM, set out of band), Vercel environment variables (sensitive), `develop` preview deployed, `/api/health` and `/api/health/isolation` PASS from the deployed app login | ARCH | ARCH-001 | plan §6 steps 6–7 recorded with evidence; DEPLOYMENT_STATUS updated | NOT_STARTED |
 | V13-ARCH-004 | Requirements register and traceability (E-, UXQA-, QG-, Gate ids → tasks → tests) | ARCH | — | `docs/REQUIREMENTS_REGISTER.csv` + `docs/TRACEABILITY.md` | IN_PROGRESS |

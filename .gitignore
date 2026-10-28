@@ -26,6 +26,12 @@ blob-report/
 supabase/.temp/
 supabase/.branches/
 
+# local database clusters and scratch files (scripts/db/local-pg.mjs)
+.local/
+
+# vercel cli
+.vercel/
+
 # os / editor
 .DS_Store
 *.log
