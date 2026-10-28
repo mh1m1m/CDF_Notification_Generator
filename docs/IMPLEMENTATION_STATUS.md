@@ -4,7 +4,7 @@
 NOT_STARTED · PRODUCTION_SUBSTITUTION_REQUIRED. A capability is COMPLETE only with its implementation and verification
 evidence (`docs/TEST_EVIDENCE.md`). No overall completion percentage is given: each gate is reported on its own.
 
-Last updated: **28 Oct 2026 01:30 UTC** (Chief Architect).
+Last updated: **28 Oct 2026 02:02 UTC** (Chief Architect).
 
 ## 1. Milestones
 
@@ -28,7 +28,7 @@ Last updated: **28 Oct 2026 01:30 UTC** (Chief Architect).
 | Database: V13 schema and roles in CDF GC Review, isolated | COMPLETE | TEST_EVIDENCE §1–§2; ADR-012 |
 | Database: recovery plan and rollback script | COMPLETE | `docs/hosted/ISOLATION_AND_RECOVERY_PLAN.md`; rollback rehearsed locally (TEST_EVIDENCE §1.2) |
 | Vercel project linked to the repository | COMPLETE | DEPLOYMENT_STATUS §3 |
-| Vercel environment variables | NOT_STARTED | V13-ARCH-003 |
+| Vercel environment variables | IN_PROGRESS | the two plain switches are set on the `develop` preview; the two sensitive values wait for the owner step (`docs/hosted/OWNER_STEP_APP_LOGIN.md`) |
 | Successful deployment | NOT_STARTED | two builds failed `NEXT_NO_VERSION` before the app existed (OI-010) |
 | Deployment verification (build, DB connectivity, sign-in, Playwright smoke) | NOT_STARTED | DEPLOYMENT_STATUS §5 |
 
