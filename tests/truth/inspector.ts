@@ -85,7 +85,19 @@ function collectInPage(): EpistemicNode[] {
 }
 
 export async function snapshotEpistemic(page: Page): Promise<EpistemicNode[]> {
-  return page.evaluate(collectInPage);
+  const nodes = await page.evaluate(collectInPage);
+  // Same-origin frames (e.g. a notification preview) are checked like the main page (ARCH review of #7, item 1).
+  for (const frame of page.frames()) {
+    if (frame === page.mainFrame()) continue;
+    try {
+      const url = frame.url();
+      const sub = await frame.evaluate(collectInPage);
+      nodes.push(...sub.map((n) => ({ ...n, path: `frame(${url}) ${n.path}` })));
+    } catch {
+      // Cross-origin or detached frame: nothing readable.
+    }
+  }
+  return nodes;
 }
 
 export async function checkTruth(

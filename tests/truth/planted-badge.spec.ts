@@ -147,4 +147,17 @@ test.describe("other truth rules", () => {
     );
     expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T6"]);
   });
+
+  test("a planted badge inside a same-origin frame (notification preview) → T3", async ({ page }) => {
+    const badge =
+      '<span data-epistemic="recorded" data-status-kind="notification" data-status="SENT">أُرسل</span>';
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({ insideWorkspace: `<iframe title="preview" srcdoc='${badge}'></iframe>` }),
+    );
+    const v = await inspectTruth(page, oracle, NOW);
+    expect(rulesOf(v)).toEqual(["T3"]);
+    expect(formatTruthViolations(v)).toContain("frame(");
+  });
 });

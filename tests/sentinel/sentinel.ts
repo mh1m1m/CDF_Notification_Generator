@@ -16,10 +16,18 @@
 //   P1 a payload (HTML, RSC flight, JSON) contains no case id or reference outside the allowed set
 import type { Page, Response } from "@playwright/test";
 
-export const CASE_REF_PATTERN = /CDF-DEMO-\d{4}-\d{4}/g;
+export const CASE_REF_PATTERN = /CDF-DEMO-\d{4}-\d{4}/gi;
 const CASE_REF_EXACT = /^CDF-DEMO-\d{4}-\d{4}$/;
 // Same shape as lib/contracts UUID_PATTERN, unanchored for scanning.
-export const UUID_SCAN_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/g;
+export const UUID_SCAN_PATTERN = /[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+
+/**
+ * Arabic-Indic (U+0660–0669) and Extended Arabic-Indic (U+06F0–06F9) digits → ASCII, so a reference a component
+ * renders with Arabic digits (against DESIGN_SYSTEM §5) is still matched.
+ */
+export function normaliseDigits(text: string): string {
+  return text.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, (d) => String((d.charCodeAt(0) & 0xf) % 10));
+}
 const UUID_EXACT = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 export interface CaseOwnerNode {
@@ -62,7 +70,9 @@ export interface Violation {
 
 /** Runs in the browser: collects the ADR-013 evidence. Must stay self-contained (it is serialised). */
 function collectInPage(): CaseContextSnapshot {
-  const refPattern = /CDF-DEMO-\d{4}-\d{4}/g;
+  const refPattern = /CDF-DEMO-\d{4}-\d{4}/gi;
+  const ascii = (t: string) =>
+    t.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, (d) => String((d.charCodeAt(0) & 0xf) % 10));
   const pathOf = (el: Element): string => {
     const parts: string[] = [];
     let node: Element | null = el;
@@ -96,7 +106,7 @@ function collectInPage(): CaseContextSnapshot {
       descendantCaseIds: Array.from(el.querySelectorAll("[data-case-id]")).map(
         (d) => d.getAttribute("data-case-id") ?? "",
       ),
-      textRefs: Array.from(new Set(text.match(refPattern) ?? [])),
+      textRefs: Array.from(new Set((ascii(text).match(refPattern) ?? []).map((r) => r.toUpperCase()))),
     };
   });
   const counts = Array.from(document.querySelectorAll('[data-testid^="count-"]')).map((el) => ({
@@ -247,15 +257,47 @@ export interface PayloadAllowance {
 /** P1: finds case ids and references in a payload that are not allowed. */
 export function scanPayload(where: string, text: string, allow: PayloadAllowance): Violation[] {
   const v: Violation[] = [];
-  for (const id of new Set(text.match(UUID_SCAN_PATTERN) ?? [])) {
+  const ascii = normaliseDigits(text);
+  for (const id of new Set((ascii.match(UUID_SCAN_PATTERN) ?? []).map((x) => x.toLowerCase()))) {
     if (allow.knownCaseIds.has(id) && !allow.caseIds.has(id))
       v.push({ rule: "P1", where, detail: `payload carries case id ${id}` });
   }
-  for (const ref of new Set(text.match(CASE_REF_PATTERN) ?? [])) {
+  for (const ref of new Set((ascii.match(CASE_REF_PATTERN) ?? []).map((r) => r.toUpperCase()))) {
     if (!allow.caseRefs.has(ref))
       v.push({ rule: "P1", where, detail: `payload carries case reference ${ref}` });
   }
   return v;
+}
+
+// Windows-1252 code points for bytes 0x80–0x9F (the rest of 0x00–0xFF maps to itself).
+const CP1252_HIGH = [
+  0x20ac, 0x81, 0x201a, 0x192, 0x201e, 0x2026, 0x2020, 0x2021, 0x2c6, 0x2030, 0x160, 0x2039, 0x152, 0x8d,
+  0x17d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122, 0x161, 0x203a,
+  0x153, 0x9d, 0x17e, 0x178,
+];
+const CP1252_BYTE = new Map(CP1252_HIGH.map((cp, i) => [cp, 0x80 + i] as const));
+
+/**
+ * Chromium hands Playwright the body of a text response without a charset (Next.js RSC flight is
+ * `text/x-component`) already decoded as Windows-1252, so UTF-8 Arabic arrives as mojibake ("Û²" for "۲") and no
+ * pattern can match it. This reverses that decoding when, and only when, the result is valid UTF-8.
+ */
+export function recoverUtf8(text: string): string {
+  const bytes: number[] = [];
+  for (const ch of text) {
+    const cp = ch.codePointAt(0)!;
+    const b =
+      cp <= 0x7f || (cp >= 0xa0 && cp <= 0xff)
+        ? cp
+        : (CP1252_BYTE.get(cp) ?? (cp >= 0x80 && cp <= 0x9f ? cp : -1));
+    if (b < 0) return text; // not a Windows-1252 decoding: leave it as it is
+    bytes.push(b);
+  }
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(Uint8Array.from(bytes));
+  } catch {
+    return text;
+  }
 }
 
 const SCANNED_TYPES = /text\/html|text\/x-component|application\/json|text\/plain/;
@@ -273,8 +315,11 @@ export function recordPayloads(page: Page, origin: string) {
     if (!SCANNED_TYPES.test(type)) return;
     bodies.push(
       response
-        .text()
-        .then((text) => ({ where: `${response.request().method()} ${url}`, text }))
+        .body()
+        .then((body) => ({
+          where: `${response.request().method()} ${url}`,
+          text: /charset=/i.test(type) ? body.toString("utf8") : recoverUtf8(body.toString("utf8")),
+        }))
         .catch(() => null),
     );
   };

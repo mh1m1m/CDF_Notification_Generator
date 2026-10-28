@@ -10,7 +10,13 @@ import {
   openFixture,
   portfolioHtml,
 } from "../fixtures/synthetic-case-page";
-import { formatViolations, inspectCaseContext, recordPayloads, type PayloadAllowance } from "./sentinel";
+import {
+  formatViolations,
+  inspectCaseContext,
+  recordPayloads,
+  recoverUtf8,
+  type PayloadAllowance,
+} from "./sentinel";
 
 const c1 = CASES.c0001;
 const casePath = `/cases/${c1.id}`;
@@ -125,4 +131,65 @@ test.describe("planted leaks are detected", () => {
     await openFixture(page, "/portfolio", portfolioHtml().replace('data-count="3"', 'data-count="many"'));
     expect(rulesOf(await inspectCaseContext(page, {}))).toEqual(["S7"]);
   });
+
+  test("(h) restricted 0009's id in UPPER CASE in an RSC payload → P1", async ({ page }) => {
+    const payloads = recordPayloads(page, FIXTURE_ORIGIN);
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml(),
+      `1:{"caseId":"${CASES.c0009.id.toUpperCase()}"}\n`,
+    );
+    const p = await payloads.violations(allowOn0001);
+    expect(rulesOf(p)).toEqual(["P1"]);
+    expect(formatViolations(p)).toContain(CASES.c0009.id);
+  });
+
+  test("(i) another case's reference written with Arabic-Indic digits → S4", async ({ page }) => {
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({ insideWorkspace: "<p>انظر CDF-DEMO-٢٠٢٦-٠٠٠٣</p>" }),
+    );
+    const v = await inspectCaseContext(page, { contextCaseId: c1.id });
+    expect(rulesOf(v)).toEqual(["S4"]);
+    expect(formatViolations(v)).toContain(CASES.c0003.ref);
+  });
+
+  test("(j) restricted 0009's reference with Extended Arabic-Indic digits in a payload → P1", async ({
+    page,
+  }) => {
+    const payloads = recordPayloads(page, FIXTURE_ORIGIN);
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml(),
+      '1:{"title":"فضية مقيدة — في الحفظ","ref":"CDF-DEMO-۲۰۲۶-۰۰۰۹"}\n',
+    );
+    const p = await payloads.violations(allowOn0001);
+    expect(rulesOf(p)).toEqual(["P1"]);
+    expect(formatViolations(p)).toContain(CASES.c0009.ref);
+  });
+
+  test("(k) another case's element inside a same-origin frame of the case page → S5", async ({ page }) => {
+    const c2 = CASES.c0002;
+    const frame = `<div data-case-id="${c2.id}" data-case-ref="${c2.ref}">معاينة</div>`;
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({ insideWorkspace: `<iframe title="preview" srcdoc='${frame}'></iframe>` }),
+    );
+    expect(rulesOf(await inspectCaseContext(page, { contextCaseId: c1.id }))).toEqual(["S5"]);
+  });
+});
+
+test("recoverUtf8 reverses a Windows-1252 decoding of UTF-8 and leaves other text alone", () => {
+  // Every byte value 0x80–0xBF occurs as a UTF-8 continuation byte across this Arabic sample.
+  const arabic = "فضية مقيدة — في الحفظ، صندوق التنمية الثقافي ٠١٢٣٤٥٦٧٨٩ ۰۱۲۳۴۵۶۷۸۹";
+  const bytes = Buffer.from(arabic, "utf8");
+  const cp1252 = new TextDecoder("windows-1252").decode(bytes);
+  expect(cp1252).not.toBe(arabic);
+  expect(recoverUtf8(cp1252)).toBe(arabic);
+  expect(recoverUtf8(arabic)).toBe(arabic); // already correct text is untouched
+  expect(recoverUtf8("plain ASCII")).toBe("plain ASCII");
 });
