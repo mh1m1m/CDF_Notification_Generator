@@ -183,7 +183,7 @@ keeps this plan, the board and the status file current.
 | Environment | Database | App | Data | Purpose |
 | ----------- | -------- | --- | ---- | ------- |
 | Local | PostgreSQL 16 started by `pnpm db:local` (no Docker), same roles and migrations | `pnpm dev` | synthetic seed | development, unit/DB/e2e tests |
-| CI | PostgreSQL 16 in GitHub Actions | production build | synthetic seed | every PR and push |
+| CI | PostgreSQL 17 service container in GitHub Actions (the hosted project runs 17.11) | production build | synthetic seed | every PR and push |
 | Staging | `cdf_notifications_v13` in CDF GC Review | Vercel preview of `develop` | synthetic seed | integration, Gate J smoke, owner review |
 | Production | none | blocked | — | blocked by ADR-005 / QG-13 |
 
