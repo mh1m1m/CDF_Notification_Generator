@@ -41,7 +41,16 @@ function recorder(rows: CaseRow[]) {
 const counted = (total: number | string, rows: CaseRow[]): CaseRow[] =>
   rows.length === 0
     ? [{ total, id: null } as unknown as CaseRow]
-    : rows.map((r) => ({ ...r, total }) as unknown as CaseRow);
+    : rows.map(
+        (r) =>
+          ({
+            last_event_id: null,
+            last_event_at: null,
+            my_open_task_count: 0,
+            ...r,
+            total,
+          }) as unknown as CaseRow,
+      );
 
 describe("listCases", () => {
   it("calls portfolio_count and portfolio_page in one statement with bound values, inside the identity's context", async () => {
@@ -54,7 +63,7 @@ describe("listCases", () => {
     expect(call.text).toMatch(/cdf_notifications_v13\.portfolio_page\(/);
     expect(call.text).not.toContain("drop table");
     const text = "x'); drop table t; --";
-    expect(call.values).toEqual([null, null, text, null, 26, null, null, text]);
+    expect(call.values).toEqual([null, null, text, false, null, 26, null, null, text, false]);
     expect(page.items.map((c) => c.case_number)).toEqual(["CDF-DEMO-2026-0001", "CDF-DEMO-2026-0003"]);
     expect(page.next_cursor).toBeNull();
     expect(page.total).toBe(2);
@@ -62,8 +71,24 @@ describe("listCases", () => {
 
   it("passes the same filters to the count and to the page", async () => {
     const { calls, adapter } = recorder(counted(1, [row(10, { records_state: "CLOSED", stage: "CLOSURE" })]));
-    await adapter.listCases(SECRETARY, { lifecycle_stage: "CLOSURE", records_state: "CLOSED", text: "0010" });
-    expect(calls[0]?.values).toEqual(["CLOSURE", "CLOSED", "0010", null, 26, "CLOSURE", "CLOSED", "0010"]);
+    await adapter.listCases(SECRETARY, {
+      lifecycle_stage: "CLOSURE",
+      records_state: "CLOSED",
+      text: "0010",
+      assigned_to_me: true,
+    });
+    expect(calls[0]?.values).toEqual([
+      "CLOSURE",
+      "CLOSED",
+      "0010",
+      true,
+      null,
+      26,
+      "CLOSURE",
+      "CLOSED",
+      "0010",
+      true,
+    ]);
   });
 
   it("returns an empty page with its total when no case matches", async () => {
@@ -88,6 +113,35 @@ describe("listCases", () => {
     await expect(adapter.listCases(SECRETARY, {})).rejects.toThrow();
   });
 
+  it("maps the row summaries: last recorded event and own open tasks", async () => {
+    const { adapter } = recorder(
+      counted(2, [
+        row(1, {
+          last_event_id: "0e000000-0000-4000-8000-000000000001",
+          last_event_at: new Date("2026-10-01T09:00:00Z"),
+          my_open_task_count: 2,
+        } as Partial<CaseRow>),
+        row(5),
+      ]),
+    );
+    const page = await adapter.listCases(SECRETARY, {});
+    expect(page.items[0]).toMatchObject({
+      last_event_id: "0e000000-0000-4000-8000-000000000001",
+      last_event_at: "2026-10-01T09:00:00.000Z",
+      my_open_task_count: 2,
+    });
+    expect(page.items[1]).toMatchObject({ last_event_id: null, last_event_at: null, my_open_task_count: 0 });
+  });
+
+  it.each([
+    ["no open-task count (older read function)", { my_open_task_count: null }],
+    ["a negative open-task count", { my_open_task_count: -1 }],
+    ["an event id without its time", { last_event_id: "0e000000-0000-4000-8000-000000000001" }],
+  ])("refuses the page when a row has %s", async (_n, extra) => {
+    const { adapter } = recorder(counted(1, [row(1, extra as Partial<CaseRow>)]));
+    await expect(adapter.listCases(SECRETARY, {})).rejects.toThrow();
+  });
+
   it("refuses a page larger than its authorised total", async () => {
     const { adapter } = recorder(counted(1, [row(1), row(2)]));
     await expect(adapter.listCases(SECRETARY, {})).rejects.toThrow();
@@ -100,7 +154,7 @@ describe("listCases", () => {
     expect(page.next_cursor).not.toContain("CDF-DEMO");
     expect(decodeCursor(page.next_cursor ?? undefined)).toBe("CDF-DEMO-2026-0002");
     await adapter.listCases(SECRETARY, { limit: 2, cursor: page.next_cursor ?? undefined });
-    expect(calls[1]?.values[3]).toBe("CDF-DEMO-2026-0002");
+    expect(calls[1]?.values[4]).toBe("CDF-DEMO-2026-0002");
   });
 
   it("refuses the whole page when any row breaks the contract", async () => {

@@ -10,10 +10,12 @@
 // system through the ASP.NET Core API on Alibaba Cloud Riyadh.
 import "server-only";
 import {
+  CaseListExtrasSchema,
   CaseListFilterSchema,
   CaseSummarySchema,
   type CaseId,
   type CaseListFilter,
+  type CaseListItem,
   type CaseListPage,
   type CaseSourceAdapter,
   type CaseSummary,
@@ -39,6 +41,13 @@ export interface CaseRow {
   source_system?: string | null;
   source_ref?: string | null;
   updated_at?: Date | string | null;
+}
+
+/** A portfolio_page row: CaseRow plus the row summaries (migration 0003, DB PR #15). */
+export interface PortfolioRow extends CaseRow {
+  last_event_id?: string | null;
+  last_event_at?: Date | string | null;
+  my_open_task_count?: number | null;
 }
 
 /** bigint count → number; anything that is not a non-negative safe integer is refused. */
@@ -71,6 +80,16 @@ export function rowToCaseSummary(row: CaseRow): CaseSummary {
   });
 }
 
+/** Portfolio row → CaseListItem; the row summaries are required (a source without them is refused). */
+export function rowToCaseListItem(row: PortfolioRow): CaseListItem {
+  const extras = CaseListExtrasSchema.parse({
+    last_event_id: row.last_event_id ?? null,
+    last_event_at: iso(row.last_event_at) ?? null,
+    my_open_task_count: row.my_open_task_count,
+  });
+  return { ...rowToCaseSummary(row), ...extras };
+}
+
 export function createV13RecordsCaseSource(run: RequestContextRunner): CaseSourceAdapter {
   return {
     sourceSystem: V13_SOURCE_SYSTEM,
@@ -84,17 +103,18 @@ export function createV13RecordsCaseSource(run: RequestContextRunner): CaseSourc
       const joined = await run(
         identity,
         (tx) =>
-          tx<(CaseRow & { total: string | number | bigint })[]>`
+          tx<(PortfolioRow & { total: string | number | bigint })[]>`
           select t.total, p.*
             from (select cdf_notifications_v13.portfolio_count(
-                    ${f.lifecycle_stage ?? null}, ${f.records_state ?? null}, ${f.text ?? null}) as total) t
+                    ${f.lifecycle_stage ?? null}, ${f.records_state ?? null}, ${f.text ?? null},
+                    ${f.assigned_to_me}) as total) t
             left join lateral cdf_notifications_v13.portfolio_page(
                     ${after}, ${f.limit + 1}, ${f.lifecycle_stage ?? null}, ${f.records_state ?? null},
-                    ${f.text ?? null}) p on true`,
+                    ${f.text ?? null}, ${f.assigned_to_me}) p on true`,
       );
       const total = toCount(joined[0]?.total);
       const rows = joined.filter((r) => r.id !== null);
-      const items = rows.slice(0, f.limit).map(rowToCaseSummary);
+      const items = rows.slice(0, f.limit).map(rowToCaseListItem);
       // A page larger than its own authorised total is inconsistent: refuse it rather than show it.
       if (items.length > total) throw new Error("portfolio_count: total below page size");
       const last = items.at(-1);

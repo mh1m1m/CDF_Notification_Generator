@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AuditEventSchema,
+  CaseListExtrasSchema,
   CASE_NUMBER_PATTERN,
   CaseIdSchema,
   CaseListFilterSchema,
@@ -132,6 +133,42 @@ describe("CaseListFilterSchema", () => {
   });
 });
 
+describe("CaseListExtrasSchema and the assigned-to-me filter", () => {
+  const extras = {
+    last_event_id: "0e000000-0000-4000-8000-000000000001",
+    last_event_at: "2026-10-01T09:00:00Z",
+    my_open_task_count: 2,
+  };
+
+  it("accepts row summaries, and none for a case without events", () => {
+    expect(CaseListExtrasSchema.parse(extras).my_open_task_count).toBe(2);
+    expect(
+      CaseListExtrasSchema.safeParse({ last_event_id: null, last_event_at: null, my_open_task_count: 0 })
+        .success,
+    ).toBe(true);
+  });
+
+  it("refuses half an event, negative or fractional counts, and extra fields", () => {
+    for (const bad of [
+      { ...extras, last_event_at: null },
+      { ...extras, last_event_id: null },
+      { ...extras, last_event_id: "not-a-uuid" },
+      { ...extras, my_open_task_count: -1 },
+      { ...extras, my_open_task_count: 1.5 },
+      { ...extras, my_open_task_count: undefined },
+      { ...extras, assignee: "Employee Alpha" },
+    ]) {
+      expect(CaseListExtrasSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it("assigned_to_me defaults to false and is boolean only", () => {
+    expect(CaseListFilterSchema.parse({}).assigned_to_me).toBe(false);
+    expect(CaseListFilterSchema.parse({ assigned_to_me: true }).assigned_to_me).toBe(true);
+    expect(CaseListFilterSchema.safeParse({ assigned_to_me: "1" }).success).toBe(false);
+  });
+});
+
 describe("RequestIdentitySchema", () => {
   const identity = {
     persona_id: "0b000000-0000-4000-8000-000000000001",
@@ -201,7 +238,10 @@ describe("CaseSourceAdapter contract", () => {
       const allowed = [visible, hidden].filter(
         (c) => identity.active_workspace === "INVESTIGATIONS" || c === visible,
       );
-      return { items: allowed.slice(0, f.limit), next_cursor: null, total: allowed.length };
+      const items = allowed
+        .slice(0, f.limit)
+        .map((c) => ({ ...c, last_event_id: null, last_event_at: null, my_open_task_count: 0 }));
+      return { items, next_cursor: null, total: allowed.length };
     },
     async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null> {
       const allowed = [visible, hidden].filter(

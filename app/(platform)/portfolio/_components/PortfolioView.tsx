@@ -54,6 +54,17 @@ function numberFormat(locale: Locale): Intl.NumberFormat {
   return new Intl.NumberFormat(locale === "ar" ? "ar-u-nu-arab" : "en-u-nu-latn");
 }
 
+/**
+ * Recorded-event dates: calendar date in the CDF time zone (Asia/Riyadh), Arabic-Indic digits in Arabic. The exact
+ * instant stays in the <time dateTime> attribute.
+ */
+function dateFormat(locale: Locale): Intl.DateTimeFormat {
+  return new Intl.DateTimeFormat(locale === "ar" ? "ar-u-nu-arab" : "en-GB-u-nu-latn", {
+    dateStyle: "medium",
+    timeZone: "Asia/Riyadh",
+  });
+}
+
 function resultLine(t: Translator, locale: Locale, total: number): string {
   // English has no "zero" plural category; say "No cases" there too.
   const rule = total === 0 ? "zero" : new Intl.PluralRules(locale).select(total);
@@ -67,6 +78,7 @@ function captionOf(t: Translator, locale: Locale, query: PortfolioQuery): string
     parts.push(t("portfolio.caption.stage", { stage: stageLabel(t, query.stage) }));
   if (query.state !== undefined)
     parts.push(t("portfolio.caption.state", { state: t(RECORDS_KEYS[query.state]) }));
+  if (query.mine) parts.push(t("portfolio.caption.mine"));
   return t("portfolio.caption", {
     filters:
       parts.length === 0
@@ -161,6 +173,17 @@ function Filters({ t, query }: { t: Translator; query: PortfolioQuery }) {
             </option>
           ))}
         </select>
+      </div>
+      <div className={styles.check}>
+        <input
+          id="portfolio-mine"
+          name="mine"
+          type="checkbox"
+          value="1"
+          defaultChecked={query.mine === true}
+          data-testid="portfolio-mine"
+        />
+        <label htmlFor="portfolio-mine">{t("portfolio.filters.mine")}</label>
       </div>
       <div className={styles.actions}>
         <button type="submit" className="v13-button" data-testid="portfolio-apply">
@@ -281,6 +304,8 @@ function Results({
                   <th scope="col">{t("portfolio.column.stage")}</th>
                   <th scope="col">{t("portfolio.column.state")}</th>
                   <th scope="col">{t("portfolio.column.indicators")}</th>
+                  <th scope="col">{t("portfolio.column.lastEvent")}</th>
+                  <th scope="col">{t("portfolio.column.myOpenTasks")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -315,6 +340,23 @@ function Results({
                           {t("case.restricted")}
                         </span>
                       ) : null}
+                    </td>
+                    <td>
+                      {c.last_event_id !== null && c.last_event_at !== null ? (
+                        <time
+                          dateTime={c.last_event_at}
+                          data-testid="portfolio-last-event"
+                          data-epistemic="recorded"
+                          data-event-id={c.last_event_id}
+                        >
+                          {dateFormat(locale).format(new Date(c.last_event_at))}
+                        </time>
+                      ) : (
+                        <span data-testid="portfolio-no-event">{t("portfolio.noEvent")}</span>
+                      )}
+                    </td>
+                    <td data-testid="portfolio-my-open-tasks" data-count={c.my_open_task_count}>
+                      {fmt.format(c.my_open_task_count)}
                     </td>
                   </tr>
                 ))}

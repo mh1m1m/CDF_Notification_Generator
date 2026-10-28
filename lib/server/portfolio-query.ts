@@ -31,6 +31,8 @@ export interface PortfolioQuery {
   readonly text?: string;
   readonly stage?: PortfolioStage;
   readonly state?: RecordsState;
+  /** Only cases where the persona holds an active case assignment (URL mine=1). */
+  readonly mine?: true;
   /** Cursor of the current page (absent on the first page). */
   readonly after?: string;
   /** Cursors of the pages before the current one, oldest first; "" stands for the first page. */
@@ -49,17 +51,19 @@ const one = (value: string | string[] | undefined): string | undefined =>
  * come from an edited URL. An empty value means "no filter".
  */
 export function parsePortfolioQuery(params: RawSearchParams): ParsedPortfolioQuery {
-  for (const key of ["q", "stage", "state", "after", "back"]) {
+  for (const key of ["q", "stage", "state", "mine", "after", "back"]) {
     if (Array.isArray(params[key])) return { ok: false };
   }
   const text = one(params.q)?.trim() || undefined;
   const stage = one(params.stage) || undefined;
   const state = one(params.state) || undefined;
+  const mine = one(params.mine) || undefined;
   const after = one(params.after) || undefined;
   const back = one(params.back);
 
   if (text !== undefined && text.length > 100) return { ok: false };
   if (stage !== undefined && !(PORTFOLIO_STAGES as readonly string[]).includes(stage)) return { ok: false };
+  if (mine !== undefined && mine !== "1") return { ok: false };
   if (state !== undefined && !(PORTFOLIO_RECORDS_STATES as readonly string[]).includes(state))
     return { ok: false };
   if (after !== undefined && !CURSOR_SHAPE.test(after)) return { ok: false };
@@ -75,6 +79,7 @@ export function parsePortfolioQuery(params: RawSearchParams): ParsedPortfolioQue
       ...(text !== undefined ? { text } : {}),
       ...(stage !== undefined ? { stage: stage as PortfolioStage } : {}),
       ...(state !== undefined ? { state: state as RecordsState } : {}),
+      ...(mine !== undefined ? { mine: true as const } : {}),
       ...(after !== undefined ? { after } : {}),
       trail: trail.map((c) => (c === "~" ? "" : c)),
     },
@@ -87,16 +92,19 @@ export function toCaseListFilter(query: PortfolioQuery): CaseListFilter {
     ...(query.text !== undefined ? { text: query.text } : {}),
     ...(query.stage !== undefined ? { lifecycle_stage: query.stage } : {}),
     ...(query.state !== undefined ? { records_state: query.state } : {}),
+    ...(query.mine ? { assigned_to_me: true } : {}),
     ...(query.after !== undefined ? { cursor: query.after } : {}),
   };
 }
 
 export function hasFilters(query: PortfolioQuery): boolean {
-  return query.text !== undefined || query.stage !== undefined || query.state !== undefined;
+  return (
+    query.text !== undefined || query.stage !== undefined || query.state !== undefined || query.mine === true
+  );
 }
 
 function href(
-  query: Pick<PortfolioQuery, "text" | "stage" | "state">,
+  query: Pick<PortfolioQuery, "text" | "stage" | "state" | "mine">,
   after?: string,
   trail: readonly string[] = [],
 ) {
@@ -104,6 +112,7 @@ function href(
   if (query.text !== undefined) params.set("q", query.text);
   if (query.stage !== undefined) params.set("stage", query.stage);
   if (query.state !== undefined) params.set("state", query.state);
+  if (query.mine) params.set("mine", "1");
   if (after !== undefined) {
     params.set("after", after);
     if (trail.length > 0) params.set("back", trail.map((c) => (c === "" ? "~" : c)).join("."));

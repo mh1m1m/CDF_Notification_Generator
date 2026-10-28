@@ -55,6 +55,7 @@ describe("parsePortfolioQuery", () => {
     ["unknown stage", { stage: "investigation" }],
     ["stage code not in the catalogue", { stage: "ARCHIVED" }],
     ["unknown records state", { state: "DELETED" }],
+    ["assigned-to-me other than 1", { mine: "true" }],
     ["over-long search", { q: "x".repeat(101) }],
     ["cursor with forbidden characters", { after: "a b" }],
     ["over-long cursor", { after: "a".repeat(513) }],
@@ -83,6 +84,28 @@ describe("parsePortfolioQuery", () => {
       records_state: "CLOSED",
       cursor: CURSOR_A,
     });
+  });
+});
+
+describe("assigned-to-me filter", () => {
+  it("mine=1 maps to assigned_to_me and survives paging links", () => {
+    const q = ok({ mine: "1" });
+    expect(toCaseListFilter(q)).toEqual({ limit: 25, assigned_to_me: true });
+    expect(nextHref(q, CURSOR_A)).toBe(`/portfolio?mine=1&after=${CURSOR_A}&back=%7E`);
+  });
+
+  it("keeps only cases with an active case assignment; the total follows", async () => {
+    const alpha = pageOf(await load(SECRETARY, { mine: "1" }));
+    expect(alpha.page.items.map((c) => c.case_id)).toEqual([1, 3, 4, 7, 8, 10].map(caseIdOf));
+    expect(alpha.page.total).toBe(6);
+    const delta = pageOf(await load(GOVERNANCE, { mine: "1" }));
+    expect(delta.page.items.map((c) => c.case_id)).toEqual([caseIdOf(8)]);
+  });
+
+  it("never widens visibility: Gamma's assignments outside its workspace view stay hidden", async () => {
+    const gamma = pageOf(await load(INVESTIGATOR_GAMMA, { mine: "1" }));
+    expect(gamma.page.items.map((c) => c.case_id)).toEqual([2, 6, 10].map(caseIdOf));
+    expect(gamma.page.items.map((c) => c.case_id)).not.toContain(caseIdOf(9));
   });
 });
 
@@ -251,6 +274,24 @@ describe("PortfolioView markup", async () => {
     expect(html).toContain("٧ قضايا");
     expect(html).toContain("عرض ١–٧ من ٧");
     expect(html).toContain('<bdi dir="ltr">CDF-DEMO-2026-0010</bdi>');
+  });
+
+  it("last recorded event carries its event id and the recorded marker; own open tasks are counted", async () => {
+    const html = render("ar", await load(SECRETARY));
+    expect(html).toMatch(
+      /<time dateTime="2026-10-11T09:00:00.000Z" data-testid="portfolio-last-event" data-epistemic="recorded" data-event-id="0e000000-0000-4000-8000-000000000001">[^<]*١١[^<]*<\/time>/,
+    );
+    expect(html).toMatch(/data-testid="portfolio-my-open-tasks" data-count="2">٢</);
+    const beta = render("en", await load(INVESTIGATOR_BETA));
+    expect(beta).toContain('data-testid="portfolio-no-event"');
+    expect(beta).toContain("No recorded events yet");
+  });
+
+  it("the assigned-to-me box reflects the URL and is named in the caption", async () => {
+    const html = render("en", await load(SECRETARY, { mine: "1" }));
+    expect(html).toMatch(/<input id="portfolio-mine" type="checkbox"[^>]*checked=""/);
+    expect(html).toContain("Filters: assigned to me only.");
+    expect(render("en", await load(SECRETARY))).not.toMatch(/id="portfolio-mine"[^>]*checked/);
   });
 
   it("restricted 0009 carries the named-access flag for its assigned investigator", async () => {

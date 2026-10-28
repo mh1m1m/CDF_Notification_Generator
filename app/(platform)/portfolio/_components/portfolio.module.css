@@ -92,3 +92,10 @@
 .nowrap {
   white-space: nowrap;
 }
+
+.check {
+  display: flex;
+  gap: var(--cdf-space-2);
+  align-items: center;
+  min-block-size: 2.5rem;
+}

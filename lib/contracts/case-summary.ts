@@ -1,6 +1,6 @@
 // Case summary: the list/detail header shape every case source returns. Synthetic data only.
 import { z } from "zod";
-import { CaseIdSchema } from "./ids";
+import { CaseIdSchema, UuidSchema } from "./ids";
 
 /** Display identifier of a synthetic case. Never a key: lookups always use case_id and are authorised. */
 export const CASE_NUMBER_PATTERN = /^CDF-DEMO-2026-\d{4}$/;
@@ -58,6 +58,8 @@ export const CaseListFilterSchema = z.strictObject({
   limit: z.number().int().min(1).max(100).default(25),
   /** Opaque cursor returned by the previous page. */
   cursor: z.string().min(1).max(512).optional(),
+  /** Only cases where the identity holds an active case assignment (any capacity); task-only assignees do not count. */
+  assigned_to_me: z.boolean().default(false),
 });
 export type CaseListFilter = z.input<typeof CaseListFilterSchema>;
 
@@ -66,8 +68,27 @@ export type CaseListFilter = z.input<typeof CaseListFilterSchema>;
  * aside): it is computed after authorisation, in the same request transaction as the page, so it never reveals an
  * unauthorised case (§40; ARCH, 28 Oct 2026).
  */
+/**
+ * Per-row portfolio summaries, computed by the source after authorisation (SCREENS S2): the case's last recorded
+ * procedural event (both null when it has none) and the identity's own open tasks in that case.
+ */
+export const CaseListExtrasSchema = z
+  .strictObject({
+    last_event_id: UuidSchema.nullable(),
+    last_event_at: z.iso.datetime({ offset: true }).nullable(),
+    my_open_task_count: z.number().int().min(0).max(10_000),
+  })
+  .refine((x) => (x.last_event_id === null) === (x.last_event_at === null), {
+    message: "last_event_id and last_event_at are set together",
+    path: ["last_event_id"],
+  });
+export type CaseListExtras = z.infer<typeof CaseListExtrasSchema>;
+
+/** One portfolio row: the case summary plus its row summaries. */
+export type CaseListItem = CaseSummary & CaseListExtras;
+
 export interface CaseListPage {
-  readonly items: readonly CaseSummary[];
+  readonly items: readonly CaseListItem[];
   readonly next_cursor: string | null;
   readonly total: number;
 }
