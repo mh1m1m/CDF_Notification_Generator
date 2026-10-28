@@ -116,6 +116,23 @@ A forged claim, a claim rewritten after its MAC, or a MAC replayed from another 
 so it grants nothing (ADR-014). Policies also require `current_user = 'cdf_v13_user'`, so a query that escaped the
 request context sees nothing.
 
+RLS binds the caller, never the table owner (threat TM-T10). Every V13 table is owned by `cdf_v13_owner`, and RLS does
+not apply to a table's owner (no V13 table uses FORCE ROW LEVEL SECURITY). So every V13 view is created
+`WITH (security_invoker = true)`, and every read function (`portfolio_page()`, `case_header()`, `my_work_tasks()`,
+`case_notifications()` and later ones) is `SECURITY INVOKER`, so RLS applies to the caller. `SECURITY DEFINER` is
+allowed in four groups only:
+- the `api_*` commands. RLS does not apply inside them, so their own checks are the control there, and every
+  case-keyed command calls `can_access_case()` itself;
+- the claims and access-rule helpers that policies and commands call (`_verified_claims()` and the functions it uses,
+  the `current_*()` functions, `has_role()`, `_is_colleague()`, `is_assigned_to_case()`, `can_access_case()`), which
+  answer only questions about the caller's own claims and access, and the trigger `_case_owning_visibility()`, which
+  keeps a case's owning workspace listed as visible;
+- `current_persona()`, which returns only the caller's own row;
+- the audit internals `_append_audit()` and `verify_audit_chain()`, which are not granted to `cdf_v13_user`.
+
+SEC's catalog test SEC-DB-30 fails on any V13 view without `security_invoker` and on any `SECURITY DEFINER` function
+outside these groups.
+
 ### 5.2 The case-access rule (M1)
 
 A persona sees a case only when all of these hold (E03 §5):
@@ -145,6 +162,12 @@ Closed cases stay readable, and every command refuses to change them.
 Administrative or technical privilege never grants case content (REQ-SEC-016). In M1 no role reaches case content
 through administration. The System Administration workspace (M6, PLANNED) gets configuration rights only.
 
+Two technical functions sit outside the case-access rule. `verify_audit_chain()` runs only as the owner or the
+administrator; it is not granted to `cdf_v13_user` and returns counts only. `api_install_claims_key()` is the one
+technical command the request role can call: it installs the claims key once, refuses a different key, and is audited
+without key material. Rotating the key clears it with an audited script that only the Chief Architect runs
+(`database/hosted/reset_claims_key.sql`, DB-001); the app then installs the new key (ADR-014).
+
 One residual risk comes from sharing the database. The shared project's administrator `postgres` can read V13
 tables (OI-014). This is acceptable only for synthetic data; production needs a dedicated database (ADR-012).
 
@@ -152,12 +175,12 @@ tables (OI-014). This is acceptable only for synthetic data; production needs a 
 
 | Test | Where it is proved | Arrives |
 | ---- | ------------------ | ------- |
-| User A cannot reach Case B by changing the URL (REQ-SEC-017) | FE-004 negative tests; QA Scenarios A and D | M1 |
+| User A cannot reach Case B by changing the URL (REQ-SEC-017) | FE-004 negative tests; SEC-APP-01 and SEC-DB-18; QA Scenarios A and D | M1 |
 | A committee member cannot reach a case outside their membership (REQ-SEC-018) | committee workspace tests | M6 |
 | A recused member loses access to restricted deliberations (REQ-SEC-015) | committee workspace tests | M6 |
 | An external recipient never reaches internal information (REQ-NOTIF-017) | dispatch and disclosure tests | M5 |
-| Changing workspace grants nothing (REQ-SEC-019) | Scenario C with refused switches | M1 |
-| A service-role credential never reaches the browser (REQ-SEC-002) | bundle scan (REQ-DEPLOY-013) | M1 |
+| Changing workspace grants nothing (REQ-SEC-019) | SEC-DB-06 and SEC-APP-05; QA Scenario C with refused switches | M1 |
+| A service-role credential never reaches the browser (REQ-SEC-002) | bundle scan (REQ-DEPLOY-013); SEC-APP-13 | M1 |
 
 External recipients have no login at all in V13. Every user is an authenticated CDF staff persona, and a portal
 would be a second app under a new ADR (ADR-002). V13 has no service-role key either: there is no `@supabase/*`
