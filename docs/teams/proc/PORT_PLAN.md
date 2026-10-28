@@ -86,30 +86,44 @@ How each kind is carried over:
 | Reads the owner's directive text | ST-33 | **Not copied** (owner message, not repository material): ST-33 keeps the constants already in the test and records that the source excerpt is not in the repository |
 | Reads V12 evidence (`journeys/level2_journeys.json`, `generator/source/tests/v9_data.json`, the V12 hash ledger) | ST-22, REG-14 | Frozen copies of the two synthetic JSON files with their sha256; the ledger check recomputes against those copies only (ADAPTED) |
 | Reads generated demo output (`out/demo/`) | REG-01 … REG-12, A11Y-* | The demo builder renders in memory inside the test; no files written |
-| Runs the V12 engine suite on an untouched V12 copy (86 tests, 437 MB generator) | REG-13 | **Not portable**: stays in the reference package; listed as NOT PORTED with the reason |
+| Runs the V12 engine suite on an untouched V12 copy (86 tests, 437 MB generator) | REG-13 | **NOT_PORTED**: the test does not exist in the repository (no skipped test in the committed suite). It would need the V12 generator source and its 86-test engine suite; it stays in the reference package |
+| Checks the V12 hash ledger | REG-14 | **PARTIAL**: checks the 5 V12 journey-catalogue rows against frozen copies; the 95 `generator/source/` rows are not verified (4.8 MB of V12 generator code not copied) |
+| Re-checks the 77 V12 sample e-mails for `X-Unsent` | PC-15 | **PARTIAL**: the 77 V12 sample EMLs (118 MB) are not in the repository; the synthetic PC-15 cases run |
+| Quotes lines of V12 e-mails and samples (V12 replays) | PC-02, PC-06, PC-07, PC-09, PC-17 (×2), PC-18, PC-22, PC-23, PC-24 (×2) | **PARTIAL**: V12 EML evidence is never copied into the repository (Chief Architect, 28 Oct); the replay's rule assertions run, the quoted V12 line is reported as not re-verified |
 
-Expected repository count when PROC-005 lands: **725 ported + 1 not ported (REG-13)**. The exact list per test id is
+Repository count when PROC-005 lands: **734 pass, 0 skipped** (725 ported reference tests + 9 BADGE tests for the
+ADR-013 mapping); REG-13 not ported; REG-14, PC-15 and the eleven V12 replays partial. The exact list per test id is
 recorded in each PR.
+
+### Equivalence evidence
+
+Beyond the tests, the port is compared with the reference package by script, and each PR names the commit the
+comparison ran on: journey outputs (`resolveLevel1`, `resolveLevel2_3`, `buildProgressView`) for every scenario ×
+13 recipient classes; `decide()` over every recipient × field × channel × context (42,840 combinations); the in-memory
+demo build against the reference `out/demo/MANIFEST.json` (516 files, sha256). Scenarios changed by the BL-45 fixture
+corrections are listed as expected differences with their reason.
 
 ## 6. Fixture fixes before any seed reads the scenarios (BL-45, BL-46; gate G2)
 
 ST-34 lists 12 scenarios whose declared object status is not what the domain fold of their own events gives.
 
-- **BL-45 (five fixture defects)** — fix the fixture, never the fold:
-  - EC-01: a REPORT status is declared from case-code events; declare the status the report's own events give
-    (`REPORT_ACKNOWLEDGED` → the fold's state) and keep the case code on the case record only.
-  - SUM-01: same pattern for the REFERRAL (no referral status from `CASE_STATUS_RECORDED`).
-  - CF-35: the decision event targets the recommendation by bare id; give it the typed reference the fold needs, so the
-    RECOMMENDATION status and its source event follow from the events.
-  - CF-37: a DECISION is declared DECIDED from its notice; add the decision's own `AUTHORITY_DECISION_RECORDED` event
-    before the notice.
-  - WIT-01: a HEARING is declared SCHEDULED from a statement request; the declared object becomes the one the events
-    support, or the scenario declares no status for it.
-- **BL-46 (seven journey-bound procedures: CF-15 … CF-19, CF-23b, CF-36)** — one mapping table from journey events to
-  the PROCEDURE lifecycle, so the generic PROCEDURE table and the catalogue cannot disagree. The table is a modelling
-  artefact derived from the catalogue (labelled PROPOSED), not a governance value.
-- Acceptance: ST-34 reports 0 differences, ST-34 becomes a strict assertion (not a diagnostic), and the journey,
-  progress and render tests that read these fixtures stay green. This lands in PROC-002 before DB-005 seeds anything
+- **BL-45 (five fixture defects)** — fix the fixture, never the fold or a rule (done in the scratch port; listed with
+  before/after in the PROC-002 PR):
+
+  | Scenario | Before | After | Rule that required it |
+  | -------- | ------ | ----- | --------------------- |
+  | EC-01 | REPORT COMPLETED from `evt-EC-01-08` (a case-code event) | REPORT OPEN from `evt-EC-01-01` (`REPORT_RECEIVED`) | a procedural status comes only from the object's own driving events, never from the case code (charter §3.2; FI rules) |
+  | SUM-01 | REFERRAL IN_PROGRESS from `evt-SUM-01-09` (a case-code event) | no declared status (`null`): no recorded event drives the referral | same |
+  | WIT-01 | HEARING SCHEDULED from `evt-WIT-01-01` (`STATEMENT_REQUESTED`) | no declared status (`null`): a statement request drives a TASK, never a hearing | same |
+  | CF-35 | `AUTHORITY_DECISION_RECORDED` names the recommendation by a bare id | the same event carries the typed reference `{type: RECOMMENDATION, id}`; the fold then gives the declared DECIDED from `evt-CF-35-09` | events name their object by typed reference (charter §3.3) |
+  | CF-37 | DECISION DECIDED from its notice `evt-CF-37-01` | adds `evt-CF-37-00a` `PACKAGE_SUBMITTED_TO_AUTHORITY` and `evt-CF-37-00b` `AUTHORITY_DECISION_RECORDED` (outcome APPROVE) before the notice; DECIDED from `evt-CF-37-00b` | a decision is DECIDED only on its own record, never on its notice (FI-03) |
+
+- **BL-46 (seven journey-bound procedures: CF-15 … CF-19, CF-23b, CF-36)** — ON HOLD (Chief Architect, 28 Oct): new
+  PROCEDURE rows change status semantics and need the owner's approval (REQ-GOV-014). The proposal is in
+  `docs/teams/proc/PROPOSALS.md`; until approved the port keeps the reference behaviour and ST-34's documented
+  differences.
+- Acceptance for BL-45: the five scenarios no longer appear in ST-34's differences, no rule or status meaning changes,
+  and the journey, progress and render tests that read these fixtures stay green. Lands before DB-005 seeds anything
   from the scenarios.
 
 ## 7. Requests to ARCH (through the Chief Architect)
