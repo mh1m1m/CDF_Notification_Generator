@@ -16,6 +16,15 @@ lands; not yet reviewed, not applied to the hosted schema).
 - RLS is enabled on every table. `cdf_v13_user` has `SELECT` only (where a policy allows it) and `EXECUTE` on named
   functions; it has no `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` anywhere. Writes go through `api_*` `SECURITY DEFINER`
   commands owned by `cdf_v13_owner` with `search_path = ''`.
+- Every policy also requires `current_user = 'cdf_v13_user'` (SEC-REC-02), so a query that escaped the request
+  context (running as `cdf_v13_app`) sees nothing.
+- **Authenticated claims (ADR-014).** Each request transaction sets `request.v13.claims` =
+  `{"v":1,"persona_id","workspace_id","correlation_id"}` and `request.v13.claims_mac` =
+  base64url(HMAC-SHA256(K, claims ‖ `|` ‖ `pg_current_xact_id()`)), unpadded. K = HKDF-SHA256(`V13_SESSION_SECRET`,
+  info `cdf-v13/request-claims/v1`), installed once with `api_install_claims_key`. `_verified_claims()` recomputes the
+  MAC with core `sha256()` (pads precomputed at install; no pgcrypto) and accepts only exactly that shape with
+  lower-case UUIDs. A forged claim, a claim rewritten after the MAC, a MAC replayed from another transaction, a missing
+  key or a missing MAC all resolve to "no claims". Interop with Node `crypto.createHmac` checked on three vectors.
 - Append-only tables (`audit_event`, `procedural_event`, `notification_event`, `notification_template_version`) refuse
   `UPDATE`/`DELETE` (and `TRUNCATE` where applicable) by trigger, for every role including the owner.
 - JSONB only for small code/id attribute bags (`audit_event.metadata`, `procedural_event.attributes`), each limited to an
@@ -55,8 +64,9 @@ erDiagram
 | 0000 | `schema_migrations` | `version` | V13 history; restrictive deny-all policy (0001) |
 | 0001 | `workspace` | `id`, `code` unique | SECRETARIAT, INVESTIGATIONS, GOVERNANCE (seed) |
 | 0001 | `role` | `id`, `code` unique | COMMITTEE_SECRETARY, INVESTIGATOR, GOVERNANCE_OFFICER (reference data in the migration) |
-| 0001 | `persona` | `id`, `code`, `email` unique | `@example.test` enforced by a check; `is_active` |
+| 0001 | `persona` | `id`, `code`, `email` unique | `@example.test` enforced by a check; `is_active`; `email` not readable by `cdf_v13_user` (column grants), own address via `current_persona()` |
 | 0001 | `persona_workspace_membership` | persona × workspace × role, `valid_from`/`valid_to` | active when `valid_from <= now() < valid_to` |
+| 0001 | `claims_key` | `key_version` = 1 | ipad/opad keys + sha256 of K; restrictive deny-all, no grant; cleared only by `database/hosted/reset_claims_key.sql` |
 | 0001 | `audit_event` | `id`, `seq` identity, `row_hash` unique | append-only, hash chain (`prev_hash` → `row_hash`), no reader grant |
 | 0002 | `case_record` | `id`, `display_number` unique | stage, `is_restricted`, `records_state` ACTIVE/CLOSED (+`closed_at` consistency), `owning_workspace_id`, `source_system` = `V13_SYNTHETIC`, `source_ref`, `row_version` |
 | 0002 | `case_workspace_visibility` | (`case_id`, `workspace_id`) | owning workspace inserted by trigger |
@@ -74,6 +84,10 @@ erDiagram
 
 | Function | Kind | Granted to `cdf_v13_user` | Purpose |
 | -------- | ---- | ------------------------- | ------- |
+| `_verified_claims()`, `_claims_hmac(bytea)`, `_claim_uuid(text)` | internal definer | no | MAC check and v1 shape (§1) |
+| `current_correlation_id()` | definer, stable | yes | correlation id of the verified claims; default for audit rows |
+| `current_persona()` | definer, stable | yes | own persona row incl. e-mail |
+| `api_install_claims_key(bytea)` | definer command | yes | installs K while none exists; same key → `ALREADY_INSTALLED`; other key → `V1409`; audited `CLAIMS_KEY_INSTALLED` without key material |
 | `current_persona_id()` | definer, stable | yes | claimed persona if it exists and is active, else NULL |
 | `current_workspace_id()` | definer, stable | yes | claimed workspace if active and the persona has an active membership, else NULL |
 | `current_role_codes()`, `has_role(text)` | definer, stable | yes | roles in the current workspace |
@@ -86,7 +100,7 @@ erDiagram
 | `api_update_task_status(uuid, text, int, uuid)` | definer command | yes | §6 |
 | `api_create_notification_draft(uuid, uuid, text, text, uuid)` | definer command | yes | §6 |
 | `verify_audit_chain()` | definer | **no** (owner/administrator) | recomputes the chain; counts and first broken `seq` only |
-| `_claim_uuid`, `_append_audit`, `_audit_row_hash`, `_reject_mutation`, `_task_transition_allowed`, `_case_owning_visibility`, `_template_version_hash` | internal | no | — |
+| `_append_audit`, `_audit_row_hash`, `_reject_mutation`, `_task_transition_allowed`, `_case_owning_visibility`, `_template_version_hash` | internal | no | — |
 | `_is_colleague(uuid)` | internal definer | yes (used inside the `persona` policy) | persona has an active membership in the current workspace |
 
 PUBLIC holds `EXECUTE` on no V13 function (default privileges from 0000; isolation check C11).
