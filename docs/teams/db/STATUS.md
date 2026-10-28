@@ -37,6 +37,8 @@ No Vitest suite exists yet (needs V13-ARCH-001: package.json, Vitest, `pnpm db:l
 | `pnpm lint`, `pnpm typecheck`, `pnpm test` (prep branch, 03:50) | pass | unit 261 / 261 | local |
 | `pnpm db:reset` + `pnpm db:lint` + `V13_DB_TESTS_REQUIRED=1 pnpm test:db`, twice without reset (03:50) | pass | db:lint 0 findings (22 rules); test:db 95 / 95 both runs | local |
 | Same with only migration 0001 and seed part 1 (the PR (a) state) | pass | test:db 95 / 95 | local |
+| `V13_DB_TESTS_REQUIRED=1 pnpm test:db` with `case-access.spec.ts` (56 tests: visibility matrix of 9 contexts, portfolio, header, search/count, keyset and clamp, no writes, `api_update_task_status` 2 allowed + 16 refusals, My Work, `api_create_notification_draft` 2 allowed + 14 refusals, outbox, template hash and immutability, append-only events, cross-case FKs, seed invariants), twice without reset (04:05) | pass | test:db 151 / 151 both runs | local |
+| Mutation check: `can_access_case` without the restricted condition, applied by hand to the local database only, then `db:reset` | caught | 10 of 56 case-access tests fail | local |
 | `node scripts/db/rehearse-shared.mjs` after the seed split | REHEARSAL PASS | | local |
 
 These manual checks become Vitest suites in `tests/integration/` once ARCH-001 lands; they are not a substitute.
