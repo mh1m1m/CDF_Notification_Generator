@@ -14,8 +14,10 @@ FACT (PLAN §4, M1): three roles and three workspaces.
 | `GOVERNANCE` | الحوكمة | Governance | Governance Officer · مسؤول الحوكمة | oversight of cases and notification operations (read-mostly) |
 
 A persona can belong to several workspaces (membership = persona × workspace × role, with an active window; V13-DB-001).
-Synthetic example: _Governance Officer Delta_ in Governance only; _Secretary Alpha_ in Secretariat; _Investigator Beta_
-and _Investigator Gamma_ in Investigations, each assigned to different cases.
+Seed (authority for memberships, ADR-014; `database/seed/0001_m1_synthetic.sql`): _Governance Officer Delta_ in
+Governance and Secretariat, role Governance Officer in both (the persona of the switch scenario); _Secretary Alpha_ in
+Secretariat; _Investigator Beta_ and _Investigator Gamma_ in Investigations, each assigned to different cases. No persona
+holds three memberships.
 
 ## 2. What a workspace decides
 
@@ -58,8 +60,11 @@ PROPOSAL (FE/ARCH): if per-tab workspaces become a requirement, the workspace wo
 
 ## 5. Acceptance (feeds QA Scenario C)
 
-1. The switcher lists exactly the persona's active memberships (Delta: one item, plain text).
-2. After switching Secretariat → Investigations, My Work and the Portfolio show only Investigations-visible cases.
-3. A case URL from the old workspace that is not visible in the new one shows the same page as an unknown id.
+1. The switcher lists exactly the persona's active memberships (Delta: two items; Alpha, Beta and Gamma: one, shown as
+   plain text).
+2. After Delta switches Governance → Secretariat, My Work and the Portfolio show only Secretariat-visible cases (seed:
+   CDF-DEMO-2026-0002 leaves, 0006 appears).
+3. A case URL from the old workspace that is not visible in the new one (e.g. 0002's URL after that switch) shows the
+   same page as an unknown id.
 4. The active workspace is identified by glyph + word + `aria-current`, verified in greyscale screenshots.
 5. Keyboard-only and screen-reader paths complete the switch; axe reports 0 serious/critical on `/workspaces`.

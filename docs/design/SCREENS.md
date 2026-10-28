@@ -160,7 +160,7 @@ active one shows "الحالية" with a check glyph instead of the button.
 | Case Portfolio | populated, empty, no results, loading, error |
 | Case Workspace | each of 4 tabs populated and empty, not found, closed case, loading, error |
 | Notification Operations Center | populated, empty, no results, loading, error |
-| Workspace Switcher | menu open (3 memberships), single membership (plain text), `/workspaces` page |
+| Workspace Switcher | menu open (2 memberships, Delta), single membership (plain text), `/workspaces` page |
 
 Each in ar/RTL and en/LTR at 360, 768, 1280 px (1920 px for the two tables). Dark mode: tokens support it; whether M1
 exposes a theme switch is PROPOSAL (default: follow `prefers-color-scheme`, no switch in M1). Loading states are

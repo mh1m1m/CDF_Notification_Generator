@@ -126,7 +126,13 @@ never folded into expected); `data-status-kind` and `data-status`; and `data-eve
 its seven domain epistemic classes onto these four in `lib/domain` (`RECORDED_FACT`, `DERIVED_FROM_VERIFIED_FACTS` →
 `recorded`; `EXPECTED_PROCESS` → `expected`; `CONDITIONAL_STEP` → `conditional`; approval-bound expected steps →
 `awaiting_approval`) and refuses the other three (`PROPOSED_ACTION`, `UNVERIFIED_INFORMATION`, `NOT_APPLICABLE`), which
-are never rendered as a badge. Domain tone (info/success/…) for recorded badges comes from one registry per status kind, as in
+are never rendered as a badge.
+
+Condition on `DERIVED_FROM_VERIFIED_FACTS` → `recorded` (QA, accepted with PR #4): it holds only when the shown status
+is exactly what PROC's fold yields from the case's recorded events; `data-event-id` is then the latest recorded event of
+the same case on which the derivation rests. Other derivations (counts, percentages, forecasts) are never StatusBadges:
+they are plain text through `Count` with `data-count`. `PROPOSED_ACTION` and `UNVERIFIED_INFORMATION` are never badges
+in M1. Domain tone (info/success/…) for recorded badges comes from one registry per status kind, as in
 PLT `STATUS_TONES` (unknown code → neutral, never red).
 
 **Four variants, distinct without colour** (each differs from every other in at least two of glyph, outline, fill,
