@@ -199,6 +199,26 @@ M5 are added when PROC fixes the lifecycle (V13-PROC-005).
 | `Button` | `{ variant: "primary" \| "secondary" \| "tertiary" \| "text"; … }` | DG p. 33: primary Cinder/white, secondary white with Cinder 1 px border (0.5 px in DG, rendered 1 px), tertiary 2 px bottom stroke, text plain; radius 0; height ≥ 44 px; `critical` only inside a confirm dialog (PLT) | `data-testid` passed through |
 | `ConfirmDialog` | `{ title; body; confirmLabel; cancelLabel; action }` | native `<dialog>`, focus trapped by the platform, Escape cancels, focus returns to the opener | `confirm-dialog` |
 
+### 3.4a As built (V13-UX-003)
+
+The components are in `components/data/`. They take `t` and `locale` where they show chrome text, numbers or dates.
+Where the build differs from §3.1–§3.4:
+
+| Item | As built |
+| ---- | -------- |
+| `StatusBadge` | The union above plus `t`, `locale`, `testId?` and an optional `tone` for recorded badges. Unknown recorded codes are neutral with the glyph ▪. Runtime guards render nothing and log a warning without content in three cases: a recorded badge without an event id; a projected badge with a completed-class status (equal to QA's inspector `COMPLETED_CLASS`, rule T5); a projected badge whose label or condition uses ✔, ● or "سُجل / مسجل / اكتُمل / تم / recorded / completed / done" (Arabic diacritics ignored). Visible words are joined with spaces. The screen-reader suffix is a visually hidden span, not `aria-label`. |
+| `Timeline` | An entry takes `status: { statusKind, status, label, tone? }`, and the recorded badge is built from the entry's own `eventId` and `recordedAt`, so badge and entry cannot disagree. Entries are sorted newest first by occurred time. |
+| `ExpectedSteps` | Takes projected badges with a `key`. It renders nothing when there are no steps (the card is absent, not empty). |
+| `DataTable` | Takes `t` and `testId`. The scroll region is `role="region"` with `tabindex="0"` (axe `scrollable-region-focusable`). Row headers are `<th scope="row">`. |
+| `Pagination` | Takes `t` and `locale`. A missing direction is disabled text (`aria-disabled`), not a link. |
+| `ErrorState` | Generic words come from `common.error.*`. `afterUserAction` switches on `role="alert"`. The copy button appears only with JavaScript and the Clipboard API. |
+| `NotFoundState` | Takes its words as props, so the page chooses them. The test shows the markup is identical apart from the correlation id. |
+| `DeadlineText` | Counts calendar days in Riyadh time, with Arabic plural forms via `Intl.PluralRules` (`common.days.*`). |
+| Dates | Gregorian, Riyadh time, long month (`٢٠ أكتوبر ٢٠٢٦`), Arabic-Indic digits in Arabic (`components/format.ts`). |
+| `Button` | `Button` plus `ButtonLink`, for navigation only. `critical` is used only by `ConfirmDialog`. |
+| `ConfirmDialog` | A client component (`showModal`). It needs JavaScript to open, so pages use it only for confirmations. |
+| Not built yet | The notification sending family (§3.3) waits for V13-PROC-005, so that "sent" and "delivered" are not shown before PROC fixes where they come from. `NamedAccessFlag` and `RecordsStateBadge` are inside `CaseHeader` (V13-UX-002) until a list needs them. |
+
 ### 3.5 Tests (V13-UX-002/003 acceptance)
 
 Unit (`tests/unit/components/`): render each component in ar and en; assert landmarks, `aria-current`, `aria-sort`,

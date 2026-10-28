@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 · Branch: `feature/V13-UX-002-shell` · Base: `feature/V13-UX-001-tokens` + `develop` `e04c164`
+Updated: 2026-10-28 · Branch: `feature/V13-UX-003-data-components` · Base: `feature/V13-UX-002-shell` (PR #14)
 
 ## Completed
 - V13-UX-004: information architecture, the five screen specs, design-system spec and strings, in `docs/design/`.
@@ -9,8 +9,12 @@ Updated: 2026-10-28 · Branch: `feature/V13-UX-002-shell` · Base: `feature/V13-
   CI green on `070a371`. IN_REVIEW (reviewer: QA).
 - V13-UX-002: shell components in `components/shell/` (AppShell frame form, TopBar, SideNav, WorkspaceSwitcher,
   PersonaMenu, Breadcrumbs, PageHeading, CaseWorkspace, CaseHeader, CaseTabs, banner glyph). Also `Count`, icons, the
-  `shell` strings, and shell styles. IN_REVIEW once its PR is open (reviewer: QA). The branch is stacked on UX-001
-  because the shell styles use its tokens.
+  `shell` strings, and shell styles. PR #14, stacked on PR #8. IN_REVIEW (reviewer: QA).
+- V13-UX-003: data components in `components/data/`: StatusBadge (four epistemic variants, type-enforced, with runtime
+  guards), RecordedEventDate, DataTable (case scope), Pagination, Timeline, ExpectedSteps, Empty/Error/NotFound/Loading
+  states, DeadlineText, Button/ButtonLink, ConfirmDialog, FilterBar; `common` strings; data styles. Stacked on PR #14.
+  IN_REVIEW once its PR is open (reviewer: QA). Not built yet: the notification sending family (waits for
+  V13-PROC-005).
 
 ## Changed files (V13-UX-002)
 - `components/shell/*` (new: `Breadcrumbs`, `CaseHeader`, `CaseTabs`, `CaseWorkspace`, `Disclosure`, `PageHeading`,
@@ -31,6 +35,18 @@ Updated: 2026-10-28 · Branch: `feature/V13-UX-002-shell` · Base: `feature/V13-
 | `pnpm build` | pass |
 | `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | 33 passed |
 | Keyboard check (local Chromium, temporary preview page, not committed) | Enter opens the switcher; Arrow Down moves through the options and then the page link; Escape closes it and focus returns to the switcher; the breadcrumb chevron is mirrored in Arabic and not in English |
+
+## Test evidence (V13-UX-003, local, on the branch head before push)
+| Command | Result |
+| ------- | ------ |
+| `pnpm lint` | pass (logical-css: 43 files) |
+| `pnpm typecheck` | pass |
+| `pnpm format:check` | pass |
+| `pnpm test` | 20 files, 429 tests passed (`tests/unit/components/data.spec.tsx` new) |
+| `pnpm build` | pass |
+| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | 33 passed |
+| axe-core (WCAG 2.0/2.1/2.2 A and AA) on a temporary preview page with every data component, not committed | 0 violations: Arabic light, English light, Arabic dark |
+| QA's `checkTruth` over the rendered markup (unit test) | no violation, apart from one planted wrong-status badge, which it reports as T4 |
 
 ## Unresolved defects
 - None known.

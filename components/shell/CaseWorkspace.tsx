@@ -3,7 +3,7 @@
 // number). QA's Case Context Sentinel asserts that nothing inside it belongs to another case. The case comes from the
 // URL only; there is no "current case" state anywhere (INFORMATION_ARCHITECTURE.md §5).
 import type { ReactNode } from "react";
-import { assertCaseIdentity } from "./case-identity";
+import { assertCaseIdentity } from "@/components/case-identity";
 
 export interface CaseWorkspaceProps {
   caseId: string;
