@@ -1,8 +1,10 @@
 # E03 — Enterprise data model (Milestone M1)
 
 **SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Owner: team DB. Schema `cdf_notifications_v13` in the
-shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0004`, seed
-`database/seed/0001_m1_synthetic.sql`.
+shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0004`; seed in two parts:
+`database/seed/0001_m1_synthetic.sql` (identity: workspaces, personas, memberships; needs migration 0001 only; audit row
+`SEED_M1_LOADED`) and `database/seed/0002_m1_cases.sql` (cases and their history; needs 0001–0004; audit row
+`SEED_M1_CASES_LOADED`).
 
 Status: **IN_PROGRESS** (drafted and checked on a local PostgreSQL 16 cluster; Vitest suites follow once V13-ARCH-001
 lands; not yet reviewed, not applied to the hosted schema).

@@ -7,7 +7,7 @@ Updated: 2026-10-28 02:00 UTC · Branch: feature/V13-DB-001-m1-database-core · 
 - V13-DB-002 — migration 0002 (case registry, `can_access_case`, portfolio reads) — DRAFT
 - V13-DB-003 — migration 0003 (procedural events, tasks, `api_update_task_status`, `my_work_tasks`) — DRAFT
 - V13-DB-004 — migration 0004 (templates, notifications, events, `api_create_notification_draft`, content-free outbox) — DRAFT
-- V13-DB-005 — seed `database/seed/0001_m1_synthetic.sql` (3 workspaces, 3 roles, 6 personas incl. 2 negative, 10 cases, 15 assignments, 20 tasks, 17 events, 2 templates × 2 languages, 5 notifications, all DRAFT) — DRAFT
+- V13-DB-005 — seed in two idempotent parts, each with its own audit row: `database/seed/0001_m1_synthetic.sql` identity (3 workspaces, 3 roles, 6 personas incl. 2 negative, 7 memberships) and `0002_m1_cases.sql` (10 cases, 15 assignments, 20 tasks, 17 events, 2 templates × 2 languages, 5 notifications, all DRAFT) — DRAFT
 - V13-DB-006 — `scripts/db/rehearse-shared.mjs` (Supabase-like cluster; dry run, apply, fingerprint, isolation, four planted faults, refused and clean rollback) — DRAFT, CI job needs ARCH
 - E03 — `docs/architecture/DATA_MODEL.md` — DRAFT
 
@@ -18,7 +18,7 @@ Updated: 2026-10-28 02:00 UTC · Branch: feature/V13-DB-001-m1-database-core · 
 
 ## Changed files
 - database/migrations/0001_identity_access_audit.sql, 0002_case_registry.sql, 0003_procedural_core.sql, 0004_notification_core.sql
-- database/seed/0001_m1_synthetic.sql
+- database/seed/0001_m1_synthetic.sql, database/seed/0002_m1_cases.sql
 - scripts/db/rehearse-shared.mjs
 - docs/architecture/DATA_MODEL.md, docs/teams/db/STATUS.md
 
