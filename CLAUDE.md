@@ -23,7 +23,8 @@ CDF build protocol and the CDF Connected Engineering Operating Model (CDF-CEOM) 
 ## 1. Data safety — absolute
 
 - Synthetic data only: _Employee Alpha_, _Investigator Beta_, _Witness Gamma_, _Secretary Alpha_, _Governance Officer
-  Delta_; case numbers `CDF-DEMO-2026-0001` … `CDF-DEMO-2026-0010`; e-mail addresses `@example.test`.
+  Delta_; seeded case numbers `CDF-DEMO-2026-0001` … `CDF-DEMO-2026-0010` (unit-test fixtures that are never seeded
+  may use other `CDF-DEMO-2026-NNNN` numbers); e-mail addresses `@example.test`.
 - No real reports, allegations, cases, identities, personal data, documents, evidence, credentials, regulatory data or
   real CDF e-mail addresses — in code, fixtures, tests, screenshots, commits, PRs, issues, logs, Sentry or Mixpanel.
 - Never open or copy `/mnt/project-files/uploads/hearth/be02c96c-1d82-4401-89e9-9cd0406d23ec` (real personal data).
