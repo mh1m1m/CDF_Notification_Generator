@@ -152,3 +152,10 @@ in their navigation, and for an Investigator it answers exactly like an unknown 
 Enforced by the `lib/authz` pre-check (`notification.center.read` denied for INVESTIGATOR), and the database still
 filters every row. Committee Secretary and Governance Officer keep the Center over their authorised cases. FE-006
 ships the route guard with a negative test (Investigator -> same 404 as an unknown path); SEC-APP-17 covers it.
+
+## 11. M1 scope after the register re-baseline (develop 81db9ae, OI-019; relayed by ARCH 02:23 UTC)
+
+M1 portfolio = UX SCREENS S2 only: table, FilterBar (search, stage, records state, assigned to me), keyset pagination.
+Moved to M2: REQ-SRCH-001/004 (shell search), REQ-CASE-009/010 (recent cases, bookmarks, quick switcher),
+REQ-PORT-001/005/006/007 (cards and recently viewed, full filters, full columns, case preview). Notifications in M1:
+REQ-NOTIF-001/002/003/006/011 and E10's list; REQ-NOTIF-013..016 are M4; REQ-NOTIF-004/005/012 are M5.
