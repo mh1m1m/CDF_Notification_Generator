@@ -65,7 +65,9 @@ SDK, any ORM, any dotenv loader (Next.js loads `.env.local` itself; scripts read
    generated from, not only the latest version.
 5. **Hosted simulation as a second local cluster** (`pnpm db:local`, port 54330) whose bootstrap superuser is
    `supabase_admin`, because a cluster's bootstrap superuser can never lose SUPERUSER. CI uses a second `postgres:17`
-   service the same way.
+   service the same way. Versions: CDF GC Review runs PostgreSQL **17.11** (`docs/DEPLOYMENT_STATUS.md`), so CI's
+   `postgres:17` is the run of record for version-sensitive behaviour; `db:local` uses whatever server binaries the
+   machine has (the build sandbox has only 16.15).
 6. **Isolation probe output**: besides the requested counts it reports `inconclusive` per check (any error other than
    SQLSTATE 42501) and `login.session_user_ok`; either one fails the verdict. FAIL answers 503.
 7. **`GET /api/health` answers 503 when degraded** (database missing, unreachable or isolation failed).
