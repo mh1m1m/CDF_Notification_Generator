@@ -34,8 +34,12 @@ lib/authz/
                       notification.read, notification.draft.create, workspace.switch, portfolio.read
   matrix.ts           role x workspace x action table (mirrors SEC's AUTHORIZATION_MATRIX once E05 exists)
 lib/adapters/case-source/
-  postgres.ts         CaseSourceAdapter over cdf_notifications_v13 read functions (DB-002)
-  fake.ts             in-memory adapter over the 10 synthetic cases, used by unit tests until DB-002 lands
+  v13-records.ts      CaseSourceAdapter over cdf_notifications_v13 read functions (DB-002); not named postgres.ts
+                      because the lint rule for the postgres driver matches that path segment
+  cursor.ts           opaque keyset cursor (sort position only, validated on the way back in)
+tests/unit/server/support/fake-case-source.ts
+                      in-memory adapter over the 10 synthetic cases with the seed visibility table (tests only,
+                      so it never ships in the app bundle)
 lib/server/
   context.ts          getRequestContext(): verified session -> claims -> withRequestContext wrapper; correlation id
   errors.ts           AppError codes (NOT_FOUND, CONFLICT_STALE, VALIDATION, UNAVAILABLE), toUserError()
