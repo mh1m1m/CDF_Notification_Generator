@@ -1,6 +1,6 @@
 # QA status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 01:50 UTC · Branch: docs/V13-QA-001-test-architecture · Head: see PR
+Updated: 2026-10-28 02:15 UTC · Branch: docs/V13-QA-001-test-architecture · Head: see PR #1
 
 ## Completed
 - V13-QA-001 (design part) — browser testing architecture, `docs/qa/TEST_ARCHITECTURE.md` — PR pending — IN_REVIEW
