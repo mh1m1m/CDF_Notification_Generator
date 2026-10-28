@@ -1,9 +1,9 @@
-// Workspace switcher (FE-002, Scenario C; ADR-013: data-testid="workspace-switcher" + data-workspace-code). Offers
-// only the persona's own memberships; the Server Action re-checks the choice and the database re-checks every request.
-// Minimal markup until UX-002's WorkspaceSwitcher component lands.
+// Workspace switcher, TopBar control (FE-002, Scenario C; WORKSPACES.md §3; ADR-013: data-testid="workspace-switcher"
+// + data-workspace-code). With one membership it is plain text; with more it links to /workspaces, the list that
+// works without JavaScript (UX-002's disclosure menu will add the in-place menu over the same Server Action).
+import Link from "next/link";
 import type { WorkspaceCode } from "@/lib/contracts";
 import { WORKSPACE_NAME_KEYS, type Translator } from "@/lib/i18n";
-import { switchWorkspace } from "../workspace-actions";
 
 export interface WorkspaceSwitcherProps {
   t: Translator;
@@ -12,28 +12,16 @@ export interface WorkspaceSwitcherProps {
 }
 
 export function WorkspaceSwitcher({ t, active, options }: WorkspaceSwitcherProps) {
+  const label = t("workspaces.switcher.button", { name: t(WORKSPACE_NAME_KEYS[active]) });
   return (
     <div data-testid="workspace-switcher" data-workspace-code={active}>
       {options.length > 1 ? (
-        <form action={switchWorkspace}>
-          <label htmlFor="workspace-switcher-select">{t("workspaces.switcher.label")}</label>
-          <select
-            id="workspace-switcher-select"
-            name="workspace"
-            defaultValue={active}
-            data-testid="workspace-switcher-select"
-          >
-            {options.map((code) => (
-              <option key={code} value={code} data-testid={`workspace-option-${code}`}>
-                {t(WORKSPACE_NAME_KEYS[code])}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="v13-button" data-testid="workspace-switcher-submit">
-            {t("workspaces.switcher.submit")}
-          </button>
-        </form>
-      ) : null}
+        <Link href="/workspaces" className="v13-button-link" data-testid="workspace-switcher-open">
+          {label}
+        </Link>
+      ) : (
+        <span>{label}</span>
+      )}
     </div>
   );
 }

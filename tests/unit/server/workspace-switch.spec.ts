@@ -112,7 +112,7 @@ describe("switchWorkspace Server Action", () => {
       SESSION_COOKIE_NAME,
       await createSessionToken({ persona_id: DELTA, active_workspace: "GOVERNANCE" }, { env }),
     );
-    expect(await callSwitch("SECRETARIAT")).toBe("/my-work");
+    expect(await callSwitch("SECRETARIAT")).toBe("/my-work?switched=1");
     const claims = await verifySessionToken(jar.get(SESSION_COOKIE_NAME), { env });
     expect(claims).toMatchObject({ persona_id: DELTA, active_workspace: "SECRETARIAT" });
   });

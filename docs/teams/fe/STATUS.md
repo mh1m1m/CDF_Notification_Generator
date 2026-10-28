@@ -25,6 +25,8 @@ Updated: 2026-10-28 03:55 UTC · Branch: feature/V13-FE-002-workspace-switcher �
 | After the contract change, merged develop e04c164: `pnpm test` | pass | 407 tests (develop + FE) | FE-001 head |
 | FE-002: `pnpm test` (unit) | pass | 23 files, 328 tests at b8d02e5 (12 new: workspace switch 7, navigation/markup 5) | b8d02e5 |
 | FE-002: `pnpm test:e2e` (`PW_CHROMIUM_PATH=/opt/pw-browsers/chromium`, build + start) | pass | 12/12 (e2e 9, a11y 3 incl. My Work with the new nav/switcher) | b8d02e5 |
+| FE-002 after S5 alignment: `pnpm test` (unit) | pass | 419 | FE-002 head |
+| FE-002 throwaway browser probe (not committed; e2e is QA's): Delta GOVERNANCE → SECRETARIAT via `/workspaces`, forged hidden value INVESTIGATIONS refused (cookie unchanged, reference shown), axe 0 serious/critical on `/workspaces`; Beta one membership shown as text, no Center link | pass | 2/2 | FE-002 head |
 | Integration probe (not committed): `tests/integration/fe-case-source.spec.ts` on a local merge of this branch + `feature/V13-DB-001-m1-database-core` (b27cebb), `pnpm db:reset` then vitest integration | 3 pass, 9 fail as expected: every visible row is refused by the CaseSummary contract (no `source_system`, `source_ref`, `updated_at` from `portfolio_page`/`case_header`) | 12 tests | local |
 | Same probe with the three columns filled locally by a throwaway patch (reverted, not committed) | pass: seed visibility for 8 persona/workspace pairs, 0009 only for Beta, unknown = unauthorised = null, closed readable, keyset paging, filters inside the authorised set | 12/12 | local |
 

@@ -24,5 +24,5 @@ export async function switchWorkspace(formData: FormData): Promise<void> {
     failure = crypto.randomUUID();
     logServerError("workspace.switch_refused", failure, { code: "SWITCH_REFUSED" });
   }
-  redirect(failure ? `/my-work?ref=${failure}` : "/my-work");
+  redirect(failure ? `/my-work?ref=${failure}` : "/my-work?switched=1");
 }

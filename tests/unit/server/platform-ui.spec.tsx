@@ -1,11 +1,9 @@
 // FE-002 navigation and switcher markup: role-aware items (D6), ADR-013 attributes, only own memberships offered.
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createTranslator } from "@/lib/i18n";
 import { navigationFor } from "@/lib/server/navigation";
 import { GOVERNANCE, INVESTIGATOR_BETA, SECRETARY } from "./support/identities";
-
-vi.mock("@/app/(platform)/workspace-actions", () => ({ switchWorkspace: async () => undefined }));
 
 const t = createTranslator("ar");
 
@@ -30,15 +28,15 @@ describe("markup", () => {
     expect(html).not.toContain("/notifications");
   });
 
-  it("WorkspaceSwitcher carries the active code and offers only the given memberships", async () => {
+  it("WorkspaceSwitcher with several memberships: labelled link to /workspaces carrying the active code", async () => {
     const { WorkspaceSwitcher } = await import("@/app/(platform)/_components/WorkspaceSwitcher");
     const html = renderToStaticMarkup(
       <WorkspaceSwitcher t={t} active="GOVERNANCE" options={["GOVERNANCE", "SECRETARIAT"]} />,
     );
     expect(html).toContain('data-testid="workspace-switcher"');
     expect(html).toContain('data-workspace-code="GOVERNANCE"');
-    expect(html).toContain('data-testid="workspace-option-SECRETARIAT"');
-    expect(html).not.toContain("INVESTIGATIONS");
+    expect(html).toContain('href="/workspaces"');
+    expect(html).toContain(t("workspaces.switcher.button", { name: t("workspaces.name.governance") }));
   });
 
   it("single membership: the code is shown, no form", async () => {
@@ -47,6 +45,6 @@ describe("markup", () => {
       <WorkspaceSwitcher t={t} active="SECRETARIAT" options={["SECRETARIAT"]} />,
     );
     expect(html).toContain('data-workspace-code="SECRETARIAT"');
-    expect(html).not.toContain("<form");
+    expect(html).not.toContain("<a ");
   });
 });
