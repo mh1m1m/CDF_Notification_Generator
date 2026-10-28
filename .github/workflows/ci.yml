@@ -5,8 +5,9 @@
 # and accessibility). No repository secrets are used; the database passwords below exist only inside the job's
 # containers and are deliberately not secret.
 #
-# Actions are pinned to full commit SHAs (tag in the comment). The SHAs were written from the maintainers' release
-# tags without network access to GitHub: verify them (and keep them current with Dependabot) before relying on them.
+# Actions are pinned to full commit SHAs (tag in the comment). The first run (40626543282, commit 5c53ec4) resolved
+# every pin. These versions target Node.js 20, which GitHub now runs on Node.js 24 with a deprecation warning; moving
+# to the current majors is OPEN_ISSUES OI-021.
 name: CI
 
 on:

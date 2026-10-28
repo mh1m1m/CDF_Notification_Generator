@@ -20,8 +20,15 @@ const isCI = process.env.CI === "true";
 
 export default defineConfig({
   testDir: "tests",
-  // tests/security/e2e: SEC's browser-level security suites.
-  testMatch: ["e2e/**/*.spec.ts", "a11y/**/*.spec.ts", "security/e2e/**/*.spec.ts"],
+  // QA's suites (e2e, a11y, Sentinel, Truth Inspector, visual) and SEC's browser-level security suites.
+  testMatch: [
+    "e2e/**/*.spec.ts",
+    "a11y/**/*.spec.ts",
+    "sentinel/**/*.spec.ts",
+    "truth/**/*.spec.ts",
+    "visual/**/*.spec.ts",
+    "security/e2e/**/*.spec.ts",
+  ],
   outputDir: "test-results/playwright",
   fullyParallel: true,
   forbidOnly: isCI,

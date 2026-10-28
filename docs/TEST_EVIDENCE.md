@@ -146,8 +146,14 @@ Mutation checks (not committed, each reverted and rebuilt before the final run):
 
 ## 4. CI
 
-The workflow `.github/workflows/ci.yml` arrives with V13-ARCH-001. Its first run on the pull request is recorded here
-(workflow, run id, commit) once it completes.
+Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6).
+
+| Run                                                                                              | Commit    | Result                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [40626543282](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40626543282) #1 | `5c53ec4` | success, 5 of 5 jobs: lint/typecheck/format/db:lint clean; unit 17 files, 251 passed; integration 35 passed, 2 skipped (persona registry, as locally); build; Playwright 12 passed (13.4 s) |
+
+Every pinned action SHA resolved. Warnings: the pinned versions target Node.js 20 and ran on Node.js 24 (OI-021); the
+dependency cache could not be saved (GitHub service message), which does not affect results.
 
 ## 5. Deployment checks
 
