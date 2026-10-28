@@ -13,8 +13,10 @@
 //   S5 on a case page, a case-workspace root exists, carries the URL's case, and every data-case-id equals it
 //   S6 every case id / reference on the page is one the persona may see (when the visible set is given)
 //   S7 every count-* element carries an integer data-count
+//   S8 every child frame of the page could be read (evaluated, or parsed from its srcdoc); none passes silently
 //   P1 a payload (HTML, RSC flight, JSON) contains no case id or reference outside the allowed set
 import type { Page, Response } from "@playwright/test";
+import { readChildFrames, type FramePage, type UnreadableFrame } from "./frames";
 
 export const CASE_REF_PATTERN = /CDF-DEMO-\d{4}-\d{4}/gi;
 const CASE_REF_EXACT = /^CDF-DEMO-\d{4}-\d{4}$/;
@@ -53,6 +55,8 @@ export interface CaseContextSnapshot {
   counts: CountNode[];
   /** Number of elements with data-testid="case-workspace". */
   caseWorkspaceRoots: { caseId: string | null; caseRef: string | null }[];
+  /** Child frames the harness could not read (S8). */
+  unreadableFrames: UnreadableFrame[];
 }
 
 export interface CaseExpectation {
@@ -68,8 +72,12 @@ export interface Violation {
   detail: string;
 }
 
-/** Runs in the browser: collects the ADR-013 evidence. Must stay self-contained (it is serialised). */
-function collectInPage(): CaseContextSnapshot {
+/**
+ * Runs in the browser: collects the ADR-013 evidence of its document, or of `html` parsed in place (a frame's srcdoc
+ * read from the parent). Must stay self-contained (it is serialised).
+ */
+function collectInPage(html: string | null): CaseContextSnapshot {
+  const doc = html === null ? document : new DOMParser().parseFromString(html, "text/html");
   const refPattern = /CDF-DEMO-\d{4}-\d{4}/gi;
   const ascii = (t: string) =>
     t.replace(/[\u0660-\u0669\u06F0-\u06F9]/g, (d) => String((d.charCodeAt(0) & 0xf) % 10));
@@ -96,7 +104,7 @@ function collectInPage(): CaseContextSnapshot {
   };
   const visibleText = (el: Element): string =>
     (el instanceof HTMLElement ? el.innerText : el.textContent) ?? "";
-  const owners = Array.from(document.querySelectorAll("[data-case-id]")).map((el) => {
+  const owners = Array.from(doc.querySelectorAll("[data-case-id]")).map((el) => {
     const text = [visibleText(el), ...labelsOf(el)].join("\n");
     return {
       path: pathOf(el),
@@ -109,34 +117,38 @@ function collectInPage(): CaseContextSnapshot {
       textRefs: Array.from(new Set((ascii(text).match(refPattern) ?? []).map((r) => r.toUpperCase()))),
     };
   });
-  const counts = Array.from(document.querySelectorAll('[data-testid^="count-"]')).map((el) => ({
+  const counts = Array.from(doc.querySelectorAll('[data-testid^="count-"]')).map((el) => ({
     path: pathOf(el),
     testId: el.getAttribute("data-testid") ?? "",
     count: el.getAttribute("data-count"),
   }));
-  const caseWorkspaceRoots = Array.from(document.querySelectorAll('[data-testid="case-workspace"]')).map(
-    (el) => ({
-      caseId: el.getAttribute("data-case-id"),
-      caseRef: el.getAttribute("data-case-ref"),
-    }),
-  );
-  return { url: location.href, owners, counts, caseWorkspaceRoots };
+  const caseWorkspaceRoots = Array.from(doc.querySelectorAll('[data-testid="case-workspace"]')).map((el) => ({
+    caseId: el.getAttribute("data-case-id"),
+    caseRef: el.getAttribute("data-case-ref"),
+  }));
+  return {
+    url: html === null ? location.href : "about:srcdoc",
+    owners,
+    counts,
+    caseWorkspaceRoots,
+    unreadableFrames: [],
+  };
 }
 
-export async function snapshotCaseContext(page: Page): Promise<CaseContextSnapshot> {
-  const main = await page.evaluate(collectInPage);
-  // Same-origin frames (e.g. a notification preview) are part of the page the viewer sees.
-  for (const frame of page.frames()) {
-    if (frame === page.mainFrame()) continue;
-    try {
-      const sub = await frame.evaluate(collectInPage);
-      main.owners.push(...sub.owners.map((o) => ({ ...o, path: `frame(${sub.url}) ${o.path}` })));
-      main.counts.push(...sub.counts);
-      main.caseWorkspaceRoots.push(...sub.caseWorkspaceRoots);
-    } catch {
-      // Cross-origin or detached frame: nothing to read, and nothing of ours should be there.
-    }
+export async function snapshotCaseContext(
+  page: Page,
+  frames: FramePage | Page = page,
+): Promise<CaseContextSnapshot> {
+  const main = await page.evaluate(collectInPage, null);
+  // Child frames (e.g. a sandboxed notification preview) are part of the page the viewer sees.
+  const { reads, unreadable } = await readChildFrames(frames, collectInPage);
+  for (const { url, via, result: sub } of reads) {
+    const prefix = via === "frame" ? `frame(${url})` : `frame(${url}, srcdoc)`;
+    main.owners.push(...sub.owners.map((o) => ({ ...o, path: `${prefix} ${o.path}` })));
+    main.counts.push(...sub.counts.map((c) => ({ ...c, path: `${prefix} ${c.path}` })));
+    main.caseWorkspaceRoots.push(...sub.caseWorkspaceRoots);
   }
+  main.unreadableFrames.push(...unreadable);
   return main;
 }
 
@@ -233,6 +245,9 @@ export function checkCaseContext(snapshot: CaseContextSnapshot, expect: CaseExpe
         });
     }
   }
+
+  for (const f of snapshot.unreadableFrames)
+    v.push({ rule: "S8", where: `frame(${f.url})`, detail: `frame could not be inspected: ${f.reason}` });
 
   for (const c of snapshot.counts) {
     if (c.count === null || !/^\d+$/.test(c.count))
@@ -345,6 +360,10 @@ export function formatViolations(violations: Violation[]): string {
 }
 
 /** Snapshot + check in one call; returns the violations (empty when the page is clean). */
-export async function inspectCaseContext(page: Page, expect: CaseExpectation = {}): Promise<Violation[]> {
-  return checkCaseContext(await snapshotCaseContext(page), expect);
+export async function inspectCaseContext(
+  page: Page,
+  expect: CaseExpectation = {},
+  frames: FramePage | Page = page,
+): Promise<Violation[]> {
+  return checkCaseContext(await snapshotCaseContext(page, frames), expect);
 }

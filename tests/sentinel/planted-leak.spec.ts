@@ -17,6 +17,7 @@ import {
   recoverUtf8,
   type PayloadAllowance,
 } from "./sentinel";
+import { refuseFrameEvaluation } from "./frames";
 
 const c1 = CASES.c0001;
 const casePath = `/cases/${c1.id}`;
@@ -180,6 +181,49 @@ test.describe("planted leaks are detected", () => {
       caseWorkspaceHtml({ insideWorkspace: `<iframe title="preview" srcdoc='${frame}'></iframe>` }),
     );
     expect(rulesOf(await inspectCaseContext(page, { contextCaseId: c1.id }))).toEqual(["S5"]);
+  });
+});
+
+test.describe("sandboxed preview frames (SEC form for FE-006: sandbox + srcdoc, no allow-scripts, no allow-same-origin)", () => {
+  const c2 = CASES.c0002;
+  const leak = `<div data-case-id="${c2.id}" data-case-ref="${c2.ref}">معاينة</div>`;
+  const sandboxed = (srcdoc: string) => `<iframe sandbox="" title="preview" srcdoc='${srcdoc}'></iframe>`;
+
+  test("(l) another case's element inside a sandboxed srcdoc preview → S5", async ({ page }) => {
+    await openFixture(page, casePath, caseWorkspaceHtml({ insideWorkspace: sandboxed(leak) }));
+    expect(rulesOf(await inspectCaseContext(page, { contextCaseId: c1.id }))).toEqual(["S5"]);
+  });
+
+  test("(l′) same leak when the frame refuses evaluation → read from srcdoc in the parent, S5", async ({
+    page,
+  }) => {
+    await openFixture(page, casePath, caseWorkspaceHtml({ insideWorkspace: sandboxed(leak) }));
+    const v = await inspectCaseContext(page, { contextCaseId: c1.id }, refuseFrameEvaluation(page));
+    expect(rulesOf(v)).toEqual(["S5"]);
+    expect(formatViolations(v)).toContain("srcdoc)");
+  });
+
+  test("a clean sandboxed preview passes, also when read from srcdoc", async ({ page }) => {
+    const own = `<div data-case-id="${c1.id}" data-case-ref="${c1.ref}">معاينة</div>`;
+    await openFixture(page, casePath, caseWorkspaceHtml({ insideWorkspace: sandboxed(own) }));
+    for (const frames of [page, refuseFrameEvaluation(page)]) {
+      const v = await inspectCaseContext(page, { contextCaseId: c1.id }, frames);
+      expect(v, formatViolations(v)).toEqual([]);
+    }
+  });
+
+  test("(m) a frame that can be neither evaluated nor read from srcdoc → S8, never a silent pass", async ({
+    page,
+  }) => {
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({
+        insideWorkspace: `<iframe sandbox="" title="preview" src="/preview-frame"></iframe>`,
+      }),
+    );
+    const v = await inspectCaseContext(page, { contextCaseId: c1.id }, refuseFrameEvaluation(page));
+    expect(rulesOf(v)).toEqual(["S8"]);
   });
 });
 

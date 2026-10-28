@@ -14,9 +14,14 @@ Updated: 2026-10-28 · Branch: test/V13-QA-004-followups (base develop f384507)
   - Found and fixed: Chromium returns a charset-less text body (Next.js RSC `text/x-component`) decoded as
     Windows-1252, so Arabic text in RSC payloads arrived as mojibake and digit normalisation could not see it.
     `recoverUtf8` restores the UTF-8 text before scanning (self-test (j) and a byte-level unit test).
+  - ARCH review of #13 (REVIEW: CHANGES 251834c): no frame passes silently. Shared walker `tests/sentinel/frames.ts`
+    evaluates in each child frame, falls back to parsing its srcdoc in the parent, and reports any frame it still
+    cannot read (Sentinel S8, Inspector T7). Planted cases in the SEC form for the FE-006 preview (`sandbox=""` +
+    srcdoc, no allow-scripts, no allow-same-origin), with and without simulated evaluation refusal. Mutation check:
+    dropping the unreadable list fails exactly the S8 and T7 tests (2 failed, 32 passed).
 
 ## Changed files (this branch)
-- tests/sentinel/sentinel.ts, tests/sentinel/planted-leak.spec.ts
+- tests/sentinel/sentinel.ts, tests/sentinel/frames.ts (new), tests/sentinel/planted-leak.spec.ts
 - tests/truth/inspector.ts, tests/truth/planted-badge.spec.ts
 - tests/fixtures/synthetic-case-page.ts, tests/fixtures/personas.ts
 - docs/teams/qa/STATUS.md
@@ -27,7 +32,7 @@ Updated: 2026-10-28 · Branch: test/V13-QA-004-followups (base develop f384507)
 | `pnpm typecheck` | pass | — | this branch |
 | `pnpm lint` | pass | 0 warnings | this branch |
 | `pnpm format:check` | pass | — | this branch |
-| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | pass | 39 passed, 0 failed | this branch |
+| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | pass | 46 passed, 0 failed | this branch |
 
 New self-tests: Sentinel (h) upper-case id → P1, (i) Arabic-Indic ref → S4, (j) Extended Arabic-Indic ref in a
 payload with Arabic text → P1, (k) other case inside a same-origin frame → S5, recoverUtf8 unit test; Inspector badge
