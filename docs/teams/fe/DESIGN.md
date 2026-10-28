@@ -117,5 +117,30 @@ CDF case system adapter. Both marked `PRODUCTION_SUBSTITUTION_REQUIRED` in code.
    for `UpdateTaskStatus`, `CreateNotificationDraft`, `SwitchWorkspace` (or confirm FE proposes them in a PR to ARCH).
 2. `lib/db`: signature of `withRequestContext(claims, fn)` and whether it accepts a correlation id for logging.
 3. `lib/auth`: a `getSession()` / `issueSession()` pair FE can call from Server Actions (workspace switch re-issues).
-4. `lib/i18n/index.ts`: register FE namespaces `portfolio`, `case`, `my-work`, `notifications`, `workspaces`.
+4. `lib/i18n/index.ts`: register FE namespaces `portfolio`, `case`, `myWork`, `notifications`, `workspaces` (registered by ARCH, see §9).
 5. Dependencies: none beyond the app foundation (Next.js, React, Zod, postgres) expected for FE-001..006.
+
+## 9. ARCH answers (28 Oct 2026 01:53 UTC; ADR-013, ADR-014 on `develop` at 38dc495)
+
+1. `lib/contracts` (ARCH-001): `CaseSourceAdapter { sourceSystem; listCases(identity, filter) -> CaseListPage
+   {items, next_cursor} (no total count; counts from authorised SQL); getCase(identity, caseId) -> CaseSummary | null }`
+   (null = unknown or unauthorised, indistinguishable). `CaseSummary`: case_id, case_number, title_key |
+   synthetic_title, lifecycle_stage, is_restricted, records_state, source_system, source_ref, updated_at. Also
+   `CaseListFilter`, `RequestIdentity {persona_id, active_workspace, roles}`, `ClockPort`, `IdGeneratorPort`,
+   `AuditSinkPort`. No `Claims` type: FE uses `RequestIdentity`. FE proposes `CaseHeader` and the three command
+   schemas as new files under `lib/contracts` in its FE PR; they need ARCH and SEC ACCEPT.
+2. `withRequestContext(identity, fn, { correlationId?, sql? })` in `lib/db/security-context.ts`: one transaction,
+   claims `{"v":1, persona_id, workspace_id, correlation_id}`, then `SET LOCAL ROLE cdf_v13_user`. FE passes its
+   correlation id. DB adds a claims MAC (ADR-014) without changing the signature.
+3. `lib/auth/session.ts`: `getCurrentSession() -> {persona, identity, claims} | null`,
+   `createSessionToken({persona_id, active_workspace})`, `setSessionCookie(token)`, `clearSessionCookie()` (Server
+   Actions and Route Handlers only). Workspace switch = target in the persona's memberships (contracts registry) ->
+   new token -> set cookie; the database re-checks membership on every request (ADR-014 §2).
+4. i18n namespaces registered: `auth`, `portfolio`, `case`, `myWork` (camelCase), `notifications`, `workspaces`;
+   file format per ADR-013.
+5. No new dependencies.
+
+Fixed ids: personas `0b…0001`–`0004` (0005/0006 are negative-test personas, not on the sign-in page); workspaces
+`0a…0001`–`0003`; Delta holds GOVERNANCE and SECRETARIAT (Scenario C). ADR-013 DOM attributes on every case-owning
+element: `data-case-id`, `data-case-ref`; the switcher carries `data-workspace-code`; counts are `count-<name>` with
+`data-count`. FE starts on the ARCH-001 branch head when ARCH says the PR is up.
