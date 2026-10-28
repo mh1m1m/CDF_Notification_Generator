@@ -60,15 +60,29 @@ describe("parsePortfolioQuery", () => {
     ["over-long cursor", { after: "a".repeat(513) }],
     ["trail without a current cursor", { back: "~" }],
     ["trail with a bad entry", { after: CURSOR_A, back: "~.a+b" }],
-    ["trail too long", { after: CURSOR_A, back: Array(MAX_TRAIL + 1).fill("~").join(".") }],
+    [
+      "trail too long",
+      {
+        after: CURSOR_A,
+        back: Array(MAX_TRAIL + 1)
+          .fill("~")
+          .join("."),
+      },
+    ],
   ])("refuses %s", (_n, params) => {
     expect(parsePortfolioQuery(params).ok).toBe(false);
   });
 
   it("maps to the CaseListFilter contract with the fixed page size", () => {
-    expect(toCaseListFilter(ok({ q: "x", stage: "CLOSURE", state: "CLOSED", after: CURSOR_A, back: "~" }))).toEqual(
-      { limit: 25, text: "x", lifecycle_stage: "CLOSURE", records_state: "CLOSED", cursor: CURSOR_A },
-    );
+    expect(
+      toCaseListFilter(ok({ q: "x", stage: "CLOSURE", state: "CLOSED", after: CURSOR_A, back: "~" })),
+    ).toEqual({
+      limit: 25,
+      text: "x",
+      lifecycle_stage: "CLOSURE",
+      records_state: "CLOSED",
+      cursor: CURSOR_A,
+    });
   });
 });
 
@@ -86,7 +100,9 @@ describe("paging links keep the filters", () => {
 
   it("previous from the third page goes to the second", () => {
     const third = ok(
-      Object.fromEntries(new URL(nextHref(ok({ after: CURSOR_A, back: "~" }), CURSOR_B)!, "http://x").searchParams),
+      Object.fromEntries(
+        new URL(nextHref(ok({ after: CURSOR_A, back: "~" }), CURSOR_B)!, "http://x").searchParams,
+      ),
     );
     expect(third.trail).toEqual(["", CURSOR_A]);
     expect(prevHref(third)).toBe(`/portfolio?after=${CURSOR_A}&back=%7E`);
@@ -119,8 +135,11 @@ const pageOf = (v: PortfolioView) => {
   if (v.kind !== "page") throw new Error(`expected a page, got ${v.kind}`);
   return v;
 };
-const load = (identity: Parameters<typeof ctxFor>[0], params = {}, source: CaseSourceAdapter = createFakeCaseSource()) =>
-  loadPortfolio({ ctx: ctxFor(identity), source }, params);
+const load = (
+  identity: Parameters<typeof ctxFor>[0],
+  params = {},
+  source: CaseSourceAdapter = createFakeCaseSource(),
+) => loadPortfolio({ ctx: ctxFor(identity), source }, params);
 
 describe("loadPortfolio", () => {
   it("lists only the persona's authorised cases, total equal to what it may see", async () => {
@@ -178,7 +197,9 @@ describe("loadPortfolio", () => {
     const source: CaseSourceAdapter = {
       ...createFakeCaseSource(),
       listCases: async () => {
-        throw new Error('relation "cdf_notifications_v13.case_record" permission denied for role cdf_v13_user');
+        throw new Error(
+          'relation "cdf_notifications_v13.case_record" permission denied for role cdf_v13_user',
+        );
       },
     };
     const v = await load(SECRETARY, {}, source);
@@ -208,7 +229,11 @@ describe("PortfolioView markup", async () => {
     expect(html).toContain('data-testid="portfolio-filters"');
     expect(html).toContain('data-testid="portfolio-search"');
     expect(html).toContain('data-testid="portfolio-table"');
-    const rows = [...html.matchAll(/data-testid="portfolio-row-([0-9a-f-]{36})" data-case-id="([0-9a-f-]{36})" data-case-ref="(CDF-DEMO-2026-\d{4})"/g)];
+    const rows = [
+      ...html.matchAll(
+        /data-testid="portfolio-row-([0-9a-f-]{36})" data-case-id="([0-9a-f-]{36})" data-case-ref="(CDF-DEMO-2026-\d{4})"/g,
+      ),
+    ];
     expect(rows.map((r) => r[1])).toEqual([1, 3, 4, 6, 7, 8, 10].map(caseIdOf));
     for (const r of rows) {
       expect(r[2]).toBe(r[1]);

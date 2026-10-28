@@ -77,3 +77,18 @@
 .empty {
   margin-block: var(--cdf-space-4);
 }
+
+.field input,
+.field select {
+  min-block-size: 2.5rem;
+  padding-inline: var(--cdf-space-2);
+  border: 1px solid var(--cdf-border-control);
+  border-radius: var(--cdf-radius-control);
+  background: var(--cdf-surface);
+  color: var(--cdf-text);
+  font: inherit;
+}
+
+.nowrap {
+  white-space: nowrap;
+}

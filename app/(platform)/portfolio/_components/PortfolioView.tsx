@@ -63,11 +63,15 @@ function resultLine(t: Translator, locale: Locale, total: number): string {
 function captionOf(t: Translator, locale: Locale, query: PortfolioQuery): string {
   const parts: string[] = [];
   if (query.text !== undefined) parts.push(t("portfolio.caption.search", { text: query.text }));
-  if (query.stage !== undefined) parts.push(t("portfolio.caption.stage", { stage: stageLabel(t, query.stage) }));
+  if (query.stage !== undefined)
+    parts.push(t("portfolio.caption.stage", { stage: stageLabel(t, query.stage) }));
   if (query.state !== undefined)
     parts.push(t("portfolio.caption.state", { state: t(RECORDS_KEYS[query.state]) }));
   return t("portfolio.caption", {
-    filters: parts.length === 0 ? t("portfolio.caption.noFilters") : t("portfolio.caption.filters", {
+    filters:
+      parts.length === 0
+        ? t("portfolio.caption.noFilters")
+        : t("portfolio.caption.filters", {
             list: new Intl.ListFormat(locale, { type: "conjunction" }).format(parts),
           }),
   });
@@ -75,7 +79,14 @@ function captionOf(t: Translator, locale: Locale, query: PortfolioQuery): string
 
 function LockGlyph() {
   return (
-    <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 16 16" className={styles.glyph}>
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      className={styles.glyph}
+    >
       <rect x="3" y="7" width="10" height="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
       <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" strokeWidth="1.5" />
     </svg>
@@ -84,7 +95,14 @@ function LockGlyph() {
 
 function KeyGlyph() {
   return (
-    <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 16 16" className={styles.glyph}>
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      className={styles.glyph}
+    >
       <circle cx="5" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
       <path d="M8 8h6M12 8v3" fill="none" stroke="currentColor" strokeWidth="1.5" />
     </svg>
@@ -93,7 +111,14 @@ function KeyGlyph() {
 
 function Filters({ t, query }: { t: Translator; query: PortfolioQuery }) {
   return (
-    <form method="get" action="/portfolio" role="search" aria-label={t("portfolio.filters.label")} className={styles.filters} data-testid="portfolio-filters">
+    <form
+      method="get"
+      action="/portfolio"
+      role="search"
+      aria-label={t("portfolio.filters.label")}
+      className={styles.filters}
+      data-testid="portfolio-filters"
+    >
       <div className={styles.field}>
         <label htmlFor="portfolio-q">{t("portfolio.filters.search")}</label>
         <input
@@ -107,7 +132,12 @@ function Filters({ t, query }: { t: Translator; query: PortfolioQuery }) {
       </div>
       <div className={styles.field}>
         <label htmlFor="portfolio-stage">{t("portfolio.filters.stage")}</label>
-        <select id="portfolio-stage" name="stage" defaultValue={query.stage ?? ""} data-testid="portfolio-stage">
+        <select
+          id="portfolio-stage"
+          name="stage"
+          defaultValue={query.stage ?? ""}
+          data-testid="portfolio-stage"
+        >
           <option value="">{t("portfolio.filters.anyStage")}</option>
           {PORTFOLIO_STAGES.map((code) => (
             <option key={code} value={code}>
@@ -118,7 +148,12 @@ function Filters({ t, query }: { t: Translator; query: PortfolioQuery }) {
       </div>
       <div className={styles.field}>
         <label htmlFor="portfolio-state">{t("portfolio.filters.state")}</label>
-        <select id="portfolio-state" name="state" defaultValue={query.state ?? ""} data-testid="portfolio-state">
+        <select
+          id="portfolio-state"
+          name="state"
+          defaultValue={query.state ?? ""}
+          data-testid="portfolio-state"
+        >
           <option value="">{t("portfolio.filters.anyState")}</option>
           {PORTFOLIO_RECORDS_STATES.map((code) => (
             <option key={code} value={code}>
@@ -141,7 +176,19 @@ function Filters({ t, query }: { t: Translator; query: PortfolioQuery }) {
   );
 }
 
-function ErrorState({ t, title, body, correlationId, testId }: { t: Translator; title: string; body: string; correlationId: string; testId: string }) {
+function ErrorState({
+  t,
+  title,
+  body,
+  correlationId,
+  testId,
+}: {
+  t: Translator;
+  title: string;
+  body: string;
+  correlationId: string;
+  testId: string;
+}) {
   return (
     <div role="alert" className="v13-error" data-testid={testId}>
       <h2>{title}</h2>
@@ -253,7 +300,11 @@ function Results({
                     <td data-testid="portfolio-stage-cell" data-stage={c.lifecycle_stage}>
                       {stageLabel(t, c.lifecycle_stage)}
                     </td>
-                    <td data-testid="portfolio-records-state" data-records-state={c.records_state}>
+                    <td
+                      className={styles.nowrap}
+                      data-testid="portfolio-records-state"
+                      data-records-state={c.records_state}
+                    >
                       {c.records_state === "CLOSED" ? <LockGlyph /> : null}
                       {t(RECORDS_KEYS[c.records_state])}
                     </td>

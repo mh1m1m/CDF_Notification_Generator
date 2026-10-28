@@ -38,8 +38,7 @@ export interface PortfolioQuery {
 }
 
 export type ParsedPortfolioQuery =
-  | { readonly ok: true; readonly query: PortfolioQuery }
-  | { readonly ok: false };
+  { readonly ok: true; readonly query: PortfolioQuery } | { readonly ok: false };
 
 const one = (value: string | string[] | undefined): string | undefined =>
   typeof value === "string" ? value : undefined;
@@ -61,7 +60,8 @@ export function parsePortfolioQuery(params: RawSearchParams): ParsedPortfolioQue
 
   if (text !== undefined && text.length > 100) return { ok: false };
   if (stage !== undefined && !(PORTFOLIO_STAGES as readonly string[]).includes(stage)) return { ok: false };
-  if (state !== undefined && !(PORTFOLIO_RECORDS_STATES as readonly string[]).includes(state)) return { ok: false };
+  if (state !== undefined && !(PORTFOLIO_RECORDS_STATES as readonly string[]).includes(state))
+    return { ok: false };
   if (after !== undefined && !CURSOR_SHAPE.test(after)) return { ok: false };
 
   const trail = back === undefined || back === "" ? [] : back.split(".");
@@ -95,7 +95,11 @@ export function hasFilters(query: PortfolioQuery): boolean {
   return query.text !== undefined || query.stage !== undefined || query.state !== undefined;
 }
 
-function href(query: Pick<PortfolioQuery, "text" | "stage" | "state">, after?: string, trail: readonly string[] = []) {
+function href(
+  query: Pick<PortfolioQuery, "text" | "stage" | "state">,
+  after?: string,
+  trail: readonly string[] = [],
+) {
   const params = new URLSearchParams();
   if (query.text !== undefined) params.set("q", query.text);
   if (query.stage !== undefined) params.set("stage", query.stage);
