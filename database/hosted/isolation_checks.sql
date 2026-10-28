@@ -101,22 +101,27 @@ begin
   insert into v13_iso values ('C05_v13_schema_acl', '*', coalesce(v_pass, 0), 5 - coalesce(v_pass, 0), 0,
     (select coalesce(nspacl::text, '<null>') from pg_catalog.pg_namespace where nspname = v13));
 
-  -- C06 relation privileges outside V13 (catalog check over every table, view, sequence, foreign table).
+  -- C06 relation privileges outside V13 (catalog check over every table, view, sequence, foreign table). A privilege is
+  -- effective only together with USAGE on the relation's schema (as for functions in C07). PUBLIC grants that sit behind
+  -- a schema the role cannot use (Supabase grants SELECT on two pg_stat_statements views in `extensions` to PUBLIC) are
+  -- not access; they are counted in `detail` as latent and stay visible.
   foreach v_role in array v_roles loop
-    select count(*) filter (where not (has_table_privilege(v_role, c.oid, 'SELECT') or has_table_privilege(v_role, c.oid, 'INSERT')
-                                    or has_table_privilege(v_role, c.oid, 'UPDATE') or has_table_privilege(v_role, c.oid, 'DELETE')
-                                    or has_table_privilege(v_role, c.oid, 'TRUNCATE') or has_table_privilege(v_role, c.oid, 'REFERENCES')
-                                    or has_table_privilege(v_role, c.oid, 'TRIGGER'))),
-           count(*) filter (where has_table_privilege(v_role, c.oid, 'SELECT') or has_table_privilege(v_role, c.oid, 'INSERT')
-                                    or has_table_privilege(v_role, c.oid, 'UPDATE') or has_table_privilege(v_role, c.oid, 'DELETE')
-                                    or has_table_privilege(v_role, c.oid, 'TRUNCATE') or has_table_privilege(v_role, c.oid, 'REFERENCES')
-                                    or has_table_privilege(v_role, c.oid, 'TRIGGER'))
-      into v_pass, v_breach
+    select count(*) filter (where not (has_schema_privilege(v_role, n.oid, 'USAGE') and x.any_priv)),
+           count(*) filter (where has_schema_privilege(v_role, n.oid, 'USAGE') and x.any_priv),
+           count(*) filter (where not has_schema_privilege(v_role, n.oid, 'USAGE') and x.any_priv)
+      into v_pass, v_breach, v_unexp
       from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+      cross join lateral (select (has_table_privilege(v_role, c.oid, 'SELECT') or has_table_privilege(v_role, c.oid, 'INSERT')
+                                  or has_table_privilege(v_role, c.oid, 'UPDATE') or has_table_privilege(v_role, c.oid, 'DELETE')
+                                  or has_table_privilege(v_role, c.oid, 'TRUNCATE') or has_table_privilege(v_role, c.oid, 'REFERENCES')
+                                  or has_table_privilege(v_role, c.oid, 'TRIGGER')) as any_priv) x
      where c.relkind in ('r', 'p', 'v', 'm', 'S', 'f')
        and n.nspname not in (v13, 'pg_catalog', 'information_schema')
        and n.nspname not like 'pg\_toast%' and n.nspname not like 'pg\_temp%';
-    insert into v13_iso values ('C06_foreign_relation_privileges', v_role, v_pass, v_breach, 0, 'relations checked outside V13');
+    insert into v13_iso values ('C06_foreign_relation_privileges', v_role, v_pass, v_breach, 0,
+      case when v_breach = 0 then 'no effective privilege on any relation outside V13'
+           else 'EFFECTIVE privilege on ' || v_breach || ' relation(s) outside V13' end
+      || '; latent PUBLIC grants behind an unusable schema: ' || v_unexp);
   end loop;
 
   -- C07 callable functions outside V13 (EXECUTE and USAGE on the function's schema). Never calls a function.

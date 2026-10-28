@@ -192,11 +192,16 @@ estate, roles issued by the CDF DBA, credentials in KMS, and the CDF corporate I
 
 ## 11. Evidence log
 
-| When (UTC) | Step | Result | Evidence |
-| ---------- | ---- | ------ | -------- |
-| 28 Oct ≈ 00:37 | BEFORE fingerprint | 648 objects, TOTAL `40c9efe5…f85f` | §3; detail JSON in the shared folder |
-| 28 Oct ≈ 01:00 | BEFORE re-taken with the final query | identical in every category | §3 |
-| 28 Oct ≈ 01:10 | Step 0 local rehearsal (PostgreSQL 16, Supabase-like roles) | bootstrap OK; F1 = F0; isolation PASS (27 checks); 4 planted breaches detected then cleared; rollback refused a planted foreign view; rollback restored F0 | `docs/TEST_EVIDENCE.md` |
-| _pending_ | Step 1 hosted dry run | | |
-| _pending_ | Steps 2–5 | | |
-| _pending_ | Steps 6–7 | | |
+| When (UTC, 28 Oct 2026) | Step | Result | Evidence |
+| ----------------------- | ---- | ------ | -------- |
+| ≈ 00:37 | BEFORE fingerprint | 648 objects, TOTAL `40c9efe5697d19552d15f5ef85c2f85f` | §3; detail JSON in the shared folder |
+| ≈ 01:00 | BEFORE re-taken with the final query (V13-role default ACLs excluded) | identical in every category | §3 |
+| ≈ 00:55–01:00 | Step 0 local rehearsal (PostgreSQL 16, Supabase-like non-superuser `postgres`) | bootstrap OK; F1 = F0; isolation PASS; planted breaches (membership, schema usage, table grant) detected and cleared; rollback refused a planted foreign view; rollback restored F0 exactly. The rehearsal also caught one defect in the first draft of the bootstrap (`comment on schema` ran before `set role`), fixed before any hosted run | `docs/TEST_EVIDENCE.md` §1 |
+| 01:02:39 | GC Review counters before | `cdf`: 32 tables, 109 live rows, ins 116 / upd 50 / del 3; 13 connections | §5.4 |
+| ≈ 01:02 | **Step 1 hosted dry run** (bootstrap, then ROLLBACK) | no error; roles, schema ACL `{cdf_v13_owner=UC/cdf_v13_owner,cdf_v13_user=U/cdf_v13_owner}`, SET-only memberships, 2 owner default-ACL rows and RLS on the history table as designed; afterwards fingerprint = BEFORE and no V13 object left | `docs/TEST_EVIDENCE.md` §2 |
+| 01:03:21 | **Step 2 hosted apply** of `0000_bootstrap` (sha256 `0f80be82…5c01`) | committed; history row `0000 bootstrap` runner `hosted` applied_by `postgres` | `cdf_notifications_v13.schema_migrations` |
+| ≈ 01:04 | **Step 3 fingerprint AFTER** | identical to BEFORE in all 12 categories, TOTAL `40c9efe5697d19552d15f5ef85c2f85f` | `docs/TEST_EVIDENCE.md` §2 |
+| ≈ 01:05 | Step 4 isolation checks, first run | **FAIL from a checker defect, not an access path**: C06 counted Supabase's PUBLIC `SELECT` on two `pg_stat_statements` views in schema `extensions`, which V13 roles cannot use; C08's live probes of the same views were refused (42501). C06 corrected to require schema USAGE (as C07 already did) with latent grants reported; regression-tested locally (latent grant → PASS, real grant → FAIL) | §5.2; `docs/OPEN_ISSUES.md` OI-002 |
+| ≈ 01:06 | **Step 4 isolation checks, corrected** | **PASS**: 27 checks, 0 breaches, 0 unexpected; 11 foreign schemas closed, 83 foreign relations with no effective privilege (2 latent PUBLIC grants), 111 foreign functions not callable, 75 live probes refused per role, CREATE refused, API roles cannot reach V13 | `docs/TEST_EVIDENCE.md` §2 |
+| 01:07 | **Step 5** advisors, counters, GC Review | security: the pre-existing WARN plus one new INFO on V13 (`rls_enabled_no_policy` on the history table — deny-all by design; an explicit restrictive policy comes with the first DB-team migration); performance: the same 4 pre-existing INFO; `cdf` counters unchanged; GC Review production deployment READY, `/` and `/api/health` HTTP 200 | §5.4–5.5 |
+| _pending_ | Steps 6–7 (app login verifier, deployment, app-login probes) | waits for the foundation build | |
