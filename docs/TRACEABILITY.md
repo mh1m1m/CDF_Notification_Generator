@@ -92,6 +92,69 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 | QA | Playwright & Visual QA | 76 |
 | SEC | Security & Adversarial Testing | 39 |
 
+### 3.1 M1 coverage (V13-PROC-012)
+
+The 280 rows with `Milestone` = M1, counted from the CSV on `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026). The
+status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
+merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
+merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Rows whose only evidence is a
+document or a standing rule, with no test that can exercise them, are IN_PROGRESS with the document in `Evidence` and an
+empty `Test_ID` (96 rows). COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, are checked by SEC before merge.
+
+**By status**
+
+| Status | Rows |
+|---|---|
+| COMPLETE | 61 |
+| IN_PROGRESS | 177 |
+| BLOCKED | 16 |
+| PRODUCTION_SUBSTITUTION_REQUIRED | 1 |
+| NOT_STARTED | 25 |
+| **Total** | **280** |
+
+**By owner team**
+
+| Owner team | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
+|---|---|---|---|---|---|---|
+| ARCH | 105 | 5 | 84 | 12 | 0 | 4 |
+| QA | 51 | 8 | 25 | 4 | 0 | 14 |
+| DB | 33 | 14 | 18 | 0 | 1 | 0 |
+| FE | 31 | 13 | 18 | 0 | 0 | 0 |
+| SEC | 27 | 14 | 13 | 0 | 0 | 0 |
+| UX | 26 | 3 | 16 | 0 | 0 | 7 |
+| PROC | 7 | 4 | 3 | 0 | 0 | 0 |
+
+PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
+
+**By gate** (a row with several gates counts under each; "(none)" is a row without a gate)
+
+| Gate | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
+|---|---|---|---|---|---|---|
+| QG-01 | 10 | 1 | 9 | 0 | 0 | 0 |
+| QG-02 | 29 | 10 | 16 | 3 | 0 | 0 |
+| QG-03 | 32 | 21 | 8 | 2 | 1 | 0 |
+| QG-04 | 11 | 5 | 6 | 0 | 0 | 0 |
+| QG-05 | 18 | 6 | 10 | 1 | 0 | 1 |
+| QG-06 | 23 | 5 | 15 | 2 | 0 | 1 |
+| QG-07 | 18 | 1 | 7 | 0 | 0 | 10 |
+| QG-08 | 17 | 3 | 10 | 0 | 0 | 4 |
+| QG-09 | 7 | 1 | 4 | 0 | 0 | 2 |
+| QG-10 | 4 | 1 | 3 | 0 | 0 | 0 |
+| QG-11 | 14 | 0 | 11 | 2 | 0 | 1 |
+| QG-12 | 15 | 0 | 4 | 10 | 0 | 1 |
+| QG-13 | 15 | 1 | 10 | 3 | 0 | 1 |
+| Gate A | 4 | 0 | 3 | 1 | 0 | 0 |
+| Gate B | 19 | 7 | 9 | 3 | 0 | 0 |
+| Gate C | 23 | 14 | 7 | 2 | 0 | 0 |
+| Gate D | 5 | 0 | 2 | 0 | 0 | 3 |
+| Gate E | 16 | 3 | 9 | 0 | 0 | 4 |
+| Gate F | 6 | 1 | 3 | 0 | 0 | 2 |
+| Gate G | 6 | 0 | 4 | 1 | 0 | 1 |
+| Gate H | 2 | 0 | 2 | 0 | 0 | 0 |
+| Gate I | 5 | 3 | 2 | 0 | 0 | 0 |
+| Gate J | 10 | 0 | 1 | 9 | 0 | 0 |
+| (none) | 110 | 11 | 91 | 2 | 0 | 6 |
+
 ## 4. Gate crosswalk
 
 PROMPT_A Part XXIII "Mandatory Gates" lists the conditions that block production deployment (register row REQ-CICD-010). The single gate rule — all gates pass with evidence, failed gates stay visible — is REQ-GOV-028. "Rows tagged" counts register rows whose `Gate` field names the gate.
