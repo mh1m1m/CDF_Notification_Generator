@@ -16,7 +16,7 @@ Updated: 2026-10-31 ~20:20 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | V13-PROC-006 case task status catalogue (OI-029) | COMPLETE | PR #35 merged into `develop` 6db4cd0 (31 Oct); `lib/domain/task-status.ts`: migration 0003's five `task.status` codes, DONE added to the T5 list; for FE's task badges |
 | V13-PROC-003 disclosure | COMPLETE | PR #40 merged into `develop` 0f46d79 (31 Oct); `lib/disclosure` + `Projected<T>` brand; DIS-02/03/04/06/18, PRJ-01..03, BND-05/06; the other 13 DIS tests land with PROC-005 (ARCH 31 Oct) |
 | V13-PROC-004 authority | COMPLETE | PR #39 merged into `develop` e8bba66 (31 Oct); `lib/authority` (server-only, fail closed) + `tests/unit/authority` (3 files, 88 tests incl. BND-01..04 data boundary and ST-28b) |
-| V13-PROC-005 notifications | IN_REVIEW | `lib/notifications` (lifecycle, consistency PC-00..29, next action, render); renderers take only `Projected<T>`; the 13 deferred DIS tests; NDB-01/02 (diagnostics never reach a recipient); reference skip guards made strict |
+| V13-PROC-005 notifications | IN_REVIEW | `lib/notifications` (lifecycle, consistency PC-00..29, next action, render); renderers take only `Projected<T>`; the 13 deferred DIS tests; NDB-01/02 (diagnostics never reach a recipient); reference skip guards made strict; OI-035 server binding `lib/notifications/binding/server-projection.ts` (context only from the case row's `is_restricted` + the server access-list result, recipient class only from the DB recipient row, fail closed; SPB-01..12) |
 
 ## Changed files
 - PR #3: `docs/teams/proc/PORT_PLAN.md`, `docs/teams/proc/STATUS.md`
@@ -33,7 +33,8 @@ Updated: 2026-10-31 ~20:20 UTC · Branch: `claude/project-thread-94r9g5` · Base
   `tests/unit/disclosure/{disclosure,projected-brand}.spec.ts`, `tests/unit/authority/data-boundary.spec.ts` (BND-05/06),
   this file
 - PROC-005: `lib/notifications/**` (21 files), `tests/unit/notifications/**` (10 specs, 4 support, 7 fakes, 7 evidence
-  copies), `tests/unit/disclosure/disclosure-render.spec.ts`, EVIDENCE_MANIFEST (7 rows), this file
+  copies), `tests/unit/disclosure/disclosure-render.spec.ts`, EVIDENCE_MANIFEST (7 rows), this file;
+  OI-035: `lib/notifications/binding/server-projection.ts`, `tests/unit/notifications/server-projection.spec.ts`
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -54,6 +55,7 @@ Updated: 2026-10-31 ~20:20 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | PROC-003 (develop e8bba66 + PROC-003): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` (fresh `db:reset`) | PASS | all exit 0; test:db 19 files · 352 pass; e2e 92 pass; unit 43 files · 965 pass, of which `tests/unit/disclosure` 2 files · 8 pass (DIS-02/03/04/06/18, PRJ-01..03) and BND-05/06 in `tests/unit/authority`; mutation: with `Projected<T> = T` typecheck fails on PRJ-02's unused `@ts-expect-error` (TS2578) | PROC-003 head |
 | PROC-003 equivalence: reference `src/disclosure/project.js` vs `lib/disclosure/project.ts`, same policy (JSON equal except the documented `case_number` example rename) | PASS | `decide()`: 87,360 queries (15 recipient values × 52 fields × 14 channels × 8 contexts), 0 differ; `project()`: 600 runs (15 recipient values × 5 channels × 8 contexts) on a model carrying every field, 0 differ (fields, log and summary; `policy_path` excluded), 80 refused identically | scratch spec, not committed |
 | PROC-005 (develop f937052 + PROC-005, fresh `db:reset`): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` · `build` | PASS | all exit 0; unit 55 files · 1,381 pass · 0 skipped, of which `tests/unit/notifications` + `tests/unit/disclosure` 13 files · 379 pass; test:db 19 files · 352 pass; e2e 94 pass | PROC-005 head |
+| PROC-005 + OI-035 binding, after merging `develop` f39af8b (fresh `db:reset`, 10 migrations): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` · `build` | PASS | all exit 0; unit 56 files · 1,406 pass · 0 skipped (SPB 25 new); test:db 20 files · 357 pass; e2e 94 pass; mutation: binding forced to `on_access_list = true` → 3 SPB fail; tags passed as a Set (read by `project()` as no tags) → 5 SPB fail | PROC-005 head |
 | PROC-005 equivalence: reference `src/demo/build_demo.js` `renderAll()` (reference `src/` with its W-E `design/tokens.json`, JSON-equal to `lib/notifications/render/email_tokens.json`) vs the port's, same inline scenarios | PASS | 516 rendered files (platform HTML, e-mail HTML, text, EML, card) compared after the `CDF-IC-2026-DEMO-` → `CDF-DEMO-2026-` rename: 0 differ, none missing on either side; refusals equal (5) | scratch spec, not committed |
 | PROC-005: V12 quotes not re-verified here | UNVERIFIED here (by ruling) | 22 `evidenceLine` quotes from V12 sample EMLs (`eml/en/…`) and `generator/samples/WB-08.txt`, and the 77/77 X-Unsent check: ARCH ruled the EMLs are never copied; they pass in the reference package run (726/726). Any other missing evidence file now fails | local |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
@@ -100,3 +102,9 @@ evidence); with the V12 siblings and the demo built, 726 / 726.
 - SEC LOW note on #18 (via ARCH, 31 Oct): T5 matched statuses exactly. Fixed on #24: a badge's `shown_status` must be an
   upper-snake status code or a catalogue step code (`SHOWN_STATUS_NOT_A_CODE` otherwise), and `isCompletedClassStatus`
   fails closed on any other string; BADGE-12 covers "completed", " COMPLETED", "Completed" and more.
+- ARCH 31 Oct (OI-035, SEC's two LOWs on #40): built into PROC-005 as `projectForRecipient(model, records, opts)`.
+  Open for DB/ARCH: migration 0004's recipient codes (`CASE_TEAM`, `COMMITTEE_MEMBERS`, `SUBJECT_EMPLOYEE`, `WITNESS`,
+  `GOVERNANCE`) are not the policy's 13 classes (only `WITNESS` matches), and `case_record` has no access-list check
+  yet. Until a mapping is decided, every row class but `WITNESS` is refused (UNKNOWN_RECIPIENT); PROC never guesses it.
+- Open for ARCH: renderer wording stays in `lib/notifications/render/i18n.ts` (as in the reference) unless ARCH adds a
+  `notifications` namespace to `lib/i18n`.
