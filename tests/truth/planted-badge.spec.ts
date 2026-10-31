@@ -149,6 +149,29 @@ test.describe("other truth rules", () => {
     expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T6"]);
   });
 
+  test("an unmarked OPEN task badge is allowed (ARCH ruling on FE-004)", async ({ page }) => {
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({
+        insideWorkspace: `<span data-testid="status-badge" data-status-kind="task" data-status="OPEN">مفتوحة</span>`,
+      }),
+    );
+    const v = await inspectTruth(page, oracle, NOW);
+    expect(v, formatTruthViolations(v)).toEqual([]);
+  });
+
+  test("a COMPLETED badge with no data-epistemic at all → T8", async ({ page }) => {
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({
+        insideWorkspace: `<span data-testid="status-badge" data-status-kind="task" data-status="COMPLETED">اكتملت</span>`,
+      }),
+    );
+    expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T8"]);
+  });
+
   test("a planted badge inside a same-origin frame (notification preview) → T3", async ({ page }) => {
     const badge =
       '<span data-epistemic="recorded" data-status-kind="notification" data-status="SENT">أُرسل</span>';

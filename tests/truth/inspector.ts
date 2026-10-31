@@ -13,6 +13,8 @@
 //      future, and the oracle's status for it equals the shown status (PROC's fold; ARCH ruling on derived states)
 //   T5 a completed-class status is never shown as anything but recorded
 //   T6 a non-recorded element is distinguishable from a recorded one of the same status by its text, not by colour
+//   T8 an element that shows a status (data-status) without data-epistemic never shows a completed-class status
+//      (ARCH ruling on FE-004: an OPEN task with no status event carries no data-epistemic; nothing else may hide)
 //   T7 every child frame of the page could be read (evaluated, or parsed from its srcdoc); none passes silently
 import type { Page } from "@playwright/test";
 import { readChildFrames, type FramePage, type UnreadableFrame } from "../sentinel/frames";
@@ -72,7 +74,7 @@ function collectInPage(html: string | null): EpistemicNode[] {
     }
     return parts.join(" > ");
   };
-  return Array.from(doc.querySelectorAll("[data-epistemic]")).map((el) => {
+  return Array.from(doc.querySelectorAll("[data-epistemic], [data-status], [data-status-kind]")).map((el) => {
     const owner = el.closest("[data-case-id]");
     const label = el.getAttribute("aria-label") ?? "";
     const text = ((el instanceof HTMLElement ? el.innerText : el.textContent) ?? "").trim();
@@ -127,7 +129,13 @@ export async function checkTruth(
 
   for (const n of nodes) {
     const where = n.path;
-    if (!n.epistemic || !(EPISTEMIC_VALUES as readonly string[]).includes(n.epistemic)) {
+    if (n.epistemic === null) {
+      // Unmarked status (allowed for "nothing has happened yet"); it may never claim that something has happened.
+      if (n.status && COMPLETED_CLASS.has(n.status))
+        v.push({ rule: "T8", where, detail: `${n.status} shown without data-epistemic` });
+      continue;
+    }
+    if (!(EPISTEMIC_VALUES as readonly string[]).includes(n.epistemic)) {
       v.push({ rule: "T1", where, detail: `data-epistemic ${JSON.stringify(n.epistemic)} is not allowed` });
       continue;
     }
@@ -182,7 +190,7 @@ export async function checkTruth(
   }
 
   for (const n of nodes) {
-    if (n.epistemic === "recorded" || !n.statusKind || !n.status) continue;
+    if (n.epistemic === null || n.epistemic === "recorded" || !n.statusKind || !n.status) continue;
     if (recordedTextByStatus.get(`${n.statusKind}/${n.status}`)?.has(n.text))
       v.push({
         rule: "T6",
