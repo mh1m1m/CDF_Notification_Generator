@@ -172,6 +172,29 @@ test.describe("other truth rules", () => {
     expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T8"]);
   });
 
+  for (const [label, attrs] of [
+    ["an unmarked IN_PROGRESS task", 'data-status-kind="task" data-status="IN_PROGRESS"'],
+    [
+      "an unmarked OPEN element of another kind (notification)",
+      'data-status-kind="notification" data-status="OPEN"',
+    ],
+    [
+      "an unmarked OPEN task that carries data-event-id",
+      `data-status-kind="task" data-status="OPEN" data-event-id="${EVENTS.e0001task}"`,
+    ],
+    ["an element with data-status-kind but no data-status", 'data-status-kind="task"'],
+    ["an unmarked QUEUED notification", 'data-status-kind="notification" data-status="QUEUED"'],
+  ] as const) {
+    test(`${label} → T8`, async ({ page }) => {
+      await openFixture(
+        page,
+        casePath,
+        caseWorkspaceHtml({ insideWorkspace: `<span data-testid="status-badge" ${attrs}>حالة</span>` }),
+      );
+      expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T8"]);
+    });
+  }
+
   test("a planted badge inside a same-origin frame (notification preview) → T3", async ({ page }) => {
     const badge =
       '<span data-epistemic="recorded" data-status-kind="notification" data-status="SENT">أُرسل</span>';

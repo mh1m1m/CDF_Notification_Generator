@@ -8,10 +8,17 @@ Updated: 2026-10-31 · Branch: test/V13-QA-004-unmarked-status (base develop 2ec
   (T1–T7) with planted-fault self-tests — PRs #7 and #13 — COMPLETE (browser half); DB half IN_PROGRESS
   - #13: frames (same-origin, sandboxed srcdoc fallback, unreadable frame = S8/T7), case-insensitive P1,
     Arabic-Indic digit normalisation, RSC UTF-8 recovery (`recoverUtf8`), `SESSION_COOKIE_NAME` import
-- This branch (IN_REVIEW): Inspector rule T8 per the ARCH ruling on FE-004. An OPEN task with no status event carries
-  no `data-epistemic` and is allowed; any element showing a completed-class status without `data-epistemic` fails.
-  The Inspector now also collects `[data-status]` / `[data-status-kind]` elements, not only `[data-epistemic]`.
-  Mutation check: removing the T8 check fails exactly the T8 self-test (1 failed, 15 passed).
+- This branch (IN_REVIEW): Inspector rule T8 per the ARCH ruling on FE-004, as an allow-list (ARCH review of #22,
+  CHANGES 4f3fc97). The only element with `data-status` / `data-status-kind` and no `data-epistemic` that passes is
+  a task with status OPEN and no `data-event-id`; every other unmarked status element fails T8. The Inspector now
+  collects `[data-status]` / `[data-status-kind]` elements, not only `[data-epistemic]`. No component on develop
+  2ec6ce0 renders status attributes yet, so no page fails T8 today. Mutation checks: completed-class-only logic fails
+  the 5 new T8 tests; ignoring `data-event-id` fails the OPEN-with-event test; allow-all fails all 6 T8 tests.
+
+## Changed files (this branch)
+- tests/truth/inspector.ts
+- tests/truth/planted-badge.spec.ts
+- docs/teams/qa/STATUS.md
 
 ## Reviews
 - #10 [V13-FE-002] REVIEW: ACCEPT 2bbacf2, re-confirmed ACCEPT 35e1e65 (session expiry kept on switch)
@@ -21,7 +28,7 @@ Updated: 2026-10-31 · Branch: test/V13-QA-004-unmarked-status (base develop 2ec
 | Command | Result | Counts | Commit |
 | ------- | ------ | ------ | ------ |
 | `pnpm typecheck`, `pnpm lint`, `pnpm format:check` | pass | 0 warnings | this branch |
-| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | pass | 75 passed, 0 failed | this branch |
+| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | pass | 80 passed, 0 failed | this branch |
 
 ## Waiting
 - Scenario C e2e (11 tests) on `test/V13-QA-002-scenario-c` (5bdfc4b, stacked on #10 35e1e65): PR opens after #10

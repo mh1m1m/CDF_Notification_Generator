@@ -13,9 +13,9 @@
 //      future, and the oracle's status for it equals the shown status (PROC's fold; ARCH ruling on derived states)
 //   T5 a completed-class status is never shown as anything but recorded
 //   T6 a non-recorded element is distinguishable from a recorded one of the same status by its text, not by colour
-//   T8 an element that shows a status (data-status) without data-epistemic never shows a completed-class status
-//      (ARCH ruling on FE-004: an OPEN task with no status event carries no data-epistemic; nothing else may hide)
 //   T7 every child frame of the page could be read (evaluated, or parsed from its srcdoc); none passes silently
+//   T8 an element with data-status or data-status-kind but no data-epistemic is allowed only as an OPEN task with no
+//      data-event-id (ARCH ruling on FE-004, allow-list); every other unmarked status element is a violation
 import type { Page } from "@playwright/test";
 import { readChildFrames, type FramePage, type UnreadableFrame } from "../sentinel/frames";
 
@@ -130,9 +130,14 @@ export async function checkTruth(
   for (const n of nodes) {
     const where = n.path;
     if (n.epistemic === null) {
-      // Unmarked status (allowed for "nothing has happened yet"); it may never claim that something has happened.
-      if (n.status && COMPLETED_CLASS.has(n.status))
-        v.push({ rule: "T8", where, detail: `${n.status} shown without data-epistemic` });
+      // Allow-list of one: an OPEN task with no status event. Anything else must say what it is.
+      const openTask = n.statusKind === "task" && n.status === "OPEN" && n.eventId === null;
+      if (!openTask)
+        v.push({
+          rule: "T8",
+          where,
+          detail: `${n.statusKind ?? "?"}/${n.status ?? "?"}${n.eventId ? ` (event ${n.eventId})` : ""} shown without data-epistemic`,
+        });
       continue;
     }
     if (!(EPISTEMIC_VALUES as readonly string[]).includes(n.epistemic)) {
