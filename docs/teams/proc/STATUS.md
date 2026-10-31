@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 ~18:45 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 64aa5c1
+Updated: 2026-10-31 ~19:30 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 434f905
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -12,9 +12,10 @@ Updated: 2026-10-31 ~18:45 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | Task | State | Note |
 | ---- | ----- | ---- |
 | V13-PROC-001 domain status model | COMPLETE | PR #18 merged into `develop` 64aa5c1 (31 Oct) |
-| V13-PROC-002 journeys + BL-45 fixture fixes | IN_REVIEW | `lib/journeys` + `tests/unit/journeys` (81 tests); BL-45 fixed (five scenarios); BL-46 held (OI-020) |
-| V13-PROC-003 disclosure | NOT_STARTED | |
-| V13-PROC-004 authority | NOT_STARTED | |
+| V13-PROC-002 journeys + BL-45 fixture fixes | COMPLETE | PR #24 merged into `develop` 434f905 (31 Oct); BL-45 fixed (five scenarios); BL-46 held (OI-020) |
+| V13-PROC-006 case task status catalogue (OI-029) | IN_REVIEW | `lib/domain/task-status.ts`: migration 0003's five `task.status` codes, DONE added to the T5 list; for FE's task badges |
+| V13-PROC-003 disclosure | NOT_STARTED | after PROC-004; DIS-02/03/04/06 + boundary test; 14 DIS tests land with PROC-005 (ARCH 31 Oct) |
+| V13-PROC-004 authority | IN_PROGRESS | built locally (88 tests, BND-01..04 boundary tests); opens after PROC-006 |
 | V13-PROC-005 notifications | NOT_STARTED | |
 
 ## Changed files
@@ -22,6 +23,10 @@ Updated: 2026-10-31 ~18:45 UTC · Branch: `claude/project-thread-94r9g5` · Base
 - PROC-001: `lib/domain/{badge,concepts,epistemic,index,invariants,nil,status,types}.ts`,
   `tests/unit/domain/{badge,evidence-scan,invariants,status}.spec.ts`, `tests/unit/domain/__evidence__/` (4 files),
   `docs/teams/proc/EVIDENCE_MANIFEST.md`, `docs/teams/proc/PORT_PLAN.md` (§5 note), this file
+- PROC-002: `lib/journeys/**`, `tests/unit/journeys/**` (+ 4 evidence copies), `lib/domain/badge.ts` (T5 code check),
+  `tests/unit/domain/badge.spec.ts`, EVIDENCE_MANIFEST, this file
+- PROC-006: `lib/domain/{task-status,badge,index}.ts`, `tests/unit/domain/{task-status,badge}.spec.ts`,
+  `tests/integration/task-status-catalogue.spec.ts` (outside PROC paths, at ARCH's request), this file
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -35,6 +40,8 @@ Updated: 2026-10-31 ~18:45 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | PROC-002: `pnpm format:check` · `pnpm lint` · `pnpm typecheck` · `pnpm test` (develop 64aa5c1 + PROC-002) | PASS | all exit 0; unit 33 files · 775 pass, (776 with BADGE-12, below), of which `tests/unit/journeys` 3 files · 81 pass · 0 skipped; evidence scan (EVS-01) now covers the journeys evidence and `lib/journeys/**/*.json`: 0 hits | PROC-002 head |
 | PROC-002 equivalence: reference `src/journeys/{resolve,progress}.js` vs `lib/journeys` on the same inputs (22 reference scenario files, refs `CDF-IC-2026-DEMO-NNNN` normalised to `CDF-DEMO-2026-NNNN`), 32 runs incl. variants × (resolve + 13 recipient classes) | PASS | 448 outputs compared, 0 differ; catalogue identical after the ref rename | PROC-002 working tree on 64aa5c1 (after prettier) |
 | PROC-002 fixture effect (BL-45): `lib/journeys` on reference vs ported fixtures | EXPECTED DIFFERENCES ONLY | 5 scenario files changed (EC-01, SUM-01, WIT-01, CF-35, CF-37); 448 outputs compared, 2 differ, both CF-37 (base and CF-37-V1: the added `AUTHORITY_DECISION_RECORDED` before the notice); ST-34 now lists only the 7 BL-46 scenarios | same |
+| PROC-006 (develop 434f905 + PROC-006, fresh `db:local start` + `db:reset`, 9 migrations): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` | PASS | all exit 0; unit 37 files · 813 pass, of which `tests/unit/domain` 5 files · 212 pass (CTS-01..08 new); test:db 18 files · 337 pass, 0 skipped (CTS-DB-01/02 new); e2e 92 pass | PROC-006 head |
+| PROC-006 mutation check: `CANCELLED` removed from `CASE_TASK_STATUSES` | FAIL (expected) | CTS-DB-01 and CTS-DB-02 both fail; reverted | local only |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
 
 ### Baseline without sibling evidence (`src/` + `tests/` only): causes
