@@ -4,13 +4,13 @@
 NOT_STARTED · PRODUCTION_SUBSTITUTION_REQUIRED. A capability is COMPLETE only with its implementation and verification
 evidence (`docs/TEST_EVIDENCE.md`). No overall completion percentage is given: each gate is reported on its own.
 
-Last updated: **28 Oct 2026 02:02 UTC** (Chief Architect).
+Last updated: **31 Oct 2026 20:00 UTC** (Chief Architect), `develop` `0f46d79`.
 
 ## 1. Milestones
 
 | Milestone | Status | Notes |
 | --------- | ------ | ----- |
-| M1 — Enterprise foundation | IN_PROGRESS | Hosted database isolation done; app foundation being built; team build starts after it lands |
+| M1 — Enterprise foundation | IN_PROGRESS | On `develop`: app foundation (#6, #20), data model and commands in migrations 0000–0008 with the synthetic seed (DB-001..010), domain status model (#18), task status catalogue (#35), journeys (#24), authority check (#39), disclosure projection (#40), workspace switcher (#10), Case Portfolio (#19), Scenario C e2e (#33), database adversarial suites (#29) and post-apply checks (#30). In review: database-backed e2e job (#36), Case Workspace (#23), My Work (#32), audited switch call (#27), shell and data components (#14, #16). Not started: Notification Operations Center (FE-006). Hosted: 0000–0005 applied with every check PASS; 0006 waits for the owner to answer the connector's confirmation (OI-034). Staging sign-in waits for the owner step |
 | M2 — Multi-case and multi-workspace | NOT_STARTED | |
 | M3 — Procedural intelligence | NOT_STARTED | |
 | M4 — Notification Center | NOT_STARTED | |
@@ -26,29 +26,31 @@ Last updated: **28 Oct 2026 02:02 UTC** (Chief Architect).
 | GitHub repository (existing, `develop` integration branch) | COMPLETE | DEPLOYMENT_STATUS §1 |
 | Branch protection on `main` | BLOCKED | no connector tool; owner setting (OI-016) |
 | Database: V13 schema and roles in CDF GC Review, isolated | COMPLETE | TEST_EVIDENCE §1–§2; ADR-012 |
+| Database: V13 migrations 0001–0008 and the seed on the hosted project | BLOCKED | 0001–0005 applied 31 Oct with every per-step check PASS (TEST_EVIDENCE §2.1); 0006 waits for the owner to answer the Supabase connector's confirmation (OI-034); then 0007, 0008, the seeds and the post-apply checks (V13-ARCH-005) |
 | Database: recovery plan and rollback script | COMPLETE | `docs/hosted/ISOLATION_AND_RECOVERY_PLAN.md`; rollback rehearsed locally (TEST_EVIDENCE §1.2) |
 | Vercel project linked to the repository | COMPLETE | DEPLOYMENT_STATUS §3 |
 | Vercel environment variables | IN_PROGRESS | the two plain switches are set on the `develop` preview; the two sensitive values wait for the owner step (`docs/hosted/OWNER_STEP_APP_LOGIN.md`) |
-| Successful deployment | NOT_STARTED | two builds failed `NEXT_NO_VERSION` before the app existed (OI-010) |
-| Deployment verification (build, DB connectivity, sign-in, Playwright smoke) | NOT_STARTED | DEPLOYMENT_STATUS §5 |
+| CI on every PR and every `develop` push | COMPLETE | six jobs (TEST_EVIDENCE §4) |
+| Successful deployment | COMPLETE | every `develop` merge since #6 deploys READY on the staging alias; `/api/health` answers 503 `DB_NOT_CONFIGURED` as expected until the owner step (DEPLOYMENT_STATUS §3). The two early builds failed `NEXT_NO_VERSION` before the app existed (OI-010) |
+| Deployment verification (DB connectivity, sign-in, isolation probe, Playwright smoke) | BLOCKED | the database, sign-in and probe checks need `V13_DATABASE_URL` and `V13_SESSION_SECRET` (owner step); the smoke run is OI-008 (DEPLOYMENT_STATUS §5) |
 
 ## 3. Quality gates
 
 | Gate | Status | Evidence / reason |
 | ---- | ------ | ----------------- |
 | QG-01 Source integrity | NOT_STARTED | hash check of the V12/V13 evidence folders to be scripted; nothing in them has been modified |
-| QG-02 / Gate B Multi-case integrity | NOT_STARTED | |
-| QG-03 / Gate C Authorization | NOT_STARTED | database-level isolation from GC Review is proven (TEST_EVIDENCE §2); case-level authorisation is not built yet |
-| QG-04 / Gate I Procedural truth | NOT_STARTED | |
-| QG-05 Disclosure | NOT_STARTED | |
+| QG-02 / Gate B Multi-case integrity | IN_PROGRESS | Case Context Sentinel part 1 and frame rule merged (#7, #13); it runs on the case pages as #23 lands |
+| QG-03 / Gate C Authorization | IN_PROGRESS | database: RLS, command checks and the persona × workspace × case adversarial suites (#29); application pre-check `lib/authz` (#9); application adversarial tests part 1 (#11); post-apply checks (#30). Not met until the screens and their e2e negative tests land |
+| QG-04 / Gate I Procedural truth | IN_PROGRESS | domain status model (#18); Truth Inspector part 1, follow-ups and T8 (#7, #13, #22) |
+| QG-05 Disclosure | IN_PROGRESS | disclosure projection ported, default deny, PROPOSED policy, bound to nothing yet (#40); authority check (#39). Binding conditions OI-033 and OI-035; renderers and the full DIS suite with PROC-005 |
 | QG-06 / Gate A Functional correctness | NOT_STARTED | |
 | QG-07 / Gate D Visual quality | NOT_STARTED | |
-| QG-08 / Gate E Accessibility | NOT_STARTED | |
+| QG-08 / Gate E Accessibility | IN_PROGRESS | axe checks run in the e2e job on every PR; OI-028's root cause is found and fixed in #38; QA's 375 px review of #23 found scrollable regions keyboard users cannot reach (being fixed in #23); the five-screen audit is QA-005 |
 | QG-09 / Gate F Arabic RTL | NOT_STARTED | |
 | Gate G Responsive | NOT_STARTED | |
 | QG-10 / Gate H Performance | NOT_STARTED | budgets to be agreed in M7 |
-| QG-11 Regression | NOT_STARTED | |
-| QG-12 / Gate J Deployment | NOT_STARTED | |
+| QG-11 Regression | IN_PROGRESS | CI runs lint, unit, rehearsal, database integration, build and e2e on every PR and `develop` push (TEST_EVIDENCE §4) |
+| QG-12 / Gate J Deployment | IN_PROGRESS | previews build and serve; staging verification waits for the owner step (QA-006) |
 | QG-13 Production authorization | BLOCKED | by design: hosting gate items all UNVERIFIED (ADR-005, OI-013) |
 
 ## 4. Deliverables
@@ -56,6 +58,8 @@ Last updated: **28 Oct 2026 02:02 UTC** (Chief Architect).
 | Deliverable | Status | Location |
 | ----------- | ------ | -------- |
 | E01 Current-state audit | COMPLETE | `docs/CURRENT_STATE_ARCHITECTURE.md` |
+| E02 Conceptual architecture | COMPLETE | `docs/architecture/CONCEPTUAL_ARCHITECTURE.md` (#5) |
+| E05 Threat model and authorisation matrix (M1 part) | IN_PROGRESS | #2, DB reviews |
 | E19 Migration and rollback plan — hosted part | COMPLETE | `docs/hosted/ISOLATION_AND_RECOVERY_PLAN.md` |
 | E19 Migration from V12 | NOT_STARTED | |
 | Requirements register and traceability | IN_PROGRESS | V13-ARCH-004 |
