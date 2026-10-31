@@ -11,12 +11,14 @@ import type {
   CaseSourceAdapter,
   CaseSummary,
   CaseTask,
+  NotificationDraftPort,
   NotificationRecordsReader,
   ProceduralRecordsReader,
 } from "@/lib/contracts";
 import { getCaseForRoute } from "./cases";
 import type { RequestContext } from "./context";
 import { toUserError } from "./errors";
+import { loadDraftForm, type DraftFormView, type DraftNotice } from "./notification-draft";
 
 export const CASE_TABS = ["overview", "events", "tasks", "notifications"] as const;
 export type CaseTab = (typeof CASE_TABS)[number];
@@ -28,6 +30,10 @@ export interface CaseWorkspaceDeps {
   readonly source: CaseSourceAdapter;
   readonly procedural: ProceduralRecordsReader;
   readonly notifications: NotificationRecordsReader;
+  /** Draft options and command (V13-FE-006); without it the tab offers no draft form. */
+  readonly drafts?: NotificationDraftPort;
+  /** The outcome flag of the last draft action, already parsed (notifications tab only). */
+  readonly notice?: DraftNotice | null;
 }
 
 interface Frame {
@@ -43,13 +49,18 @@ export type CaseWorkspaceView =
     })
   | (Frame & { readonly tab: "events"; readonly events: readonly CaseEvent[] })
   | (Frame & { readonly tab: "tasks"; readonly tasks: readonly CaseTask[] })
-  | (Frame & { readonly tab: "notifications"; readonly notifications: readonly CaseNotification[] });
+  | (Frame & {
+      readonly tab: "notifications";
+      readonly notifications: readonly CaseNotification[];
+      readonly draft: DraftFormView | null;
+      readonly notice: DraftNotice | null;
+    });
 
 const OPEN_STATUSES = new Set(["OPEN", "IN_PROGRESS", "BLOCKED"]);
 
 /** Loads one tab of one case. Throws AppError("NOT_FOUND") for anything the persona may not see. */
 export async function loadCaseWorkspace(
-  { ctx, source, procedural, notifications }: CaseWorkspaceDeps,
+  { ctx, source, procedural, notifications, drafts, notice }: CaseWorkspaceDeps,
   rawCaseId: unknown,
   tab: CaseTab,
 ): Promise<CaseWorkspaceView> {
@@ -71,12 +82,21 @@ export async function loadCaseWorkspace(
       return { ...frame, tab, events: await procedural.listEvents(ctx.identity, caseId) };
     case "tasks":
       return { ...frame, tab, tasks: await procedural.listTasks(ctx.identity, caseId) };
-    case "notifications":
+    case "notifications": {
+      const list = await notifications.listForCase(ctx.identity, caseId);
+      // A "created" flag is shown only for a notification of this case the persona can see (no echo of other ids).
+      const shown =
+        notice?.kind === "created" && !list.some((n) => n.notification_id === notice.notificationId)
+          ? null
+          : (notice ?? null);
       return {
         ...frame,
         tab,
-        notifications: await notifications.listForCase(ctx.identity, caseId),
+        notifications: list,
+        draft: drafts ? await loadDraftForm({ ctx, drafts }, summary) : null,
+        notice: shown,
       };
+    }
   }
 }
 

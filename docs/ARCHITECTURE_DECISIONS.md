@@ -368,6 +368,16 @@ Next free number: **ADR-020**.
      #48). The consistency-rule messages, the next-action rule texts and the export's status labels are domain data of
      the same kind: {ar, en} next to their codes in `lib/notifications`. When a UI component first renders one, PROC
      mirrors it into `lib/i18n` with a unit test that pins the mirror, and the component renders through `lib/i18n`.
+  5. **Notification documents** (Chief Architect, 31 Oct 2026, on QA's question before FE-006's preview). The
+     renderer's output, which a viewer sees only inside the sandboxed preview frame (UX-006) and which is also the
+     message body, is a document of its own. Its `data-epistemic` marks a content block with the reference package's
+     vocabulary (`RECORDED_FACT`, `EXPECTED_PROCESS`, … `GENERALIZED`); it is not an ADR-013 status badge. The renderer
+     keeps the attribute: renaming it would break the equivalence with the reference (516 files) and change the
+     reference message format. `lib/notifications` exports the vocabulary as one constant (V13-PROC-011), and the
+     content writer fails closed on a class it does not know. A tool that reads into a preview frame applies a
+     notification rule set there: the badge rules (T1, T8) do not apply inside the frame, every `data-epistemic` value
+     there must be in the exported list (imported, never copied, as item 2 requires), and a frame it cannot read stays
+     T7. On the page itself nothing changes: a notification value outside a frame still fails T1.
      A fixed bilingual marking of a generated document (the export's notice: both languages always printed together,
      never switched by locale) stays with the code that writes the document. The notification renderers' wording
      is user-facing text and lives in the PROC-owned `notificationRender` namespace (#48, OPEN_ISSUES OI-036).

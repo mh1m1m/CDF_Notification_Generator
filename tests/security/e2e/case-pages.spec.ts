@@ -268,6 +268,7 @@ test.describe("SEC-APP-11 the workspace switch takes nothing from the form but t
     await signInAs(page, "governance-officer-delta");
     await page.goto("/workspaces");
     const form = page
+      .getByTestId("workspaces-page")
       .locator("form")
       .filter({ has: page.locator('[name="workspace"]') })
       .first();
@@ -311,6 +312,7 @@ test.describe("SEC-APP-11 the workspace switch takes nothing from the form but t
     const before = (await context.cookies()).find((c) => c.name === SESSION_COOKIE)?.value;
     await page.goto("/workspaces");
     const form = page
+      .getByTestId("workspaces-page")
       .locator("form")
       .filter({ has: page.locator('[name="workspace"]') })
       .first();

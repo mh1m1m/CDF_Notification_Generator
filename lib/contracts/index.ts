@@ -6,5 +6,6 @@ export * from "./case-summary";
 export * from "./procedural-records";
 export * from "./notification-records";
 export * from "./my-work";
+export * from "./notification-draft";
 export * from "./ports";
 export * from "./personas";

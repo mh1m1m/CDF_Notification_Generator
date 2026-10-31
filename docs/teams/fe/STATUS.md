@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 22:05 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-filter-reset (FE-006 parts 1–2 are #51, #61) · Head: see PR
+Updated: 2026-10-31 22:25 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-filter-reset (FE-006 part 1 #51 merged 65a251d; part 2 is #61) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -21,8 +21,8 @@ Updated: 2026-10-31 22:05 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-f
   `NotificationRecordsReader` (listForCase) in `lib/contracts/notification-records.ts`,
   `CaseSourceAdapter.getCase` returns `CaseHeader` (summary + `my_capacity`, `CaseCapacitySchema`) in `ports.ts`/`case-summary.ts`. Task status
   badges via `lib/domain` toBadgeEpistemic (server only). `app/not-found.tsx` gains `data-testid="not-found-state"` (ARCH
-  path, ARCH ACCEPT needed). PR #23 (stacked on #19) — IN_REVIEW once #19 lands.
-- OI-023 — workspace switch runs `api_switch_workspace` before the cookie is re-issued — PR #27 — IN_REVIEW.
+  path, ARCH ACCEPT needed). PR #23 — COMPLETE (merged into develop 69e03d6, 31 Oct).
+- OI-023 — workspace switch runs `api_switch_workspace` before the cookie is re-issued — PR #27 — COMPLETE (merged into develop 3cfce15, 31 Oct).
 - V13-FE-005 My Work (SCREENS S1) — `/my-work`: subtitle with the workspace, count strip (Overdue, Due this week,
   Open; links that filter, counts from the authorised rows, Asia/Riyadh dates), own open tasks with case link by UUID,
   deadline in words, recorded status badges (event id; untouched OPEN unmarked) and a short Server Action form that
@@ -30,7 +30,14 @@ Updated: 2026-10-31 22:05 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-f
   version → "تغيّرت هذه المهمة منذ فتحها…" + reference; every other refusal generic + reference; success in a polite
   live region. Proposed contract `lib/contracts/my-work.ts` (MyWorkReader, TaskCommandPort,
   UpdateTaskStatusCommandSchema): needs ARCH + SEC ACCEPT. Reads DB-010's columns (migration 0008, on develop
-  b5ee5f4). Draft PR stacked on #23 — IN_PROGRESS.
+  b5ee5f4). PR #32 — COMPLETE (merged into develop d694ff8, 31 Oct).
+
+- V13-FE-006 part 1, Scenario E draft — the case Notifications tab offers "Create a notification draft" to roles
+  that may draft (COMMITTEE_SECRETARY, INVESTIGATOR) on ACTIVE cases; Server Action → lib/server (pre-check, Zod,
+  `api_create_notification_draft`); one fresh idempotency key per rendered form; a created draft redirects to the case
+  id the command returned (SEC condition 1); every refusal (incl. a reused key) is one generic message with a reference,
+  shown in place (useActionState), nothing written. Contract `lib/contracts/notification-draft.ts`. PR #51 — COMPLETE (merged into develop 65a251d, 31 Oct).
+  Part 2 (`/notifications`, D6 guard, list on DB-015) is PR #61; the in-case preview follows.
 - V13-FE-007 (QA defects pinned in #58) — OI-042: `app/(platform)/not-found.tsx` renders notFound() inside the
   AppShell as a section (no second `<main>`, no second `id="main"`), same visible text, `data-testid` and title as the
   root not-found page; OI-043: the Portfolio filter form is keyed on its filter values (`filterFormKey`), so Clear,
@@ -105,7 +112,17 @@ Updated: 2026-10-31 22:05 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-f
 | FE-007 throwaway browser probe (not committed; QA's pinned tests are in #58): Gamma on hidden 0009 and unknown 0099 → 404, one `main`, one `id="main"`, axe 0 violations; Alpha `/portfolio?stage=INVESTIGATION&state=ACTIVE` → Clear shows empty selects, Back shows both again. Same probe on the code without the fix: 2/2 fail | pass | 2/2 | FE-007 head |
 | FE-007 after QA CHANGES e1434b4 and develop b5d810c (#58): `autoComplete="off"` on the Portfolio filter form (back_forward document loads), QA's two `test.fail()` pins removed (board §1 exception, ARCH): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (both former pins pass: case-404 one main, Scenario D Clear/Back) | pass | — / 1725 / 418 / 138 | FE-007 head |
 
+| FE-006 part 1 (develop ec8653a): lint, typecheck, format:check, build / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (new `tests/integration/fe/notification-draft.spec.ts`, 12) / `pnpm db:reset` + `pnpm test:e2e` / throwaway Scenario E browser probe (not committed; e2e is QA's): Alpha drafts on 0001 (count +1, row marked, axe 0, no CSP console error), id absent from 0003, resubmitted old key → duplicate notice and no new row, case id tampered to 0009 → not-found page, no draft form on closed 0010 or for Delta | pass | — / 1615 (52 new: service+markup+action 33, adapter 19) / 384 / 101 / 2/2 | FE-006 head |
+
+| FE-006 part 1 after merging develop d694ff8 + ARCH/SEC conditions (DB-returned case id only, one generic refusal shown in place, swap test, negatives): lint, typecheck, format:check, build / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (FE draft suite 13) / `pnpm db:reset` + `pnpm test:e2e` / throwaway probe (`/mnt/project-files/v13-fe/probes/zz-fe-draft-probe.spec.ts`, committed as tests/e2e/scenario-e-notification-draft.spec.ts): Alpha WITNESS draft on 0001 (+1, axe 0, no CSP error), id absent from 0003; own key again, 0009, 0002, 0010, unknown and malformed case ids → same generic reference on the 0001 page, counts on 0001 and 0010 unchanged; no form on 0010 or for Delta | pass | — / 1706 / 402 / 101 / 2/2 | FE-006 head |
+| FE-006 part 1, SEC CHANGES 150d54a (integration access negatives, all NOT_FOUND with no notification, event or audit row): Alpha on 0002 and 0005, Alpha and Gamma on restricted 0009, unknown UUID, Gamma (Investigations) on 0008 (visible only in other workspaces), Delta (role): `pnpm db:reset` + `pnpm test:db` (FE draft suite 16) | pass | 405 | FE-006 head |
+| FE-006 part 1: committed `tests/e2e/scenario-e-notification-draft.spec.ts` (ARCH: rides #51, QA reviews; SEC condition 2 with relative counts): `pnpm db:reset` + `pnpm test:e2e`; then `db:reset` + the spec with `--repeat-each=2 --workers=1` (second pass on a database the first wrote to). A second server start without `db:reset` fails every e2e suite with CLAIMS_KEY_MISMATCH (migration 0007, known local constraint), not this spec | pass | 103 / 4 | FE-006 head |
+
 ## Unresolved defects
+- FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
+  field. A tampered id to a case the persona may not draft on is refused generically, nothing written; a swap to
+  another case it may draft on lands the draft and its audit event there only (tested). ARCH + SEC accepted this
+  binding without an HMAC helper (31 Oct).
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
   pattern `^[A-Za-z0-9._:-]{1,80}$` (both in `lib/contracts`, this PR, needs ARCH + SEC ACCEPT); DB returns
   `updated_at`, `source_system`, `source_ref` and makes `source_ref` NOT NULL in its PR (b). Until DB's PR lands the
