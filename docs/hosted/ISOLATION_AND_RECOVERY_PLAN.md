@@ -175,8 +175,8 @@ commit;
 The server checks the query text it actually received. Because the guard runs first, no statement of the text has run
 when it checks, and any difference raises `P0001`. The simple query then stops, so no later statement runs and the
 implicit transaction rolls back. The md5 covers only the repository text between the guard and the final statement. So
-the dry-run and apply texts carry the same hash and differ in three lines: the guard's expected final statement, and
-the final statement itself.
+the dry-run and apply texts carry the same hash and differ in three lines: the two lines of the guard that
+name the expected final statement, and the final statement itself.
 
 The generator's unit tests (`tests/unit/hosted-bundle.spec.ts`) and the hosted rehearsal
 (`tests/integration/hosted-sim.spec.ts`, against PostgreSQL) refuse each of these, while the unchanged texts pass with
