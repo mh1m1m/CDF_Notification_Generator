@@ -117,6 +117,36 @@ App login password on the hosted project:
 The password is now set only by the owner with `database/hosted/owner_set_app_login.sql`
 (`docs/hosted/OWNER_STEP_APP_LOGIN.md`).
 
+### 2.1 Migrations 0001–0005 — 31 Oct 2026 18:52–19:47 UTC
+
+Runner: the Chief Architect's session, through the Supabase connector (`execute_sql`) as `postgres`. Each text was the
+bundle that `scripts/db/hosted-bundle.mjs` generates from the merged migration. Before each send, a local copy was
+compared byte for byte with the bundle. Each bundle carries the text guard of plan §5.7: unless the md5 of the text the
+server received equals the repository text's, the transaction aborts. Per migration the plan's order (§6): dry run
+ending in ROLLBACK, apply, history, fingerprint, isolation, GC Review counters, advisors, GC Review deployment.
+
+Before the first migration: fingerprint 13 rows identical to the baseline, TOTAL 648 `40c9efe5697d19552d15f5ef85c2f85f`;
+history `0000 bootstrap` only; GC Review counters 32 tables, 109 live rows, ins 116 / upd 50 / del 3, 7 connections;
+security advisor the INFO of OI-009 plus GC Review's pre-existing WARN `auth_leaked_password_protection`; performance
+advisor GC Review's 4 pre-existing INFO; GC Review production deployment READY, `/` and `/api/health` 200.
+
+| Migration | Dry run (ROLLBACK) | Apply (COMMIT) | History row sha256 | Fingerprint | Isolation (V13 tables / functions) | Security advisor | Performance advisor | GC Review |
+| --------- | ------------------ | -------------- | ------------------ | ----------- | ---------------------------------- | ---------------- | ------------------- | --------- |
+| 0001 identity_access_audit | 18:59:44, no error | 19:01:48 | `6b3bd988…f297` = header | identical, TOTAL 648 `40c9efe5…` | 27 / 0 / 0 PASS (7 / 15) | no new finding; OI-009's INFO gone | 6 new INFO (V13) | counters unchanged; READY, 200 / 200 |
+| 0002 case_registry | 19:10:28, no error | 19:11:17 | `5628854c…f904` = header | identical | 27 / 0 / 0 PASS (10 / 19) | no new finding | 3 new INFO (V13) | unchanged; READY, 200 / 200 |
+| 0003 procedural_core | 19:16:50, no error | ≈ 19:17:55 | `bcb552e7…a04f` = header | identical | 27 / 0 / 0 PASS (12 / 24) | no new finding | 5 new INFO (V13) | unchanged; READY, 200 / 200 |
+| 0004 notification_core | 19:28:55, no error | 19:30:17 | `ae23246e…0a2a` = header | identical | 27 / 0 / 0 PASS (18 / 27) | no new finding | 9 new INFO (V13) | unchanged; READY, 200 / 200 |
+| 0005 workspace_switch | 19:35:40, no error | 19:36:17 | `143894be…4435` = header | identical | 27 / 0 / 0 PASS (18 / 28) | no new finding | none new | unchanged; READY, 200 / 200 |
+
+- "Counters unchanged" means GC Review's table statistics (tables, live rows, inserts, updates, deletes); its connection
+  count moved between 7 and 10.
+- An extra history read after the first dry run showed that a dry run leaves nothing behind.
+- The 23 new performance findings are 14 `unindexed_foreign_keys` and 9 `unused_index`, all on V13 tables (OI-032).
+- **Stopped at 0006 (OI-034).** At 19:41:19 the 0006 dry run (bundle 11, byte-identical) was sent. The connector asked
+  the user a question and, with no answer within 60 s, returned without a SQL result. At ≈ 19:45 a read-only history
+  query answered without a question: rows 0000–0005, unchanged. Not resent; 0006, 0007, 0008, the seeds and the
+  post-apply checks wait for the owner.
+
 ## 3. Application tests
 
 ### 3.1 V13-ARCH-001 foundation, local run — 28 Oct 2026 ≈ 03:12–03:22 UTC, commit `3756b4e`
@@ -155,9 +185,9 @@ Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #2
 Every pinned action SHA resolved. Warnings: the pinned versions target Node.js 20 and ran on Node.js 24 (OI-021); the
 dependency cache could not be saved (GitHub service message), which does not affect results.
 
-### 4.1 `develop`: one push run per merge (read from GitHub Actions, 31 Oct 2026 ≈ 19:20 UTC)
+### 4.1 `develop`: one push run per merge (read from GitHub Actions, 31 Oct 2026 ≈ 19:55 UTC)
 
-Each merge rests on the PR run named in its merge commit: green CI on the head the independent reviewer accepted. The workflow cancels a running push run when a newer push to the same branch arrives (`concurrency`, `cancel-in-progress: true`), so a merge pushed within a minute of the next one shows a cancelled push run. The next successful push run contains that merge and verifies the combination; it is named in the last column.
+Each merge rests on the PR run named in its merge commit: green CI on the head the independent reviewer accepted. The workflow cancels a running push run when a newer push to the same branch arrives (`concurrency`, `cancel-in-progress: true`), so a merge pushed within a minute of the next one shows a cancelled push run. The next successful push run contains that merge and verifies the combination; it is named in the last column. When `develop` moved after a PR's run, ARCH merges on that run only if `develop` changed none of the PR's files (ARCH ruling, 31 Oct). Since #24, ARCH also runs typecheck, lint, format, unit, test:db and Playwright on the combined tree locally before the merge, because a test already on `develop` can exercise behaviour the PR changes; the counts are in the merge commit and in the last column.
 
 | Merge | PR, task | PR run (merge basis) | `develop` push run | Push run result |
 | ----- | -------- | -------------------- | ------------------ | --------------- |
@@ -184,6 +214,11 @@ Each merge rests on the PR run named in its merge commit: green CI on the head t
 | `50850a4` | #29 SEC-002 | [41231449891](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231449891) | [41231779492](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231779492) | cancelled; verified by [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) |
 | `b5ee5f4` | #31 DB-010 | [41231559873](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231559873) | [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) | success, 6 of 6 jobs |
 | `a6c224a` | #30 SEC-004 | [41232084126](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41232084126) | [41232604284](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41232604284) | success |
+| `57d5f00` | #33 QA-002 | [41233154338](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41233154338) | [41233381902](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41233381902) | success |
+| `434f905` | #24 PROC-002 | [41229568445](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229568445) | [41233985516](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41233985516) | success (combined tree checked locally first: unit 805, e2e 92) |
+| `e4ba953` | #19 FE-003 | [41229567055](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229567055) | [41234932051](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41234932051) | success (combined tree checked locally first: unit 859, test:db 350, e2e 92) |
+| `6db4cd0` | #35 PROC-006 | [41234318389](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41234318389) | [41235108601](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41235108601) | success (combined tree checked locally first: unit 867, test:db 352, e2e 92) |
+| `e8bba66` | #39 PROC-004 | [41235523564](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41235523564) | [41235883655](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41235883655) | success (the PR's base was the develop head, so its run covered the merged tree) |
 
 Run [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) on `develop` `b5ee5f4`: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build and Playwright all succeeded. Test counts are in each PR's evidence and in the job logs; this table records the job outcome only.
 

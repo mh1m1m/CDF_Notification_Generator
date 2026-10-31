@@ -12,10 +12,10 @@ Last checked: **31 Oct 2026 19:08 UTC** by the Chief Architect (§2 Supabase: se
 | ---- | ----- | ------- |
 | Repository | [`mh1m1m/CDF_Notification_Generator`](https://github.com/mh1m1m/CDF_Notification_Generator) (existing; no other repository created) | 01:29 |
 | Visibility | public (OPEN_ISSUES OI-006) | E01 §1.2 |
-| Default branch | `main` at `9f1edaf` (README and .gitignore only); unchanged: only the owner merges `develop` → `main` | 31 Oct 19:08 |
-| Integration branch | `develop` at `a6c224a` (merge of #30, V13-SEC-004); 23 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1 | 31 Oct 19:08 |
+| Default branch | `main` at `9f1edaf` (README and .gitignore only); unchanged: only the owner merges `develop` → `main` | 31 Oct 19:56 |
+| Integration branch | `develop` at `0f46d79` (merge of #40, V13-PROC-003); 29 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1 | 31 Oct 19:58 |
 | Branch protection | **none on `main` or `develop`** (`protected: false`); the GitHub connector cannot set protection rules (OI-016) | 31 Oct 19:08 |
-| CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Latest `develop` push run [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) on `b5ee5f4`: 6 of 6 jobs succeeded | 31 Oct 19:08 |
+| CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Latest `develop` push run [41235883655](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41235883655) on `e8bba66`: success | 31 Oct 19:56 |
 
 ## 2. Supabase (database)
 
@@ -25,11 +25,11 @@ Last checked: **31 Oct 2026 19:08 UTC** by the Chief Architect (§2 Supabase: se
 | Project | **CDF GC Review**, ref `jeseeznffxlxmcljpmiu`, region `eu-central-1`, PostgreSQL 17.11, shared with the GC Review application (ADR-012) | 01:24 |
 | V13 schema | `cdf_notifications_v13`, owned by `cdf_v13_owner`; ACL `{cdf_v13_owner=UC/cdf_v13_owner,cdf_v13_user=U/cdf_v13_owner}` | 01:28 |
 | V13 roles | `cdf_v13_owner` (NOLOGIN), `cdf_v13_app` (LOGIN, connection limit 8, **no password**: nobody can log in; the owner sets it with `database/hosted/owner_set_app_login.sql`), `cdf_v13_user` (NOLOGIN) | 01:42 |
-| V13 migrations applied | 1: `0000 bootstrap` (sha256 `0f80be82…5c01`) at 01:03:21, runner `hosted` | 01:24 |
-| Isolation | PASS, 27 checks, 0 breaches (`docs/TEST_EVIDENCE.md` §2) | 01:28 |
-| GC Review objects | fingerprint of all 648 non-V13 objects identical to the baseline, TOTAL `40c9efe5697d19552d15f5ef85c2f85f` | 01:18 |
+| V13 migrations applied | 6: `0000 bootstrap` (28 Oct 01:03:21) and `0001`–`0005` (31 Oct 19:01–19:36), runner `hosted`, applied by `postgres`, each history sha256 equal to the migration file's (`docs/TEST_EVIDENCE.md` §2.1). `0006`–`0008` and the two seed files wait for the owner to answer the connector's confirmation (OI-034) | 31 Oct 19:45 |
+| Isolation | PASS, 27 checks, 0 breaches, after `0000` and after each of `0001`–`0005` (`docs/TEST_EVIDENCE.md` §2, §2.1) | 31 Oct 19:37 |
+| GC Review objects | fingerprint of all 648 non-V13 objects identical to the baseline after every V13 step, TOTAL `40c9efe5697d19552d15f5ef85c2f85f`; GC Review's table statistics unchanged; its production deployment READY with `/` and `/api/health` 200 after each step | 31 Oct 19:40 |
 | Supabase Auth / Storage / Realtime / Edge Functions / Data API | not used by V13; no V13 user, bucket, function or exposed schema | — |
-| Advisors | security: one pre-existing WARN (GC Review) + one INFO on V13 (OI-009); performance: 4 pre-existing INFO | 01:07 |
+| Advisors | security: GC Review's pre-existing WARN only (the V13 INFO of OI-009 cleared with `0001`); performance: GC Review's 4 pre-existing INFO plus 23 INFO on V13 tables (OI-032) | 31 Oct 19:39 |
 
 ## 3. Vercel (hosting)
 
