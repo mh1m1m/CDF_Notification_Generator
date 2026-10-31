@@ -151,6 +151,10 @@ Library `tests/sentinel/sentinel.ts`, called after every navigation in every sce
   catalogue, belongs to a hidden case), **D2** (a child row readable while its parent is not), **D3** (a child's case
   differs from its parent's); `tests/sentinel/db.spec.ts` runs them for the five persona/workspace pairs pinned to
   DATA_MODEL §5 and plants each fault into a copy of a real snapshot.
+  `tests/sentinel/db-functions.spec.ts` checks the read functions the pages use (`can_access_case`, `case_header`,
+  `case_events`, `case_tasks`, `case_notifications`, `portfolio_page`/`_count`, `my_work_tasks`,
+  `notifications_page`/`_count`) for every pair and every seeded case: nothing for a hidden case, only that case's
+  rows (equal to the table reads) for a visible one. Epsilon and Zeta read nothing in any workspace.
 - **Planted-leak self-test** (acceptance). `planted-leak.spec.ts` serves a real case page and injects, through
   `page.route` on the HTML/RSC response, (a) a second `data-case-id` inside the case workspace, (b) another case's
   reference in text, (c) restricted 0009's UUID in an RSC payload. Each plant is asserted to make the Sentinel report
