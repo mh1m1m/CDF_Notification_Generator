@@ -8,9 +8,12 @@ import { expireSessionCookie, readSession, writeSessionCookie, type Session } fr
 /** The verified session of this request, or null. Verified once per request render. */
 export const getCurrentSession = cache(async (): Promise<Session | null> => readSession(await cookies()));
 
-/** Server Actions and Route Handlers only (Next allows cookie writes there). */
-export async function setSessionCookie(token: string): Promise<void> {
-  writeSessionCookie(await cookies(), token);
+/**
+ * Server Actions and Route Handlers only (Next allows cookie writes there). `maxAge` is the remaining lifetime of a
+ * re-issued token (reissueSessionToken); omitted, the cookie lasts a full new session.
+ */
+export async function setSessionCookie(token: string, maxAge?: number): Promise<void> {
+  writeSessionCookie(await cookies(), token, maxAge);
 }
 
 /** Server Actions and Route Handlers only. */
