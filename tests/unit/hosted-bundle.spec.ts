@@ -35,16 +35,24 @@ function twoMigrations(fixture = FIXTURE_0001): string {
   return dir;
 }
 
+const CLOSING = "$v13_text_guard$;";
+
 /**
- * What the server's guard does (plan §5.7): md5(split_part(current_query(), marker, 1)) against the hash embedded in
- * the guard. Returns true when the text passes. tests/integration/hosted-sim.spec.ts runs the same check in PostgreSQL.
+ * What the server's guard does (plan §5.7), step for step: (1) md5(split_part(current_query(), marker, 1)) against the
+ * hash embedded in the guard; (2) after the guard's closing tag, the embedded final statement, then only whitespace and
+ * line comments. Returns true when the text passes. tests/integration/hosted-sim.spec.ts runs the guard in PostgreSQL.
  */
 function guardPasses(received: string): boolean {
-  const embedded = /is distinct from '([0-9a-f]{32})' then/.exec(
-    received.slice(received.indexOf(TEXT_GUARD_MARKER)),
-  );
-  if (!embedded) throw new Error("no text guard in the text");
-  return md5Hex(received.split(TEXT_GUARD_MARKER)[0]!) === embedded[1];
+  const afterMarker = received.slice(received.indexOf(TEXT_GUARD_MARKER));
+  const hash = /is distinct from '([0-9a-f]{32})' then/.exec(afterMarker);
+  const final = /pg_catalog\.chr\(10\), 2\) \|\| '(commit;|rollback;)' \|\|/.exec(afterMarker);
+  if (!hash || !final) throw new Error("no text guard in the text");
+  if (md5Hex(received.split(TEXT_GUARD_MARKER)[0]!) !== hash[1]) return false;
+  const closing = afterMarker.indexOf(CLOSING);
+  if (closing === -1) return false;
+  const afterGuard = afterMarker.slice(closing + CLOSING.length);
+  const expected = `\n\n${final[1]}\n`;
+  return afterGuard.startsWith(expected) && /^(\s|--[^\n]*)*$/.test(afterGuard.slice(expected.length));
 }
 
 /** Statements outside the verbatim file section, in order (comments dropped). */
@@ -92,12 +100,23 @@ describe("bundle for the bootstrap (0000)", () => {
     expect(frame(dry)).not.toContain("commit;");
   });
 
-  it("dry run and apply differ only in the final ROLLBACK/COMMIT, so they carry the same guard hash", () => {
+  it("dry run and apply differ only in the final statement and the guard's expected one; same guard hash", () => {
     const dry = buildHostedBundle({ version: "0000", dryRun: true });
     expect(dry.endsWith("\nrollback;\n")).toBe(true);
     expect(bundle.endsWith("\ncommit;\n")).toBe(true);
-    expect(dry.slice(0, -"rollback;\n".length)).toBe(bundle.slice(0, -"commit;\n".length));
-    expect(dry.split("\n").filter((line, k) => line !== bundle.split("\n")[k])).toEqual(["rollback;"]);
+    const applyLines = bundle.split("\n");
+    const differing = dry
+      .split("\n")
+      .map((line, k) => [line, applyLines[k]] as const)
+      .filter(([d, a]) => d !== a);
+    expect(differing).toEqual([
+      [
+        "  expected text := pg_catalog.repeat(pg_catalog.chr(10), 2) || 'rollback;' || pg_catalog.chr(10);",
+        "  expected text := pg_catalog.repeat(pg_catalog.chr(10), 2) || 'commit;' || pg_catalog.chr(10);",
+      ],
+      ["rollback;", "commit;"],
+    ]);
+    expect(dry.split(TEXT_GUARD_MARKER)[0]).toBe(bundle.split(TEXT_GUARD_MARKER)[0]);
   });
 
   it("is deterministic and carries no credentials or connection details", () => {
@@ -144,20 +163,37 @@ describe("text guard (plan §5.7)", () => {
   const [before] = bundle.split(TEXT_GUARD_MARKER) as [string];
 
   it("sits after the history row, immediately before the final statement, and hashes every byte before it", () => {
-    expect(bundle.split(TEXT_GUARD_MARKER)).toHaveLength(3); // the marker line, then the split_part argument
+    expect(bundle.split(TEXT_GUARD_MARKER)).toHaveLength(4); // the marker line, then the split_part and strpos arguments
     expect(before.endsWith("reset role;\n\n")).toBe(true);
     expect(bundle.slice(before.length)).toBe(`${TEXT_GUARD_MARKER}
 do $v13_text_guard$
+declare
+  received text := pg_catalog.current_query();
+  closing text := '$v13_text' || '_guard$;';
+  expected text := pg_catalog.repeat(pg_catalog.chr(10), 2) || 'commit;' || pg_catalog.chr(10);
+  after_marker text;
+  after_guard text;
 begin
-  if pg_catalog.md5(pg_catalog.split_part(pg_catalog.current_query(), '${TEXT_GUARD_MARKER}', 1))
+  -- 1. Every byte before the marker is the repository text.
+  if pg_catalog.md5(pg_catalog.split_part(received, '${TEXT_GUARD_MARKER}', 1))
      is distinct from '${md5Hex(before)}' then
     raise exception 'V13 text guard: the text received differs from the repository text' using errcode = 'P0001';
+  end if;
+  -- 2. After this block's closing tag: exactly the final statement, then only whitespace and line comments.
+  after_marker := pg_catalog.substr(received, pg_catalog.strpos(received, '${TEXT_GUARD_MARKER}'));
+  after_guard := pg_catalog.substr(after_marker, pg_catalog.strpos(after_marker, closing) + pg_catalog.length(closing));
+  if pg_catalog.strpos(after_marker, closing) = 0
+     or pg_catalog.left(after_guard, pg_catalog.length(expected)) is distinct from expected
+     or pg_catalog.substr(after_guard, pg_catalog.length(expected) + 1) !~ '^(\\s|--[^\\n]*)*$' then
+    raise exception 'V13 text guard: the text after the guard is not the expected final statement' using errcode = 'P0001';
   end if;
 end
 $v13_text_guard$;
 
 commit;
 `);
+    // The closing tag occurs once: the block cannot contain it, so the guard assembles it from two literals.
+    expect(bundle.split(CLOSING)).toHaveLength(2);
     expect(md5Hex(before)).toMatch(/^[0-9a-f]{32}$/);
     // md5 is over UTF-8 bytes, as PostgreSQL computes md5(text) in a UTF8 database; the bundle has non-ASCII text.
     expect([...before].some((c) => c.codePointAt(0)! > 0x7f)).toBe(true);
@@ -167,6 +203,24 @@ commit;
     expect(guardPasses(bundle)).toBe(true);
     expect(guardPasses(buildHostedBundle({ version: "0000", dryRun: true }))).toBe(true);
     expect(guardPasses(`${bundle}-- connector trailer\n`)).toBe(true);
+    expect(guardPasses(`${bundle}  \n\t\n-- trailer one\n  -- trailer two`)).toBe(true);
+  });
+
+  const dryRun = buildHostedBundle({ version: "0000", dryRun: true });
+  const tails: [string, string][] = [
+    ["a dry run whose rollback; was edited to commit;", dryRun.replace(/rollback;\n$/, "commit;\n")],
+    ["an apply whose commit; was edited to rollback;", bundle.replace(/commit;\n$/, "rollback;\n")],
+    ["a statement appended after the final line", `${bundle}select 1;\n`],
+    ["a statement appended on the final line", bundle.replace(/commit;\n$/, "commit; select 1;\n")],
+    ["a statement after a comment trailer", `${bundle}-- trailer\nselect 1;\n`],
+    ["a block comment appended", `${bundle}/* trailer */\n`],
+    ["the final statement missing", bundle.replace(/commit;\n$/, "")],
+    ["the final newline missing", bundle.replace(/commit;\n$/, "commit;")],
+    ["a blank line removed before the final statement", bundle.replace(/\n\ncommit;\n$/, "\ncommit;\n")],
+  ];
+  it.each(tails)("%s raises the guard", (_label, changed) => {
+    expect(changed).not.toBe(bundle);
+    expect(guardPasses(changed)).toBe(false);
   });
 
   const lines = before.split("\n");
@@ -189,6 +243,8 @@ commit;
     expect(() => buildHostedBundle({ version: "0001", dir: d })).toThrow(/contains the text-guard marker/);
     expect(() => textGuard(`select 1;\n${TEXT_GUARD_MARKER}\n`, "commit;")).toThrow(HostedBundleError);
     expect(() => textGuard("select 1;", "commit;")).toThrow(HostedBundleError);
+    expect(() => textGuard("select $v13_text_guard$x$v13_text_guard$;\n", "commit;")).toThrow(/guard tag/);
+    expect(() => textGuard("select 1;\n", "end;" as "commit;")).toThrow(/commit; or rollback;/);
   });
 
   it("guards any text the same way (for the seed texts sent in the same frame)", () => {

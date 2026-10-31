@@ -211,10 +211,31 @@ describe.skipIf(!available)("hosted simulation: bundle", () => {
       expect(await v13Objects(sim.superuserUrl), label).toEqual({ roles: 0, schemas: 0 });
     }
 
+    // After the guard: only the expected final statement, then whitespace and line comments.
+    const dry = buildHostedBundle({ version: "0000", dryRun: true });
+    const tails: [string, string][] = [
+      ["a dry run whose rollback; was edited to commit;", dry.replace(/rollback;\n$/, "commit;\n")],
+      ["a statement appended after the final line", `${dry}select 1;\n`],
+      ["a statement appended on the final line", dry.replace(/rollback;\n$/, "rollback; select 1;\n")],
+      ["a statement after a comment trailer", `${dry}-- trailer\nselect 1;\n`],
+      ["a block comment appended", `${dry}/* trailer */\n`],
+      ["the final newline missing", dry.replace(/rollback;\n$/, "rollback;")],
+    ];
+    for (const [label, changed] of tails) {
+      const refused = await applyBundle(sim.adminUrl, changed);
+      expect(refused?.code, label).toBe("P0001");
+      expect(refused?.message, label).toBe(
+        "V13 text guard: the text after the guard is not the expected final statement",
+      );
+      expect(await v13Objects(sim.superuserUrl), label).toEqual({ roles: 0, schemas: 0 });
+    }
+
     // The unchanged text passes, also with a trailer after the final statement (the connector appends one).
     expect(
       await applyBundle(sim.adminUrl, `${buildHostedBundle({ version: "0000", dryRun: true })}-- trailer\n`),
     ).toBeNull();
+    expect(await v13Objects(sim.superuserUrl)).toEqual({ roles: 0, schemas: 0 });
+    expect(await applyBundle(sim.adminUrl, `${dry}  \n-- trailer one\n\t-- trailer two`)).toBeNull();
     expect(await v13Objects(sim.superuserUrl)).toEqual({ roles: 0, schemas: 0 });
     expect(await applyBundle(sim.adminUrl, `${bundle}-- trailer\n`)).toBeNull();
     expect(await v13Objects(sim.superuserUrl)).toEqual({ roles: 3, schemas: 1 });

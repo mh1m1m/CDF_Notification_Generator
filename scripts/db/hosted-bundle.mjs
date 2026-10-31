@@ -11,11 +11,12 @@
 //   the migration file, verbatim;
 //   SET LOCAL ROLE cdf_v13_owner; the history insert with runner 'hosted'; RESET ROLE;
 //   the text guard (plan §5.7): the marker line, then a block that aborts unless the md5 of the text the server
-//           received, up to the marker, equals the md5 of the text generated here;
+//           received, up to the marker, equals the md5 of the text generated here, and the text after the block is
+//           exactly the final statement below (plus only whitespace and line comments);
 //   commit;  (--dry-run: rollback;)
 //
-// Run the --dry-run text first. The dry-run and apply texts differ only in their final ROLLBACK/COMMIT, so they carry
-// the same guard hash. The output is deterministic for a given migration set, so it can be reviewed in a PR.
+// Run the --dry-run text first. The dry-run and apply texts differ only in the final ROLLBACK/COMMIT and the guard's
+// expected final statement, so they carry the same guard hash. The output is deterministic for a given migration set, so it can be reviewed in a PR.
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import {
@@ -52,9 +53,16 @@ export const TEXT_GUARD_MARKER = "-- V13-TEXT-END";
 /** md5 (hex) of the UTF-8 bytes of a text: what PostgreSQL's md5(text) returns in a UTF8 database. */
 export const md5Hex = (/** @type {string} */ text) => createHash("md5").update(text, "utf8").digest("hex");
 
+/** The guard block's dollar-quote tag; its closing form ends the guard, and only the final line may follow it. */
+const GUARD_TAG = "$v13_text_guard$";
+
 /**
- * Appends the plan §5.7 text guard and the final statement to a text. The guard hashes every byte before the marker,
- * so the result must be sent as one simple query (current_query() is then the whole text).
+ * Appends the plan §5.7 text guard and the final statement to a text. The guard checks the text the server received
+ * (current_query(), so the whole text must be sent as one simple query) in two parts:
+ *   1. the md5 of every byte before the marker equals the md5 of the generated body;
+ *   2. what follows the guard's closing tag is exactly a blank line and the final statement (rollback; for a dry run,
+ *      commit; for an apply), optionally followed only by whitespace and "--" line comments, which cannot execute (the
+ *      connector appends a comment trailer). So an edited final statement or an appended statement aborts the run.
  * @param {string} body everything before the guard; ends with a newline
  * @param {"commit;" | "rollback;"} finalStatement
  * @returns {string}
@@ -62,19 +70,38 @@ export const md5Hex = (/** @type {string} */ text) => createHash("md5").update(t
 export function textGuard(body, finalStatement) {
   if (body.includes(TEXT_GUARD_MARKER))
     throw new HostedBundleError(`the text already contains the guard marker "${TEXT_GUARD_MARKER}"`);
+  if (body.includes(GUARD_TAG))
+    throw new HostedBundleError(`the text already contains the guard tag "${GUARD_TAG}"`);
   if (!body.endsWith("\n")) throw new HostedBundleError("the text before the guard must end with a newline");
+  if (finalStatement !== "commit;" && finalStatement !== "rollback;")
+    throw new HostedBundleError("the final statement is commit; or rollback;");
+  const tail = `\n\n${finalStatement}\n`;
+  // The closing tag is assembled from two literals: written whole inside the block, it would end the block.
+  const [tagHead, tagRest] = [GUARD_TAG.slice(0, 9), GUARD_TAG.slice(9)];
   return `${body}${TEXT_GUARD_MARKER}
-do $v13_text_guard$
+do ${GUARD_TAG}
+declare
+  received text := pg_catalog.current_query();
+  closing text := ${literal(tagHead)} || ${literal(`${tagRest};`)};
+  expected text := pg_catalog.repeat(pg_catalog.chr(10), 2) || ${literal(finalStatement)} || pg_catalog.chr(10);
+  after_marker text;
+  after_guard text;
 begin
-  if pg_catalog.md5(pg_catalog.split_part(pg_catalog.current_query(), ${literal(TEXT_GUARD_MARKER)}, 1))
+  -- 1. Every byte before the marker is the repository text.
+  if pg_catalog.md5(pg_catalog.split_part(received, ${literal(TEXT_GUARD_MARKER)}, 1))
      is distinct from ${literal(md5Hex(body))} then
     raise exception 'V13 text guard: the text received differs from the repository text' using errcode = 'P0001';
   end if;
+  -- 2. After this block's closing tag: exactly the final statement, then only whitespace and line comments.
+  after_marker := pg_catalog.substr(received, pg_catalog.strpos(received, ${literal(TEXT_GUARD_MARKER)}));
+  after_guard := pg_catalog.substr(after_marker, pg_catalog.strpos(after_marker, closing) + pg_catalog.length(closing));
+  if pg_catalog.strpos(after_marker, closing) = 0
+     or pg_catalog.left(after_guard, pg_catalog.length(expected)) is distinct from expected
+     or pg_catalog.substr(after_guard, pg_catalog.length(expected) + 1) !~ '^(\\s|--[^\\n]*)*$' then
+    raise exception 'V13 text guard: the text after the guard is not the expected final statement' using errcode = 'P0001';
+  end if;
 end
-$v13_text_guard$;
-
-${finalStatement}
-`;
+${GUARD_TAG};${tail}`;
 }
 
 const HISTORY_PRESENT = `exists (
