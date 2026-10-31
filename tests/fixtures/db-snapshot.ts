@@ -56,7 +56,10 @@ export interface PersonaSnapshot {
 const SCHEMA = "cdf_notifications_v13";
 const TABLE_NAME = /^[a-z_][a-z0-9_]*$/;
 
-/** Tables with a case_id column the current role may read, found in the catalogue (new tables are covered too). */
+/**
+ * Tables whose case_id column the current role may read, found in the catalogue (new tables are covered too). Column
+ * privilege, not table privilege: a table granted per column (as 0001 does) is still found.
+ */
 async function caseKeyedTables(tx: ScenarioTx): Promise<string[]> {
   const rows = await tx<{ name: string }[]>`
     select c.relname::text as name
@@ -65,7 +68,7 @@ async function caseKeyedTables(tx: ScenarioTx): Promise<string[]> {
       join pg_catalog.pg_attribute a on a.attrelid = c.oid and a.attname = 'case_id' and not a.attisdropped
      where n.nspname = ${SCHEMA}
        and c.relkind in ('r', 'p', 'v', 'm')
-       and pg_catalog.has_table_privilege(c.oid, 'SELECT')
+       and pg_catalog.has_column_privilege(c.oid, a.attnum, 'SELECT')
      order by 1`;
   return rows.map((r) => r.name);
 }
