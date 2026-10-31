@@ -367,6 +367,17 @@ describe("filter form identity (OI-043)", () => {
     );
   });
 
+  it("the filter form opts out of browser form restoration (a back_forward document load keeps the URL's filters)", async () => {
+    const { PortfolioView: View } = await import("@/app/(platform)/portfolio/_components/PortfolioView");
+    const view = await loadPortfolio(
+      { ctx: ctxFor(SECRETARY), source: createFakeCaseSource() },
+      { state: "CLOSED" },
+    );
+    const html = renderToStaticMarkup(<View t={createTranslator("ar")} locale="ar" view={view} />);
+    const form = html.match(/<form[^>]*data-testid="portfolio-filters"[^>]*>/)![0];
+    expect(form).toMatch(/autocomplete="off"/i);
+  });
+
   it("the page view keys the filter form on it, so Clear and Back remount it with the URL's values", async () => {
     const { PortfolioView: View } = await import("@/app/(platform)/portfolio/_components/PortfolioView");
     const source = createFakeCaseSource();
