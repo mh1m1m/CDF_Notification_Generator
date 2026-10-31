@@ -37,6 +37,26 @@ const STAGE_KEYS: Readonly<Record<string, MessageKey>> = {
   CLOSURE: "case.stage.closure",
 };
 
+// M1-07: the case Notifications tab shows labels, not raw codes. DISPATCHED reads "sent — delivery not confirmed",
+// never "delivered" (ARCH ruling, 31 Oct 20:54). A code outside the table is shown as written.
+const NOTIFICATION_STATUS_KEYS: Readonly<Record<string, MessageKey>> = {
+  DRAFT: "case.notifications.status.draft",
+  PENDING_APPROVAL: "case.notifications.status.pendingApproval",
+  APPROVED: "case.notifications.status.approved",
+  DISPATCHED: "case.notifications.status.dispatched",
+  CANCELLED: "case.notifications.status.cancelled",
+  SUPERSEDED: "case.notifications.status.superseded",
+};
+
+/** The database's recipient class codes (migration 0004), labelled as its reference table names them. */
+const RECIPIENT_CLASS_KEYS: Readonly<Record<string, MessageKey>> = {
+  CASE_TEAM: "case.notifications.recipient.caseTeam",
+  COMMITTEE_MEMBERS: "case.notifications.recipient.committeeMembers",
+  SUBJECT_EMPLOYEE: "case.notifications.recipient.subjectEmployee",
+  WITNESS: "case.notifications.recipient.witness",
+  GOVERNANCE: "case.notifications.recipient.governance",
+};
+
 const own = (table: Readonly<Record<string, MessageKey>>, code: string) =>
   Object.prototype.hasOwnProperty.call(table, code) ? table[code] : undefined;
 
@@ -48,6 +68,18 @@ export function eventLabel(t: Translator, code: string): string {
 export function stageLabel(t: Translator, code: string): string {
   const key = own(STAGE_KEYS, code);
   return key ? t(key) : code;
+}
+
+/** A notification's lifecycle status label, or null when the code has none (the caller shows the code). */
+export function notificationStatusLabel(t: Translator, code: string): string | null {
+  const key = own(NOTIFICATION_STATUS_KEYS, code);
+  return key ? t(key) : null;
+}
+
+/** A recipient class label, or null when the code has none (the caller shows the code). */
+export function recipientClassLabel(t: Translator, code: string): string | null {
+  const key = own(RECIPIENT_CLASS_KEYS, code);
+  return key ? t(key) : null;
 }
 
 /** Instants in the CDF time zone, Arabic-Indic digits in Arabic (DESIGN_SYSTEM.md §5). */

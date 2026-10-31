@@ -19,8 +19,10 @@ import {
   dateFormat,
   dateTimeFormat,
   eventLabel,
+  notificationStatusLabel,
   numberFormat,
   PROVENANCE_KEYS,
+  recipientClassLabel,
   stageLabel,
   TASK_STATUS_KEYS,
 } from "./labels";
@@ -321,6 +323,11 @@ export function TaskTable({
   );
 }
 
+/** A code's label, or the code itself (Latin, isolated) when it has none: never blank. */
+function CodeLabel({ label, code }: { label: string | null; code: string }) {
+  return label === null ? <bdi dir="ltr">{code}</bdi> : <>{label}</>;
+}
+
 export function NotificationTable({
   t,
   locale,
@@ -368,7 +375,10 @@ export function NotificationTable({
               data-selected={n.notification_id === selectedId ? "true" : undefined}
             >
               <th scope="row">
-                <bdi dir="ltr">{n.template_code}</bdi>
+                <span data-testid="case-notification-template-name">{n.template_name[locale]}</span>{" "}
+                <bdi dir="ltr" className={styles.metaRow} data-testid="case-notification-template-code">
+                  {n.template_code}
+                </bdi>
                 <span
                   className={styles.metaRow}
                   data-testid="case-notification-language"
@@ -378,11 +388,11 @@ export function NotificationTable({
                 </span>
               </th>
               <td>{num.format(n.template_version)}</td>
-              <td>
-                <bdi dir="ltr">{n.recipient_class}</bdi>
+              <td data-testid="case-notification-recipient" data-recipient-class={n.recipient_class}>
+                <CodeLabel label={recipientClassLabel(t, n.recipient_class)} code={n.recipient_class} />
               </td>
               <td data-testid="case-notification-status" data-lifecycle-status={n.lifecycle_status}>
-                <bdi dir="ltr">{n.lifecycle_status}</bdi>
+                <CodeLabel label={notificationStatusLabel(t, n.lifecycle_status)} code={n.lifecycle_status} />
               </td>
               <td className={styles.nowrap}>
                 <time dateTime={n.created_at}>{when.format(new Date(n.created_at))}</time>

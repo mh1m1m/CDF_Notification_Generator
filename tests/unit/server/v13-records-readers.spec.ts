@@ -79,6 +79,8 @@ const notificationRow = (extra: Record<string, unknown> = {}) => ({
   lifecycle_status: "DRAFT",
   created_at: new Date("2026-10-02T08:00:00Z"),
   row_version: 1,
+  name_ar: "إشعار فتح القضية",
+  name_en: "Case opened notice",
   ...extra,
 });
 
@@ -149,9 +151,20 @@ describe("V13 record readers", () => {
         "recipient_class",
         "row_version",
         "template_code",
+        "template_name",
         "template_version",
       ].sort(),
     );
+    expect(n!.template_name).toEqual({ ar: "إشعار فتح القضية", en: "Case opened notice" });
+  });
+
+  it("M1-07: the template's catalogue name comes from notification_template by its unique code, never its text", async () => {
+    const { calls, reader } = recorder([notificationRow()]);
+    await reader.listForCase(SECRETARY, CASE);
+    const text = calls[0]!.text;
+    expect(text).toContain("join cdf_notifications_v13.notification_template t on t.code = n.template_code");
+    expect(text).toContain("order by n.created_at desc, n.notification_id");
+    expect(text).not.toMatch(/subject|body|notification_template_version/);
   });
 
   it("getCase: the summary plus the caller's capacity; null capacity kept; no row is null", async () => {
@@ -200,6 +213,8 @@ describe("V13 record readers", () => {
     ["a row version below 1", "listTasks", [taskRow({ row_version: 0 })]],
     ["an unknown notification language", "listForCase", [notificationRow({ language: "fr" })]],
     ["a malformed template code", "listForCase", [notificationRow({ template_code: "x" })]],
+    ["an empty template name", "listForCase", [notificationRow({ name_en: "" })]],
+    ["a template name with a control character", "listForCase", [notificationRow({ name_ar: "a\u0007b" })]],
   ] as const)("refuses %s", async (_n, method, rows) => {
     const { reader } = recorder([...rows]);
     await expect(reader[method](SECRETARY, CASE as CaseId)).rejects.toThrow();

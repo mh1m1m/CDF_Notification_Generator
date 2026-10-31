@@ -2,20 +2,13 @@
 // case_notifications row of that case plus its template's catalogue name. No subject, body or recipient details.
 // buildModelFromRecords (V13-PROC-008) fills the notice from these fields and the case row; projectForRecipient decides
 // what the recipient class sees.
-import { z } from "zod";
 import { UuidSchema, type CaseId } from "./ids";
 import type { RequestIdentity } from "./identity";
-import { CaseNotificationSchema } from "./notification-records";
+import { CaseNotificationSchema, type CaseNotification } from "./notification-records";
 
-// eslint-disable-next-line no-control-regex
-const NO_CONTROL_CHARS = /^[^\u0000-\u001f\u007f]*$/;
-const Name = z.string().trim().min(1).max(200).regex(NO_CONTROL_CHARS);
-
-/** One notification of one case with its template's catalogue name (notification_template.name_ar / name_en). */
-export const NotificationPreviewRecordSchema = CaseNotificationSchema.extend({
-  template_name: z.strictObject({ ar: Name, en: Name }),
-}).strict();
-export type NotificationPreviewRecord = z.infer<typeof NotificationPreviewRecordSchema>;
+/** One notification of one case with its template's catalogue name: the case_notifications row the list shows. */
+export const NotificationPreviewRecordSchema = CaseNotificationSchema;
+export type NotificationPreviewRecord = CaseNotification;
 
 /** The URL value that names the notification to preview (`?n=`): a UUID, never a display number. */
 export const PreviewNotificationIdSchema = UuidSchema;

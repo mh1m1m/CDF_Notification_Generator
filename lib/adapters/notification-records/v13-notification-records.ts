@@ -1,4 +1,5 @@
-// NotificationRecordsReader over V13's case_notifications (migration 0004): metadata only, inside the request
+// NotificationRecordsReader over V13's case_notifications (migration 0004) joined to the template catalogue's names
+// (notification_template, unique code; M1-07), in the function's own order: metadata only, inside the request
 // security context, bound values, explicit columns. Strict rows: an extra column, a malformed row or a row of another
 // case refuses the whole result.
 //
@@ -25,12 +26,16 @@ interface NotificationRow {
   lifecycle_status: string;
   created_at: Date | string;
   row_version: number;
+  name_ar: string;
+  name_en: string;
 }
 
 export function rowToCaseNotification(r: NotificationRow): CaseNotification {
+  const { name_ar, name_en, ...rest } = r;
   return CaseNotificationSchema.parse({
-    ...r,
-    created_at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at,
+    ...rest,
+    created_at: rest.created_at instanceof Date ? rest.created_at.toISOString() : rest.created_at,
+    template_name: { ar: name_ar, en: name_en },
   });
 }
 
@@ -42,8 +47,10 @@ export function createV13NotificationRecordsReader(run: RequestContextRunner): N
         (tx) =>
           tx<NotificationRow[]>`
           select n.notification_id, n.case_id, n.template_code, n.template_version, n.language, n.recipient_class,
-                 n.lifecycle_status, n.created_at, n.row_version
-            from cdf_notifications_v13.case_notifications(${caseId}::uuid) n`,
+                 n.lifecycle_status, n.created_at, n.row_version, t.name_ar, t.name_en
+            from cdf_notifications_v13.case_notifications(${caseId}::uuid) n
+            join cdf_notifications_v13.notification_template t on t.code = n.template_code
+           order by n.created_at desc, n.notification_id`,
       );
       return sameCase(caseId, rows.map(rowToCaseNotification));
     },

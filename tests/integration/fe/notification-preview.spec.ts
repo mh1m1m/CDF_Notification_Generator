@@ -15,6 +15,7 @@ import {
 import { createV13RecordsCaseSource } from "@/lib/adapters/case-source/v13-records";
 import { createV13NotificationDrafts } from "@/lib/adapters/notification-records/v13-notification-drafts";
 import { createV13NotificationPreviewReader } from "@/lib/adapters/notification-records/v13-notification-preview";
+import { createV13NotificationRecordsReader } from "@/lib/adapters/notification-records/v13-notification-records";
 import { createV13ProceduralRecordsReader } from "@/lib/adapters/procedural-records/v13-procedural-records";
 import { databaseClientOptions } from "@/lib/db/client";
 import { withRequestContext, type Tx } from "@/lib/db/security-context";
@@ -89,6 +90,19 @@ describe.skipIf(!available)("V13 notification preview on the primary cluster (FE
     expect(await reader.getForCase(ALPHA, caseId(1), NTF(99))).toBeNull(); // unknown
     expect(await reader.getForCase(DELTA_GOV, caseId(9), NTF(4))).toBeNull();
     expect(await reader.getForCase(BETA, caseId(9), NTF(4))).toMatchObject({ case_id: caseId(9) });
+  });
+
+  it("M1-07: the case list carries each template's catalogue name and keeps the function's newest-first order", async () => {
+    const list = await createV13NotificationRecordsReader((identity, fn) =>
+      withRequestContext(identity, fn, { sql, claimsKey: TEST_CLAIMS_KEY }),
+    ).listForCase(ALPHA, caseId(3));
+    expect(list.map((n) => n.notification_id)).toEqual([NTF(3), NTF(2)]);
+    const names = await admin<{ code: string; name_ar: string; name_en: string }[]>`
+      select code, name_ar, name_en from cdf_notifications_v13.notification_template`;
+    for (const n of list) {
+      const t = names.find((x) => x.code === n.template_code);
+      expect(n.template_name).toEqual({ ar: t?.name_ar, en: t?.name_en });
+    }
   });
 
   /** One request transaction: the real draft command, then the whole preview path, then rollback. */

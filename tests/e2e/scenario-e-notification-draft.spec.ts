@@ -167,10 +167,12 @@ test.describe("Scenario E — notification preview", () => {
     const inner = page.frameLocator('[data-testid="case-notification-preview-frame"]');
     await expect(inner.locator("h1#ntf-title")).toBeVisible();
     await expect(inner.locator('[data-marking="DESIGN_PREVIEW"]')).toBeVisible();
-    // The page around the frame (axe cannot run inside a frame that allows no script, so iframes are not entered)…
+    // The page around the frame. axe cannot run inside a frame that allows no script, and the default runner waits on
+    // it, so this run stays in the top document (legacy mode, iframes not entered)…
     const axe = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .options({ iframes: false })
+      .setLegacyMode(true)
       .analyze();
     expect(axe.violations.map((v) => v.id)).toEqual([]);
     // …and the framed document itself, opened as its own page from the same srcdoc.
@@ -191,6 +193,11 @@ test.describe("Scenario E — notification preview", () => {
     await signInAs(page, "secretary-alpha");
     await page.goto(`/cases/${C(1)}/notifications?n=${NTF(1)}`); // CASE_TEAM
     await expect(page.getByTestId("case-preview-unmapped")).toContainText("CASE_TEAM");
+    // M1-07: the row itself shows labels and the template's name, not raw codes
+    const seeded = page.getByTestId(`case-notification-${NTF(1)}`);
+    await expect(seeded.getByTestId("case-notification-recipient")).toHaveText("فريق القضية");
+    await expect(seeded.getByTestId("case-notification-status")).toHaveText("مسودة");
+    await expect(seeded.getByTestId("case-notification-template-name")).not.toBeEmpty();
     await expect(page.getByTestId("case-notification-preview-frame")).toHaveCount(0);
     await page.goto(`/cases/${C(3)}/notifications?n=${NTF(2)}`); // COMMITTEE_MEMBERS
     await expect(page.getByTestId("case-preview-unmapped")).toContainText("COMMITTEE_MEMBERS");

@@ -20,6 +20,7 @@ import {
 import {
   CaseWorkspace,
   NotificationPreviewSection,
+  NotificationTable,
 } from "@/app/(platform)/cases/[caseId]/_components/CaseWorkspace";
 import type * as ModelFromRecords from "@/lib/notifications/binding/model-from-records";
 import type * as ServerProjection from "@/lib/notifications/binding/server-projection";
@@ -312,5 +313,56 @@ describe("NotificationPreviewSection states", () => {
 
   it("none renders nothing", () => {
     expect(section({ kind: "none" })).toBe("");
+  });
+});
+
+describe("M1-07: the Notifications tab shows labels and the template's name, not raw codes", () => {
+  const table = (rows: Parameters<typeof NotificationTable>[0]["notifications"], locale: Locale) =>
+    renderToStaticMarkup(<NotificationTable t={createTranslator(locale)} locale={locale} notifications={rows} />);
+  const row = (over: Partial<ReturnType<typeof previewRecord>> = {}) => previewRecord(1, 1, over);
+
+  it("labels the status and the recipient class in both languages; DISPATCHED never reads delivered", () => {
+    const rows = [
+      row({ lifecycle_status: "DRAFT", recipient_class: "CASE_TEAM" }),
+      row({
+        notification_id: previewNotificationIdOf(1, 2),
+        lifecycle_status: "DISPATCHED",
+        recipient_class: "WITNESS",
+      }),
+    ];
+    const en = table(rows, "en");
+    expect(en).toContain(">Draft<");
+    expect(en).toContain(">Case team<");
+    expect(en).toContain(">Sent — delivery not confirmed<");
+    expect(en).toContain(">Witness<");
+    expect(en).not.toMatch(/>(DRAFT|CASE_TEAM|DISPATCHED|WITNESS)</);
+    expect(en).not.toMatch(/delivered/i);
+    // the codes stay on the cells as data for tests, never as visible text
+    expect(en).toContain('data-lifecycle-status="DISPATCHED"');
+    expect(en).toContain('data-recipient-class="CASE_TEAM"');
+    const ar = table(rows, "ar");
+    expect(ar).toContain(">مسودة<");
+    expect(ar).toContain(">فريق القضية<");
+    expect(ar).toContain(">أُرسل — لم يُؤكَّد التسليم<");
+    expect(ar).toContain(">الشاهد<");
+  });
+
+  it("shows the template's catalogue name in the page language beside its code (Latin, isolated)", () => {
+    const en = table([row()], "en");
+    expect(en).toContain('data-testid="case-notification-template-name">Meeting invitation<');
+    expect(en).toMatch(/<bdi dir="ltr"[^>]*data-testid="case-notification-template-code">CF-24_MEETING_INVITATION</);
+    expect(table([row()], "ar")).toContain('data-testid="case-notification-template-name">دعوة اجتماع<');
+  });
+
+  it("negative: a code without a label is shown as written, isolated, never blank", () => {
+    const out = table([row({ lifecycle_status: "ON_HOLD", recipient_class: "AUDITOR" })], "en");
+    expect(out).toMatch(/data-lifecycle-status="ON_HOLD"><bdi dir="ltr">ON_HOLD<\/bdi>/);
+    expect(out).toMatch(/data-recipient-class="AUDITOR"><bdi dir="ltr">AUDITOR<\/bdi>/);
+  });
+
+  it("negative: a code that names an Object property is not a label (own keys only)", () => {
+    const out = table([row({ lifecycle_status: "constructor", recipient_class: "toString" })], "en");
+    expect(out).toContain('<bdi dir="ltr">constructor</bdi>');
+    expect(out).toContain('<bdi dir="ltr">toString</bdi>');
   });
 });
