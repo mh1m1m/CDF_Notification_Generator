@@ -1,0 +1,879 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "CF-34",
+  "title": {
+    "ar": "تسجيل الرأي القانوني ثم إعادة التوصية إلى اللجنة: الإعادة تظهر ↩ لا تقدماً",
+    "en": "Legal opinion recorded, then the recommendation returned to the committee: the return shows ↩, not progress"
+  },
+  "journey": "J-RECOMMENDATION-COMMITTEE",
+  "assignment_id": "CF-34",
+  "recipient_class": "SECRETARY",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+    "internal_ref": "CDF-DEMO-2026-0034",
+    "track": "IR",
+    "classification": "INTERNAL",
+    "status": {
+      "code": "S4.02",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0034"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-949002e2ade6",
+    "type": "RECOMMENDATION",
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+    "journey_id": "J-RECOMMENDATION-COMMITTEE",
+    "status": "RETURNED",
+    "status_source_event_id": "evt-CF-34-09",
+    "related_objects": [
+      {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-c16fab189a64"
+      },
+      {
+        "type": "LEGAL_OPINION",
+        "id": "0b1ec700-0000-4000-8000-608add73ca17"
+      }
+    ],
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-CF-34-01",
+      "type": "RECOMMENDATION_DRAFTED",
+      "occurred_at": "2026-10-23T08:00:00Z",
+      "recorded_at": "2026-10-23T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+      "object": {
+        "type": "RECOMMENDATION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade6"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-34",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-34-02",
+      "type": "PACKAGE_SUBMITTED_FOR_VOTE",
+      "occurred_at": "2026-10-23T09:00:00Z",
+      "recorded_at": "2026-10-23T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+      "object": {
+        "type": "RECOMMENDATION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade6"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-34",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-34-03",
+      "type": "MEETING_OPENED",
+      "occurred_at": "2026-10-23T10:00:00Z",
+      "recorded_at": "2026-10-23T10:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-c16fab189a64"
+      },
+      "actor": {
+        "capacity": "CHAIR",
+        "id": "usr-demo-chair"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-34",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-34-04",
+      "type": "BALLOT_OPENED",
+      "occurred_at": "2026-10-23T11:00:00Z",
+      "recorded_at": "2026-10-23T11:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+      "object": {
+        "type": "BALLOT",
+        "id": "0b1ec700-0000-4000-8000-66b5398d059b"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-34",
+      "payload": {
+        "target": "0b1ec700-0000-4000-8000-949002e2ade6"
+      }
+    },
+    {
+      "event_id": "evt-CF-34-05",
+      "type": "BALLOT_CLOSED",
+      "occurred_at": "2026-10-23T12:00:00Z",
+      "recorded_at": "2026-10-23T12:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+      "object": {
+        "type": "BALLOT",
+        "id": "0b1ec700-0000-4000-8000-66b5398d059b"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-34",
+      "payload": {
+        "target": "0b1ec700-0000-4000-8000-949002e2ade6",
+        "result": "APPROVED"
+      }
+    },
+    {
+      "event_id": "evt-CF-34-06",
+      "type": "RECOMMENDATION_ADOPTED",
+      "occurred_at": "2026-10-23T13:00:00Z",
+      "recorded_at": "2026-10-23T13:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+      "object": {
+        "type": "RECOMMENDATION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade6"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-34",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-34-07",
+      "type": "LEGAL_REVIEW_REQUESTED",
+      "occurred_at": "2026-10-23T14:00:00Z",
+      "recorded_at": "2026-10-23T14:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+      "object": {
+        "type": "LEGAL_OPINION",
+        "id": "0b1ec700-0000-4000-8000-608add73ca17"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-34",
+      "payload": {
+        "target": "0b1ec700-0000-4000-8000-949002e2ade6"
+      }
+    },
+    {
+      "event_id": "evt-CF-34-08",
+      "type": "LEGAL_OPINION_SUBMITTED",
+      "occurred_at": "2026-10-23T15:00:00Z",
+      "recorded_at": "2026-10-23T15:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+      "object": {
+        "type": "LEGAL_OPINION",
+        "id": "0b1ec700-0000-4000-8000-608add73ca17"
+      },
+      "actor": {
+        "capacity": "LEGAL_REVIEWER",
+        "id": "usr-demo-legal-reviewer"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-34",
+      "payload": {
+        "target": "0b1ec700-0000-4000-8000-949002e2ade6",
+        "opinion": "CONFLICTS"
+      }
+    },
+    {
+      "event_id": "evt-CF-34-09",
+      "type": "RECOMMENDATION_RETURNED",
+      "occurred_at": "2026-10-23T16:00:00Z",
+      "recorded_at": "2026-10-23T16:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+      "object": {
+        "type": "RECOMMENDATION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade6"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-34",
+      "payload": {
+        "by": "LEGAL"
+      }
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S4",
+      "substate": "S4.02",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S4",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/1/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/1/2",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/2/1",
+        "state": "PENDING"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/3/3",
+        "state": "RETURNED",
+        "evidence_event_id": "evt-CF-34-09"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/2/2",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/2/3",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/3/1",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/3/2",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/4/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/4/2",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/4/3",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/5/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/5/2",
+        "kind": "EXPECTED"
+      }
+    ],
+    "previous_round": [
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/2/1",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-34-04"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/2/2",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-34-05"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/2/3",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-34-06"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/3/1",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-34-07"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/3/2",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-34-08"
+      }
+    ],
+    "stage_n": 2,
+    "notice_location": "previous_round",
+    "lifecycle": {
+      "returned": true
+    },
+    "derived": {
+      "recommendation_adopted": false
+    },
+    "must_not": [
+      "✔ on J-RECOMMENDATION-COMMITTEE/2/3",
+      "● on J-RECOMMENDATION-COMMITTEE/3/3",
+      "✔ on J-RECOMMENDATION-COMMITTEE/4/1",
+      "derived.recommendation_adopted"
+    ]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "L2 «✔ 1 ✔ 2 ● 3. المراجعة القانونية عند الاقتضاء»; L3 «✔ إسناد المراجعة / ✔ الرأي القانوني / ● الإعادة إلى اللجنة عند الاقتضاء»; marker «↳ هذا الإشعار: أُعيدت إلى اللجنة»: a return rendered as forward progress (W3 F16).",
+    "evidence": [
+      "notifications/eml/ar/CF-34_LEGAL_OPINION_RECORDED.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-34 ar",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md F16"
+    ]
+  },
+  "variants": [
+    {
+      "id": "CF-34-V1",
+      "title": {
+        "ar": "رأي قانوني موافق دون إعادة",
+        "en": "Legal opinion concurs; no return"
+      },
+      "events": [
+        {
+          "event_id": "evt-CF-34-01",
+          "type": "RECOMMENDATION_DRAFTED",
+          "occurred_at": "2026-10-23T08:00:00Z",
+          "recorded_at": "2026-10-23T08:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "RECOMMENDATION",
+            "id": "0b1ec700-0000-4000-8000-949002e2ade6"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {}
+        },
+        {
+          "event_id": "evt-CF-34-02",
+          "type": "PACKAGE_SUBMITTED_FOR_VOTE",
+          "occurred_at": "2026-10-23T09:00:00Z",
+          "recorded_at": "2026-10-23T09:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "RECOMMENDATION",
+            "id": "0b1ec700-0000-4000-8000-949002e2ade6"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {}
+        },
+        {
+          "event_id": "evt-CF-34-03",
+          "type": "MEETING_OPENED",
+          "occurred_at": "2026-10-23T10:00:00Z",
+          "recorded_at": "2026-10-23T10:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "MEETING",
+            "id": "0b1ec700-0000-4000-8000-c16fab189a64"
+          },
+          "actor": {
+            "capacity": "CHAIR",
+            "id": "usr-demo-chair"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {}
+        },
+        {
+          "event_id": "evt-CF-34-04",
+          "type": "BALLOT_OPENED",
+          "occurred_at": "2026-10-23T11:00:00Z",
+          "recorded_at": "2026-10-23T11:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "BALLOT",
+            "id": "0b1ec700-0000-4000-8000-66b5398d059b"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {
+            "target": "0b1ec700-0000-4000-8000-949002e2ade6"
+          }
+        },
+        {
+          "event_id": "evt-CF-34-05",
+          "type": "BALLOT_CLOSED",
+          "occurred_at": "2026-10-23T12:00:00Z",
+          "recorded_at": "2026-10-23T12:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "BALLOT",
+            "id": "0b1ec700-0000-4000-8000-66b5398d059b"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {
+            "target": "0b1ec700-0000-4000-8000-949002e2ade6",
+            "result": "APPROVED"
+          }
+        },
+        {
+          "event_id": "evt-CF-34-06",
+          "type": "RECOMMENDATION_ADOPTED",
+          "occurred_at": "2026-10-23T13:00:00Z",
+          "recorded_at": "2026-10-23T13:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "RECOMMENDATION",
+            "id": "0b1ec700-0000-4000-8000-949002e2ade6"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {}
+        },
+        {
+          "event_id": "evt-CF-34-07",
+          "type": "LEGAL_REVIEW_REQUESTED",
+          "occurred_at": "2026-10-23T14:00:00Z",
+          "recorded_at": "2026-10-23T14:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "LEGAL_OPINION",
+            "id": "0b1ec700-0000-4000-8000-608add73ca17"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {
+            "target": "0b1ec700-0000-4000-8000-949002e2ade6"
+          }
+        },
+        {
+          "event_id": "evt-CF-34-08",
+          "type": "LEGAL_OPINION_SUBMITTED",
+          "occurred_at": "2026-10-23T15:00:00Z",
+          "recorded_at": "2026-10-23T15:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "LEGAL_OPINION",
+            "id": "0b1ec700-0000-4000-8000-608add73ca17"
+          },
+          "actor": {
+            "capacity": "LEGAL_REVIEWER",
+            "id": "usr-demo-legal-reviewer"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {
+            "target": "0b1ec700-0000-4000-8000-949002e2ade6",
+            "opinion": "CONCURS"
+          }
+        }
+      ],
+      "procedural_object_patch": {
+        "status": "ADOPTED",
+        "status_source_event_id": "evt-CF-34-06"
+      },
+      "expected": {
+        "actual": [
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/1/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/1/2",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/2/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/2/2",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/2/3",
+            "state": "COMPLETED",
+            "evidence_event_id": "evt-CF-34-06"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/3/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/3/2",
+            "state": "COMPLETED",
+            "evidence_event_id": "evt-CF-34-08"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/3/3",
+            "state": "NOT_APPLICABLE",
+            "note": "CONDITION_NOT_MET"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/4/1",
+            "state": "PENDING"
+          }
+        ],
+        "expected_steps": [
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/4/2",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/4/3",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/5/1",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/5/2",
+            "kind": "EXPECTED"
+          }
+        ],
+        "previous_round": [],
+        "stage_n": 4,
+        "notice_location": "actual",
+        "derived": {
+          "recommendation_adopted": true
+        },
+        "must_not": ["✔ on J-RECOMMENDATION-COMMITTEE/4/1"]
+      }
+    },
+    {
+      "id": "CF-34-V2",
+      "title": {
+        "ar": "رأي قانوني دون قيد لاعتماد التوصية: الرأي لا يُعدّ اعتماداً",
+        "en": "Legal opinion without a recorded adoption: the opinion is never an adoption"
+      },
+      "events": [
+        {
+          "event_id": "evt-CF-34-01",
+          "type": "RECOMMENDATION_DRAFTED",
+          "occurred_at": "2026-10-23T08:00:00Z",
+          "recorded_at": "2026-10-23T08:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "RECOMMENDATION",
+            "id": "0b1ec700-0000-4000-8000-949002e2ade6"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {}
+        },
+        {
+          "event_id": "evt-CF-34-02",
+          "type": "PACKAGE_SUBMITTED_FOR_VOTE",
+          "occurred_at": "2026-10-23T09:00:00Z",
+          "recorded_at": "2026-10-23T09:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "RECOMMENDATION",
+            "id": "0b1ec700-0000-4000-8000-949002e2ade6"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {}
+        },
+        {
+          "event_id": "evt-CF-34-03",
+          "type": "LEGAL_REVIEW_REQUESTED",
+          "occurred_at": "2026-10-23T10:00:00Z",
+          "recorded_at": "2026-10-23T10:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "LEGAL_OPINION",
+            "id": "0b1ec700-0000-4000-8000-608add73ca17"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {
+            "target": "0b1ec700-0000-4000-8000-949002e2ade6"
+          }
+        },
+        {
+          "event_id": "evt-CF-34-04",
+          "type": "LEGAL_OPINION_SUBMITTED",
+          "occurred_at": "2026-10-23T11:00:00Z",
+          "recorded_at": "2026-10-23T11:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f8",
+          "object": {
+            "type": "LEGAL_OPINION",
+            "id": "0b1ec700-0000-4000-8000-608add73ca17"
+          },
+          "actor": {
+            "capacity": "LEGAL_REVIEWER",
+            "id": "usr-demo-legal-reviewer"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-34.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-34",
+          "payload": {
+            "target": "0b1ec700-0000-4000-8000-949002e2ade6",
+            "opinion": "CONCURS"
+          }
+        }
+      ],
+      "procedural_object_patch": {
+        "status": "DRAFT",
+        "status_source_event_id": "evt-CF-34-01"
+      },
+      "expected": {
+        "actual": [
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/1/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/1/2",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/2/1",
+            "state": "PENDING",
+            "note": "EVIDENCE_GAP"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/2/2",
+            "state": "PENDING",
+            "note": "EVIDENCE_GAP"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/2/3",
+            "state": "PENDING",
+            "note": "EVIDENCE_GAP"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/3/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/3/2",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/3/3",
+            "state": "NOT_APPLICABLE",
+            "note": "CONDITION_NOT_MET"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/4/1",
+            "state": "PENDING"
+          }
+        ],
+        "expected_steps": [
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/4/2",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/4/3",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/5/1",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/5/2",
+            "kind": "EXPECTED"
+          }
+        ],
+        "notice_location": "actual",
+        "derived": {
+          "recommendation_adopted": false
+        },
+        "anomalies_include": ["EVIDENCE_GAP"],
+        "must_not": ["✔ on J-RECOMMENDATION-COMMITTEE/2/3", "derived.recommendation_adopted"]
+      }
+    }
+  ]
+}

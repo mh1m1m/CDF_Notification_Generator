@@ -1,11 +1,19 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 03:55 UTC · Branch: feature/V13-FE-002-workspace-switcher · Head: see PR
+Updated: 2026-10-31 18:30 UTC · Branch: feature/V13-FE-003-case-portfolio · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
 - V13-FE-001 (part 1) — `lib/authz` pre-check, `lib/server` (errors, request context, case read services, case source
-  binding), `lib/adapters/case-source` (V13-records adapter, opaque cursor) — PR into `develop` — IN_REVIEW
+  binding), `lib/adapters/case-source` (V13-records adapter, opaque cursor) — PR #9 — IN_REVIEW
+- V13-FE-002 Workspace Switcher — PR #10 — IN_REVIEW (the switch is re-checked in the persona registry; DB's
+  `api_switch_workspace` with audit WORKSPACE_SWITCHED is PR #17, FE wires it once #17 is on `develop`)
+- V13-FE-003 Case Portfolio (SCREENS S2) — `/portfolio`: GET filter form (search, stage, records state, assigned to
+  me), keyset paging with previous/next, authorised total, last recorded event, own open tasks — PR (stacked on #10)
+  — IN_REVIEW. Contract change proposed in the PR (`CaseListPage.total`, `CaseListFilter.assigned_to_me`,
+  `CaseListItem` = CaseSummary + `CaseListExtrasSchema`, `PORTFOLIO_DB_ROW_BOUND` = 100 and `PORTFOLIO_PAGE_MAX` = 99 as
+  the filter's limit max): needs ARCH + SEC ACCEPT. Needs DB PR #15 on `develop`
+  first (6-argument read functions and the row summaries; the adapter refuses rows without them).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -14,6 +22,10 @@ Updated: 2026-10-28 03:55 UTC · Branch: feature/V13-FE-002-workspace-switcher �
 - tests/unit/authz/precheck.spec.ts
 - tests/unit/server/{cases,errors-context,v13-records-adapter}.spec.ts, tests/unit/server/support/*
 - docs/teams/fe/{DESIGN,STATUS}.md
+- FE-003: app/(platform)/portfolio/{page.tsx,_components/PortfolioView.tsx,_components/portfolio.module.css},
+  lib/server/{portfolio,portfolio-query}.ts, lib/adapters/case-source/v13-records.ts, lib/contracts/case-summary.ts
+  (proposed), lib/i18n/{portfolio,case}/{ar,en}.ts, tests/unit/server/{portfolio.spec.tsx,v13-records-adapter.spec.ts,
+  support/fake-case-source.ts}, tests/unit/contracts.spec.ts
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -29,6 +41,15 @@ Updated: 2026-10-28 03:55 UTC · Branch: feature/V13-FE-002-workspace-switcher �
 | FE-002 throwaway browser probe (not committed; e2e is QA's): Delta GOVERNANCE → SECRETARIAT via `/workspaces`, forged hidden value INVESTIGATIONS refused (cookie unchanged, reference shown), axe 0 serious/critical on `/workspaces`; Beta one membership shown as text, no Center link | pass | 2/2 | FE-002 head |
 | Integration probe (not committed): `tests/integration/fe-case-source.spec.ts` on a local merge of this branch + `feature/V13-DB-001-m1-database-core` (b27cebb), `pnpm db:reset` then vitest integration | 3 pass, 9 fail as expected: every visible row is refused by the CaseSummary contract (no `source_system`, `source_ref`, `updated_at` from `portfolio_page`/`case_header`) | 12 tests | local |
 | Same probe with the three columns filled locally by a throwaway patch (reverted, not committed) | pass: seed visibility for 8 persona/workspace pairs, 0009 only for Beta, unknown = unauthorised = null, closed readable, keyset paging, filters inside the authorised set | 12/12 | local |
+| FE-003: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm build` | pass | — | FE-003 head |
+| FE-003: `pnpm test` (unit) | pass | 25 files, 472 tests (portfolio 38, adapter +14, contracts +3) | FE-003 head |
+| FE-003 after merging develop a5bbb10 + FE-002 35e1e65, with `PORTFOLIO_DB_ROW_BOUND`/`PORTFOLIO_PAGE_MAX` (ARCH ruling (b) on SEC's limit+1 item): `pnpm test` | pass | 542 | FE-003 head |
+| FE-003 integration probe (`tests/integration/fe-case-source.spec.ts`, not committed yet) on a local merge of FE-003 + DB PR #15 head 4eccf57, after `pnpm db:reset` | pass: seed visibility ×8 with total, 0009 only for Beta, unknown = unauthorised = null, keyset paging with constant total, filters and total agree, assigned-to-me ×6, row summaries | 15/15 | local |
+| FE-003 throwaway browser probe (not committed; e2e is QA's) on the same merge, `pnpm build && pnpm start`: Alpha 7 rows = count, links by UUID, closed 0010 glyph + word, filters in URL survive back navigation, clear; Gamma search 0009 → no results, count 0, no 0009 UUID in the page; Beta sees 0009 with named-access flag; edited stage and forged cursor → generic state with correlation id, no SQL text; English LTR counts; assigned-to-me 6 rows, last event id 0e…0110 on 0010, own open tasks 2 on 0004; axe 0 serious/critical; no CSP console errors; no horizontal page scroll at 360 and 1280 px | pass | 5/5 | local |
+
+| FE-003 after merging develop c4b37c3 (DB #15, #17, #21, PROC #18), ARCH's two nits, explicit column lists for `portfolio_page` and `case_header` (SEC LOW): `pnpm lint`, `pnpm typecheck`, `pnpm format:check` | pass | — | FE-003 head |
+| Same: `pnpm test` (unit) | pass | 771 | FE-003 head |
+| Same: `pnpm db:reset` then `pnpm test:db` (includes the committed FE suite `tests/integration/fe/case-source.spec.ts`, 15) | pass | 11 files, 223 | FE-003 head |
 
 ## Unresolved defects
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
@@ -36,9 +57,16 @@ Updated: 2026-10-28 03:55 UTC · Branch: feature/V13-FE-002-workspace-switcher �
   `updated_at`, `source_system`, `source_ref` and makes `source_ref` NOT NULL in its PR (b). Until DB's PR lands the
   adapter keeps refusing rows without those columns (fail closed).
 
+- FE-003 known gaps: stage names live in `case.stage.*` until PROC's stage catalogue exists; generic labels duplicate
+  UX's `common.*` until UX-002 lands; `/cases/[id]` links answer 404 until FE-004; no sort control (S1/S2 sorting is
+  by case number only, the keyset order).
+- FE-003: the "last recorded event" date carries `data-event-id` but not `data-epistemic`. The Truth Inspector (T2) needs
+  `data-status-kind` and `data-status` on every `data-epistemic` element, and the portfolio row has no event code or
+  status yet. It becomes a full `RecordedEventDate` once DB returns the event's status and PROC's status kinds land
+  (asked of ARCH, 31 Oct).
+
 ## Dependencies and requests
-- FE owns `tests/integration/fe/**` (ARCH, 03:48). The suite lands once DB's PR with the claims-key test support and
-  the three columns is on `develop`.
+- FE owns `tests/integration/fe/**` (ARCH, 03:48). `tests/integration/fe/case-source.spec.ts` is committed with FE-003.
 - DB: merge of DB-001..005; the read-function columns per the ruling.
 - UX-002/003: FE-002 ships minimal nav/switcher markup; swapped for UX's SideNav/WorkspaceSwitcher when they land.
 - QA: Scenario C end-to-end (Delta GOVERNANCE ↔ SECRETARIAT) in QA-002; FE did not add e2e (tests/e2e is QA's).

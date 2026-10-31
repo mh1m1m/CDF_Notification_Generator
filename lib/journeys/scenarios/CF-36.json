@@ -1,0 +1,338 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "CF-36",
+  "title": {
+    "ar": "طلب اعتماد إدراج جزاء سابق من قضية مقيدة: المستوى الأول للقضية المصدر من سجلها، ولا يتسرب شيء من القضية الطالبة",
+    "en": "Approval to include a prior sanction from a restricted case: Level 1 is the source case's record; nothing leaks from the requesting case"
+  },
+  "journey": "J-SANCTION-EXTRACT",
+  "assignment_id": "CF-36",
+  "recipient_class": "RESTRICTED_CASE_AUTHORITY",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6fa",
+    "internal_ref": "CDF-DEMO-2026-0036",
+    "track": "IR",
+    "classification": "RESTRICTED",
+    "status": {
+      "code": "S5.06",
+      "recorded_at": "2026-06-03T08:00:00Z",
+      "source_event_id": "evt-hist-S5.06-23"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": true
+    },
+    "restrictions": {
+      "rca_required": true
+    },
+    "exists": true,
+    "history": [
+      {
+        "code": "S1.01",
+        "recorded_at": "2026-03-01T08:00:00Z",
+        "source_event_id": "evt-hist-S1.01-1"
+      },
+      {
+        "code": "S1.02",
+        "recorded_at": "2026-03-04T08:00:00Z",
+        "source_event_id": "evt-hist-S1.02-2"
+      },
+      {
+        "code": "S1.03",
+        "recorded_at": "2026-03-07T08:00:00Z",
+        "source_event_id": "evt-hist-S1.03-3"
+      },
+      {
+        "code": "S1.04",
+        "recorded_at": "2026-03-10T08:00:00Z",
+        "source_event_id": "evt-hist-S1.04-4"
+      },
+      {
+        "code": "S2.01",
+        "recorded_at": "2026-03-13T08:00:00Z",
+        "source_event_id": "evt-hist-S2.01-5"
+      },
+      {
+        "code": "S2.03",
+        "recorded_at": "2026-03-16T08:00:00Z",
+        "source_event_id": "evt-hist-S2.03-6"
+      },
+      {
+        "code": "S2.04",
+        "recorded_at": "2026-03-19T08:00:00Z",
+        "source_event_id": "evt-hist-S2.04-7"
+      },
+      {
+        "code": "S2.05",
+        "recorded_at": "2026-03-22T08:00:00Z",
+        "source_event_id": "evt-hist-S2.05-8"
+      },
+      {
+        "code": "S3.01",
+        "recorded_at": "2026-03-25T08:00:00Z",
+        "source_event_id": "evt-hist-S3.01-9"
+      },
+      {
+        "code": "S3.02",
+        "recorded_at": "2026-03-28T08:00:00Z",
+        "source_event_id": "evt-hist-S3.02-10"
+      },
+      {
+        "code": "S3.03",
+        "recorded_at": "2026-03-31T08:00:00Z",
+        "source_event_id": "evt-hist-S3.03-11"
+      },
+      {
+        "code": "S3.06",
+        "recorded_at": "2026-04-03T08:00:00Z",
+        "source_event_id": "evt-hist-S3.06-12"
+      },
+      {
+        "code": "S3.07",
+        "recorded_at": "2026-04-06T08:00:00Z",
+        "source_event_id": "evt-hist-S3.07-13"
+      },
+      {
+        "code": "S4.01",
+        "recorded_at": "2026-04-09T08:00:00Z",
+        "source_event_id": "evt-hist-S4.01-14"
+      },
+      {
+        "code": "S4.02",
+        "recorded_at": "2026-04-12T08:00:00Z",
+        "source_event_id": "evt-hist-S4.02-15"
+      },
+      {
+        "code": "S4.03",
+        "recorded_at": "2026-04-15T08:00:00Z",
+        "source_event_id": "evt-hist-S4.03-16"
+      },
+      {
+        "code": "S4.04",
+        "recorded_at": "2026-04-18T08:00:00Z",
+        "source_event_id": "evt-hist-S4.04-17"
+      },
+      {
+        "code": "S4.05",
+        "recorded_at": "2026-04-21T08:00:00Z",
+        "source_event_id": "evt-hist-S4.05-18"
+      },
+      {
+        "code": "S5.01",
+        "recorded_at": "2026-04-24T08:00:00Z",
+        "source_event_id": "evt-hist-S5.01-19"
+      },
+      {
+        "code": "S5.02",
+        "recorded_at": "2026-04-27T08:00:00Z",
+        "source_event_id": "evt-hist-S5.02-20"
+      },
+      {
+        "code": "S5.04",
+        "recorded_at": "2026-04-30T08:00:00Z",
+        "source_event_id": "evt-hist-S5.04-21"
+      },
+      {
+        "code": "S5.05",
+        "recorded_at": "2026-05-03T08:00:00Z",
+        "source_event_id": "evt-hist-S5.05-22"
+      },
+      {
+        "code": "S5.06",
+        "recorded_at": "2026-05-06T08:00:00Z",
+        "source_event_id": "evt-hist-S5.06-23"
+      }
+    ]
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-949002e2ade8",
+    "type": "PROCEDURE",
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6fa",
+    "journey_id": "J-SANCTION-EXTRACT",
+    "status": "OPEN",
+    "status_source_event_id": "evt-CF-36-02",
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-CF-36-01",
+      "type": "SANCTION_EXTRACT_PREPARED",
+      "occurred_at": "2026-10-24T08:00:00Z",
+      "recorded_at": "2026-10-24T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6fa",
+      "object": {
+        "type": "PROCEDURE",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade8"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-36.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-36",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-36-02",
+      "type": "SANCTION_EXTRACT_APPROVAL_REQUESTED",
+      "occurred_at": "2026-10-24T09:00:00Z",
+      "recorded_at": "2026-10-24T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6fa",
+      "object": {
+        "type": "PROCEDURE",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade8"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-36.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-36",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-36-03",
+      "type": "RECOMMENDATION_ADOPTED",
+      "occurred_at": "2026-10-24T10:00:00Z",
+      "recorded_at": "2026-10-24T10:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-e966fb64dd0f",
+      "object": {
+        "type": "RECOMMENDATION",
+        "id": "0b1ec700-0000-4000-8000-a452be89c625"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-36.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-36",
+      "payload": {}
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S5",
+      "substate": "S5.06",
+      "current_state": "COMPLETED",
+      "derivation": "HISTORY",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S4",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S5",
+          "layer": "A",
+          "state": "COMPLETED",
+          "current": true
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-SANCTION-EXTRACT/1/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-SANCTION-EXTRACT/1/2",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-36-02"
+      },
+      {
+        "step_id": "J-SANCTION-EXTRACT/2/1",
+        "state": "PENDING"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-SANCTION-EXTRACT/3/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-SANCTION-EXTRACT/4/1",
+        "kind": "SUBJECT_TO_APPROVAL"
+      },
+      {
+        "step_id": "J-SANCTION-EXTRACT/4/2",
+        "kind": "SUBJECT_TO_APPROVAL"
+      },
+      {
+        "step_id": "J-SANCTION-EXTRACT/5/1",
+        "kind": "EXPECTED"
+      }
+    ],
+    "stage_n": 2,
+    "notice_location": "actual",
+    "derived": {
+      "recommendation_adopted": false
+    },
+    "ignored": [
+      {
+        "event_id": "evt-CF-36-03",
+        "reason": "OBJECT_MISMATCH"
+      }
+    ],
+    "must_not": [
+      "✔ on J-SANCTION-EXTRACT/2/1",
+      "✔ on J-SANCTION-EXTRACT/4/1",
+      "derived.recommendation_adopted",
+      "L1 S5.01"
+    ]
+  },
+  "register_meaning": {
+    "label": "FACT",
+    "text": "Register CF-36 SANCTION_EXTRACT_APPROVAL_REQUESTED (BUILT): trigger \"Prior-sanctions extract includes a restricted case\"; recipient \"Restricted case authority of the source case\"; text \"A committee asked to include a prior sanction from your restricted case. It awaits your decision.\" The object is the approval request; the case is the restricted source case; the requesting committee's recommendation is another object.",
+    "evidence": ["notifications/COMMITTEE_FLOW_NOTIFICATION_REGISTER.csv row CF-36"]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "L1 «● S5 … └ موقع الحالة: S5.01 تبليغ القرار عند انطباقه» (from the notification type); L3 «✔ إعداد المستخرج / ● تقديم الطلب»; marker «↳ هذا الإشعار: اعتُمدت التوصيات» — the marker names an adoption, not the approval request the register describes.",
+    "evidence": [
+      "notifications/eml/ar/CF-36_SANCTION_EXTRACT_APPROVAL_REQUESTED.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-36 ar"
+    ]
+  },
+  "variants": []
+}

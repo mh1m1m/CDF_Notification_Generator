@@ -15,6 +15,8 @@ const PORT = 3100;
 const externalBaseUrl = process.env.V13_E2E_BASE_URL?.trim();
 const baseURL = externalBaseUrl || `http://localhost:${PORT}`;
 const sessionSecret = process.env.V13_E2E_SESSION_SECRET?.trim() || randomBytes(32).toString("base64url");
+// Workers inherit the environment: tests that mint a negative-test persona's session read the same secret.
+if (!externalBaseUrl) process.env.V13_E2E_SESSION_SECRET = sessionSecret;
 const chromiumPath = process.env.PW_CHROMIUM_PATH?.trim();
 const isCI = process.env.CI === "true";
 

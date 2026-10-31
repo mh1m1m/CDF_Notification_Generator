@@ -1,6 +1,6 @@
 // Case summary: the list/detail header shape every case source returns. Synthetic data only.
 import { z } from "zod";
-import { CaseIdSchema } from "./ids";
+import { CaseIdSchema, UuidSchema } from "./ids";
 
 /** Display identifier of a synthetic case. Never a key: lookups always use case_id and are authorised. */
 export const CASE_NUMBER_PATTERN = /^CDF-DEMO-2026-\d{4}$/;
@@ -49,20 +49,51 @@ export const CaseSummarySchema = z
   });
 export type CaseSummary = z.infer<typeof CaseSummarySchema>;
 
+/** Rows the database returns per portfolio_page call at most (migration 0003, E02). */
+export const PORTFOLIO_DB_ROW_BOUND = 100;
+/** Largest page a caller may ask for: the adapter reads one look-ahead row to know whether a next page exists. */
+export const PORTFOLIO_PAGE_MAX = PORTFOLIO_DB_ROW_BOUND - 1;
+
 /** Filter for listing cases. Authorisation is applied by the adapter before filtering, counting or paging. */
 export const CaseListFilterSchema = z.strictObject({
   records_state: RecordsStateSchema.optional(),
   lifecycle_stage: LifecycleStageSchema.optional(),
   /** Free-text match on case number or title; applied only to cases the identity may already see. */
   text: z.string().trim().min(1).max(100).regex(NO_CONTROL_CHARS).optional(),
-  limit: z.number().int().min(1).max(100).default(25),
+  limit: z.number().int().min(1).max(PORTFOLIO_PAGE_MAX).default(25),
   /** Opaque cursor returned by the previous page. */
   cursor: z.string().min(1).max(512).optional(),
+  /** Only cases where the identity holds an active case assignment (any capacity); task-only assignees do not count. */
+  assigned_to_me: z.boolean().default(false),
 });
 export type CaseListFilter = z.input<typeof CaseListFilterSchema>;
 
-/** One page of authorised cases. There is deliberately no total count (counts must not leak unauthorised cases). */
+/**
+ * Per-row portfolio summaries, computed by the source after authorisation (SCREENS S2): the case's last recorded
+ * procedural event (both null when it has none) and the identity's own open tasks in that case.
+ */
+export const CaseListExtrasSchema = z
+  .strictObject({
+    last_event_id: UuidSchema.nullable(),
+    last_event_at: z.iso.datetime({ offset: true }).nullable(),
+    my_open_task_count: z.number().int().min(0).max(10_000),
+  })
+  .refine((x) => (x.last_event_id === null) === (x.last_event_at === null), {
+    message: "last_event_id and last_event_at are set together",
+    path: ["last_event_id"],
+  });
+export type CaseListExtras = z.infer<typeof CaseListExtrasSchema>;
+
+/** One portfolio row: the case summary plus its row summaries. */
+export type CaseListItem = CaseSummary & CaseListExtras;
+
+/**
+ * One page of authorised cases. `total` counts only cases the identity may see that match the same filters (cursor
+ * aside): it is computed after authorisation, in the same request transaction as the page, so it never reveals an
+ * unauthorised case (§40; ARCH, 28 Oct 2026).
+ */
 export interface CaseListPage {
-  readonly items: readonly CaseSummary[];
+  readonly items: readonly CaseListItem[];
   readonly next_cursor: string | null;
+  readonly total: number;
 }

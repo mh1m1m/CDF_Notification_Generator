@@ -1,0 +1,339 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "REO-01",
+  "title": {
+    "ar": "تكليف بالتحقيق بعد إعادة فتح القضية: المراحل التي سبق المرور بها لا تُعرض مكتملة الآن",
+    "en": "Investigation assigned after the case was reopened: stages visited before do not read as completed now"
+  },
+  "journey": "J-INVESTIGATION",
+  "assignment_id": "CF-20",
+  "recipient_class": "INVESTIGATOR",
+  "fixture_note": {
+    "label": "UNVERIFIED",
+    "text": "The V8 model has no reopening transition (W3 F11; src/domain/concepts.js CASE_REOPENED note): the code after reopening is SOURCE_REQUIRED. This synthetic record holds S3.01 only to exercise the resolver, which reads whatever code the record holds."
+  },
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-7a59cc8ba0fd",
+    "internal_ref": "CDF-DEMO-2026-0904",
+    "track": "IR",
+    "classification": "INTERNAL",
+    "status": {
+      "code": "S3.01",
+      "recorded_at": "2026-06-06T08:00:00Z",
+      "source_event_id": "evt-hist-S3.01-23"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": true,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true,
+    "history": [
+      {
+        "code": "S1.01",
+        "recorded_at": "2026-04-01T08:00:00Z",
+        "source_event_id": "evt-hist-S1.01-1"
+      },
+      {
+        "code": "S1.02",
+        "recorded_at": "2026-04-04T08:00:00Z",
+        "source_event_id": "evt-hist-S1.02-2"
+      },
+      {
+        "code": "S1.03",
+        "recorded_at": "2026-04-07T08:00:00Z",
+        "source_event_id": "evt-hist-S1.03-3"
+      },
+      {
+        "code": "S1.04",
+        "recorded_at": "2026-04-10T08:00:00Z",
+        "source_event_id": "evt-hist-S1.04-4"
+      },
+      {
+        "code": "S2.01",
+        "recorded_at": "2026-04-13T08:00:00Z",
+        "source_event_id": "evt-hist-S2.01-5"
+      },
+      {
+        "code": "S2.03",
+        "recorded_at": "2026-04-16T08:00:00Z",
+        "source_event_id": "evt-hist-S2.03-6"
+      },
+      {
+        "code": "S2.04",
+        "recorded_at": "2026-04-19T08:00:00Z",
+        "source_event_id": "evt-hist-S2.04-7"
+      },
+      {
+        "code": "S2.05",
+        "recorded_at": "2026-04-22T08:00:00Z",
+        "source_event_id": "evt-hist-S2.05-8"
+      },
+      {
+        "code": "S3.01",
+        "recorded_at": "2026-04-25T08:00:00Z",
+        "source_event_id": "evt-hist-S3.01-9"
+      },
+      {
+        "code": "S3.02",
+        "recorded_at": "2026-04-28T08:00:00Z",
+        "source_event_id": "evt-hist-S3.02-10"
+      },
+      {
+        "code": "S3.03",
+        "recorded_at": "2026-05-01T08:00:00Z",
+        "source_event_id": "evt-hist-S3.03-11"
+      },
+      {
+        "code": "S3.06",
+        "recorded_at": "2026-05-04T08:00:00Z",
+        "source_event_id": "evt-hist-S3.06-12"
+      },
+      {
+        "code": "S3.07",
+        "recorded_at": "2026-05-07T08:00:00Z",
+        "source_event_id": "evt-hist-S3.07-13"
+      },
+      {
+        "code": "S4.01",
+        "recorded_at": "2026-05-10T08:00:00Z",
+        "source_event_id": "evt-hist-S4.01-14"
+      },
+      {
+        "code": "S4.02",
+        "recorded_at": "2026-05-13T08:00:00Z",
+        "source_event_id": "evt-hist-S4.02-15"
+      },
+      {
+        "code": "S4.03",
+        "recorded_at": "2026-05-16T08:00:00Z",
+        "source_event_id": "evt-hist-S4.03-16"
+      },
+      {
+        "code": "S4.04",
+        "recorded_at": "2026-05-19T08:00:00Z",
+        "source_event_id": "evt-hist-S4.04-17"
+      },
+      {
+        "code": "S4.05",
+        "recorded_at": "2026-05-22T08:00:00Z",
+        "source_event_id": "evt-hist-S4.05-18"
+      },
+      {
+        "code": "S5.01",
+        "recorded_at": "2026-05-25T08:00:00Z",
+        "source_event_id": "evt-hist-S5.01-19"
+      },
+      {
+        "code": "S5.02",
+        "recorded_at": "2026-05-28T08:00:00Z",
+        "source_event_id": "evt-hist-S5.02-20"
+      },
+      {
+        "code": "S5.04",
+        "recorded_at": "2026-05-31T08:00:00Z",
+        "source_event_id": "evt-hist-S5.04-21"
+      },
+      {
+        "code": "S5.05",
+        "recorded_at": "2026-06-03T08:00:00Z",
+        "source_event_id": "evt-hist-S5.05-22"
+      },
+      {
+        "code": "S3.01",
+        "recorded_at": "2026-06-06T08:00:00Z",
+        "source_event_id": "evt-hist-S3.01-23"
+      }
+    ]
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-063829be6cef",
+    "type": "INVESTIGATION",
+    "case_id": "ca5e0000-0000-4000-8000-7a59cc8ba0fd",
+    "journey_id": "J-INVESTIGATION",
+    "status": "OPEN",
+    "status_source_event_id": "evt-REO-01-02",
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-REO-01-01",
+      "type": "CASE_REOPENED",
+      "occurred_at": "2026-10-20T08:00:00Z",
+      "recorded_at": "2026-10-20T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a59cc8ba0fd",
+      "object": {
+        "type": "CASE",
+        "id": "ca5e0000-0000-4000-8000-7a59cc8ba0fd"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/REO-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-REO-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-REO-01-02",
+      "type": "INVESTIGATION_ASSIGNED",
+      "occurred_at": "2026-10-20T09:00:00Z",
+      "recorded_at": "2026-10-20T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a59cc8ba0fd",
+      "object": {
+        "type": "INVESTIGATION",
+        "id": "0b1ec700-0000-4000-8000-063829be6cef"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/REO-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-REO-01",
+      "payload": {}
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S3",
+      "substate": "S3.01",
+      "current_state": "IN_PROGRESS",
+      "derivation": "HISTORY",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true,
+          "reopened": true
+        },
+        {
+          "code": "S4",
+          "layer": "B",
+          "kind": "EXPECTED",
+          "previously_visited": true
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED",
+          "previously_visited": true
+        }
+      ],
+      "flags": {
+        "reopened": true
+      }
+    },
+    "actual": [
+      {
+        "step_id": "J-INVESTIGATION/1/1",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-REO-01-02"
+      },
+      {
+        "step_id": "J-INVESTIGATION/1/2",
+        "state": "PENDING"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-INVESTIGATION/1/3",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/2/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/2/2",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/2/3",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/3/1",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/3/2",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/3/3",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/3/4",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/4/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/4/2",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/4/3",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/5/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/5/2",
+        "kind": "EXPECTED"
+      }
+    ],
+    "stage_n": 1,
+    "notice_location": "actual",
+    "must_not": ["L1 ✔ on S4", "L1 ✔ on S5", "● on J-INVESTIGATION/1/1"]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "Reopening is not modelled in V12 (\"a closed case reopened in practice would have no representable position\", W3 F11). CF-20 renders L1 «S3.01» from the notification type, L2 «● 1. التكليف بالتحقيق وإقرار الاستقلالية» and L3 «● إشعار التكليف / ○ إقرار الاستقلالية» — the recorded assignment shown in progress (W3 F5).",
+    "evidence": [
+      "notifications/eml/ar/CF-20_INVESTIGATION_ASSIGNED.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-20 ar",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md F11, F5"
+    ]
+  },
+  "variants": []
+}
