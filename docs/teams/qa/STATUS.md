@@ -1,6 +1,6 @@
 # QA status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 · Branch: test/V13-QA-002-pin-positive-control (base develop d694ff8)
+Updated: 2026-10-31 · Branch: docs/V13-QA-002-status-reviews (base develop b5d810c)
 
 ## Completed
 - V13-QA-001 (design) — `docs/qa/TEST_ARCHITECTURE.md` — PR #1 — COMPLETE
@@ -15,17 +15,17 @@ Updated: 2026-10-31 · Branch: test/V13-QA-002-pin-positive-control (base develo
   client-side navigation; for 4–129 ms the URL is the new one and the document has no `<title>` while Next.js
   streams the metadata (38/40 probe runs). axe started inside that gap reports `document-title` in 18/18 runs. Every
   scan now waits for a non-empty title; a page without a title still fails (mutation check).
-- V13-QA-002 Scenario C (workspace switch, 11 tests with negatives) — PR #33 — merged. Scenarios A, B, D, E:
-  NOT_STARTED (next).
+- V13-QA-002 Scenario C (workspace switch, 11 tests with negatives) — PR #33 — merged.
 - V13-QA-002 negative-persona pin — PR #43 — merged. Minted Epsilon (expired membership) and Zeta (inactive):
   empty portfolio with count 0, no My Work task, 404 for every seeded case on every Case Workspace tab; Sentinel with
-  an empty visible set over pages and payloads.
-
-## This branch (IN_REVIEW)
-- Positive control for #43 (ARCH review of #43): Secretary Alpha on the same paths sees her 7 cases (rows and
-  count 7), her 7 open tasks (strip 7), case 0001 on all 4 tabs, and 404 for hidden 0002. Now that FE-004 and FE-005
-  are on develop, the pin also requires `not-found-state` on the 404s and the My Work strip at 0 (no longer optional).
-  Mutation check: running the control with a minted Epsilon session fails all 3 control tests.
+  an empty visible set over pages and payloads. Positive control (Secretary Alpha, same paths) — PR #53 — merged.
+- V13-QA-002 Scenarios A, B, D — PR #58 — merged (develop b5d810c). `tests/fixtures/db.ts`: read-only oracle in each
+  persona's own security context (signed claims, `SET LOCAL ROLE cdf_v13_user`, every transaction rolled back).
+  A: case switching, back/forward/reload, storage free of case ids. B: two cases in two tabs, one task row and one
+  event changed, stale update, hidden task answers like an unknown one. D: filters in the URL. Pinned two defects
+  with `test.fail()`: OI-042 (nested `<main>` on the case 404) and OI-043 (filter form keeps stale values after
+  Clear/Back). Both fixed by V13-FE-007 (#63, ACCEPT ab52116), which removes the pins.
+- Scenario E (notification draft) is FE's spec in #51, reviewed by QA.
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |
@@ -37,19 +37,29 @@ Updated: 2026-10-31 · Branch: test/V13-QA-002-pin-positive-control (base develo
 | #23 FE-004 | CHANGES fdf2327 → ACCEPT d439d59 | table scroll wrappers not focusable at 375 px; 116 negative URLs 404 |
 | #32 FE-005 | ACCEPT 018b46e, 29106d7 | command, stale, 4 forged task ids, closed case |
 | #36 ARCH-008 | ACCEPT ca4fc1a | database-backed e2e; URL guard checked with 9 URLs |
+| #50 SEC (SEC-APP-11) | CHANGES → ACCEPT 77d1268 | locator picked the hidden menu form; scoped to `workspaces-page` |
+| #51 FE-006 part 1 | CHANGES 661b7e7 → ACCEPT 74176da | draft form reflowed at 375 px; focus now moves to the refusal; assertions by row id |
+| #54 UX-006 | ACCEPT (merged 9d5fa72) | sandboxed srcdoc preview works under the page CSP; 343 px at 375 |
+| #61 FE-006 Center | CHANGES dd9aa9c → ACCEPT 920e98a | Back restored stale filter values; fixed by form-level `autoComplete="off"` |
+| #63 FE-007 | CHANGES e1434b4 → ACCEPT ab52116 | OI-042 + OI-043; former pins 35/35 at repeat-each=5; mutation check |
 
 ## Changed files (this branch)
-- tests/e2e/negative-personas-pinning.spec.ts
 - docs/teams/qa/STATUS.md
 
 ## Test evidence
 | Command | Result | Counts | Commit |
 | ------- | ------ | ------ | ------ |
 | `pnpm typecheck`, `pnpm lint`, `pnpm format:check` | pass | 0 warnings | this branch |
-| `pnpm db:reset && PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | pass | 104 passed, 0 failed | this branch |
+| #58 head: `pnpm db:reset && PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | pass | A, B, D 50/50 at repeat-each=5 | #58 |
+| develop b5d810c + #51 74176da: unit / e2e | pass | 1775 / 141 | review |
+| develop b5d810c + #63 ab52116: unit / e2e | pass | 1725 / 138 | review |
+| develop b5d810c + #61 920e98a: unit / e2e | pass | 1802 / 144 | review |
 
 ## Waiting / next
-- Scenarios A, B, D on the merged pages (E after FE-006).
+- After #61 merges: a Center Back step in Scenario D.
+- Harness: axe excludes sandboxed srcdoc frames and scans the srcdoc separately (axe hangs on them today);
+  preview-frame rule set per the ARCH ruling once PROC-011 exports the renderer's values; P2 for Server Action POST
+  bodies Chromium drops after a redirect.
 - QA-004: Truth Inspector on the case pages with a DB event oracle (local/CI database only); DB half of the Sentinel.
 - QA-005 (rest): five-screen audit, screenshot library; QA-006 staging Gate J (OI-008).
 - Local note: the local PostgreSQL cluster can stop between runs; `pnpm db:local start` before `pnpm db:reset`.
