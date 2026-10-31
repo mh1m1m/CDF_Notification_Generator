@@ -2,11 +2,14 @@
 import { describe, expect, it } from "vitest";
 import {
   AuditEventSchema,
+  CaseListExtrasSchema,
   CASE_NUMBER_PATTERN,
   CaseIdSchema,
   CaseListFilterSchema,
   CaseSummarySchema,
   I18N_KEY_PATTERN,
+  PORTFOLIO_DB_ROW_BOUND,
+  PORTFOLIO_PAGE_MAX,
   RequestIdentitySchema,
   SOURCE_REF_PATTERN,
   UUID_PATTERN,
@@ -124,11 +127,51 @@ describe("CaseListFilterSchema", () => {
     expect(CaseListFilterSchema.parse({}).limit).toBe(25);
     expect(CaseListFilterSchema.safeParse({ limit: 0 }).success).toBe(false);
     expect(CaseListFilterSchema.safeParse({ limit: 101 }).success).toBe(false);
+    // One look-ahead row must still fit inside the database bound.
+    expect(PORTFOLIO_PAGE_MAX).toBe(PORTFOLIO_DB_ROW_BOUND - 1);
+    expect(CaseListFilterSchema.safeParse({ limit: PORTFOLIO_PAGE_MAX }).success).toBe(true);
+    expect(CaseListFilterSchema.safeParse({ limit: PORTFOLIO_DB_ROW_BOUND }).success).toBe(false);
   });
 
   it("rejects unknown filters and over-long text", () => {
     expect(CaseListFilterSchema.safeParse({ workspace: "GOVERNANCE" }).success).toBe(false);
     expect(CaseListFilterSchema.safeParse({ text: "x".repeat(101) }).success).toBe(false);
+  });
+});
+
+describe("CaseListExtrasSchema and the assigned-to-me filter", () => {
+  const extras = {
+    last_event_id: "0e000000-0000-4000-8000-000000000001",
+    last_event_at: "2026-10-01T09:00:00Z",
+    my_open_task_count: 2,
+  };
+
+  it("accepts row summaries, and none for a case without events", () => {
+    expect(CaseListExtrasSchema.parse(extras).my_open_task_count).toBe(2);
+    expect(
+      CaseListExtrasSchema.safeParse({ last_event_id: null, last_event_at: null, my_open_task_count: 0 })
+        .success,
+    ).toBe(true);
+  });
+
+  it("refuses half an event, negative or fractional counts, and extra fields", () => {
+    for (const bad of [
+      { ...extras, last_event_at: null },
+      { ...extras, last_event_id: null },
+      { ...extras, last_event_id: "not-a-uuid" },
+      { ...extras, my_open_task_count: -1 },
+      { ...extras, my_open_task_count: 1.5 },
+      { ...extras, my_open_task_count: undefined },
+      { ...extras, assignee: "Employee Alpha" },
+    ]) {
+      expect(CaseListExtrasSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it("assigned_to_me defaults to false and is boolean only", () => {
+    expect(CaseListFilterSchema.parse({}).assigned_to_me).toBe(false);
+    expect(CaseListFilterSchema.parse({ assigned_to_me: true }).assigned_to_me).toBe(true);
+    expect(CaseListFilterSchema.safeParse({ assigned_to_me: "1" }).success).toBe(false);
   });
 });
 
@@ -188,8 +231,8 @@ describe("AuditEventSchema (shaped like cdf_notifications_v13.audit_event)", () 
 });
 
 describe("CaseSourceAdapter contract", () => {
-  // A minimal in-memory adapter honouring the contract: authorisation before filtering, null for unknown and for
-  // unauthorised ids alike, no total count.
+  // A minimal in-memory adapter honouring the contract: authorisation before filtering and counting, null for
+  // unknown and for unauthorised ids alike.
   const visible = CaseSummarySchema.parse(summary());
   const hidden = CaseSummarySchema.parse(
     summary({ case_id: "0c000000-0000-4000-8000-000000000009", case_number: "CDF-DEMO-2026-0009" }),
@@ -201,7 +244,10 @@ describe("CaseSourceAdapter contract", () => {
       const allowed = [visible, hidden].filter(
         (c) => identity.active_workspace === "INVESTIGATIONS" || c === visible,
       );
-      return { items: allowed.slice(0, f.limit), next_cursor: null };
+      const items = allowed
+        .slice(0, f.limit)
+        .map((c) => ({ ...c, last_event_id: null, last_event_at: null, my_open_task_count: 0 }));
+      return { items, next_cursor: null, total: allowed.length };
     },
     async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null> {
       const allowed = [visible, hidden].filter(
@@ -223,9 +269,10 @@ describe("CaseSourceAdapter contract", () => {
     expect(unauthorised).toBeNull();
   });
 
-  it("lists pages without a total count", async () => {
+  it("lists pages whose total counts only cases the identity may see", async () => {
     const page = await adapter.listCases(secretary, {});
     expect(page.items.map((c) => c.case_number)).toEqual(["CDF-DEMO-2026-0001"]);
-    expect(Object.keys(page).sort()).toEqual(["items", "next_cursor"]);
+    expect(Object.keys(page).sort()).toEqual(["items", "next_cursor", "total"]);
+    expect(page.total).toBe(1);
   });
 });

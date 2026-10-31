@@ -69,7 +69,7 @@ describe("getCaseForRoute", () => {
   it("refuses an adapter answer for another case (defence in depth)", async () => {
     const wrong: CaseSourceAdapter = {
       sourceSystem: "V13_SYNTHETIC",
-      listCases: async () => ({ items: [], next_cursor: null }),
+      listCases: async () => ({ items: [], next_cursor: null, total: 0 }),
       getCase: async () => FAKE_CASES[1] as CaseSummary,
     };
     await notFound(getCaseForRoute({ ctx: ctxFor(SECRETARY), source: wrong }, caseIdOf(1)));
@@ -99,14 +99,14 @@ describe("listPortfolio", () => {
     ["Governance Delta @ Governance", GOVERNANCE, 7],
     ["Governance Delta @ Secretariat", GOVERNANCE_AT_SECRETARIAT, 7],
   ])("%s sees exactly the seed visibility (%i cases)", async (_n, who, count) => {
-    const page = await listPortfolio({ ctx: ctxFor(who), source: createFakeCaseSource() }, { limit: 100 });
+    const page = await listPortfolio({ ctx: ctxFor(who), source: createFakeCaseSource() }, { limit: 50 });
     expect(page.items).toHaveLength(count);
     expect(page.next_cursor).toBeNull();
   });
 
   it("restricted 0009 is absent for everyone but the assigned investigator", async () => {
     for (const who of [SECRETARY, INVESTIGATOR_GAMMA, GOVERNANCE]) {
-      const page = await listPortfolio({ ctx: ctxFor(who), source: createFakeCaseSource() }, { limit: 100 });
+      const page = await listPortfolio({ ctx: ctxFor(who), source: createFakeCaseSource() }, { limit: 50 });
       expect(page.items.map((c) => c.case_number)).not.toContain("CDF-DEMO-2026-0009");
     }
   });
