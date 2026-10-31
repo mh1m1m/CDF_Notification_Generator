@@ -6,8 +6,9 @@
 //
 // Database (V13-ARCH-008): the started app reads and writes the LOOPBACK database v13_local as cdf_v13_app, the same
 // way staging uses its database: V13_E2E_DATABASE_URL, or by default the local primary cluster of `pnpm db:local`
-// with the local-only app password `pnpm db:reset` sets. Anything but a loopback v13_local is refused, because the
-// tests write (switches, task commands) and db:reset rebuilds only that database. The app installs the claims key for
+// with the local-only app password `pnpm db:reset` sets. Anything but the loopback v13_local as cdf_v13_app (no query,
+// no fragment) is refused, because the tests write (switches, task commands), db:reset rebuilds only that database,
+// and another login would bypass the security context the suites test. The app installs the claims key for
 // this run's secret at start (ADR-014), so the database must not hold another key: run `pnpm db:reset` before every
 // local run (CI runs it in the e2e job). The database URL is never printed.
 //
@@ -27,22 +28,34 @@ const sessionSecret = process.env.V13_E2E_SESSION_SECRET?.trim() || randomBytes(
 // Workers inherit the environment: tests that mint a negative-test persona's session read the same secret.
 if (!externalBaseUrl) process.env.V13_E2E_SESSION_SECRET = sessionSecret;
 
-/** The database the locally started app uses: loopback v13_local only (see the header). */
+/**
+ * The database the locally started app uses (see the header): exactly the loopback v13_local as cdf_v13_app, with no
+ * query or fragment. postgres.js turns query parameters into startup parameters that can replace the database and the
+ * user (SEC review of #36), and any other login (a superuser above all) would bypass the security context under test.
+ * The error never contains the URL.
+ */
 function e2eDatabaseUrl(env: Readonly<Record<string, string | undefined>>): string {
   const configured = env.V13_E2E_DATABASE_URL?.trim();
   const password = encodeURIComponent(env.V13_LOCAL_APP_PASSWORD || DEFAULT_LOCAL_APP_PASSWORD);
   const url =
     configured || `postgres://${V13_APP}:${password}@127.0.0.1:${localPrimaryPort(env)}/${LOCAL_DATABASE}`;
-  let database: string;
-  let loopback: boolean;
+  let accepted = false;
   try {
-    database = decodeURIComponent(new URL(url).pathname.replace(/^\//, ""));
-    loopback = isLoopbackUrl(url);
+    const u = new URL(url);
+    accepted =
+      (u.protocol === "postgres:" || u.protocol === "postgresql:") &&
+      isLoopbackUrl(url) &&
+      decodeURIComponent(u.username) === V13_APP &&
+      decodeURIComponent(u.pathname.replace(/^\//, "")) === LOCAL_DATABASE &&
+      u.search === "" &&
+      u.hash === "";
   } catch {
-    throw new Error("V13_E2E_DATABASE_URL is not a valid URL");
+    accepted = false;
   }
-  if (!loopback || database !== LOCAL_DATABASE) {
-    throw new Error(`V13_E2E_DATABASE_URL must point at the loopback database ${LOCAL_DATABASE}`);
+  if (!accepted) {
+    throw new Error(
+      `V13_E2E_DATABASE_URL must be the loopback database ${LOCAL_DATABASE} as ${V13_APP}, with no query or fragment`,
+    );
   }
   return url;
 }
@@ -97,6 +110,9 @@ export default defineConfig({
           V13_SESSION_SECRET: sessionSecret,
           // Set explicitly, so the app never inherits another V13_DATABASE_URL from the shell.
           V13_DATABASE_URL: e2eDatabaseUrl(process.env),
+          // Playwright merges the runner's environment into the server's: the app gets no administrator URL.
+          V13_ADMIN_DATABASE_URL: "",
+          V13_HOSTED_SIM_SUPERUSER_URL: "",
           NEXT_TELEMETRY_DISABLED: "1",
         },
       },
