@@ -11,11 +11,13 @@ import {
   personaSignInStatus,
   PersonaSignInError,
   readSession,
+  reissueSessionToken,
   SESSION_COOKIE_NAME,
   SESSION_COOKIE_OPTIONS,
   SESSION_MAX_AGE_SECONDS,
   SessionConfigError,
   sessionFromClaims,
+  SessionReissueError,
   sessionKey,
   verifySessionToken,
   writeSessionCookie,
@@ -241,5 +243,93 @@ describe("cookie", () => {
       options: { ...SESSION_COOKIE_OPTIONS, maxAge: 0 },
     });
     expect(await readSession(store, { env })).toBeNull();
+  });
+});
+
+describe("workspace switch re-issue (a switch never extends the session)", () => {
+  const at = (ms: number) => new Date(NOW.getTime() + ms);
+  const HOUR = 3_600_000;
+  const deltaClaims = async () => {
+    const token = await createSessionToken(
+      { persona_id: DELTA, active_workspace: "GOVERNANCE" },
+      { env, now: NOW },
+    );
+    const claims = await verifySessionToken(token, { env, now: NOW });
+    if (!claims) throw new Error("expected claims");
+    return claims;
+  };
+
+  it("keeps exp after one switch; the token verifies and maps to the target workspace", async () => {
+    const claims = await deltaClaims();
+    const later = at(2 * HOUR);
+    const { token, maxAge } = await reissueSessionToken(claims, "SECRETARIAT", { env, now: later });
+    const next = await verifySessionToken(token, { env, now: later });
+    expect(next?.exp).toBe(claims.exp);
+    expect(next?.iat).toBe(Math.floor(later.getTime() / 1000));
+    expect(maxAge).toBe(claims.exp - Math.floor(later.getTime() / 1000));
+    expect(maxAge).toBe(6 * 3600);
+    const session = next ? sessionFromClaims(next) : null;
+    expect(session?.identity.active_workspace).toBe("SECRETARIAT");
+    expect(session?.persona.persona_id).toBe(DELTA);
+  });
+
+  it("keeps exp across repeated switches, including one at 7 h 59 m", async () => {
+    let claims = await deltaClaims();
+    const exp = claims.exp;
+    for (const [ms, ws] of [
+      [1 * HOUR, "SECRETARIAT"],
+      [3 * HOUR, "GOVERNANCE"],
+      [7 * HOUR + 59 * 60_000, "SECRETARIAT"],
+    ] as const) {
+      const { token, maxAge } = await reissueSessionToken(claims, ws, { env, now: at(ms) });
+      const next = await verifySessionToken(token, { env, now: at(ms) });
+      if (!next) throw new Error("expected claims");
+      expect(next.exp).toBe(exp);
+      expect(maxAge).toBe(exp - Math.floor(at(ms).getTime() / 1000));
+      claims = next;
+    }
+    expect(exp - Math.floor(at(7 * HOUR + 59 * 60_000).getTime() / 1000)).toBe(60);
+  });
+
+  it("refuses an expired session (code only) and leaves the cookie as it was", async () => {
+    const claims = await deltaClaims();
+    const jar = new Map<string, { value: string; options: unknown }>();
+    const store = {
+      get: (name: string) => (jar.has(name) ? { value: jar.get(name)?.value ?? "" } : undefined),
+      set: (name: string, value: string, options: unknown) => void jar.set(name, { value, options }),
+    };
+    writeSessionCookie(store, "original-token");
+    const before = jar.get(SESSION_COOKIE_NAME);
+    let error: unknown;
+    try {
+      const { token, maxAge } = await reissueSessionToken(claims, "SECRETARIAT", { env, now: at(8 * HOUR) });
+      writeSessionCookie(store, token, maxAge);
+    } catch (e) {
+      error = e;
+    }
+    expect(error).toBeInstanceOf(SessionReissueError);
+    expect((error as SessionReissueError).message).toBe("SESSION_EXPIRED");
+    expect(jar.get(SESSION_COOKIE_NAME)).toEqual(before);
+  });
+
+  it("refuses a lifetime longer than a session, and a workspace code that is not one", async () => {
+    const claims = await deltaClaims();
+    await expect(
+      reissueSessionToken({ ...claims, exp: claims.exp + 60 }, "SECRETARIAT", { env, now: NOW }),
+    ).rejects.toMatchObject({ code: "SESSION_LIFETIME_INVALID" });
+    await expect(reissueSessionToken(claims, "FINANCE", { env, now: NOW })).rejects.toThrow();
+  });
+
+  it("writes the cookie with Max-Age equal to the remaining lifetime, and refuses an out-of-range Max-Age", async () => {
+    const claims = await deltaClaims();
+    const set: unknown[] = [];
+    const store = { set: (_n: string, _v: string, options: unknown) => void set.push(options) };
+    const { token, maxAge } = await reissueSessionToken(claims, "SECRETARIAT", { env, now: at(5 * HOUR) });
+    writeSessionCookie(store, token, maxAge);
+    expect(set[0]).toEqual({ ...SESSION_COOKIE_OPTIONS, maxAge: 3 * 3600 });
+    for (const bad of [0, -1, 1.5, SESSION_MAX_AGE_SECONDS + 1]) {
+      expect(() => writeSessionCookie(store, token, bad)).toThrow(SessionReissueError);
+    }
+    expect(set).toHaveLength(1);
   });
 });

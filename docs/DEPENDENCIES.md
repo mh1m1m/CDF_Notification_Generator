@@ -87,6 +87,19 @@ SDK, any ORM, any dotenv loader (Next.js loads `.env.local` itself; scripts read
 13. **The isolation probe sets `lock_timeout = '2s'` and `statement_timeout = '15s'`**, because the database is shared
     with GC Review: a lock wait counts as inconclusive (FAIL), and the probe never holds up the other application.
 14. **Application code never imports from `tests/`** (ESLint `no-restricted-imports` regex on `app/`, `components/`,
-    `lib/`, `proxy.ts`, `next.config.ts`). SEC's suites live in `tests/security/app` (unit project),
+    `lib/`, `proxy.ts`, `instrumentation.ts`, `next.config.ts`). SEC's suites live in `tests/security/app` (unit project),
     `tests/security/db` (integration project, may use the postgres driver and raw SQL) and `tests/security/e2e`
     (Playwright).
+15. **Frozen evidence copies are neither formatted nor linted.** PROC's ported tests read byte-exact copies of
+    synthetic reference material under `tests/unit/**/__evidence__/`. Their sha256 hashes are recorded in
+    `docs/teams/proc/EVIDENCE_MANIFEST.md`, and they are scanned for personal-data patterns before copying and on every
+    test run. Prettier would rewrite them and break the recorded hashes, so `.prettierignore` and the ESLint ignores
+    exclude exactly that folder name under `tests/unit/` (`tests/unit/eslint-rules.spec.ts` pins the scope). Vitest
+    runs only `*.spec.*` files and `tsc` checks only TypeScript, so nothing in those folders runs as code. Evidence
+    copies live nowhere else.
+16. **`agentRules: false` in `next.config.ts`.** Next.js 16.4 writes an `AGENTS.md` at the project root when
+    `next dev` detects an AI coding agent (option `agentRules`, default true:
+    `node_modules/next/dist/server/config-shared.d.ts` and `server/lib/start-server.js`). `CLAUDE.md` is this
+    repository's only agent-instructions file, so the generated file is turned off. With the option off, Next.js
+    only removes its own marked block from an existing `AGENTS.md`; it never touches `CLAUDE.md`. The related
+    `experimental.agentFeedback` is off unless set to true, and stays unset.

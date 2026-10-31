@@ -105,6 +105,7 @@ describe("application code never imports from tests/", () => {
     ["lib/domain/example.ts", "@/tests/support/fixtures"],
     ["lib/contracts/example.ts", "@/tests"],
     ["proxy.ts", "./tests/support/keys"],
+    ["instrumentation.ts", "./tests/support/keys"],
     ["next.config.ts", "./tests/support/headers"],
   ])("is an error in %s (%s)", async (file, source) => {
     expect(fromTests(await messagesFor(file, importing(source))), `${file} ← ${source}`).toBe(true);
@@ -118,6 +119,23 @@ describe("application code never imports from tests/", () => {
       ["lib/auth/example.ts", "@/testsuite/x"],
     ] as const) {
       expect(fromTests(await messagesFor(file, importing(source))), `${file} ← ${source}`).toBe(false);
+    }
+  });
+});
+
+describe("frozen evidence copies (docs/DEPENDENCIES.md decision 15)", () => {
+  it("ignores files under tests/unit/**/__evidence__/ only", async () => {
+    for (const file of ["tests/unit/domain/__evidence__/ui_v9.js", "tests/unit/a/b/__evidence__/c/d.js"]) {
+      expect(await eslint.isPathIgnored(file), file).toBe(true);
+    }
+    for (const file of [
+      "tests/unit/domain/helper.js",
+      "tests/unit/domain/status.spec.ts",
+      "tests/unit/domain/__evidence__.spec.ts",
+      "lib/domain/__evidence__/x.ts",
+      "tests/integration/__evidence__/x.ts",
+    ]) {
+      expect(await eslint.isPathIgnored(file), file).toBe(false);
     }
   });
 });
