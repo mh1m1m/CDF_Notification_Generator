@@ -1,6 +1,6 @@
 # DB status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 18:55 UTC · Team DB · Reviewer of DB PRs: SEC
+Updated: 2026-10-31 19:10 UTC · Team DB · Reviewer of DB PRs: SEC
 
 ## Delivery plan (ruled by the Chief Architect)
 
@@ -10,6 +10,8 @@ Updated: 2026-10-31 18:55 UTC · Team DB · Reviewer of DB PRs: SEC
 | (b) `[V13-DB-002]` | `feature/V13-DB-002-case-registry-notifications`, stacked on (a) | migrations 0002–0004, seed part 2 (cases), `scripts/db/rehearse-shared.mjs`, case-access suite, FE contract ruling on 0002, persona-registry tests un-skipped | COMPLETE — #15 merged 7a79857 (SEC ACCEPT) |
 | (c) `[V13-DB-007]` | `feature/V13-DB-007-workspace-switch`, stacked on (b) | migration 0005 `api_switch_workspace` (ids-only WORKSPACE_SWITCHED audit), workspace-switch suite (14), definer allow-list entry | COMPLETE — #17 merged e6717de (SEC ACCEPT) |
 | (d) `[V13-DB-008]` | `feature/V13-DB-008-case-workspace-reads`, stacked on (c) | migration 0006: `case_events`, `case_tasks`, `case_header.my_capacity` (FE-004, ARCH ruling 28 Oct), case-workspace suite (22) | COMPLETE — #21 merged c4b37c3 (SEC ACCEPT) |
+| `[V13-DB-006]` | `feature/V13-DB-006-rehearsal-ci` | CI job "Shared-database rehearsal" (`.github/workflows/ci.yml`, ARCH-agreed edit) + this status refresh | IN_PROGRESS — PR #26, review pending |
+| `[V13-DB-009]` | `feature/V13-DB-009-claims-key-health`, stacked on #26 | migration 0007 `claims_key_state`; `/api/health` reports `db.claims_key` (closes OI-022) | IN_PROGRESS — PR open, review pending |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -46,6 +48,17 @@ Updated: 2026-10-31 18:55 UTC · Team DB · Reviewer of DB PRs: SEC
 - V13-DB-008 — migration 0006: SECURITY INVOKER Case Workspace reads; persons appear only as capacity codes or an
   is-mine flag.
 
+## In progress: V13-DB-009 (OI-022)
+- Migration 0007: `claims_key_state(p_probe_mac text)`, SECURITY DEFINER owned by `cdf_v13_owner`, `search_path = ''`,
+  EXECUTE for `cdf_v13_user` only. Input: base64url HMAC-SHA256(K, `cdf-v13/claims-key-probe/v1|<xid>`), computed by
+  the app in the same transaction. Output: `INSTALLED_MATCH`, `INSTALLED_MISMATCH` or `NOT_INSTALLED`; no key
+  material, no audit row.
+- `lib/db/health-probe.ts` probes as the request role; `/api/health` reports `db.claims_key`. `INSTALLED_MISMATCH` →
+  503 `CLAIMS_KEY_MISMATCH`; `NOT_INSTALLED` → 503 `CLAIMS_KEY_NOT_INSTALLED`; no usable `V13_SESSION_SECRET` →
+  `NOT_CHECKED`, not degraded (such a deployment serves no signed-in request). Isolation failures are reported first.
+- Tests: `tests/integration/claims-key-state.spec.ts` (12), `tests/unit/claims-key-probe.spec.ts` (4), health-route
+  unit cases (+2), definer allow-list entry.
+
 ## Changed files (PR (a))
 - database/migrations/0001_identity_access_audit.sql, database/seed/0001_m1_synthetic.sql,
   database/hosted/reset_claims_key.sql
@@ -76,8 +89,8 @@ Per-PR counts are in each PR description, from runs on the PR head. Final local 
 ## Dependencies and requests
 - ARCH: a CI job that runs `node scripts/db/rehearse-shared.mjs` when `database/**` changes (V13-DB-006 acceptance;
   the script lands in PR (b)).
-- ARCH follow-up after (a): report a key mismatch in `/api/health`.
-- Hosted: the Chief Architect applies 0001–0006 with the plan procedure. DB never connects. Hosted notes:
+- ARCH follow-up after (a): report a key mismatch in `/api/health` — V13-DB-009 (above).
+- Hosted: the Chief Architect applies 0001–0006 (0007 after V13-DB-009 merges) with the plan procedure. DB never connects. Hosted notes:
   every deployment that shares the schema (previews included) must use the same `V13_SESSION_SECRET`, because the
   claims key is installed first-writer-wins at server start; seed part 2 needs 0001–0004; every request now takes a
-  transaction id (`pg_current_xact_id()`), negligible at prototype load (SEC INFO).
+  transaction id (`pg_current_xact_id()`), negligible at prototype load (SEC INFO); a health call with a session secret takes one too (V13-DB-009).
