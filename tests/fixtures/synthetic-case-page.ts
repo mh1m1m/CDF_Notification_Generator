@@ -109,7 +109,11 @@ export async function openFixture(
   await page.route(`${FIXTURE_ORIGIN}/**`, async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/rsc-payload")
-      return route.fulfill({ status: 200, contentType: "text/x-component", body: rscPayload });
+      return route.fulfill({
+        status: 200,
+        contentType: "text/x-component",
+        body: Buffer.from(rscPayload, "utf8"),
+      });
     return route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: html });
   });
   await page.goto(`${FIXTURE_ORIGIN}${path}`);
