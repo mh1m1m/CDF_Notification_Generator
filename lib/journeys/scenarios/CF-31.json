@@ -1,0 +1,344 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "CF-31",
+  "title": {
+    "ar": "عرض حزمة التوصيات للمداولة: التصويت لا يُعرض مفتوحاً قبل تسجيل فتحه",
+    "en": "Package submitted for deliberation: the vote is shown open only after BALLOT_OPENED"
+  },
+  "journey": "J-RECOMMENDATION-COMMITTEE",
+  "assignment_id": "CF-31",
+  "recipient_class": "MEMBER",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6f5",
+    "internal_ref": "CDF-DEMO-2026-0031",
+    "track": "IR",
+    "classification": "INTERNAL",
+    "status": {
+      "code": "S4.01",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0031"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-949002e2ade3",
+    "type": "RECOMMENDATION",
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6f5",
+    "journey_id": "J-RECOMMENDATION-COMMITTEE",
+    "status": "DRAFT",
+    "status_source_event_id": "evt-CF-31-01",
+    "related_objects": [
+      {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-5f745fe4c5e5"
+      }
+    ],
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-CF-31-01",
+      "type": "RECOMMENDATION_DRAFTED",
+      "occurred_at": "2026-10-23T08:00:00Z",
+      "recorded_at": "2026-10-23T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f5",
+      "object": {
+        "type": "RECOMMENDATION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade3"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-31.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-31",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-31-02",
+      "type": "PACKAGE_SUBMITTED_FOR_VOTE",
+      "occurred_at": "2026-10-23T09:00:00Z",
+      "recorded_at": "2026-10-23T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f5",
+      "object": {
+        "type": "RECOMMENDATION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade3"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-31.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-31",
+      "payload": {}
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S4",
+      "substate": "S4.01",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S4",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/1/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/1/2",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-31-02"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/2/1",
+        "state": "PENDING"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/2/2",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/2/3",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/3/1",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/3/2",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/3/3",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/4/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/4/2",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/4/3",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/5/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-RECOMMENDATION-COMMITTEE/5/2",
+        "kind": "EXPECTED"
+      }
+    ],
+    "stage_n": 2,
+    "notice_location": "actual",
+    "derived": {
+      "ballot_open": false
+    },
+    "notes_include": ["STAGE_DIFFERS_FROM_ASSIGNMENT"],
+    "must_not": [
+      "● on J-RECOMMENDATION-COMMITTEE/2/2",
+      "✔ on J-RECOMMENDATION-COMMITTEE/2/1",
+      "derived.ballot_open"
+    ]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "L2 «● 1. إعداد حزمة التوصيات وعرضها للمداولة»; L3 «✔ الإعداد / ● العرض للمداولة»; marker «↳ هذا الإشعار: التصويت مفتوح» — a vote stated open with no ballot record; the reported submission itself shown in progress (W3 F5).",
+    "evidence": [
+      "notifications/eml/ar/CF-31_PACKAGE_SUBMITTED_FOR_DELIBERATION.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-31 ar",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md F5"
+    ]
+  },
+  "variants": [
+    {
+      "id": "CF-31-V1",
+      "title": {
+        "ar": "بعد انعقاد الاجتماع وتسجيل فتح التصويت",
+        "en": "After MEETING_OPENED and BALLOT_OPENED are recorded"
+      },
+      "events_add": [
+        {
+          "event_id": "evt-CF-31-03",
+          "type": "MEETING_OPENED",
+          "occurred_at": "2026-10-25T09:00:00Z",
+          "recorded_at": "2026-10-25T09:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f5",
+          "object": {
+            "type": "MEETING",
+            "id": "0b1ec700-0000-4000-8000-5f745fe4c5e5"
+          },
+          "actor": {
+            "capacity": "CHAIR",
+            "id": "usr-demo-chair"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-31.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-31",
+          "payload": {
+            "related": ["0b1ec700-0000-4000-8000-949002e2ade3"]
+          }
+        },
+        {
+          "event_id": "evt-CF-31-04",
+          "type": "BALLOT_OPENED",
+          "occurred_at": "2026-10-25T10:00:00Z",
+          "recorded_at": "2026-10-25T10:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6f5",
+          "object": {
+            "type": "BALLOT",
+            "id": "0b1ec700-0000-4000-8000-5847d35bc573"
+          },
+          "actor": {
+            "capacity": "SECRETARY",
+            "id": "usr-demo-secretary"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-31.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-31",
+          "payload": {
+            "target": "0b1ec700-0000-4000-8000-949002e2ade3"
+          }
+        }
+      ],
+      "expected": {
+        "actual": [
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/1/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/1/2",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/2/1",
+            "state": "COMPLETED",
+            "evidence_event_id": "evt-CF-31-04"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/2/2",
+            "state": "IN_PROGRESS",
+            "evidence_event_id": "evt-CF-31-04"
+          }
+        ],
+        "expected_steps": [
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/2/3",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/3/1",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/3/2",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/3/3",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/4/1",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/4/2",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/4/3",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/5/1",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-RECOMMENDATION-COMMITTEE/5/2",
+            "kind": "EXPECTED"
+          }
+        ],
+        "stage_n": 2,
+        "derived": {
+          "ballot_open": true,
+          "ballot_open_event_id": "evt-CF-31-04"
+        },
+        "must_not": ["✔ on J-RECOMMENDATION-COMMITTEE/2/2", "✔ on J-RECOMMENDATION-COMMITTEE/2/3"]
+      }
+    }
+  ]
+}

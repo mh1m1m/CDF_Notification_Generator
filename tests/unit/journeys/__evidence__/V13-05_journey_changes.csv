@@ -1,0 +1,157 @@
+﻿journey,stage_or_step,value_26b,value_v13,reason,w3_finding
+J-WB-REPORTER,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-WB-REPORTER,(lifecycle),not modelled,"returnable=yes, suspendable=yes, reopenable=no, cancellable=no, early_termination=yes",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-WB-REPORTER,J-WB-REPORTER/2/3,text shown to the public recipient,text unchanged; flagged disclosure_review (owner to rule),W3 F8/3.3: paraphrases internal WB-S1-04; owner to rule whether the fact is disclosable,F8
+J-WB-REPORTER,J-WB-REPORTER/3/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on whether the report data is complete,F3 F9 F15
+J-WB-REPORTER,stage 4,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: the preliminary assessment outcome,F3 F9 F15
+J-WB-REPORTER,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F3 F9 F15
+J-IR-REFERRER,(journey),five-stage strip shown for every journey,structure LINEAR; summary5 true,"W3 3.4: the five cells stay only where the object is genuinely linear (DR mandate, IR referral intake)",W3 3.4
+J-IR-REFERRER,(lifecycle),not modelled,"returnable=yes, suspendable=yes, reopenable=no, cancellable=no, early_termination=yes",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-IR-REFERRER,J-IR-REFERRER/1/2,text shown to the scope recipient,text unchanged; flagged disclosure_review (owner to rule),W3 F8: same fact as internal IR-S1-02; owner to rule,F8
+J-IR-REFERRER,J-IR-REFERRER/1/3,text shown to the scope recipient,text unchanged; flagged disclosure_review (owner to rule),W3 F8: short-title hit IR-S1-03; owner to rule,F8
+J-IR-REFERRER,J-IR-REFERRER/3/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on whether the referral documents are complete,F4 F8 F13
+J-IR-REFERRER,stage 4,untyped sequential stage,SEQUENCE skipped only by early termination,"Skipped only by early termination of the referral path (T09 transfer, T12 closure at screening, T34 closure as incomplete): lifecycle.early_termination, not a branch (W3 3.4: genuinely linear)",W3 3.4
+J-IR-REFERRER,J-IR-REFERRER/4/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on whether clarifications are needed from you,F4 F8 F13
+J-IR-REFERRER,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F4 F8 F13
+J-IR-REFERRER,J-IR-REFERRER/5/1,text shown to the scope recipient,text unchanged; flagged disclosure_review (owner to rule),W3 F8: short-title hit IR-S5-01; owner to rule,F8
+J-INTAKE-SECRETARY,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-INTAKE-SECRETARY,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-INTAKE-SECRETARY,stage 3,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: whether the matter is not already a registered case,F13
+J-INTAKE-SECRETARY,J-INTAKE-SECRETARY/3/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on whether the matter came from a referring body,F13
+J-INTAKE-SECRETARY,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F13
+J-DR-PREPARER,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-DR-PREPARER,(lifecycle),not modelled,"returnable=yes, suspendable=no, reopenable=yes, cancellable=no, early_termination=yes",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-DR-PREPARER,stage 4,untyped sequential stage,BRANCH,Branch: which step applies depends on the recorded outcome of the previous step,F16 F20
+J-DR-PREPARER,J-DR-PREPARER/4/2,sequential sub-step (no kind),ALTERNATIVE (alternative group J-DR-PREPARER/G-REJECTION-RESPONSE),Applies only depending on rejection of the referral,F16 F20
+J-DR-PREPARER,J-DR-PREPARER/4/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on an objection to the rejection,F16 F20
+J-DR-PREPARER,J-DR-PREPARER/4/4,(absent),PROPOSED-NEW ALTERNATIVE: «التصحيح وإعادة التقديم بعد الرفض» / Corrected and resubmitted after rejection,TARGET 3.1: after REJECTED the sector may RESUBMIT or OBJECT (rejection is not final); resubmission restarts the head approval (reopen_to 2/1),F16 F20
+J-DR-PREPARER,J-DR-PREPARER/4/4,sequential sub-step (no kind),ALTERNATIVE (alternative group J-DR-PREPARER/G-REJECTION-RESPONSE),Applies only depending on rejection of the referral,F16 F20
+J-DR-PREPARER,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F16 F20
+J-DR-SECRETARY,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-DR-SECRETARY,(lifecycle),not modelled,"returnable=yes, suspendable=no, reopenable=yes, cancellable=no, early_termination=yes",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-DR-SECRETARY,J-DR-SECRETARY/2/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on whether the referral is complete,F20
+J-DR-SECRETARY,stage 4,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: a sector objection to the rejection,F20
+J-DR-SECRETARY,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F20
+J-DR-AUTHORITY,(journey),five-stage strip shown for every journey,structure LINEAR; summary5 true,"W3 3.4: the five cells stay only where the object is genuinely linear (DR mandate, IR referral intake)",W3 3.4
+J-DR-AUTHORITY,(lifecycle),not modelled,"returnable=no, suspendable=yes, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-DR-AUTHORITY,J-DR-AUTHORITY/3/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on whether the scope needs clarification,F8
+J-DR-AUTHORITY,J-DR-AUTHORITY/4/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on whether further information is needed,F8
+J-DR-AUTHORITY,J-DR-AUTHORITY/4/4,sequential sub-step (no kind),OPTIONAL,May occur without blocking the path,F8
+J-DR-AUTHORITY,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F8
+J-DR-AUTHORITY,J-DR-AUTHORITY/5/1,visible to the journey disclosure class (scope),visibility internal,W3 F8: the Arabic text contains the internal DR-S4-01 title; visibility internal only,F8
+J-CHAIR-DIRECTION,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-CHAIR-DIRECTION,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-CHAIR-DIRECTION,stage 2,untyped sequential stage,CHOICE,Alternatives: exactly one is selected by a recorded event; selecting one never completes the others,F1 F2 F13 F20
+J-CHAIR-DIRECTION,J-CHAIR-DIRECTION/2/1,sequential sub-step (no kind),ALTERNATIVE (alternative group J-CHAIR-DIRECTION/G-DIRECTION),One of several mutually exclusive paths,F1 F2 F13 F20
+J-CHAIR-DIRECTION,J-CHAIR-DIRECTION/2/2,sequential sub-step (no kind),ALTERNATIVE (alternative group J-CHAIR-DIRECTION/G-DIRECTION),One of several mutually exclusive paths,F1 F2 F13 F20
+J-CHAIR-DIRECTION,J-CHAIR-DIRECTION/2/3,sequential sub-step (no kind),ALTERNATIVE (alternative group J-CHAIR-DIRECTION/G-DIRECTION),One of several mutually exclusive paths,F1 F2 F13 F20
+J-CHAIR-DIRECTION,J-CHAIR-DIRECTION/2/4,sequential sub-step (no kind),ALTERNATIVE (alternative group J-CHAIR-DIRECTION/G-DIRECTION),One of several mutually exclusive paths,F1 F2 F13 F20
+J-CHAIR-DIRECTION,J-CHAIR-DIRECTION/2/5,(absent),PROPOSED-NEW ALTERNATIVE: «إرجاء التوجيه» / Direction deferred,Charter 3.3 direction DEFER; what a deferral requires and when the matter returns to the chair is SOURCE_REQUIRED,F1 F2 F13 F20
+J-CHAIR-DIRECTION,J-CHAIR-DIRECTION/2/5,sequential sub-step (no kind),ALTERNATIVE (alternative group J-CHAIR-DIRECTION/G-DIRECTION),One of several mutually exclusive paths,F1 F2 F13 F20
+J-CHAIR-DIRECTION,J-CHAIR-DIRECTION/2/5,(no governance status),governance_status SOURCE_REQUIRED,Charter 3.3 direction DEFER; what a deferral requires and when the matter returns to the chair is SOURCE_REQUIRED,F1 F2 F13 F20
+J-CHAIR-DIRECTION,stage 3,untyped sequential stage,BRANCH,Branch: which step applies depends on the recorded outcome of the previous step,F1 F2 F13 F20
+J-CHAIR-DIRECTION,J-CHAIR-DIRECTION/3/3,(no governance status),governance_status SOURCE_REQUIRED,CF-19 register open point: procedural votes are not modelled; whether they are allowed is SOURCE_REQUIRED. A vote is open only with BALLOT_OPENED.,F1 F2 F13 F20
+J-CHAIR-DIRECTION,stage 4,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: the direction not being deferred,F1 F2 F13 F20
+J-CHAIR-DIRECTION,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F1 F2 F13 F20
+J-MEETING,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-MEETING,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=yes, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-MEETING,J-MEETING/1/4,«إعادة الجدولة أو الإلغاء عند الاقتضاء» / Rescheduled or cancelled where required,«إعادة الجدولة عند الاقتضاء» / Rescheduled where required,"26b 1/4 bundled rescheduling and cancellation (W3 F15); split into 1/4 (reschedule) and 1/5 (cancellation, terminal)",F15
+J-MEETING,J-MEETING/1/4,sequential sub-step (no kind),CONDITIONAL,Applies only depending on a change of date or place,F15
+J-MEETING,J-MEETING/1/5,(absent),PROPOSED-NEW CONDITIONAL: «إلغاء الاجتماع عند الاقتضاء» / Meeting cancelled where required,Split from the bundled 26b step,F6 F15 F20
+J-MEETING,J-MEETING/1/5,sequential sub-step (no kind),CONDITIONAL,Applies only depending on cancellation of the meeting,F6 F15 F20
+J-MEETING,J-MEETING/2/4,sequential sub-step (no kind),CONDITIONAL,Applies only depending on a conflict-of-interest concern being raised,F6 F15 F20
+J-MEETING,J-MEETING/3/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on an item being put to a vote,F6 F15 F20
+J-MEETING,J-MEETING/3/4,sequential sub-step (no kind),CONDITIONAL,Applies only depending on an item being put to a vote,F6 F15 F20
+J-MEETING,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F6 F15 F20
+J-MEETING,J-MEETING/5/2,sequential sub-step (no kind),OPTIONAL,May occur without blocking the path,F6 F15 F20
+J-COMMITTEE-TASK,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-COMMITTEE-TASK,(lifecycle),not modelled,"returnable=yes, suspendable=no, reopenable=no, cancellable=yes, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-COMMITTEE-TASK,J-COMMITTEE-TASK/3/2,sequential sub-step (no kind),OPTIONAL,May occur without blocking the path,F5 F13 F20
+J-COMMITTEE-TASK,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F5 F13 F20
+J-INVESTIGATION,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-INVESTIGATION,(lifecycle),not modelled,"returnable=no, suspendable=yes, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-INVESTIGATION,J-INVESTIGATION/1/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on an approved amendment of the mandate,F13 F15 F17
+J-INVESTIGATION,stage 3,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: approval of escalation to an extended investigation,F13 F15 F17
+J-INVESTIGATION,J-INVESTIGATION/4/2,position 4.3,position 4/2,W3 F17: re-sequenced before the submission for review (26b order 4/3 -> V13 4/2),F17
+J-INVESTIGATION,J-INVESTIGATION/4/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on an extended investigation,F17
+J-INVESTIGATION,J-INVESTIGATION/4/3,position 4.2,position 4/3,W3 F17: re-sequenced after the results presentation (26b order 4/2 -> V13 4/3),F17
+J-INVESTIGATION,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F13 F15 F17
+J-EVIDENCE-REQUEST,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-EVIDENCE-REQUEST,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-EVIDENCE-REQUEST,stage 4,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: the documents provided being incomplete,F13 F15
+J-EVIDENCE-REQUEST,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F13 F15
+J-STATEMENT-PARTY,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-STATEMENT-PARTY,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-STATEMENT-PARTY,stage 2,untyped sequential stage,PARALLEL,Steps without a recorded order between them; typed PARALLEL instead of a false sequence,W3 3.2 matrix
+J-STATEMENT-PARTY,J-STATEMENT-PARTY/2/1,sequential sub-step (no kind),PARALLEL,No recorded order relative to its siblings,W3 3.2 matrix
+J-STATEMENT-PARTY,J-STATEMENT-PARTY/2/2,sequential sub-step (no kind),PARALLEL,No recorded order relative to its siblings,W3 3.2 matrix
+J-STATEMENT-PARTY,stage 3,untyped sequential stage,CHOICE,Alternatives: exactly one is selected by a recorded event; selecting one never completes the others,W3 3.2 matrix
+J-STATEMENT-PARTY,J-STATEMENT-PARTY/3/1,sequential sub-step (no kind),ALTERNATIVE (alternative group J-STATEMENT-PARTY/G-STATEMENT-MODE),One of several mutually exclusive paths,W3 3.2 matrix
+J-STATEMENT-PARTY,J-STATEMENT-PARTY/3/2,sequential sub-step (no kind),ALTERNATIVE (alternative group J-STATEMENT-PARTY/G-STATEMENT-MODE),One of several mutually exclusive paths,W3 3.2 matrix
+J-STATEMENT-PARTY,stage 4,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: the statement being given in a session,W3 3.2 matrix
+J-STATEMENT-PARTY,J-STATEMENT-PARTY/4/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on your request to correct the record,W3 3.2 matrix
+J-STATEMENT-PARTY,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",W3 3.2 matrix
+J-WITNESS,(journey),five-stage strip shown for every journey,structure LINEAR; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (linear object, but not one of the two W3 3.4 five-phase objects; W3 F24 suggests 2-3 slots); Layer A / Layer B steps carry the progress",W3 3.4 F24
+J-WITNESS,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=yes, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-WITNESS,J-WITNESS/2/1,sequential sub-step (no kind),OPTIONAL,May occur without blocking the path,F13 F24
+J-WITNESS,J-WITNESS/4/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on your request to correct the record,F13 F24
+J-WITNESS,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F13 F24
+J-DEFENCE,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-DEFENCE,(lifecycle),not modelled,"returnable=no, suspendable=yes, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-DEFENCE,J-DEFENCE/1/2,sequential sub-step (no kind),OPTIONAL,May occur without blocking the path,F13
+J-DEFENCE,stage 3,untyped sequential stage,PARALLEL,Steps without a recorded order between them; typed PARALLEL instead of a false sequence,F13
+J-DEFENCE,J-DEFENCE/3/1,sequential sub-step (no kind),PARALLEL,No recorded order relative to its siblings,F13
+J-DEFENCE,J-DEFENCE/3/2,sequential sub-step (no kind),OPTIONAL,May occur without blocking the path,F13
+J-DEFENCE,J-DEFENCE/4/1,sequential sub-step (no kind),OPTIONAL,May occur without blocking the path,F13
+J-DEFENCE,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F13
+J-DEFENCE,J-DEFENCE/5/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on a defence being submitted,F13
+J-RECOMMENDATION-COMMITTEE,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-RECOMMENDATION-COMMITTEE,(lifecycle),not modelled,"returnable=yes, suspendable=no, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-RECOMMENDATION-COMMITTEE,stage 3,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: a legal review being requested,F5 F15 F16 F20
+J-RECOMMENDATION-COMMITTEE,J-RECOMMENDATION-COMMITTEE/3/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on the legal opinion conflicting with the recommendation,F5 F15 F16 F20
+J-RECOMMENDATION-COMMITTEE,J-RECOMMENDATION-COMMITTEE/4/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on the authority returning the recommendation to the committee,F5 F15 F16 F20
+J-RECOMMENDATION-COMMITTEE,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F5 F15 F16 F20
+J-LEGAL-REVIEW,(journey),five-stage strip shown for every journey,structure LINEAR; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (linear object, but not one of the two W3 3.4 five-phase objects; W3 F24 suggests 2-3 slots); Layer A / Layer B steps carry the progress",W3 3.4 F24
+J-LEGAL-REVIEW,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-LEGAL-REVIEW,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F13 F24
+J-DECISION-AUTHORITY,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-DECISION-AUTHORITY,(lifecycle),not modelled,"returnable=yes, suspendable=no, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-DECISION-AUTHORITY,J-DECISION-AUTHORITY/2/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on the recommendation being returned to the committee,F5 F13 F18
+J-DECISION-AUTHORITY,stage 4,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: notification or execution being required,F5 F13 F18
+J-DECISION-AUTHORITY,J-DECISION-AUTHORITY/4/3,sequential sub-step (no kind),CONDITIONAL,Applies only depending on a grievance being filed,F5 F13 F18
+J-DECISION-AUTHORITY,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F5 F13 F18
+J-DECISION-SUBJECT,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-DECISION-SUBJECT,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-DECISION-SUBJECT,J-DECISION-SUBJECT/1/2,sequential sub-step (no kind),OPTIONAL,May occur without blocking the path,F13
+J-DECISION-SUBJECT,stage 3,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: a grievance being filed within the period,F13
+J-DECISION-SUBJECT,stage 4,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: a grievance being filed within the period,F13
+J-DECISION-SUBJECT,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F13
+J-SANCTION-EXTRACT,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4 F24
+J-SANCTION-EXTRACT,(lifecycle),not modelled,"returnable=yes, suspendable=no, reopenable=no, cancellable=no, early_termination=yes",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-SANCTION-EXTRACT,stage 3,untyped sequential stage,BRANCH,Branch: which step applies depends on the recorded outcome of the previous step,F13 F24
+J-SANCTION-EXTRACT,stage 4,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: approval of the extract,F13 F24
+J-SANCTION-EXTRACT,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F13 F24
+J-IMPLEMENTATION,(journey),five-stage strip shown for every journey,structure LINEAR; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (linear object, but not one of the two W3 3.4 five-phase objects; W3 F24 suggests 2-3 slots); Layer A / Layer B steps carry the progress",W3 3.4 F24
+J-IMPLEMENTATION,(lifecycle),not modelled,"returnable=no, suspendable=yes, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-IMPLEMENTATION,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F18 F24
+J-ALERT,(journey),five-stage strip shown for every journey,structure LINEAR; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (linear object, but not one of the two W3 3.4 five-phase objects; W3 F24 suggests 2-3 slots); Layer A / Layer B steps carry the progress",W3 3.4
+J-ALERT,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=no, early_termination=no",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-ALERT,J-ALERT/3/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on the deadline being exceeded,F14
+J-ALERT,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F14
+J-ALERT,(journey),three levels on the alert card,three levels kept (NO CHANGE),W3 F14 recommends dropping Level 2/3 for alerts; NOT ADOPTED: the owner decision of 26 Oct (three levels on every card) prevails,F14
+J-RESTRICTION-LIFT,(journey),five-stage strip shown for every journey,structure BRANCHING; summary5 false,"W3 3.4: five sequential cells are not an honest summary here (typed branches, alternatives, returns or exception exits); Layer A / Layer B steps carry the progress",W3 3.4
+J-RESTRICTION-LIFT,(lifecycle),not modelled,"returnable=no, suspendable=no, reopenable=no, cancellable=yes, early_termination=yes",Charter section 4 lifecycle flags; the events that set them are in lifecycle.events (facts win over flags at resolution time),F11 (W3 3.4 matrix)
+J-RESTRICTION-LIFT,J-RESTRICTION-LIFT/2/2,sequential sub-step (no kind),OPTIONAL,May occur without blocking the path,F20
+J-RESTRICTION-LIFT,stage 3,untyped sequential stage,BRANCH,Branch: which step applies depends on the recorded outcome of the previous step,F20
+J-RESTRICTION-LIFT,J-RESTRICTION-LIFT/3/2,sequential sub-step (no kind),CONDITIONAL,Applies only depending on a change in the preview result,F20
+J-RESTRICTION-LIFT,stage 4,untyped sequential stage,CONDITION,Stage applies only under a recorded condition: approval of the request,F20
+J-RESTRICTION-LIFT,stage 5,untyped sequential stage,TERMINAL,"Final stage typed TERMINAL: its terminal step closes this object, never the case (owner rule 26 Oct)",F20
+J-MEETING,COM-07 -> J-MEETING/1/5,step index 4,step 5,W3 F15: cancellation split from rescheduling into its own terminal conditional step 1/5,F15
+J-INVESTIGATION,INV-08 -> J-INVESTIGATION/4/3,step index 2,step 3,W3 F17: submission for review re-sequenced after the results presentation,F17
+J-INVESTIGATION,INV-09 -> J-INVESTIGATION/3/4,stage 4 (step index 0),"stage 3, step J-INVESTIGATION/3/4","The notice reports CASE_STATUS_RECORDED T18 (HEARINGS_COMPLETED_AND_DEFENSE_OBSERVED), which completes J-INVESTIGATION 3/4 ""Hearings completed""; 26b placed it at stage 4 with step 0 (W3 F5, 4.3)",F5 F17 F19
+J-DR-PREPARER,CF-02 -> J-DR-PREPARER/1/2,step index 1,step 2,"The returned referral must be resubmitted: the pending step is 1/2 ""Submitted to the sector head""; 1/1 (prepared) stays a recorded fact (W3 F16)",F16
+J-WB-REPORTER,CF-12 -> J-WB-REPORTER/1/1,step index 2,step 1,"The CF-12 trigger is public_api.submit_report (register, FACT): it reports REPORT_RECEIVED, the completion event of 1/1 «وصول البلاغ عبر القناة المعتمدة»; the acknowledgement (1/2) is a separate record (REPORT_ACKNOWLEDGED, reported by WB-01). W3 section 5 overlap pair CF-12/WB-01 now reports two different events",F5 F19
+J-DEFENCE,CF-23 -> J-DEFENCE/2/1,step index 2,step 1,The defence notice is its own step (2/1); the period start (2/2) needs its own recorded event (DEC-F18: duration SOURCE_REQUIRED),F5 F19
+J-INVESTIGATION,CF-23d -> J-INVESTIGATION/4/2,step index 3,step 2,W3 F17: results presented (S3.06) re-sequenced before the submission for review (S3.07),F17
+J-MEETING,CF-25 -> J-MEETING/1/5,step index 4,step 5,W3 F15: cancellation split from rescheduling into its own terminal conditional step 1/5,F15
+J-RECOMMENDATION-COMMITTEE,CF-34 -> J-RECOMMENDATION-COMMITTEE/3/2,step index 3,step 2,"The notice reports LEGAL_OPINION_SUBMITTED, the completion event of 3/2 ""Legal opinion""; the return to the committee (3/3) is a separate recorded event (W3 F16)",F16

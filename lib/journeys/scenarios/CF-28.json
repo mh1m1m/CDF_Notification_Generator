@@ -1,0 +1,582 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "CF-28",
+  "title": {
+    "ar": "تذكير بمراجعة المحضر: التذكير المسجل لا يُكمل خطوة المراجعة",
+    "en": "Minutes review reminder: a recorded reminder never completes the review step"
+  },
+  "journey": "J-MEETING",
+  "assignment_id": "CF-28",
+  "recipient_class": "MEMBER",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+    "internal_ref": "CDF-DEMO-2026-0028",
+    "track": "IR",
+    "classification": "INTERNAL",
+    "status": {
+      "code": "S4.01",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0028"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-949002e2ad67",
+    "type": "MEETING",
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+    "journey_id": "J-MEETING",
+    "status": "MINUTES_UNDER_REVIEW",
+    "status_source_event_id": "evt-CF-28-10",
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-CF-28-01",
+      "type": "AGENDA_APPROVED",
+      "occurred_at": "2026-10-24T08:00:00Z",
+      "recorded_at": "2026-10-24T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "CHAIR",
+        "id": "usr-demo-chair"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-02",
+      "type": "MEETING_SCHEDULED",
+      "occurred_at": "2026-10-24T09:00:00Z",
+      "recorded_at": "2026-10-24T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-03",
+      "type": "PARTICIPANTS_INVITED",
+      "occurred_at": "2026-10-24T10:00:00Z",
+      "recorded_at": "2026-10-24T10:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-04",
+      "type": "MEETING_PACK_RELEASED",
+      "occurred_at": "2026-10-24T11:00:00Z",
+      "recorded_at": "2026-10-24T11:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-05",
+      "type": "COI_DECLARATION_REQUESTED",
+      "occurred_at": "2026-10-24T12:00:00Z",
+      "recorded_at": "2026-10-24T12:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-06",
+      "type": "COI_DECLARATIONS_COMPLETE",
+      "occurred_at": "2026-10-24T13:00:00Z",
+      "recorded_at": "2026-10-24T13:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-07",
+      "type": "MEETING_OPENED",
+      "occurred_at": "2026-10-24T14:00:00Z",
+      "recorded_at": "2026-10-24T14:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "CHAIR",
+        "id": "usr-demo-chair"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-08",
+      "type": "MEETING_CLOSED",
+      "occurred_at": "2026-10-24T15:00:00Z",
+      "recorded_at": "2026-10-24T15:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "CHAIR",
+        "id": "usr-demo-chair"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-09",
+      "type": "MINUTES_DRAFTED",
+      "occurred_at": "2026-10-24T16:00:00Z",
+      "recorded_at": "2026-10-24T16:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-10",
+      "type": "MINUTES_UNDER_REVIEW",
+      "occurred_at": "2026-10-24T17:00:00Z",
+      "recorded_at": "2026-10-24T17:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-28-11",
+      "type": "NOTIFICATION_SENT",
+      "occurred_at": "2026-10-24T18:00:00Z",
+      "recorded_at": "2026-10-24T18:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+      "object": {
+        "type": "NOTIFICATION",
+        "id": "ntf-CF-28-earlier"
+      },
+      "actor": {
+        "capacity": "SYSTEM",
+        "id": "usr-demo-system"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-28",
+      "payload": {
+        "template_code": "MINUTES_REVIEW_REMINDER",
+        "purpose": "MINUTES_REVIEW_REMINDER",
+        "subject_object_id": "0b1ec700-0000-4000-8000-949002e2ad67"
+      }
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S4",
+      "substate": "S4.01",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S4",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-MEETING/1/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/1/2",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/1/3",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/1/4",
+        "state": "NOT_APPLICABLE",
+        "note": "CONDITION_DID_NOT_ARISE"
+      },
+      {
+        "step_id": "J-MEETING/1/5",
+        "state": "NOT_APPLICABLE",
+        "note": "CONDITION_DID_NOT_ARISE"
+      },
+      {
+        "step_id": "J-MEETING/2/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/2/2",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/2/3",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/2/4",
+        "state": "NOT_APPLICABLE",
+        "note": "CONDITION_DID_NOT_ARISE"
+      },
+      {
+        "step_id": "J-MEETING/3/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/3/2",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/3/3",
+        "state": "NOT_APPLICABLE",
+        "note": "CONDITION_DID_NOT_ARISE"
+      },
+      {
+        "step_id": "J-MEETING/3/4",
+        "state": "NOT_APPLICABLE",
+        "note": "CONDITION_DID_NOT_ARISE"
+      },
+      {
+        "step_id": "J-MEETING/4/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/4/2",
+        "state": "IN_PROGRESS"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-MEETING/4/3",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-MEETING/5/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-MEETING/5/2",
+        "kind": "OPTIONAL"
+      }
+    ],
+    "stage_n": 4,
+    "notice_location": "actual",
+    "derived": {
+      "minutes_final": null
+    },
+    "deadlines": [
+      {
+        "kind": "MINUTES_REVIEW_DUE",
+        "rule_id": "MINUTES_REVIEW_WINDOW",
+        "at": null,
+        "status": "SOURCE_REQUIRED",
+        "basis_event_id": "evt-CF-28-10"
+      }
+    ],
+    "must_not": ["✔ on J-MEETING/4/2", "✔ on J-MEETING/3/3", "deadline.at"]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "Subject «تذكير: قد يُعدّ المحضر معتمداً ما لم تراجعه.» with the same strip as CF-27 (✔1 ✔2 ✔3 ●4; «● تعميم المسودة والمراجعة»); deemed approval is OWNER_DEFAULT (TARGET 5) and no date is recorded.",
+    "evidence": [
+      "notifications/eml/ar/CF-28_MINUTES_REVIEW_REMINDER.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-28 ar",
+      "cdf_case_management docs/business-architecture/TARGET_WORKFLOW_STATE_MODEL.md section 5"
+    ]
+  },
+  "variants": [
+    {
+      "id": "CF-28-V1",
+      "title": {
+        "ar": "بعد اعتبار المحضر معتمداً (مسجلاً)",
+        "en": "After MINUTES_FINAL (deemed approved) is recorded"
+      },
+      "events_add": [
+        {
+          "event_id": "evt-CF-28-12",
+          "type": "MINUTES_FINAL",
+          "occurred_at": "2026-10-24T19:00:00Z",
+          "recorded_at": "2026-10-24T19:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e679",
+          "object": {
+            "type": "MEETING",
+            "id": "0b1ec700-0000-4000-8000-949002e2ad67"
+          },
+          "actor": {
+            "capacity": "SYSTEM",
+            "id": "usr-demo-system"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-28.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-28",
+          "payload": {
+            "basis": "DEEMED_APPROVED"
+          }
+        }
+      ],
+      "procedural_object_patch": {
+        "status": "MINUTES_FINAL",
+        "status_source_event_id": "evt-CF-28-12"
+      },
+      "expected": {
+        "actual": [
+          {
+            "step_id": "J-MEETING/1/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-MEETING/1/2",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-MEETING/1/3",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-MEETING/1/4",
+            "state": "NOT_APPLICABLE",
+            "note": "CONDITION_DID_NOT_ARISE"
+          },
+          {
+            "step_id": "J-MEETING/1/5",
+            "state": "NOT_APPLICABLE",
+            "note": "CONDITION_DID_NOT_ARISE"
+          },
+          {
+            "step_id": "J-MEETING/2/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-MEETING/2/2",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-MEETING/2/3",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-MEETING/2/4",
+            "state": "NOT_APPLICABLE",
+            "note": "CONDITION_DID_NOT_ARISE"
+          },
+          {
+            "step_id": "J-MEETING/3/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-MEETING/3/2",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-MEETING/3/3",
+            "state": "NOT_APPLICABLE",
+            "note": "CONDITION_DID_NOT_ARISE"
+          },
+          {
+            "step_id": "J-MEETING/3/4",
+            "state": "NOT_APPLICABLE",
+            "note": "CONDITION_DID_NOT_ARISE"
+          },
+          {
+            "step_id": "J-MEETING/4/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-MEETING/4/2",
+            "state": "COMPLETED",
+            "evidence_event_id": "evt-CF-28-12"
+          },
+          {
+            "step_id": "J-MEETING/4/3",
+            "state": "PENDING"
+          }
+        ],
+        "expected_steps": [
+          {
+            "step_id": "J-MEETING/5/1",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-MEETING/5/2",
+            "kind": "OPTIONAL"
+          }
+        ],
+        "stage_n": 4,
+        "derived": {
+          "minutes_final": {
+            "event_id": "evt-CF-28-12",
+            "basis": "DEEMED_APPROVED"
+          }
+        },
+        "must_not": ["✔ on J-MEETING/4/3"]
+      }
+    }
+  ]
+}

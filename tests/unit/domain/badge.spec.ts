@@ -257,4 +257,40 @@ describe("BADGE — epistemic class → data-epistemic", () => {
     // a recorded badge may show one (the status rests on its event)
     assert.equal(toBadgeEpistemic({ epistemic: "RECORDED_FACT", event_id: "evt-1" }).value, "recorded");
   });
+  test("BADGE-12 negative (SEC LOW, rule T5): a variant spelling of a status is refused, never matched as not completed", () => {
+    for (const shown_status of [
+      "completed",
+      " COMPLETED",
+      "Completed",
+      "COMPLETED ",
+      "completed_class",
+      "Sent",
+      "j-demo/1",
+    ]) {
+      assert.equal(
+        isCompletedClassStatus(shown_status),
+        true,
+        `predicate fails closed on ${JSON.stringify(shown_status)}`,
+      );
+      for (const epistemic of ["EXPECTED_PROCESS", "CONDITIONAL_STEP", "SUBJECT_TO_APPROVAL"] as const) {
+        assert.equal(
+          code(() => toBadgeEpistemic({ epistemic, shown_status })),
+          "SHOWN_STATUS_NOT_A_CODE",
+          `${epistemic} ${JSON.stringify(shown_status)}`,
+        );
+      }
+    }
+    // well-formed codes outside the list, step codes and null pass
+    for (const shown_status of [
+      "IN_PROGRESS",
+      "NOT_STARTED",
+      "J-DEMO-COMMITTEE/2/1",
+      "J-WB-REPORTER",
+      null,
+    ]) {
+      assert.equal(isCompletedClassStatus(shown_status), false, String(shown_status));
+      assert.equal(toBadgeEpistemic({ epistemic: "EXPECTED_PROCESS", shown_status }).value, "expected");
+    }
+    assert.equal(isCompletedClassStatus(42), false, "a non-string is no status at all");
+  });
 });

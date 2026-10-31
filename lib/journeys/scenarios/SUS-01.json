@@ -1,0 +1,311 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "SUS-01",
+  "title": {
+    "ar": "تحقيق موقوف مؤقتاً: ⏸ على الخطوة الجارية، ولا شيء بعدها يُعرض جارياً",
+    "en": "Investigation suspended: ⏸ on the open step; nothing after it is shown as progressing"
+  },
+  "journey": "J-INVESTIGATION",
+  "assignment_id": "INV-07",
+  "recipient_class": "INVESTIGATOR",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-7a63e17487ec",
+    "internal_ref": "CDF-DEMO-2026-0903",
+    "track": "IR",
+    "classification": "RESTRICTED",
+    "status": {
+      "code": "S3.02",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-SUS-01-06"
+    },
+    "flags": {
+      "suspended": true,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-06423ea753de",
+    "type": "INVESTIGATION",
+    "case_id": "ca5e0000-0000-4000-8000-7a63e17487ec",
+    "journey_id": "J-INVESTIGATION",
+    "status": "ON_HOLD",
+    "status_source_event_id": "evt-SUS-01-05",
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-SUS-01-01",
+      "type": "INVESTIGATION_ASSIGNED",
+      "occurred_at": "2026-10-20T08:00:00Z",
+      "recorded_at": "2026-10-20T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e17487ec",
+      "object": {
+        "type": "INVESTIGATION",
+        "id": "0b1ec700-0000-4000-8000-06423ea753de"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUS-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUS-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-SUS-01-02",
+      "type": "INDEPENDENCE_DECLARED",
+      "occurred_at": "2026-10-20T09:00:00Z",
+      "recorded_at": "2026-10-20T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e17487ec",
+      "object": {
+        "type": "INVESTIGATION",
+        "id": "0b1ec700-0000-4000-8000-06423ea753de"
+      },
+      "actor": {
+        "capacity": "INVESTIGATOR",
+        "id": "usr-demo-investigator"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUS-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUS-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-SUS-01-03",
+      "type": "MANDATE_AMENDED",
+      "occurred_at": "2026-10-20T10:00:00Z",
+      "recorded_at": "2026-10-20T10:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e17487ec",
+      "object": {
+        "type": "INVESTIGATION",
+        "id": "0b1ec700-0000-4000-8000-06423ea753de"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUS-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUS-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-SUS-01-04",
+      "type": "INFO_REQUEST_SENT",
+      "occurred_at": "2026-10-20T11:00:00Z",
+      "recorded_at": "2026-10-20T11:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e17487ec",
+      "object": {
+        "type": "INVESTIGATION",
+        "id": "0b1ec700-0000-4000-8000-06423ea753de"
+      },
+      "actor": {
+        "capacity": "INVESTIGATOR",
+        "id": "usr-demo-investigator"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUS-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUS-01",
+      "payload": {
+        "kind": "DOCUMENTS"
+      }
+    },
+    {
+      "event_id": "evt-SUS-01-05",
+      "type": "PROCEDURE_SUSPENDED",
+      "occurred_at": "2026-10-20T12:00:00Z",
+      "recorded_at": "2026-10-20T12:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e17487ec",
+      "object": {
+        "type": "INVESTIGATION",
+        "id": "0b1ec700-0000-4000-8000-06423ea753de"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUS-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUS-01",
+      "payload": {
+        "reason_code": "AWAITING_EXTERNAL_INPUT"
+      }
+    },
+    {
+      "event_id": "evt-SUS-01-06",
+      "type": "CASE_SUSPENDED",
+      "occurred_at": "2026-10-20T13:00:00Z",
+      "recorded_at": "2026-10-20T13:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e17487ec",
+      "object": {
+        "type": "CASE",
+        "id": "ca5e0000-0000-4000-8000-7a63e17487ec"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUS-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUS-01",
+      "payload": {}
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S3",
+      "substate": "S3.02",
+      "current_state": "SUSPENDED",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "SUSPENDED",
+          "current": true
+        },
+        {
+          "code": "S4",
+          "layer": "B",
+          "kind": "EXPECTED"
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-INVESTIGATION/1/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/1/2",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/1/3",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-SUS-01-03"
+      },
+      {
+        "step_id": "J-INVESTIGATION/2/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/2/2",
+        "state": "SUSPENDED",
+        "evidence_event_id": "evt-SUS-01-05"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-INVESTIGATION/2/3",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/3/1",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/3/2",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/3/3",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/3/4",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/4/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/4/2",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-INVESTIGATION/4/3",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/5/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-INVESTIGATION/5/2",
+        "kind": "EXPECTED"
+      }
+    ],
+    "stage_n": 2,
+    "notice_location": "actual",
+    "lifecycle": {
+      "suspended": true
+    },
+    "must_not": ["● on J-INVESTIGATION/2/2", "○ on J-INVESTIGATION/2/2", "● on J-INVESTIGATION/1/3"]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "V12 has no suspension representation on any level (W3 F11: \"L1/L2/L3 never show hold/cancel\"); the INV-07 sample shows «● 1. التكليف بالتحقيق وإقرار الاستقلالية» with L3 «✔ إشعار التكليف / ✔ إقرار الاستقلالية وعدم التعارض / ● تعديل النطاق أو المدة عند اعتماده» (the recorded amendment shown in progress).",
+    "evidence": [
+      "notifications/generator/samples/INV-07.txt",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md F11, F5"
+    ]
+  },
+  "variants": []
+}
