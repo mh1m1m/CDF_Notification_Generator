@@ -184,6 +184,19 @@ const REGISTRY: Record<string, Probe[]> = {
         nobody: noRows,
       },
     ],
+  "notifications_page(p_after_created_at text, p_after_id uuid, p_limit integer, p_lifecycle_status text, p_template_code text, p_case_number text, p_created_from timestamp with time zone, p_created_before timestamp with time zone)":
+    [null, "CDF-DEMO-2026-0001", "CDF-DEMO-2026-0009"].map((n) => ({
+      label: `notifications_page ${n ?? "all"}`,
+      call: (tx) =>
+        tx`select * from cdf_notifications_v13.notifications_page(null, null, 100, null, null, ${n}, null, null)`,
+      nobody: noRows,
+    })),
+  "notifications_count(p_lifecycle_status text, p_template_code text, p_case_number text, p_created_from timestamp with time zone, p_created_before timestamp with time zone)":
+    [null, "CDF-DEMO-2026-0009"].map((n) => ({
+      label: `notifications_count ${n ?? "all"}`,
+      call: (tx) => tx`select cdf_notifications_v13.notifications_count(null, null, ${n}, null, null) as v`,
+      nobody: scalarIs(0),
+    })),
   "api_update_task_status(p_task_id uuid, p_new_status text, p_expected_version integer)": [1, 2, 17].map(
     (n) => ({
       label: `api_update_task_status task ${n}`,
