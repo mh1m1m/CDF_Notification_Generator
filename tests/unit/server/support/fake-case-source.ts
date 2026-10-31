@@ -110,12 +110,8 @@ export function createFakeCaseSource(): CaseSourceAdapter & { calls: string[] } 
         total: matching.length,
       };
     },
-    async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null> {
+    async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
       calls.push("getCase");
-      return visibleTo(identity).find((c) => c.case_id === caseId) ?? null;
-    },
-    async getCaseHeader(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
-      calls.push("getCaseHeader");
       const found = visibleTo(identity).find((c) => c.case_id === caseId);
       if (!found) return null;
       const assigned = (ASSIGNED[identity.persona_id] ?? []).includes(Number(found.case_number.slice(-4)));

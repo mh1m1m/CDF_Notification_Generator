@@ -1,4 +1,4 @@
-// FE-004: V13 ProceduralRecordsReader, NotificationRecordsReader and CaseSourceAdapter.getCaseHeader against the local
+// FE-004: V13 ProceduralRecordsReader, NotificationRecordsReader and CaseSourceAdapter.getCase against the local
 // primary cluster as cdf_v13_app → cdf_v13_user (M1 seed, migration 0006). Unknown = unauthorised = nothing.
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -33,7 +33,7 @@ describe.skipIf(!available)("V13 case records on the primary cluster", () => {
     myCapacity(i: RequestIdentity, c: CaseId): Promise<string | null>;
     listEvents: ReturnType<typeof createV13ProceduralRecordsReader>["listEvents"];
     listTasks: ReturnType<typeof createV13ProceduralRecordsReader>["listTasks"];
-    listNotifications: ReturnType<typeof createV13NotificationRecordsReader>["listCaseNotifications"];
+    listNotifications: ReturnType<typeof createV13NotificationRecordsReader>["listForCase"];
   };
   beforeAll(() => {
     sql = postgres(PRIMARY_APP_URL, { ...databaseClientOptions(PRIMARY_APP_URL, {}), max: 1 });
@@ -43,10 +43,10 @@ describe.skipIf(!available)("V13 case records on the primary cluster", () => {
     const procedural = createV13ProceduralRecordsReader(run);
     const notifications = createV13NotificationRecordsReader(run);
     r = {
-      myCapacity: async (i, c) => (await source.getCaseHeader(i, c))?.my_capacity ?? null,
+      myCapacity: async (i, c) => (await source.getCase(i, c))?.my_capacity ?? null,
       listEvents: (i, c) => procedural.listEvents(i, c),
       listTasks: (i, c) => procedural.listTasks(i, c),
-      listNotifications: (i, c) => notifications.listCaseNotifications(i, c),
+      listNotifications: (i, c) => notifications.listForCase(i, c),
     };
   });
   afterAll(async () => {

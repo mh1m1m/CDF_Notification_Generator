@@ -1,6 +1,6 @@
 // Ports: the interfaces the application layer depends on. Implementations live outside lib/contracts.
 import { z } from "zod";
-import type { CaseHeader, CaseListFilter, CaseListPage, CaseSummary } from "./case-summary";
+import type { CaseHeader, CaseListFilter, CaseListPage } from "./case-summary";
 import {
   CaseIdSchema,
   CorrelationIdSchema,
@@ -32,9 +32,8 @@ export interface CaseSourceAdapter {
   /** Upper-snake code identifying this source; equals `CaseSummary.source_system` of what it returns. */
   readonly sourceSystem: string;
   listCases(identity: RequestIdentity, filter: CaseListFilter): Promise<CaseListPage>;
-  getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null>;
-  /** `getCase` plus the identity's own capacity on the case; same null rule (unknown = unauthorised). */
-  getCaseHeader(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null>;
+  /** The case header: the summary plus the identity's own capacity on the case (null when it holds none). */
+  getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null>;
 }
 
 /** The current time. Inject a fixed clock in tests; never call `new Date()` inside domain rules. */

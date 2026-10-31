@@ -128,8 +128,8 @@ export function createFakeNotificationRecords(): NotificationRecordsReader & { c
   const calls: string[] = [];
   return {
     calls,
-    async listCaseNotifications(identity, caseId) {
-      calls.push("listCaseNotifications");
+    async listForCase(identity, caseId) {
+      calls.push("listForCase");
       return indexOf(identity, caseId) === 1 ? notificationsOf(1) : [];
     },
   };

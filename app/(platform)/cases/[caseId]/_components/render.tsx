@@ -1,5 +1,5 @@
 // Shared page plumbing for the Case Workspace tabs (FE-004). One cached load per request, shared by generateMetadata
-// and the page: request context → getCaseHeaderForRoute (lib/authz pre-check + CaseSourceAdapter) → V13 records.
+// and the page: request context → getCaseForRoute (lib/authz pre-check + CaseSourceAdapter) → V13 records.
 // Anything the persona may not see is notFound(), the same page as an unknown route; no session goes to sign-in.
 import "server-only";
 import type { Metadata } from "next";

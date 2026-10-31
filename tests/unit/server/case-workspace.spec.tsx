@@ -97,14 +97,14 @@ describe("loadCaseWorkspace", () => {
       ["overview", ["listEvents", "listTasks"]],
       ["events", ["listEvents"]],
       ["tasks", ["listTasks"]],
-      ["notifications", ["listCaseNotifications"]],
+      ["notifications", ["listForCase"]],
     ] as const) {
       const procedural = createFakeProceduralRecords();
       const notifications = createFakeNotificationRecords();
       const d = deps(SECRETARY, procedural, notifications);
       const v = await loadCaseWorkspace(d, caseIdOf(1), tab);
       expect(v.tab).toBe(tab);
-      expect(d.source.calls).toEqual(["getCaseHeader"]);
+      expect(d.source.calls).toEqual(["getCase"]);
       expect([...procedural.calls, ...notifications.calls]).toEqual(reads);
     }
   });
@@ -286,7 +286,7 @@ describe("Case Workspace markup", () => {
 
   it("empty tabs say so", async () => {
     const records: ProceduralRecordsReader = { listEvents: async () => [], listTasks: async () => [] };
-    const none: NotificationRecordsReader = { listCaseNotifications: async () => [] };
+    const none: NotificationRecordsReader = { listForCase: async () => [] };
     for (const [tab, testId] of [
       ["events", "case-events-empty"],
       ["tasks", "case-tasks-empty"],

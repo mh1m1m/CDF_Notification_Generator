@@ -26,5 +26,5 @@ export type CaseNotification = z.infer<typeof CaseNotificationSchema>;
  */
 export interface NotificationRecordsReader {
   /** Notifications of one case, newest first. */
-  listCaseNotifications(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseNotification[]>;
+  listForCase(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseNotification[]>;
 }

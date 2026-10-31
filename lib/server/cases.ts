@@ -8,7 +8,6 @@ import {
   type CaseListPage,
   type CaseSourceAdapter,
   type CaseHeader,
-  type CaseSummary,
 } from "@/lib/contracts";
 import { parseCaseId, precheck } from "@/lib/authz";
 import { InvalidCursorError } from "@/lib/adapters/case-source/cursor";
@@ -24,23 +23,11 @@ export interface CaseServiceDeps {
 export async function getCaseForRoute(
   { ctx, source }: CaseServiceDeps,
   rawCaseId: unknown,
-): Promise<CaseSummary> {
+): Promise<CaseHeader> {
   const caseId = parseCaseId(rawCaseId);
   if (!caseId || !precheck(ctx.identity, "case.read", { caseId }).allow) throw new AppError("NOT_FOUND");
   const found = await source.getCase(ctx.identity, caseId);
   // Defence in depth: the adapter must return the case asked for, or nothing.
-  if (!found || found.case_id !== caseId) throw new AppError("NOT_FOUND");
-  return found;
-}
-
-/** The case header (summary + own capacity) for a route segment; same checks and same NOT_FOUND as getCaseForRoute. */
-export async function getCaseHeaderForRoute(
-  { ctx, source }: CaseServiceDeps,
-  rawCaseId: unknown,
-): Promise<CaseHeader> {
-  const caseId = parseCaseId(rawCaseId);
-  if (!caseId || !precheck(ctx.identity, "case.read", { caseId }).allow) throw new AppError("NOT_FOUND");
-  const found = await source.getCaseHeader(ctx.identity, caseId);
   if (!found || found.case_id !== caseId) throw new AppError("NOT_FOUND");
   return found;
 }

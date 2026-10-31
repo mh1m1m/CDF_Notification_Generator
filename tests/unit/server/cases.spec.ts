@@ -70,8 +70,7 @@ describe("getCaseForRoute", () => {
     const wrong: CaseSourceAdapter = {
       sourceSystem: "V13_SYNTHETIC",
       listCases: async () => ({ items: [], next_cursor: null, total: 0 }),
-      getCase: async () => FAKE_CASES[1] as CaseSummary,
-      getCaseHeader: async () => ({ ...(FAKE_CASES[1] as CaseSummary), my_capacity: null }),
+      getCase: async () => ({ ...(FAKE_CASES[1] as CaseSummary), my_capacity: null }),
     };
     await notFound(getCaseForRoute({ ctx: ctxFor(SECRETARY), source: wrong }, caseIdOf(1)));
   });
@@ -83,9 +82,6 @@ describe("getCaseForRoute", () => {
         throw new Error("boom");
       },
       getCase: async () => {
-        throw new Error("boom");
-      },
-      getCaseHeader: async () => {
         throw new Error("boom");
       },
     };
@@ -147,7 +143,6 @@ describe("listPortfolio", () => {
         throw new InvalidCursorError("bad cursor");
       },
       getCase: async () => null,
-      getCaseHeader: async () => null,
     };
     const error = await listPortfolio({ ctx: ctxFor(SECRETARY), source }, { cursor: "zz" }).catch(
       (e: unknown) => e,

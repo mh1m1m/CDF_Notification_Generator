@@ -18,8 +18,8 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
   own URL; the route's UUID is the only case context). Header with number, stage, records state, named-access flag and
   the persona's capacity; closed notice; overview = current stage + own open tasks + last 5 recorded events. Proposed
   contracts (ARCH 31 Oct): `ProceduralRecordsReader` (listEvents, listTasks) in `lib/contracts/procedural-records.ts`,
-  `NotificationRecordsReader` (listCaseNotifications) in `lib/contracts/notification-records.ts`,
-  `CaseSourceAdapter.getCaseHeader` + `CaseHeader`/`CaseCapacitySchema` in `ports.ts`/`case-summary.ts`. Task status
+  `NotificationRecordsReader` (listForCase) in `lib/contracts/notification-records.ts`,
+  `CaseSourceAdapter.getCase` returns `CaseHeader` (summary + `my_capacity`, `CaseCapacitySchema`) in `ports.ts`/`case-summary.ts`. Task status
   badges via `lib/domain` toBadgeEpistemic (server only). `app/not-found.tsx` gains `data-testid="not-found-state"` (ARCH
   path, ARCH ACCEPT needed). PR #23 (stacked on #19) — IN_REVIEW once #19 lands.
 - OI-023 — workspace switch runs `api_switch_workspace` before the cookie is re-issued — PR #27 — IN_REVIEW.
@@ -74,7 +74,8 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
 | Same: `pnpm db:reset` then `pnpm test:db` (includes the committed FE suite `tests/integration/fe/case-source.spec.ts`, 15) | pass | 11 files, 223 | FE-003 head |
 
 | FE-004 after ARCH's rulings (ProceduralRecordsReader, capacity via getCaseHeader, toBadgeEpistemic, not-found-state), merged with FE-003 983ad04: lint, typecheck, format:check, build | pass | — | FE-004 head |
-| Same: `pnpm test` (unit) | pass | 831 | FE-004 head |
+| Same: `pnpm test` (unit) | pass | 831 | ab90a91 |
+| ARCH CHANGES 224d676 items 2–3 exactly: `getCase` returns `CaseHeader` (no separate method), `listForCase`: lint, typecheck, build; `pnpm test`; `pnpm test:db` | pass | 834; 233 | FE-004 head |
 | Same: `pnpm db:reset` then `pnpm test:db` (FE suites case-source 15 + case-workspace-records 10) | pass | 12 files, 233 | FE-004 head |
 | Same: `pnpm build && pnpm start`, `pnpm test:e2e` plus the throwaway FE probe (3: Truth Inspector 0 violations, axe 0 serious/critical on 4 tabs, negatives 404 with `not-found-state`, 360 px, LTR, Beta 0009, Delta other workspace) | pass | 59 passed (56 + 3), 17 skipped | FE-004 head |
 | OI-023 (PR #27, 17f4107 on develop c4b37c3): `pnpm test` / `pnpm test:db` / `pnpm test:e2e`; browser probe: forged target refused with cookie unchanged, real switch → exactly 1 WORKSPACE_SWITCHED row | pass | 725 / 212 / 56 (17 skipped) / 1 | 17f4107 |

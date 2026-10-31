@@ -13,6 +13,7 @@ import {
   RequestIdentitySchema,
   SOURCE_REF_PATTERN,
   UUID_PATTERN,
+  type CaseHeader,
   type CaseId,
   type CaseListFilter,
   type CaseListPage,
@@ -249,14 +250,11 @@ describe("CaseSourceAdapter contract", () => {
         .map((c) => ({ ...c, last_event_id: null, last_event_at: null, my_open_task_count: 0 }));
       return { items, next_cursor: null, total: allowed.length };
     },
-    async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null> {
+    async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
       const allowed = [visible, hidden].filter(
         (c) => identity.active_workspace === "INVESTIGATIONS" || c === visible,
       );
-      return allowed.find((c) => c.case_id === caseId) ?? null;
-    },
-    async getCaseHeader(identity: RequestIdentity, caseId: CaseId) {
-      const found = await this.getCase(identity, caseId);
+      const found = allowed.find((c) => c.case_id === caseId);
       return found ? { ...found, my_capacity: null } : null;
     },
   };

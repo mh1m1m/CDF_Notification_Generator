@@ -61,7 +61,7 @@ export type CaseCapacity = z.infer<typeof CaseCapacitySchema>;
 
 /**
  * The case header view (SCREENS S3): the summary plus the requesting identity's own active capacity on the case
- * (null when it holds none). Read through CaseSourceAdapter.getCaseHeader; never shown for another identity.
+ * (null when it holds none). Returned by CaseSourceAdapter.getCase; never shown for another identity.
  */
 export type CaseHeader = CaseSummary & { readonly my_capacity: CaseCapacity | null };
 

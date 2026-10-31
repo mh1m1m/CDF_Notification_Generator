@@ -36,10 +36,7 @@ export function rowToCaseNotification(r: NotificationRow): CaseNotification {
 
 export function createV13NotificationRecordsReader(run: RequestContextRunner): NotificationRecordsReader {
   return {
-    async listCaseNotifications(
-      identity: RequestIdentity,
-      caseId: CaseId,
-    ): Promise<readonly CaseNotification[]> {
+    async listForCase(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseNotification[]> {
       const rows = await run(
         identity,
         (tx) =>

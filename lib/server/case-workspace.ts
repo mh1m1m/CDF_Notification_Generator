@@ -1,6 +1,6 @@
 // Case Workspace loader (FE-004, SCREENS S3). The URL's case id is the only case context: no cookie, storage or
-// "current case" state. Order: request context → getCaseHeaderForRoute (parse, lib/authz pre-check,
-// CaseSourceAdapter.getCaseHeader) → V13 records of that same case (ProceduralRecordsReader,
+// "current case" state. Order: request context → getCaseForRoute (parse, lib/authz pre-check,
+// CaseSourceAdapter.getCase, which carries the capacity) → V13 records of that same case (ProceduralRecordsReader,
 // NotificationRecordsReader; RLS). Unknown, malformed, unauthorised, restricted and
 // other-workspace ids all end in AppError("NOT_FOUND"), which the page turns into the shared not-found page.
 import "server-only";
@@ -14,7 +14,7 @@ import type {
   NotificationRecordsReader,
   ProceduralRecordsReader,
 } from "@/lib/contracts";
-import { getCaseHeaderForRoute } from "./cases";
+import { getCaseForRoute } from "./cases";
 import type { RequestContext } from "./context";
 import { toUserError } from "./errors";
 
@@ -53,7 +53,7 @@ export async function loadCaseWorkspace(
   rawCaseId: unknown,
   tab: CaseTab,
 ): Promise<CaseWorkspaceView> {
-  const { my_capacity: capacity, ...summary } = await getCaseHeaderForRoute({ ctx, source }, rawCaseId);
+  const { my_capacity: capacity, ...summary } = await getCaseForRoute({ ctx, source }, rawCaseId);
   const caseId = summary.case_id;
   const frame = { summary, capacity };
   switch (tab) {
@@ -75,7 +75,7 @@ export async function loadCaseWorkspace(
       return {
         ...frame,
         tab,
-        notifications: await notifications.listCaseNotifications(ctx.identity, caseId),
+        notifications: await notifications.listForCase(ctx.identity, caseId),
       };
   }
 }
