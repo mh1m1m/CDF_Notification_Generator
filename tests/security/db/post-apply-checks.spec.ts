@@ -11,10 +11,18 @@ import { join } from "node:path";
 import type postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Tx } from "@/lib/db/security-context";
-import { clusterAvailable, PRIMARY_ADMIN_URL } from "../../integration/support/clusters";
+import { buildHostedBundle } from "@/scripts/db/hosted-bundle.mjs";
+import { readMigrations } from "@/scripts/db/lib/migrations.mjs";
+import {
+  clusterAvailable,
+  HOSTED_SIM_SUPERUSER_URL,
+  PRIMARY_ADMIN_URL,
+} from "../../integration/support/clusters";
 import { adminClient } from "../../integration/support/context";
+import { client, resetHostedSim, run } from "../../integration/support/hosted-sim";
 
 const present = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
+const hostedSim = await clusterAvailable("hosted-sim", HOSTED_SIM_SUPERUSER_URL);
 
 const FILE = join(process.cwd(), "database", "hosted", "post_apply_checks.sql");
 const MIGRATIONS = join(process.cwd(), "database", "migrations");
@@ -90,7 +98,8 @@ async function runChecks(
 const asOwner = (tx: Tx, statement: string) =>
   tx.unsafe(`set local role cdf_v13_owner; ${statement}; reset role`);
 
-const FAULTS: [string, string, (tx: Tx) => Promise<unknown>][] = [
+/** [check that must fail, label, plant, other checks the same fault legitimately also fails]. */
+const FAULTS: [string, string, (tx: Tx) => Promise<unknown>, string[]?][] = [
   [
     "P01_rls_enabled",
     "RLS disabled on task",
@@ -132,6 +141,7 @@ const FAULTS: [string, string, (tx: Tx) => Promise<unknown>][] = [
       await tx.unsafe("create role anon nologin");
       await asOwner(tx, "grant usage on schema cdf_notifications_v13 to anon");
     },
+    ["P09_acl_grantees_v13_only"],
   ],
   [
     "P05_no_api_role_privileges",
@@ -141,6 +151,42 @@ const FAULTS: [string, string, (tx: Tx) => Promise<unknown>][] = [
         tx,
         "grant execute on function cdf_notifications_v13.portfolio_count(text, text, text, boolean) to public",
       ),
+    ["P09_acl_grantees_v13_only"],
+  ],
+  [
+    "P09_acl_grantees_v13_only",
+    "a column grant to a planted authenticated role",
+    async (tx) => {
+      await tx.unsafe("create role authenticated nologin");
+      await asOwner(
+        tx,
+        "grant select (display_number) on cdf_notifications_v13.case_record to authenticated",
+      );
+    },
+  ],
+  [
+    "P09_acl_grantees_v13_only",
+    "a table grant to the predefined role pg_read_all_data",
+    (tx) => asOwner(tx, "grant select on cdf_notifications_v13.task to pg_read_all_data"),
+  ],
+  [
+    "P09_acl_grantees_v13_only",
+    "a default ACL granting future tables to a planted service_role",
+    async (tx) => {
+      await tx.unsafe("create role service_role nologin");
+      await tx.unsafe(
+        "alter default privileges for role cdf_v13_owner in schema cdf_notifications_v13 grant select on tables to service_role",
+      );
+    },
+  ],
+  [
+    "P09_acl_grantees_v13_only",
+    "a function with no ACL (built-in default: PUBLIC EXECUTE), created by the administrator",
+    (tx) =>
+      tx.unsafe(
+        "create function cdf_notifications_v13.planted_public() returns int language sql set search_path = '' as 'select 1'",
+      ),
+    ["P05_no_api_role_privileges"],
   ],
   [
     "P06_claims_key_protected",
@@ -229,6 +275,7 @@ describe.skipIf(!present)("SEC-004 post_apply_checks.sql against the local clust
       "P06_claims_key_protected",
       "P07_audit_chain_valid",
       "P08_memberships",
+      "P09_acl_grantees_v13_only",
       "VERDICT",
     ]);
     for (const row of Object.values(result)) expect(row.breaches, `${row.check_id}: ${row.detail}`).toBe(0);
@@ -246,13 +293,113 @@ describe.skipIf(!present)("SEC-004 post_apply_checks.sql against the local clust
     expect(state?.role).not.toBe("cdf_v13_owner");
   });
 
-  for (const [check, label, plant] of FAULTS) {
-    it(`FAIL on a planted fault: ${label} → ${check}`, async () => {
+  for (const [check, label, plant, also = []] of FAULTS) {
+    it(`FAIL on a planted fault: ${label} → ${[check, ...also].join(" + ")}`, async () => {
       const result = await runChecks(admin, plant);
-      expect(result[check]?.breaches, result[check]?.detail).toBeGreaterThan(0);
+      for (const c of [check, ...also])
+        expect(result[c]?.breaches, `${c}: ${result[c]?.detail}`).toBeGreaterThan(0);
       expect(result.VERDICT?.detail).toBe("FAIL");
-      const others = Object.values(result).filter((r) => r.check_id !== check && r.check_id !== "VERDICT");
+      const others = Object.values(result).filter(
+        (r) => r.check_id !== check && !also.includes(r.check_id) && r.check_id !== "VERDICT",
+      );
       expect(others.filter((r) => r.breaches > 0).map((r) => `${r.check_id}: ${r.detail}`)).toEqual([]);
     });
   }
 });
+
+describe.skipIf(!hostedSim)(
+  "SEC-004 post_apply_checks.sql on the hosted layout (non-superuser administrator)",
+  () => {
+    let adminUrl: string;
+    let superuserUrl: string;
+
+    beforeAll(async () => {
+      // Every repository migration, applied the hosted way: one bundle per version, run by the non-superuser `postgres`.
+      const sim = await resetHostedSim();
+      adminUrl = sim.adminUrl;
+      superuserUrl = sim.superuserUrl;
+      for (const m of readMigrations()) await run(adminUrl, buildHostedBundle({ version: m.version }));
+    }, 120_000);
+
+    /** Runs the file exactly as ARCH runs it, as the administrator; returns the result rows. */
+    async function runFile(): Promise<Record<string, CheckRow>> {
+      const results = (await run(adminUrl, text)) as unknown as unknown[];
+      const rows = (results.find(
+        (r) => Array.isArray(r) && (r as CheckRow[]).some((x) => x?.check_id === "VERDICT"),
+      ) ?? []) as CheckRow[];
+      return Object.fromEntries(rows.map((r) => [r.check_id, { ...r, breaches: Number(r.breaches) }]));
+    }
+
+    it("the administrator holds PostgreSQL's automatic creator grants (ADMIN only, from the superuser)", async () => {
+      const rows = await run(
+        superuserUrl,
+        `select g.rolname as role, am.admin_option as admin, am.set_option as set, gr.rolsuper as by_superuser
+         from pg_catalog.pg_auth_members am
+         join pg_catalog.pg_roles u on u.oid = am.member
+         join pg_catalog.pg_roles g on g.oid = am.roleid
+         join pg_catalog.pg_roles gr on gr.oid = am.grantor
+        where u.rolname = 'postgres' and am.admin_option order by 1`,
+      );
+      expect([...rows]).toEqual([
+        { role: "cdf_v13_app", admin: true, set: false, by_superuser: true },
+        { role: "cdf_v13_owner", admin: true, set: false, by_superuser: true },
+        { role: "cdf_v13_user", admin: true, set: false, by_superuser: true },
+      ]);
+    });
+
+    it("PASS as written: every check has 0 breaches, with the Supabase API roles present", async () => {
+      const result = await runFile();
+      for (const row of Object.values(result)) expect(row.breaches, `${row.check_id}: ${row.detail}`).toBe(0);
+      expect(result.VERDICT?.detail).toBe("PASS");
+    });
+
+    it("FAIL on the hosted layout when a Supabase API role is granted something (then revoked)", async () => {
+      const sql = client(adminUrl);
+      try {
+        await sql.unsafe(
+          "set role cdf_v13_owner; grant select on cdf_notifications_v13.role to authenticated; reset role",
+        );
+        const result = await runFile();
+        expect(result.P05_no_api_role_privileges?.breaches).toBeGreaterThan(0);
+        expect(result.P09_acl_grantees_v13_only?.breaches).toBeGreaterThan(0);
+        expect(result.VERDICT?.detail).toBe("FAIL");
+      } finally {
+        await sql.unsafe(
+          "set role cdf_v13_owner; revoke select on cdf_notifications_v13.role from authenticated; reset role",
+        );
+        await sql.end({ timeout: 5 });
+      }
+      expect((await runFile()).VERDICT?.detail).toBe("PASS");
+    });
+
+    it("FAIL when the administrator's creator row gains INHERIT (then restored)", async () => {
+      // Only the bootstrap superuser, its grantor, can change that row.
+      const sql = client(superuserUrl);
+      try {
+        await sql.unsafe("grant cdf_v13_owner to postgres with inherit true granted by supabase_admin");
+        const result = await runFile();
+        expect(result.P08_memberships?.breaches).toBeGreaterThan(0);
+        expect(result.VERDICT?.detail).toBe("FAIL");
+      } finally {
+        await sql.unsafe("grant cdf_v13_owner to postgres with inherit false granted by supabase_admin");
+        await sql.end({ timeout: 5 });
+      }
+      expect((await runFile()).VERDICT?.detail).toBe("PASS");
+    });
+
+    it("FAIL when cdf_v13_app's membership in cdf_v13_user gains INHERIT (then restored)", async () => {
+      // The administrator holds ADMIN on the role it created, so it changes its own grant row in place.
+      const sql = client(adminUrl);
+      try {
+        await sql.unsafe("grant cdf_v13_user to cdf_v13_app with inherit true");
+        const result = await runFile();
+        expect(result.P08_memberships?.breaches).toBeGreaterThan(0);
+        expect(result.VERDICT?.detail).toBe("FAIL");
+      } finally {
+        await sql.unsafe("grant cdf_v13_user to cdf_v13_app with inherit false");
+        await sql.end({ timeout: 5 });
+      }
+      expect((await runFile()).VERDICT?.detail).toBe("PASS");
+    });
+  },
+);

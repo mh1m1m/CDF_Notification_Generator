@@ -15,10 +15,18 @@
 --   P03 SECURITY DEFINER functions are exactly the allow-list below (a new definer fails until it is listed;
 --       tests/security/db/post-apply-checks.spec.ts keeps the list equal to the migrations)
 --   P04 every V13 function pins search_path = ''
---   P05 no V13 privilege for PUBLIC or the Supabase API roles (anon, authenticated, service_role, authenticator, …)
+--   P05 no V13 privilege for PUBLIC or the Supabase API roles present (has_*_privilege probes)
 --   P06 claims_key: unreadable by cdf_v13_app and cdf_v13_user, deny-all policy present, at most one row
 --   P07 the audit chain verifies
---   P08 V13 role memberships are exactly 0000_bootstrap's
+--   P08 V13 role memberships are exactly 0000_bootstrap's: cdf_v13_app in cdf_v13_user (SET only), the administrator
+--       SET-only on the three roles, and, on a cluster whose administrator is not a superuser (hosted), the automatic
+--       ADMIN-only grant PostgreSQL gives the administrator as the roles' creator (granted by the bootstrap superuser;
+--       the administrator cannot revoke it).
+--   P09 every ACL on a V13 object names only the three V13 roles as grantee: schema, relations (tables, views,
+--       sequences), columns, functions, and default ACLs (aclexplode; a NULL ACL is read as its built-in default, so a
+--       function with no ACL counts as PUBLIC EXECUTE). PUBLIC or any other role is a breach. Predefined roles such as
+--       pg_read_all_data pass has_*_privilege by design on hosted and hold no V13 grant; they are not ACL grantees,
+--       so P09 does not report them, and P08 proves no V13 role belongs to one.
 -- The section between BEGIN CHECKS and END CHECKS is one SELECT; the local test runs it verbatim.
 
 begin read only;
@@ -51,6 +59,34 @@ api_roles as (
    where r.rolname in ('anon', 'authenticated', 'service_role', 'authenticator', 'dashboard_user', 'pgbouncer',
                        'supabase_auth_admin', 'supabase_storage_admin', 'cdf_app')),
 v13_roles (rolname) as (values ('cdf_v13_owner'), ('cdf_v13_app'), ('cdf_v13_user')),
+acl as (
+  select 'schema' as kind, n.nspname::text as object, a.grantee, a.privilege_type
+    from pg_catalog.pg_namespace n,
+         lateral pg_catalog.aclexplode(coalesce(n.nspacl, pg_catalog.acldefault('n'::"char", n.nspowner))) a
+   where n.oid = (select oid from v13)
+  union all
+  select 'relation', c.relname::text, a.grantee, a.privilege_type
+    from pg_catalog.pg_class c,
+         lateral pg_catalog.aclexplode(coalesce(c.relacl,
+                   pg_catalog.acldefault((case when c.relkind = 'S' then 's' else 'r' end)::"char", c.relowner))) a
+   where c.relnamespace = (select oid from v13) and c.relkind in ('r', 'p', 'v', 'm', 'f', 'S')
+  union all
+  select 'column', c.relname || '.' || att.attname, a.grantee, a.privilege_type
+    from pg_catalog.pg_attribute att
+    join pg_catalog.pg_class c on c.oid = att.attrelid,
+         lateral pg_catalog.aclexplode(att.attacl) a
+   where c.relnamespace = (select oid from v13) and att.attacl is not null and not att.attisdropped
+  union all
+  select 'function', p.proname::text, a.grantee, a.privilege_type
+    from pg_catalog.pg_proc p,
+         lateral pg_catalog.aclexplode(coalesce(p.proacl, pg_catalog.acldefault('f'::"char", p.proowner))) a
+   where p.pronamespace = (select oid from v13)
+  union all
+  select 'default ACL', pg_catalog.pg_get_userbyid(d.defaclrole) || ' ' || d.defaclobjtype::text, a.grantee, a.privilege_type
+    from pg_catalog.pg_default_acl d,
+         lateral pg_catalog.aclexplode(d.defaclacl) a
+   where d.defaclnamespace = (select oid from v13)
+      or pg_catalog.pg_get_userbyid(d.defaclrole) in (select rolname from v13_roles)),
 checks (check_id, detail, breaches) as (
   -- P00: nothing below means anything without the schema and the roles.
   select 'P00_preconditions',
@@ -163,7 +199,7 @@ checks (check_id, detail, breaches) as (
                                                || case when m.inherit_option then ' (inherit)' else '' end
                                                || case when not m.set_option then ' (no set)' else '' end, ', ')
                     filter (where not m.expected),
-                  'cdf_v13_app in cdf_v13_user (SET only), administrator SET-only on the V13 roles, nothing else'),
+                  'cdf_v13_app in cdf_v13_user (SET only), administrator SET-only on the V13 roles (plus the creator ADMIN grant when not a superuser), nothing else'),
          count(*) filter (where not m.expected)
            + case when exists (select 1 from pg_catalog.pg_auth_members am
                                  join pg_catalog.pg_roles u on u.oid = am.member
@@ -171,14 +207,31 @@ checks (check_id, detail, breaches) as (
                                 where u.rolname = 'cdf_v13_app' and g.rolname = 'cdf_v13_user')
                   then 0 else 1 end
     from (select u.rolname::text as member, g.rolname::text as grp, am.admin_option, am.inherit_option, am.set_option,
-                 not am.admin_option and not am.inherit_option and am.set_option
-                 and ((u.rolname = 'cdf_v13_app' and g.rolname = 'cdf_v13_user')
-                      or (u.rolname in ('postgres', 'supabase_admin')
-                          and g.rolname in (select rolname from v13_roles))) as expected
+                 (not am.admin_option and not am.inherit_option and am.set_option
+                  and ((u.rolname = 'cdf_v13_app' and g.rolname = 'cdf_v13_user')
+                       or (u.rolname in ('postgres', 'supabase_admin')
+                           and g.rolname in (select rolname from v13_roles))))
+                 -- The creator's automatic grant on a non-superuser administrator (hosted): ADMIN only, from a superuser.
+                 or (u.rolname in ('postgres', 'supabase_admin') and not u.rolsuper
+                     and g.rolname in (select rolname from v13_roles)
+                     and am.admin_option and not am.inherit_option and not am.set_option
+                     and gr.rolsuper) as expected
             from pg_catalog.pg_auth_members am
             join pg_catalog.pg_roles u on u.oid = am.member
             join pg_catalog.pg_roles g on g.oid = am.roleid
+            join pg_catalog.pg_roles gr on gr.oid = am.grantor
            where u.rolname in (select rolname from v13_roles) or g.rolname in (select rolname from v13_roles)) m
+  union all
+  select 'P09_acl_grantees_v13_only',
+         coalesce('foreign grantees: '
+                  || string_agg(distinct case when x.grantee = 0 then 'PUBLIC'
+                                              else pg_catalog.pg_get_userbyid(x.grantee) end
+                                         || ' ' || x.privilege_type || ' on ' || x.kind || ' ' || x.object, ', '),
+                  (select count(*) from acl) || ' ACL entries, every grantee a V13 role'),
+         count(x.*)
+    from (select * from acl
+           where acl.grantee = 0
+              or pg_catalog.pg_get_userbyid(acl.grantee) not in (select rolname from v13_roles)) x
 )
 select check_id, detail, breaches::int as breaches from checks
 union all
