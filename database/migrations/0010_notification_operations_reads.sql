@@ -66,7 +66,8 @@ as $fn$
    cross join (select case when p_after_created_at ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$'
                            then p_after_created_at::timestamptz end as at) cursor
    where ((p_after_created_at is null and p_after_id is null)
-          or (n.created_at, n.id) < (cursor.at, p_after_id))
+          or (p_after_created_at is not null and p_after_id is not null
+              and (n.created_at, n.id) < (cursor.at, p_after_id)))
      and (p_lifecycle_status is null or p_lifecycle_status = '' or n.lifecycle_status = p_lifecycle_status)
      and (p_template_code is null or p_template_code = '' or t.code = p_template_code)
      and (p_case_number is null or p_case_number = '' or c.display_number = p_case_number)

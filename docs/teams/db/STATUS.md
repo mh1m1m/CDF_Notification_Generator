@@ -15,7 +15,7 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-010]` | `feature/V13-DB-010-my-work-columns` | migration 0008: `my_work_tasks` + `case_title_ar`, `case_title_en`, `case_records_state`, `status_event_id` (FE-005, ARCH request 31 Oct) | COMPLETE — #31 merged b5ee5f46 (SEC ACCEPT 3bd1c93) |
 | `[V13-DB-011]` | `feature/V13-DB-011-fk-indexes` | migration 0009: foreign-key index review (OI-032), FK coverage suite | COMPLETE — #42 merged f39af8b (SEC ACCEPT 3e78d52, ARCH accepted) |
 | `[V13-DB-012]` | `feature/V13-DB-012-hosted-guard` | `scripts/db/hosted-bundle.mjs` generates the plan §5.7 text guard; unit + hosted-sim tests | COMPLETE — #44 merged 2766fd9 (CI 7/7, run 41237743471) |
-| `[V13-DB-014]` | `feature/V13-DB-013-guard-tail` | text guard runs first: start, body, final statement and trailer checked before any statement runs | IN_PROGRESS — #47, SEC re-review of 8c6f4f4 pending (CI 7/7) |
+| `[V13-DB-014]` | `feature/V13-DB-013-guard-tail` | text guard runs first: start, body, final statement and trailer checked before any statement runs | COMPLETE — #47 merged (267944a) |
 | `[V13-DB-015]` | `feature/V13-DB-015-notification-ops` | migration 0010: `notifications_page` / `notifications_count` for the Notification Operations Center (S4, FE-006) | IN_PROGRESS — PR open, SEC review and SEC-DB-17 registry entries pending |
 
 ## Completed in PR (a)

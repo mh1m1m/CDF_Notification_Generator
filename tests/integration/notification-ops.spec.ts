@@ -416,6 +416,11 @@ describe.skipIf(!present)("Notification Operations Center reads (migration 0010)
     const last = rows[rows.length - 1]!;
     expect(await alpha(page({}, { at: last.created_at_cursor, id: null }))).toEqual([]);
     expect(await alpha(page({}, { at: null, id: last.notification_id }))).toEqual([]);
+    // Half a cursor whose present half would admit every row (SEC review 0bb7f09): still nothing.
+    expect(await alpha(page({}, { at: "2100-01-01T00:00:00.000000Z", id: null }))).toEqual([]);
+    expect(await alpha(page({}, { at: null, id: rows[0]!.notification_id }))).toEqual([]);
+    expect(await alpha(page({}, { at: null, id: "ffffffff-ffff-4fff-bfff-ffffffffffff" }))).toEqual([]);
+    expect(await alpha(page({}, { at: "", id: null }))).toEqual([]);
     expect(await alpha(page({}, { at: last.created_at_cursor, id: last.notification_id }))).toEqual([]);
     expect(ids(await alpha(page({}, { at: "2100-01-01T00:00:00.000000Z", id: NOTIFICATION(1) })))).toEqual(
       ids(rows),
