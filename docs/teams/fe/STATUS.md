@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 22:15 UTC · Branch: feature/V13-FE-006-notification-center-list (FE-006 part 2; part 1 #51 merged into develop 65a251d) · Head: see PR
+Updated: 2026-10-31 23:12 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-filter-reset (FE-006 part 1 #51 merged 65a251d; part 2 #61 merged 9290778) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -46,7 +46,11 @@ Updated: 2026-10-31 22:15 UTC · Branch: feature/V13-FE-006-notification-center-
   Reads DB-015 (`notifications_page` + `notifications_count`, one statement). Proposed contract
   `lib/contracts/notification-center.ts` (NotificationCenterReader, row and filter schemas) and `InvalidCursorError`
   moved into `lib/contracts` (OI-031, own file `lib/contracts/cursor.ts`; `lib/adapters/case-source/cursor.ts` re-exports it): needs ARCH + SEC ACCEPT.
-  Rows link to the case's Notifications tab; the in-case preview (`?n=`) is part 3 — IN_REVIEW.
+  Rows link to the case's Notifications tab; the in-case preview (`?n=`) is part 3. Part 2 — COMPLETE (#61, merged into develop 9290778).
+- V13-FE-007 (QA defects pinned in #58) — OI-042: `app/(platform)/not-found.tsx` renders notFound() inside the
+  AppShell as a section (no second `<main>`, no second `id="main"`), same visible text, `data-testid` and title as the
+  root not-found page; OI-043: the Portfolio filter form is keyed on its filter values (`filterFormKey`), so Clear,
+  Back and other client-side navigations remount it with the URL's values — IN_REVIEW (QA).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -126,6 +130,9 @@ Updated: 2026-10-31 22:15 UTC · Branch: feature/V13-FE-006-notification-center-
 | Same: `pnpm db:reset` then `pnpm test:e2e` (new spec 6: Beta and Gamma 404 identical to an unknown route on 4 URLs, no nav item; Alpha via nav, rows name visible cases only, count = rows; case filter; hidden/unknown case → no results; edited URL → invalid with reference; Delta GOVERNANCE) | pass | 132 passed | FE-006 part 2 head |
 | FE-006 part 2 + keyed Center filter form (OI-043 fix applied to S4): `pnpm test` / `pnpm db:reset` + `pnpm test:e2e` with a throwaway probe (Center Clear empties status and case, Back restores them; not committed) | pass | 1765 / 133 (132 + probe) | FE-006 part 2 head |
 | FE-006 part 2 after ARCH CHANGES ac30892: `InvalidCursorError` in its own `lib/contracts/cursor.ts` (both ports name the refusal), `lib/server/cases.ts` imports it from contracts, page-max comment, page + count in one statement (one snapshot at READ COMMITTED): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 1765 / 423 / 132 | FE-006 part 2 head |
+| FE-007 (branch from develop 718b07b): lint, typecheck, format / `pnpm test` (not-found 4 + filter key 3 new) / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 65 files, 1691 / 418 / 126 | FE-007 head |
+| FE-007 throwaway browser probe (not committed; QA's pinned tests are in #58): Gamma on hidden 0009 and unknown 0099 → 404, one `main`, one `id="main"`, axe 0 violations; Alpha `/portfolio?stage=INVESTIGATION&state=ACTIVE` → Clear shows empty selects, Back shows both again. Same probe on the code without the fix: 2/2 fail | pass | 2/2 | FE-007 head |
+| FE-007 after QA CHANGES e1434b4 and develop b5d810c (#58): `autoComplete="off"` on the Portfolio filter form (back_forward document loads), QA's two `test.fail()` pins removed (board §1 exception, ARCH): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (both former pins pass: case-404 one main, Scenario D Clear/Back) | pass | — / 1725 / 418 / 138 | FE-007 head |
 
 | FE-006 part 1 (develop ec8653a): lint, typecheck, format:check, build / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (new `tests/integration/fe/notification-draft.spec.ts`, 12) / `pnpm db:reset` + `pnpm test:e2e` / throwaway Scenario E browser probe (not committed; e2e is QA's): Alpha drafts on 0001 (count +1, row marked, axe 0, no CSP console error), id absent from 0003, resubmitted old key → duplicate notice and no new row, case id tampered to 0009 → not-found page, no draft form on closed 0010 or for Delta | pass | — / 1615 (52 new: service+markup+action 33, adapter 19) / 384 / 101 / 2/2 | FE-006 head |
 
