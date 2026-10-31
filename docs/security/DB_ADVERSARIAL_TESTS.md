@@ -144,7 +144,7 @@ Node 22.22.0, pnpm 10.28.0, PostgreSQL 16 local cluster (`pnpm db:local`).
 | -------------------------------------------------------------- | ------------------------------------------- |
 | `npx vitest run --project integration tests/security/db`       | 4 files, 74 tests passed                    |
 | `npx vitest run --project integration` (all of `pnpm test:db`) | 14 files, 282 tests passed                  |
-| Same SEC suites with migration 0007 (PR #28) applied           | 74 passed (the guard already lists `claims_key_state`) |
+| After merging develop 558d4ae (migration 0007): `pnpm test:db` | 15 files, 294 tests passed |
 
 CI on the PR is the run of record.
 
