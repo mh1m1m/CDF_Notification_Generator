@@ -8,6 +8,7 @@ import { databaseClientOptions } from "@/lib/db/client";
 import { isProbeHealthy, probeDatabase } from "@/lib/db/health-probe";
 import { isolationChecks, isolationVerdict, runIsolationProbe } from "@/lib/db/isolation-probe";
 import { requestClaims, withRequestContext } from "@/lib/db/security-context";
+import { TEST_CLAIMS_KEY } from "./support/claims";
 import { clusterAvailable, PRIMARY_ADMIN_URL, PRIMARY_APP_URL } from "./support/clusters";
 
 const available = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
@@ -47,7 +48,7 @@ describe.skipIf(!available)("request security context on the primary cluster", (
                  pg_catalog.current_setting('request.v13.claims') as claims`;
         return row;
       },
-      { sql, correlationId: CORRELATION },
+      { sql, correlationId: CORRELATION, claimsKey: TEST_CLAIMS_KEY },
     );
     expect(inside).toEqual({
       current_user: "cdf_v13_user",
@@ -57,7 +58,7 @@ describe.skipIf(!available)("request security context on the primary cluster", (
   });
 
   it("leaves no role and no claims on the connection afterwards, also when the work fails", async () => {
-    await withRequestContext(alpha, async () => undefined, { sql });
+    await withRequestContext(alpha, async () => undefined, { sql, claimsKey: TEST_CLAIMS_KEY });
     expect(await sessionState()).toMatchObject({ current_user: "cdf_v13_app", session_user: "cdf_v13_app" });
     expect((await sessionState())?.claims ?? "").toBe("");
 
@@ -68,7 +69,7 @@ describe.skipIf(!available)("request security context on the primary cluster", (
           await tx`select pg_catalog.pg_sleep(0)`;
           throw new Error("work failed");
         },
-        { sql },
+        { sql, claimsKey: TEST_CLAIMS_KEY },
       ),
     ).rejects.toThrow("work failed");
     expect(await sessionState()).toMatchObject({ current_user: "cdf_v13_app" });
@@ -77,11 +78,15 @@ describe.skipIf(!available)("request security context on the primary cluster", (
 
   it("gives the request role no way up: SET ROLE to the owner and reading the history are refused", async () => {
     await expect(
-      withRequestContext(alpha, async (tx) => tx`set local role cdf_v13_owner`, { sql }),
+      withRequestContext(alpha, async (tx) => tx`set local role cdf_v13_owner`, {
+        sql,
+        claimsKey: TEST_CLAIMS_KEY,
+      }),
     ).rejects.toMatchObject({ code: "42501" });
     await expect(
       withRequestContext(alpha, async (tx) => tx`select 1 from cdf_notifications_v13.schema_migrations`, {
         sql,
+        claimsKey: TEST_CLAIMS_KEY,
       }),
     ).rejects.toMatchObject({ code: "42501" });
   });
