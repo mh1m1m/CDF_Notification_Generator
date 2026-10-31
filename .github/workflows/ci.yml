@@ -1,9 +1,10 @@
 # CI for CDF V13 Enterprise — SYNTHETIC-DATA REFERENCE IMPLEMENTATION, not CDF production.
 #
-# Jobs: quality (lint, typecheck, format, db:lint) · unit · integration (two throw-away PostgreSQL 17 containers: the
-# db:reset target, and a hosted simulation whose bootstrap superuser is supabase_admin) · build · e2e (Playwright smoke
-# and accessibility). No repository secrets are used; the database passwords below exist only inside the job's
-# containers and are deliberately not secret.
+# Jobs: quality (lint, typecheck, format, db:lint) · unit · rehearsal (scripts/db/rehearse-shared.mjs on a local
+# PostgreSQL 16 cluster) · integration (two throw-away PostgreSQL 17 containers: the db:reset target, and a hosted
+# simulation whose bootstrap superuser is supabase_admin) · build · e2e (Playwright smoke and accessibility). No
+# repository secrets are used; the database passwords below exist only inside the job's containers and are
+# deliberately not secret.
 #
 # Actions are pinned to full commit SHAs (tag in the comment). The first run (40626543282, commit 5c53ec4) resolved
 # every pin. These versions target Node.js 20, which GitHub now runs on Node.js 24 with a deprecation warning; moving
@@ -120,6 +121,31 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
           retention-days: 14
+
+  rehearsal:
+    # V13-DB-006: the scripted rehearsal of the shared-database procedure (ISOLATION_AND_RECOVERY_PLAN §6 step 0) on a
+    # throw-away local cluster laid out like the hosted project: dry run, apply, fingerprints, isolation checks, four
+    # planted faults, refused and clean rollback. It never connects anywhere else. The runner image ships PostgreSQL
+    # 16 binaries (no service is started; the script runs its own cluster in RUNNER_TEMP on port 54339).
+    name: Shared-database rehearsal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Locate PostgreSQL 16 binaries
+        run: |
+          if [ ! -x /usr/lib/postgresql/16/bin/initdb ]; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-16
+          fi
+          /usr/lib/postgresql/16/bin/initdb --version
+          echo "V13_PG_BIN=/usr/lib/postgresql/16/bin" >> "$GITHUB_ENV"
+      # The script uses Node built-ins only, so no dependency install is needed.
+      - run: node scripts/db/rehearse-shared.mjs --dir="$RUNNER_TEMP/v13-rehearsal" --port=54339
 
   build:
     name: Build
