@@ -150,29 +150,57 @@ PASS. Foreign isolation stays in §5.2.
 
 ### 5.7 The text that arrives is the text that was reviewed
 The hosted SQL is sent as one text through the Supabase connector (`execute_sql`), which runs it as one simple query and
-appends a comment trailer of its own. Before anything is sent, every text is generated from the repository (`node
-scripts/db/hosted-bundle.mjs <version> [--dry-run]`, the seed files verbatim inside the same transaction frame) and a
-guard block is inserted before its final COMMIT or ROLLBACK:
+appends a comment trailer of its own. Every text is generated from the repository, never edited by hand: `node
+scripts/db/hosted-bundle.mjs <version> [--dry-run]` (`buildHostedBundle()`) for a migration, and `node
+scripts/db/hosted-bundle.mjs --seed <NNNN> [--dry-run]` (`buildHostedSeedBundle()`, since #56) for a seed file, sent
+verbatim in the same transaction frame under the same `textGuard()`. A seed text also carries a guard that refuses
+unless the recorded migration history equals every repository migration (name and sha256), so a seed runs only on
+the complete schema; since #62 (V13-DB-017) the generator produces no seed text while any seed has a `db:lint` finding
+(transaction control or a role change). Since #47 (V13-DB-014, 31 Oct) the text guard is the **first** statement of
+the text, before `begin;`:
 
 ```sql
--- V13-TEXT-END
 do $v13_text_guard$
+declare
+  received text := pg_catalog.current_query();
+  ...
 begin
-  if pg_catalog.md5(pg_catalog.split_part(pg_catalog.current_query(), '-- V13-TEXT-END', 1))
-     is distinct from '<md5 of every byte before the marker>' then
-    raise exception 'V13 text guard: the text received differs from the repository text' using errcode = 'P0001';
-  end if;
+  -- 1. the received text starts with this block, and its closing tag occurs exactly once
+  -- 2. after the closing tag: the repository text, byte for byte (its md5 and its length)
+  -- 3. then exactly the final statement (commit; or, for a dry run, rollback;) and a newline
+  -- 4. then only whitespace and "--" line comments, which cannot execute (the connector's trailer)
 end
 $v13_text_guard$;
+begin;
+...
+commit;
 ```
 
-The server hashes the query text it actually received, up to the marker, so one changed, added or dropped byte anywhere
-before the marker aborts the transaction and nothing is applied. It was tested on the Supabase-like local cluster, 31
-Oct: on the real seed text, a changed comment byte, a trailing space and a changed string literal each raised the guard
-and the unchanged text passed; on a short text with the same guard, a dropped line and an added blank line each raised
-it and the unchanged text passed. After the run, a catalogue fingerprint of the V13 schema (functions with their bodies
-and settings, columns, constraints, indexes, policies, ACLs, default ACLs, memberships) is compared with the same query
-on a local database built from the same commit; equal hashes show that what was applied is what was reviewed.
+The server checks the query text it actually received. Because the guard runs first, no statement of the text has run
+when it checks, and any difference raises `P0001`. The simple query then stops, so no later statement runs and the
+implicit transaction rolls back. The md5 covers only the repository text between the guard and the final statement. So
+the dry-run and apply texts carry the same hash and differ in three lines: the two lines of the guard that
+name the expected final statement, and the final statement itself.
+
+The generator's unit tests (`tests/unit/hosted-bundle.spec.ts`) and the hosted rehearsal
+(`tests/integration/hosted-sim.spec.ts`, against PostgreSQL) refuse each of these, while the unchanged texts pass with
+whitespace and line-comment trailers:
+- a statement between the guard and the text;
+- a second closing tag, in a statement or in a trailer comment;
+- a dry run edited to `commit;` and an apply edited to `rollback;`;
+- a statement appended after or on the final line;
+- an appended block comment.
+
+Two limits remain (SEC, reviews of #44 and #47):
+- A statement put **in front of** the guard runs before it. The guard then refuses the rest, but a prepended
+  `…; commit;` would persist. So the operator writes the text to be sent to a file, compares it byte for byte with the
+  generated text (`cmp`), and sends it verbatim.
+- The final statement must be followed by a newline. A connector that trimmed it would make the guard refuse: the run
+  fails closed and nothing is applied.
+
+After the run, a catalogue fingerprint of the V13 schema (functions with their bodies and settings, columns,
+constraints, indexes, policies, ACLs, default ACLs, memberships) is compared with the same query on a local database
+built from the same commit. Equal hashes show that what was applied is what was reviewed.
 
 ## 6. Procedure (go / no-go)
 

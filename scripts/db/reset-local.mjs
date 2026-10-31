@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // @ts-check
 // Rebuilds the LOCAL database from Git (pnpm db:reset): drop and recreate v13_local, drop the V13 roles, apply every
-// migration (scripts/db/migrate.mjs), apply database/seed/*.sql, and give cdf_v13_app a local-only password.
+// migration (scripts/db/migrate.mjs), apply database/seed/*.sql (which must pass db:lint first), and give cdf_v13_app a
+// local-only password.
 //
 // LOCAL AND CI ONLY. It refuses a non-loopback host and any database other than v13_local, because it drops both.
 // The app password comes from V13_LOCAL_APP_PASSWORD (default "local-only-not-a-secret"); it is stored as a SCRAM
@@ -22,6 +23,7 @@ import {
   withDatabase,
 } from "./lib/migrations.mjs";
 import { scramVerifier } from "./lib/scram.mjs";
+import { formatFinding, lintSeedsDir } from "./lint-migrations.mjs";
 import { migrate, runnerFromEnv } from "./migrate.mjs";
 
 /** Default password of the app login on local and CI clusters. Not a secret: these clusters hold synthetic data. */
@@ -59,6 +61,13 @@ export async function resetLocal(options = {}) {
   const appPassword =
     options.appPassword ?? (process.env.V13_LOCAL_APP_PASSWORD || DEFAULT_LOCAL_APP_PASSWORD);
   const verifier = scramVerifier(appPassword);
+
+  // Seeds pass db:lint before anything is dropped (OI-041: no transaction control, no role change in a seed).
+  const seedLint = lintSeedsDir(SEED_DIR);
+  if (seedLint.findings.length > 0)
+    throw new ResetError(
+      `db:lint reports ${seedLint.findings.length} seed finding(s):\n${seedLint.findings.map((f) => formatFinding(f, SEED_DIR)).join("\n")}`,
+    );
 
   const maintenance = connect(withDatabase(url, "postgres"), "cdf-v13-reset");
   try {

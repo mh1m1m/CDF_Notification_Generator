@@ -6,16 +6,29 @@ import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { lintSeedsDir } from "@/scripts/db/lint-migrations.mjs";
 import {
   buildHostedBundle,
+  buildHostedSeedBundle,
   GUARD_TAG,
   HostedBundleError,
   md5Hex,
   textGuard,
 } from "@/scripts/db/hosted-bundle.mjs";
-import { MIGRATION_LOCK_SQL, MIGRATIONS_DIR, ROOT, readMigrations } from "@/scripts/db/lib/migrations.mjs";
+import { readFileSync } from "node:fs";
+import {
+  MIGRATION_LOCK_SQL,
+  MIGRATIONS_DIR,
+  ROOT,
+  readMigrations,
+  SEED_DIR,
+  sha256,
+} from "@/scripts/db/lib/migrations.mjs";
 
 const SCRIPT = join(ROOT, "scripts", "db", "hosted-bundle.mjs");
+const LINT_SCRIPT = join(ROOT, "scripts", "db", "lint-migrations.mjs");
+/** A seed in the required frame: SET LOCAL ROLE cdf_v13_owner first, RESET ROLE last. */
+const seedFixture = (statements: string) => `set local role cdf_v13_owner;\n${statements}\nreset role;\n`;
 const FIXTURE_0001 = `set local role cdf_v13_owner;
 comment on schema cdf_notifications_v13 is 'Synthetic fixture migration.';
 reset role;
@@ -288,6 +301,176 @@ describe("command line", () => {
       ).toBe(2);
     }
     const missing = spawnSync(process.execPath, [SCRIPT, "0099"], { encoding: "utf8" });
+    expect(missing.status).toBe(1);
+    expect(missing.stdout).toBe("");
+  });
+});
+
+describe("seed bundle (--seed, V13-DB-016)", () => {
+  const seedText = (file: string) => readFileSync(join(SEED_DIR, file), "utf8");
+
+  it("guards the seed file verbatim inside the migration frame, after a whole-history guard", () => {
+    const migrations = readMigrations();
+    const latest = migrations[migrations.length - 1]!;
+    for (const [version, file] of [
+      ["0001", "0001_m1_synthetic.sql"],
+      ["0002", "0002_m1_cases.sql"],
+    ] as const) {
+      const bundle = buildHostedSeedBundle({ version });
+      expect(bundle.startsWith(`do ${GUARD_TAG}\n`)).toBe(true);
+      expect(bundle.endsWith("\ncommit;\n")).toBe(true);
+      expect(guardPasses(bundle)).toBe(true);
+      const body = afterGuard(bundle);
+      expect(body).toContain(`-- Seed:      database/seed/${file}\n`);
+      expect(body).toContain(`-- sha256:    ${sha256(readFileSync(join(SEED_DIR, file)))}\n`);
+      expect(body).toContain(
+        `\n-- ---- ${file} (verbatim) ----\n${seedText(file)}-- ---- end of ${file} ----\n`,
+      );
+      expect(frame(bundle)).toEqual([
+        "begin;",
+        "set local lock_timeout = '5s';",
+        "set local search_path = '';",
+        `${MIGRATION_LOCK_SQL};`,
+        "do $v13_bundle_guard$",
+        "begin",
+        "if not exists (",
+        "select 1",
+        "from pg_catalog.pg_class c",
+        "join pg_catalog.pg_namespace n on n.oid = c.relnamespace",
+        "where n.nspname = 'cdf_notifications_v13' and c.relname = 'schema_migrations' and c.relkind = 'r'",
+        ") then",
+        `raise exception 'V13 seed ${version} refused: the V13 bootstrap (0000) is not applied' using errcode = 'P0001';`,
+        "end if;",
+        "end",
+        "$v13_bundle_guard$;",
+        "set local role cdf_v13_owner;",
+        "do $v13_bundle_history_guard$",
+        "begin",
+        "if exists (",
+        "select 1",
+        "from (values",
+        ...migrations.map(
+          (m, k) => `('${m.version}', '${m.name}', '${m.checksum}')${k < migrations.length - 1 ? "," : ""}`,
+        ),
+        ") as expected (version, name, checksum_sha256)",
+        "full join cdf_notifications_v13.schema_migrations as recorded on recorded.version = expected.version",
+        "where recorded.version is null",
+        "or expected.version is null",
+        "or recorded.name is distinct from expected.name",
+        "or recorded.checksum_sha256 is distinct from expected.checksum_sha256",
+        ") then",
+        `raise exception 'V13 seed ${version} refused: the recorded history is not the repository''s 0000–${latest.version} (name or sha256)'`,
+        "using errcode = 'P0001';",
+        "end if;",
+        "end",
+        "$v13_bundle_history_guard$;",
+        "reset role;",
+        "commit;",
+      ]);
+      // No history row: seeds are idempotent and not versioned in schema_migrations.
+      expect(body).not.toContain("insert into cdf_notifications_v13.schema_migrations");
+    }
+  });
+
+  it("dry run and apply differ only in the final statement and carry the same hash", () => {
+    const apply = buildHostedSeedBundle({ version: "0002" });
+    const dry = buildHostedSeedBundle({ version: "0002", dryRun: true });
+    expect(dry.endsWith("\nrollback;\n")).toBe(true);
+    expect(guardPasses(dry)).toBe(true);
+    const hash = (t: string) => /is distinct from '([0-9a-f]{32})'/.exec(t)?.[1];
+    expect(hash(dry)).toBe(hash(apply));
+    expect(afterGuard(dry).replace(/rollback;\n$/, "commit;\n")).toBe(afterGuard(apply));
+    expect(buildHostedSeedBundle({ version: "0002" })).toBe(apply);
+  });
+
+  it("refuses a missing or ambiguous seed, a bad version, and a seed that carries the guard tag", () => {
+    expect(() => buildHostedSeedBundle({ version: "0099" })).toThrow(/no seed with version 0099/);
+    expect(() => buildHostedSeedBundle({ version: "1" })).toThrow(/four digits/);
+    dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
+    writeFileSync(join(dir, "0001_a.sql"), seedFixture("select 1;"));
+    writeFileSync(join(dir, "0001_b.sql"), seedFixture("select 1;"));
+    expect(() => buildHostedSeedBundle({ version: "0001", seedDir: dir })).toThrow(
+      /seed version 0001 is also used by 0001_a\.sql/,
+    );
+    rmSync(dir, { recursive: true, force: true });
+    dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
+    writeFileSync(join(dir, "0002_tagged.sql"), seedFixture(`select '${GUARD_TAG}';`));
+    expect(() => buildHostedSeedBundle({ version: "0002", seedDir: dir })).toThrow(HostedBundleError);
+    expect(() => buildHostedSeedBundle({ version: "0002", seedDir: dir })).toThrow(/guard tag/);
+  });
+
+  describe("a seed must pass db:lint first (OI-041): no transaction control, no role change", () => {
+    // Each would escape the bundle's transaction frame: COMMIT ends it early (a dry run would apply), ROLLBACK ends it
+    // and runs the rest outside any transaction, a session-level SET ROLE outlives it, an early RESET ROLE or another
+    // role runs the rest without cdf_v13_owner.
+    const breaking: [string, string, string][] = [
+      ["COMMIT", seedFixture("select 1;\ncommit;\nselect 2;"), "transaction-control"],
+      ["ROLLBACK", seedFixture("select 1;\nrollback;"), "transaction-control"],
+      ["BEGIN", seedFixture("begin;\nselect 1;"), "transaction-control"],
+      ["END", seedFixture("select 1;\nend;"), "transaction-control"],
+      ["SAVEPOINT", seedFixture("savepoint s;\nselect 1;"), "transaction-control"],
+      ["SET ROLE", seedFixture("set role cdf_v13_owner;\nselect 1;"), "session-role"],
+      ["SET SESSION AUTHORIZATION", seedFixture("set session authorization postgres;"), "session-role"],
+      ["RESET ROLE early", seedFixture("reset role;\nselect 1;"), "owner-role"],
+      ["another role", seedFixture("set local role postgres;\nselect 1;"), "owner-role"],
+      ["no SET LOCAL ROLE first", "select 1;\nreset role;\n", "owner-role"],
+      ["COMMIT inside a DO block", seedFixture("do $s$ begin commit; end $s$;"), "transaction-control"],
+    ];
+
+    for (const [label, text, rule] of breaking) {
+      it(`${label}: db:lint reports ${rule} and the generator refuses (dry run and apply)`, () => {
+        dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
+        writeFileSync(join(dir, "0001_breaking.sql"), text);
+        expect(lintSeedsDir(dir).findings.map((f) => f.rule)).toContain(rule);
+        for (const dryRun of [true, false]) {
+          expect(() => buildHostedSeedBundle({ version: "0001", seedDir: dir, dryRun })).toThrow(
+            new RegExp(`seed finding\\(s\\); no bundle is produced:[\\s\\S]*\\[${rule}\\]`),
+          );
+        }
+        const cli = spawnSync(process.execPath, [SCRIPT, "--seed", "0001", "--dry-run", "--seed-dir", dir], {
+          encoding: "utf8",
+        });
+        expect(cli.status).toBe(1);
+        expect(cli.stdout).toBe("");
+        const lint = spawnSync(process.execPath, [LINT_SCRIPT, "--seed-dir", dir], { encoding: "utf8" });
+        expect(lint.status).toBe(1);
+        expect(lint.stderr).toContain(`[${rule}]`);
+      });
+    }
+
+    it("a well-formed seed passes, and today's seeds pass", () => {
+      dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
+      writeFileSync(join(dir, "0001_ok.sql"), seedFixture("select 1;"));
+      expect(lintSeedsDir(dir).findings).toEqual([]);
+      expect(() => buildHostedSeedBundle({ version: "0001", seedDir: dir, dryRun: true })).not.toThrow();
+      const today = lintSeedsDir();
+      expect(today.files).toEqual(["0001_m1_synthetic.sql", "0002_m1_cases.sql"]);
+      expect(today.findings).toEqual([]);
+      const lint = spawnSync(process.execPath, [LINT_SCRIPT], { encoding: "utf8" });
+      expect(lint.status).toBe(0);
+      expect(lint.stdout).toMatch(/migration file\(s\), 2 seed file\(s\), 0 finding\(s\)/);
+    });
+
+    it("seed file names: NNNN_name.sql, unique versions, never 0000", () => {
+      dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
+      writeFileSync(join(dir, "0000_boot.sql"), "select 1;\n");
+      writeFileSync(join(dir, "seed.sql"), seedFixture("select 1;"));
+      const findings = lintSeedsDir(dir).findings;
+      expect(findings.map((f) => `${f.file}:${f.rule}`).sort()).toEqual([
+        "0000_boot.sql:file-name",
+        "seed.sql:file-name",
+      ]);
+    });
+  });
+
+  it("command line: --seed prints the seed bundle; --seed-dir without a value is a usage error", () => {
+    const ok = spawnSync(process.execPath, [SCRIPT, "--seed", "0001", "--dry-run"], { encoding: "utf8" });
+    expect(ok.status).toBe(0);
+    expect(ok.stdout).toBe(buildHostedSeedBundle({ version: "0001", dryRun: true }));
+    expect(
+      spawnSync(process.execPath, [SCRIPT, "--seed", "0001", "--seed-dir"], { encoding: "utf8" }).status,
+    ).toBe(2);
+    const missing = spawnSync(process.execPath, [SCRIPT, "--seed", "0099"], { encoding: "utf8" });
     expect(missing.status).toBe(1);
     expect(missing.stdout).toBe("");
   });

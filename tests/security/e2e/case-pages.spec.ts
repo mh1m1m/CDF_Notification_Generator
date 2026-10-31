@@ -140,20 +140,42 @@ test.describe("SEC-APP-01 malformed case ids never reach a server error (TM-I2, 
     }
   });
 
-  // KNOWN DEFECT (SEC finding on V13-SEC-006, LOW): a case id that is not valid UTF-8 after percent-decoding makes
-  // Next.js answer a bare 500 "Internal Server Error" on every dynamic route (no internals, no case data). Pinned as an
-  // expected failure so the fix flips it; remove test.fail() with the fix.
-  test("ids that are not valid UTF-8 answer like an unknown id, never a 500", async ({ page }) => {
-    test.fail(
-      true,
-      "known defect: invalid percent-encoding in a dynamic segment answers 500 (reported to ARCH)",
-    );
+  // SEC-F-006-1 (LOW, found by V13-SEC-006): a case id that is not valid UTF-8 after percent-decoding made Next.js
+  // answer a bare 500 "Internal Server Error" on every dynamic route (no internals, no case data). Fixed in proxy.ts by
+  // V13-ARCH-010: the session gate runs first, then a signed-in request gets the generic not-found page. So the answer
+  // is exactly an unknown page's: the same 404 page with a session, the same redirect to sign-in without one.
+  test("ids that are not valid UTF-8 answer like an unknown page, never a 500", async ({ page }) => {
+    const malformed = ["%C0%AF", "%FF", "%E0%A4%A"];
+    const UNKNOWN_PAGE = "/no-such-page";
     await signInAs(page, "investigator-beta");
-    for (const id of ["%C0%AF", "%FF", "%E0%A4%A"]) {
+    expect((await page.goto(UNKNOWN_PAGE))?.status(), "unknown page").toBe(404);
+    const unknownPage = await visibleText(page);
+    for (const id of malformed) {
       for (const tab of TABS) {
+        const label = `${id}${tab} (signed in)`;
         const res = await page.goto(`/cases/${id}${tab}`);
-        expect(res?.status(), `${id}${tab}`).toBe(404);
-        expect((await res?.text()) ?? "", `${id}${tab}`).not.toMatch(STACK_OR_INTERNALS);
+        expect(res?.status(), label).toBe(404);
+        expect((await res?.text()) ?? "", label).not.toMatch(STACK_OR_INTERNALS);
+        await expect(page.getByTestId("not-found-state"), label).toBeVisible();
+        await expect(page.locator("[data-case-id]"), label).toHaveCount(0);
+        expect(await visibleText(page), label).toBe(unknownPage);
+      }
+    }
+    await page.context().clearCookies();
+    const anonymous = (path: string) => page.request.get(path, { maxRedirects: 0 });
+    const unknownPageAnonymous = await anonymous(UNKNOWN_PAGE);
+    const unknownIdAnonymous = await anonymous(`/cases/${UNKNOWN}`);
+    expect(unknownPageAnonymous.status(), "unknown page (anonymous)").toBe(307);
+    expect(unknownIdAnonymous.status(), "unknown id (anonymous)").toBe(307);
+    const signIn = unknownPageAnonymous.headers()["location"];
+    expect(unknownIdAnonymous.headers()["location"], "unknown id (anonymous)").toBe(signIn);
+    for (const id of malformed) {
+      for (const tab of TABS) {
+        const label = `${id}${tab} (anonymous)`;
+        const res = await anonymous(`/cases/${id}${tab}`);
+        expect(res.status(), label).toBe(307);
+        expect(res.headers()["location"], label).toBe(signIn);
+        expect(await res.text(), label).not.toMatch(STACK_OR_INTERNALS);
       }
     }
   });
@@ -246,6 +268,7 @@ test.describe("SEC-APP-11 the workspace switch takes nothing from the form but t
     await signInAs(page, "governance-officer-delta");
     await page.goto("/workspaces");
     const form = page
+      .getByTestId("workspaces-page")
       .locator("form")
       .filter({ has: page.locator('[name="workspace"]') })
       .first();
@@ -289,6 +312,7 @@ test.describe("SEC-APP-11 the workspace switch takes nothing from the form but t
     const before = (await context.cookies()).find((c) => c.name === SESSION_COOKIE)?.value;
     await page.goto("/workspaces");
     const form = page
+      .getByTestId("workspaces-page")
       .locator("form")
       .filter({ has: page.locator('[name="workspace"]') })
       .first();
