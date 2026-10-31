@@ -1,15 +1,13 @@
 // Opaque portfolio cursor. The database pages by keyset on display_number (portfolio_page, migration 0002); the
 // cursor carries that sort position only. The display number is never used to look a case up: it bounds an
 // already-authorised, RLS-filtered query. Anything that does not decode to a well-formed position is refused.
-import { CASE_NUMBER_PATTERN } from "@/lib/contracts";
+import { CASE_NUMBER_PATTERN, InvalidCursorError } from "@/lib/contracts";
 
 const CURSOR_VERSION = 1;
 const BASE64URL = /^[A-Za-z0-9_-]{1,512}$/;
 
-export class InvalidCursorError extends Error {
-  override readonly name = "InvalidCursorError";
-  readonly code = "INVALID_CURSOR";
-}
+// One error class for every opaque cursor (OI-031): it lives in lib/contracts and is re-exported here.
+export { InvalidCursorError };
 
 export function encodeCursor(afterDisplayNumber: string): string {
   if (!CASE_NUMBER_PATTERN.test(afterDisplayNumber)) throw new InvalidCursorError("bad position");

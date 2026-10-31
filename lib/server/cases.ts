@@ -8,9 +8,9 @@ import {
   type CaseListPage,
   type CaseSourceAdapter,
   type CaseHeader,
+  InvalidCursorError,
 } from "@/lib/contracts";
 import { parseCaseId, precheck } from "@/lib/authz";
-import { InvalidCursorError } from "@/lib/adapters/case-source/cursor";
 import type { RequestContext } from "./context";
 import { AppError } from "./errors";
 

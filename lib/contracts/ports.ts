@@ -31,6 +31,10 @@ import { WorkspaceIdSchema } from "./workspaces";
 export interface CaseSourceAdapter {
   /** Upper-snake code identifying this source; equals `CaseSummary.source_system` of what it returns. */
   readonly sourceSystem: string;
+  /**
+   * One authorised page. Refusal of a cursor: a `filter.cursor` the adapter did not issue, or that does not decode,
+   * throws InvalidCursorError (lib/contracts/cursor.ts) before any read.
+   */
   listCases(identity: RequestIdentity, filter: CaseListFilter): Promise<CaseListPage>;
   /** The case header: the summary plus the identity's own capacity on the case (null when it holds none). */
   getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null>;
