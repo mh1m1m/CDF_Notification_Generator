@@ -1,0 +1,362 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "CF-37",
+  "title": {
+    "ar": "إصدار إشعار بقرار: لا تُعرض مهلة التظلم قبل تسجيل بدئها",
+    "en": "Decision notice issued: no grievance deadline before GRIEVANCE_WINDOW_STARTED is recorded"
+  },
+  "journey": "J-DECISION-SUBJECT",
+  "assignment_id": "CF-37",
+  "recipient_class": "SUBJECT",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6fb",
+    "internal_ref": "CDF-DEMO-2026-0037",
+    "track": "IR",
+    "classification": "RESTRICTED",
+    "status": {
+      "code": "S5.01",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0037"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-949002e2ade9",
+    "type": "DECISION",
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6fb",
+    "journey_id": "J-DECISION-SUBJECT",
+    "status": "DECIDED",
+    "status_source_event_id": "evt-CF-37-00b",
+    "steps": [],
+    "deadlines": [
+      {
+        "kind": "GRIEVANCE_DUE",
+        "at": "2026-11-27T09:00:00Z",
+        "basis_event_id": "evt-CF-37-01",
+        "basis_rule": "DEC-F15"
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "evt-CF-37-00a",
+      "type": "PACKAGE_SUBMITTED_TO_AUTHORITY",
+      "occurred_at": "2026-10-27T09:00:00Z",
+      "recorded_at": "2026-10-27T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6fb",
+      "object": {
+        "type": "DECISION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade9"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-37.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-37",
+      "payload": {
+        "related": [
+          {
+            "type": "DECISION",
+            "id": "0b1ec700-0000-4000-8000-949002e2ade9"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "evt-CF-37-00b",
+      "type": "AUTHORITY_DECISION_RECORDED",
+      "occurred_at": "2026-10-28T08:00:00Z",
+      "recorded_at": "2026-10-28T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6fb",
+      "object": {
+        "type": "DECISION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade9"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-37.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-37",
+      "payload": {
+        "outcome": "APPROVE"
+      }
+    },
+    {
+      "event_id": "evt-CF-37-01",
+      "type": "DECISION_NOTICE_ISSUED",
+      "occurred_at": "2026-10-28T09:00:00Z",
+      "recorded_at": "2026-10-28T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6fb",
+      "object": {
+        "type": "DECISION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade9"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-37.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-37",
+      "payload": {}
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S5",
+      "substate": "S5.01",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S4",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S5",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-DECISION-SUBJECT/1/1",
+        "state": "IN_PROGRESS",
+        "evidence_event_id": "evt-CF-37-01"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-DECISION-SUBJECT/1/2",
+        "kind": "OPTIONAL"
+      },
+      {
+        "step_id": "J-DECISION-SUBJECT/2/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-DECISION-SUBJECT/2/2",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-DECISION-SUBJECT/3/1",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-DECISION-SUBJECT/3/2",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-DECISION-SUBJECT/4/1",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-DECISION-SUBJECT/4/2",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-DECISION-SUBJECT/5/1",
+        "kind": "EXPECTED"
+      }
+    ],
+    "stage_n": 1,
+    "notice_location": "actual",
+    "deadlines": [
+      {
+        "kind": "GRIEVANCE_DUE",
+        "rule_id": "DEC-F15",
+        "at": null,
+        "status": "NO_BASIS_EVENT",
+        "basis_event_id": null
+      }
+    ],
+    "anomalies_include": ["DEADLINE_CLAIM_REJECTED"],
+    "must_not": [
+      "✔ on J-DECISION-SUBJECT/1/1",
+      "● on J-DECISION-SUBJECT/2/1",
+      "✔ on J-DECISION-SUBJECT/2/1",
+      "deadline.at"
+    ]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "Subject «يوجد إشعار بقرار بانتظارك، وقد بدأت مهلة تقديم التظلّم.» while L2 shows «○ 2. مهلة التظلم» and L3 «● التبليغ الرسمي / ○ الإقرار بالاستلام»: the period is said to have started with no start recorded (W2 F-W2-25).",
+    "evidence": [
+      "notifications/eml/ar/CF-37_DECISION_NOTICE_ISSUED.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-37 ar",
+      "notifications/review/v12-forensic (W2 F-W2-25, cited by src/consistency/rules.js PC-16 v12_evidence)"
+    ]
+  },
+  "variants": [
+    {
+      "id": "CF-37-V1",
+      "title": {
+        "ar": "بعد تسجيل التسليم وبدء مهلة التظلم",
+        "en": "After delivery and GRIEVANCE_WINDOW_STARTED are recorded"
+      },
+      "events_add": [
+        {
+          "event_id": "evt-CF-37-02",
+          "type": "DECISION_NOTICE_DELIVERED",
+          "occurred_at": "2026-10-31T09:00:00Z",
+          "recorded_at": "2026-10-31T09:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6fb",
+          "object": {
+            "type": "DECISION",
+            "id": "0b1ec700-0000-4000-8000-949002e2ade9"
+          },
+          "actor": {
+            "capacity": "SYSTEM",
+            "id": "usr-demo-system"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-37.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-37",
+          "payload": {
+            "evidence": "PORTAL_ACCESS"
+          }
+        },
+        {
+          "event_id": "evt-CF-37-03",
+          "type": "GRIEVANCE_WINDOW_STARTED",
+          "occurred_at": "2026-11-01T09:00:00Z",
+          "recorded_at": "2026-11-01T09:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-4747f672e6fb",
+          "object": {
+            "type": "DECISION",
+            "id": "0b1ec700-0000-4000-8000-949002e2ade9"
+          },
+          "actor": {
+            "capacity": "SYSTEM",
+            "id": "usr-demo-system"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-37.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-37",
+          "payload": {
+            "rule": "DEC-F15"
+          }
+        }
+      ],
+      "procedural_object_patch": {
+        "deadlines": []
+      },
+      "expected": {
+        "actual": [
+          {
+            "step_id": "J-DECISION-SUBJECT/1/1",
+            "state": "COMPLETED",
+            "evidence_event_id": "evt-CF-37-02"
+          },
+          {
+            "step_id": "J-DECISION-SUBJECT/2/1",
+            "state": "COMPLETED",
+            "evidence_event_id": "evt-CF-37-03"
+          },
+          {
+            "step_id": "J-DECISION-SUBJECT/2/2",
+            "state": "PENDING"
+          }
+        ],
+        "expected_steps": [
+          {
+            "step_id": "J-DECISION-SUBJECT/1/2",
+            "kind": "OPTIONAL"
+          },
+          {
+            "step_id": "J-DECISION-SUBJECT/3/1",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-DECISION-SUBJECT/3/2",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-DECISION-SUBJECT/4/1",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-DECISION-SUBJECT/4/2",
+            "kind": "CONDITIONAL"
+          },
+          {
+            "step_id": "J-DECISION-SUBJECT/5/1",
+            "kind": "EXPECTED"
+          }
+        ],
+        "stage_n": 2,
+        "deadlines": [
+          {
+            "kind": "GRIEVANCE_DUE",
+            "rule_id": "DEC-F15",
+            "at": "2026-12-01T09:00:00.000Z",
+            "status": "OWNER_DEFAULT",
+            "basis_event_id": "evt-CF-37-03",
+            "epistemic": "DERIVED_FROM_VERIFIED_FACTS"
+          }
+        ],
+        "anomalies_exclude": ["DEADLINE_CLAIM_REJECTED"],
+        "must_not": ["✔ on J-DECISION-SUBJECT/2/2"]
+      }
+    }
+  ]
+}
