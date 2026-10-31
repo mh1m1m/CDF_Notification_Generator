@@ -6,7 +6,7 @@
 // display number on a page or in a payload is a violation. Needs the database-backed e2e app (#36). SYNTHETIC only.
 import { expect, test, type Page } from "@playwright/test";
 import { formatViolations, inspectCaseContext, recordPayloads } from "../sentinel/sentinel";
-import { mintSession } from "../fixtures/personas";
+import { mintSession, signInAs } from "../fixtures/personas";
 
 const SEEDED = Array.from({ length: 10 }, (_, i) => String(i + 1).padStart(2, "0"));
 const caseId = (n: string) => `0c000000-0000-4000-8000-0000000000${n}`;
@@ -56,9 +56,9 @@ for (const slug of ["secretary-epsilon", "persona-zeta"]) {
     test("My Work lists no task and counts none", async ({ page }) => {
       expect((await page.goto("/my-work"))?.status()).toBe(200);
       await expect(page.locator('[data-testid^="my-work-row-"]')).toHaveCount(0);
+      // FE-005 (#32) renders the strip for every persona, so it must be there and read 0.
       for (const name of ["overdue", "due-week", "open"]) {
-        const count = page.getByTestId(`count-my-work-${name}`);
-        if ((await count.count()) > 0) await expect(count).toHaveAttribute("data-count", "0");
+        await expect(page.getByTestId(`count-my-work-${name}`)).toHaveAttribute("data-count", "0");
       }
       await expectNoCaseContext(page);
     });
@@ -70,6 +70,7 @@ for (const slug of ["secretary-epsilon", "persona-zeta"]) {
         for (const tab of TABS) {
           const res = await page.goto(`/cases/${caseId(n)}${tab}`);
           expect(res?.status(), `${n}${tab}`).toBe(404);
+          await expect(page.getByTestId("not-found-state")).toBeVisible();
           await expect(page.getByTestId("case-workspace")).toHaveCount(0);
           const html = await page.content();
           for (const m of SEEDED) expect(html, `${n}${tab}`).not.toContain(caseRef(m));
@@ -79,3 +80,42 @@ for (const slug of ["secretary-epsilon", "persona-zeta"]) {
     });
   });
 }
+
+// Positive control (ARCH, review of #43): the same paths and the same assertions' targets, for a persona who does see
+// cases. Secretary Alpha (SECRETARIAT) sees 0001, 0003, 0004, 0006, 0007, 0008 and 0010 (DATA_MODEL §5) and has 7
+// open tasks. If these paths stopped rendering cases at all, the pin above would pass for the wrong reason; this
+// control fails instead.
+const ALPHA_VISIBLE = ["01", "03", "04", "06", "07", "08", "10"];
+
+test.describe("positive control: secretary-alpha on the pinned paths", () => {
+  test.beforeEach(async ({ page }) => {
+    await signInAs(page, "secretary-alpha");
+  });
+
+  test("portfolio lists Alpha's 7 cases with an authorised count of 7", async ({ page }) => {
+    await page.goto("/portfolio");
+    const rows = await page
+      .locator('[data-testid^="portfolio-row-"]')
+      .evaluateAll((els) => els.map((e) => e.getAttribute("data-case-id")));
+    expect(rows.sort()).toEqual(ALPHA_VISIBLE.map(caseId).sort());
+    await expect(page.getByTestId("count-portfolio-results")).toHaveAttribute("data-count", "7");
+    await expect(page.getByTestId("count-portfolio-total")).toHaveAttribute("data-count", "7");
+  });
+
+  test("My Work lists Alpha's 7 open tasks and the strip counts them", async ({ page }) => {
+    await page.goto("/my-work");
+    await expect(page.locator('[data-testid^="my-work-row-"]')).toHaveCount(7);
+    await expect(page.getByTestId("count-my-work-open")).toHaveAttribute("data-count", "7");
+  });
+
+  test("a visible case renders on every tab; a hidden one answers 404 like for the pinned personas", async ({
+    page,
+  }) => {
+    for (const tab of TABS) {
+      expect((await page.goto(`/cases/${caseId("01")}${tab}`))?.status(), `01${tab}`).toBe(200);
+      await expect(page.getByTestId("case-workspace")).toHaveAttribute("data-case-id", caseId("01"));
+      expect((await page.goto(`/cases/${caseId("02")}${tab}`))?.status(), `02${tab}`).toBe(404);
+      await expect(page.getByTestId("not-found-state")).toBeVisible();
+    }
+  });
+});

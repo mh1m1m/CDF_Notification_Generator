@@ -364,6 +364,13 @@ Next free number: **ADR-020**.
      PROC-006) follows the same rule and is pinned to the database constraint.
   3. **Server-only.** UI code uses `lib/domain` only on the server, never in a `"use client"` module. A recorded
      `event_id` shown on a badge comes only from the authorised case's own rows.
+  4. **Rule texts and document markings** (clarification, Chief Architect, 31 Oct 2026, on the review of PROC-007,
+     #48). The consistency-rule messages, the next-action rule texts and the export's status labels are domain data of
+     the same kind: {ar, en} next to their codes in `lib/notifications`. When a UI component first renders one, PROC
+     mirrors it into `lib/i18n` with a unit test that pins the mirror, and the component renders through `lib/i18n`.
+     A fixed bilingual marking of a generated document (the export's notice: both languages always printed together,
+     never switched by locale) stays with the code that writes the document. The notification renderers' wording
+     is user-facing text and lives in the PROC-owned `notificationRender` namespace (#48, OPEN_ISSUES OI-036).
 - **Consequences.** A status shown in the UI is either derived from a recorded event or shown as not recorded (rule T5,
   test T8). A new status code needs a catalogue change in `lib/domain` (PROC) before any UI uses it.
 
