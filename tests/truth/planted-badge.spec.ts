@@ -2,6 +2,7 @@
 // unrecorded "completed" badge (and the other T-rules) makes it fail. Fixture pages and an in-memory event oracle
 // only; the database oracle replaces it on real pages.
 import { expect, test } from "@playwright/test";
+import { DATA_EPISTEMIC_VALUES } from "@/lib/notifications/data-epistemic";
 import { CASES, EVENTS, caseWorkspaceHtml, openFixture } from "../fixtures/synthetic-case-page";
 import { formatTruthViolations, inMemoryOracle, inspectTruth, type RecordedEventFact } from "./inspector";
 import { refuseFrameEvaluation } from "../sentinel/frames";
@@ -206,7 +207,9 @@ test.describe("other truth rules", () => {
     });
   }
 
-  test("a planted badge inside a same-origin frame (notification preview) → T3", async ({ page }) => {
+  test("a planted badge inside a same-origin frame (notification preview) → T3, and T9 for its badge value", async ({
+    page,
+  }) => {
     const badge =
       '<span data-epistemic="recorded" data-status-kind="notification" data-status="SENT">أُرسل</span>';
     await openFixture(
@@ -215,7 +218,7 @@ test.describe("other truth rules", () => {
       caseWorkspaceHtml({ insideWorkspace: `<iframe title="preview" srcdoc='${badge}'></iframe>` }),
     );
     const v = await inspectTruth(page, oracle, NOW);
-    expect(rulesOf(v)).toEqual(["T3"]);
+    expect(rulesOf(v)).toEqual(["T3", "T9"]);
     expect(formatTruthViolations(v)).toContain("frame(");
   });
 });
@@ -225,17 +228,17 @@ test.describe("sandboxed preview frames (SEC form for FE-006: sandbox + srcdoc, 
     '<span data-epistemic="recorded" data-status-kind="notification" data-status="SENT">أُرسل</span>';
   const sandboxed = `<iframe sandbox="" title="preview" srcdoc='${badge}'></iframe>`;
 
-  test("an unrecorded SENT badge inside a sandboxed srcdoc preview → T3", async ({ page }) => {
+  test("an unrecorded SENT badge inside a sandboxed srcdoc preview → T3 and T9", async ({ page }) => {
     await openFixture(page, casePath, caseWorkspaceHtml({ insideWorkspace: sandboxed }));
-    expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T3"]);
+    expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T3", "T9"]);
   });
 
-  test("same badge when the frame refuses evaluation → read from srcdoc in the parent, T3", async ({
+  test("same badge when the frame refuses evaluation → read from srcdoc in the parent, T3 and T9", async ({
     page,
   }) => {
     await openFixture(page, casePath, caseWorkspaceHtml({ insideWorkspace: sandboxed }));
     const v = await inspectTruth(page, oracle, NOW, refuseFrameEvaluation(page));
-    expect(rulesOf(v)).toEqual(["T3"]);
+    expect(rulesOf(v)).toEqual(["T3", "T9"]);
     expect(formatTruthViolations(v)).toContain("srcdoc)");
   });
 
@@ -251,5 +254,62 @@ test.describe("sandboxed preview frames (SEC form for FE-006: sandbox + srcdoc, 
     );
     const v = await inspectTruth(page, oracle, NOW, refuseFrameEvaluation(page));
     expect(rulesOf(v)).toEqual(["T7"]);
+  });
+});
+
+test.describe("preview frame rule set (ARCH ruling, 31 Oct; values from V13-PROC-011)", () => {
+  /** A preview document as the renderer writes it: EventSummary roots carrying data-epistemic, no status. */
+  const previewDoc = (values: readonly string[]) =>
+    `<!DOCTYPE html><html lang="ar" dir="rtl"><body data-marking="DESIGN_PREVIEW">${values
+      .map((x) => `<div data-component="EventSummary" data-epistemic="${x}"><p>ملخص الحدث</p></div>`)
+      .join("")}</body></html>`;
+  const frame = (doc: string) =>
+    `<iframe sandbox="" title="preview" srcdoc='${doc.replaceAll("'", "&#39;")}'></iframe>`;
+
+  for (const via of ["evaluated", "srcdoc"] as const) {
+    test(`every renderer value inside a preview frame passes (${via})`, async ({ page }) => {
+      expect(DATA_EPISTEMIC_VALUES.length).toBeGreaterThan(0);
+      await openFixture(
+        page,
+        casePath,
+        caseWorkspaceHtml({ insideWorkspace: frame(previewDoc(DATA_EPISTEMIC_VALUES)) }),
+      );
+      const frames = via === "srcdoc" ? refuseFrameEvaluation(page) : page;
+      const v = await inspectTruth(page, oracle, NOW, frames);
+      expect(v, formatTruthViolations(v)).toEqual([]);
+    });
+  }
+
+  test("a value outside the renderer's list inside a preview frame → T9", async ({ page }) => {
+    for (const bad of ["FACT", "recorded_fact", "expected", ""]) {
+      await openFixture(
+        page,
+        casePath,
+        caseWorkspaceHtml({ insideWorkspace: frame(previewDoc(["RECORDED_FACT", bad])) }),
+      );
+      expect(rulesOf(await inspectTruth(page, oracle, NOW)), JSON.stringify(bad)).toEqual(["T9"]);
+    }
+  });
+
+  test("an unmarked status element inside a preview frame is not T8 (the ruling); outside a frame it still is", async ({
+    page,
+  }) => {
+    const unmarked = '<span data-status-kind="notification" data-status="QUEUED">قيد الانتظار</span>';
+    await openFixture(page, casePath, caseWorkspaceHtml({ insideWorkspace: frame(unmarked) }));
+    expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual([]);
+    await openFixture(page, casePath, caseWorkspaceHtml({ insideWorkspace: unmarked }));
+    expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T8"]);
+  });
+
+  test("a renderer value outside a frame is still T1 (outside a frame nothing changes)", async ({ page }) => {
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({
+        insideWorkspace:
+          '<span data-epistemic="RECORDED_FACT" data-status-kind="notification" data-status="SENT">أُرسل</span>',
+      }),
+    );
+    expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T1"]);
   });
 });
