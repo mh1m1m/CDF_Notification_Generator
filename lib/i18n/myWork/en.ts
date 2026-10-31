@@ -9,4 +9,6 @@ export const en: Record<keyof typeof ar, string> = {
   workspace: "Active workspace",
   placeholder:
     "Case workspaces, procedural journeys and the notification operations centre arrive in later slices.",
+  navLabel: "My work",
+  actionFailed: "The request could not be completed. Reference: {reference}",
 };

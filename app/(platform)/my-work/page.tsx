@@ -13,16 +13,36 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("myWork.pageTitle") };
 }
 
-export default async function MyWorkPage() {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+export default async function MyWorkPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ref?: string | string[]; switched?: string | string[] }>;
+}) {
   const session = await getCurrentSession();
   if (!session) redirect("/sign-in");
   const { locale, t } = await getTranslator();
   const roles = new Intl.ListFormat(locale, { type: "conjunction" }).format(
     session.identity.roles.map((role) => t(ROLE_NAME_KEYS[role])),
   );
+  const { ref, switched } = await searchParams;
+  // A failed action's correlation id (generic message only; anything that is not a UUID is ignored).
+  const reference = typeof ref === "string" && UUID.test(ref) ? ref : null;
   return (
     <>
       <h1>{t("myWork.heading")}</h1>
+      {switched === "1" && !reference ? (
+        // Announces the workspace the session is actually in now (never a value from the URL).
+        <p className="v13-notice" role="status" data-testid="workspace-switched">
+          {t("workspaces.switched", { name: t(WORKSPACE_NAME_KEYS[session.identity.active_workspace]) })}
+        </p>
+      ) : null}
+      {reference ? (
+        <p className="v13-notice" role="alert" data-testid="action-error">
+          {t("myWork.actionFailed", { reference })}
+        </p>
+      ) : null}
       <dl className="v13-facts v13-facts-block" data-testid="my-work-identity">
         <div>
           <dt>{t("myWork.persona")}</dt>
