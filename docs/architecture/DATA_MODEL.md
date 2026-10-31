@@ -1,16 +1,16 @@
 # E03 — Enterprise data model (Milestone M1)
 
 **SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Owner: team DB. Schema `cdf_notifications_v13` in the
-shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0008`; seed in two parts:
+shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0009`; seed in two parts:
 `database/seed/0001_m1_synthetic.sql` (identity: workspaces, personas, memberships; needs migration 0001 only; audit row
 `SEED_M1_LOADED`) and `database/seed/0002_m1_cases.sql` (cases and their history; needs 0001–0004; audit row
 `SEED_M1_CASES_LOADED`).
 
-Status: **COMPLETE** for M1 on `develop` (558d4ae): migrations 0001–0007 and both seed parts, merged through #12
+Status: **COMPLETE** for M1 on `develop` (b5ee5f46): migrations 0001–0008 and both seed parts, merged through #12
 (0001, identity seed, claims MAC, key install at start), #15 (0002–0004, cases seed), #17 (0005 workspace switch),
-#21 (0006 Case Workspace reads) and #28 (0007 claims-key state for health), each on SEC ACCEPT and green CI. Migration
-0008 (My Work case columns, V13-DB-010) is IN_PROGRESS in its PR. Tested on a local PostgreSQL 16 cluster
-(`pnpm test:db`, 234 tests with 0008). Applied to the hosted schema only by the Chief Architect, with the plan procedure.
+#21 (0006 Case Workspace reads), #28 (0007 claims-key state for health) and #31 (0008 My Work case columns), each on
+SEC ACCEPT and green CI. Migration 0009 (foreign-key index review, V13-DB-011) is IN_PROGRESS in its PR. Tested on a
+local PostgreSQL 16 cluster (`pnpm test:db`, 357 tests with 0009 and SEC's suites). Applied to the hosted schema only by the Chief Architect, with the plan procedure.
 
 ## 1. Principles
 
@@ -180,3 +180,13 @@ with the guard trigger disabled is reported as the first broken `seq`.
 - Personas, workspaces, memberships → CDF corporate IdP (OIDC) and directory groups (ADR-004).
 - Database → dedicated RDS PostgreSQL in CDF Alibaba Cloud Riyadh (ADR-012).
 - Outbox → approved CDF mail gateway and scheduler (ADR-010).
+
+## Foreign-key indexes (migration 0009, V13-DB-011, OI-032)
+
+A foreign key gets an index when its parent can be deleted or re-keyed, or when a read finds child rows by it. No V13
+parent key changes and no application path deletes a parent (append-only tables refuse UPDATE and DELETE), so 13 of the
+advisor's 14 unindexed-FK findings are **accepted**, each with its reason in `0009_fk_index_review.sql`. One is
+**indexed**: `notification_event_notification_idx` becomes `(notification_id, case_id, occurred_at)`, leading with the
+FK `(notification_id, case_id)` while keeping the timeline order. `tests/integration/fk-index-coverage.spec.ts` fails
+on any new foreign key until it is indexed or added to the accepted list. Revisit when a reader by that key arrives
+(recipient inbox: `notification_recipient_persona_id`; supersede command: `notification_supersedes_fk`).

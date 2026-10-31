@@ -3,7 +3,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+// OI-028: after a client-side navigation (the persona sign-in lands on /my-work without a page load), Next.js removes
+// the old <title> and streams the new page's metadata a little later. For 4-129 ms (local probe, 40 runs) the URL is
+// already the new one and the document has no <title>; an axe scan started in that gap reports document-title
+// (serious). A scan therefore starts only once the document has a non-empty title. A page that never gets a title
+// still fails here, so the check is not weakened.
 async function seriousViolations(page: Page) {
+  await expect(page, "the document has a non-empty <title> before the scan").toHaveTitle(/\S/);
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
