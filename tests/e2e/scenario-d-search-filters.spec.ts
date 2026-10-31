@@ -10,6 +10,7 @@
 // SYNTHETIC data only.
 import { expect, test, type Page } from "@playwright/test";
 import { databaseEventOracle, scenarioDb, visibleCases, type CaseRow, type ScenarioDb } from "../fixtures/db";
+import { goBackOneEntry } from "../fixtures/history";
 import { signInAs } from "../fixtures/personas";
 import { caseId, caseRef, expectCaseShown, SEEDED_CASE_IDS } from "../fixtures/scenario";
 import { formatViolations, inspectCaseContext, recordPayloads } from "../sentinel/sentinel";
@@ -115,7 +116,7 @@ test("Scenario D — filters set through the form stay in the URL across open, b
   await page.getByTestId(`portfolio-open-${open}`).click();
   await expectCaseShown(page, open, "overview", visible, oracle);
 
-  await page.goBack();
+  await goBackOneEntry(page);
   await expect(page).toHaveURL(filteredUrl);
   await expectRows(page, expected, visible, "after back");
   await expect(page.getByTestId("portfolio-stage")).toHaveValue(stage);
@@ -159,7 +160,7 @@ test("Scenario D — the filter form shows only the URL's filters after Clear an
   await page.getByTestId("portfolio-state").selectOption("CLOSED");
   await page.getByTestId("portfolio-apply").click();
   await expectFilterUrl(page, { state: "CLOSED" });
-  await page.goBack();
+  await goBackOneEntry(page);
   await expectFilterUrl(page, {});
   await expect.poll(fields, { timeout: 3000 }).toEqual(["", "", ""]);
 });
