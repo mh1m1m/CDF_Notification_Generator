@@ -205,10 +205,17 @@ const REGISTRY: Record<string, Probe[]> = {
     call: (tx) => tx`select * from cdf_notifications_v13.api_switch_workspace(${w})`,
     nobody: refusedWith("V1401"),
   })),
+  // V13-DB-009 (migration 0007, PR #28): answers for a transaction-bound probe MAC under a domain-separated label and
+  // reads no claims, so it has no "nobody" form; claims-key-state.spec.ts covers forged and replayed probes. Listed
+  // so the guard stays exhaustive once 0007 lands (until then it is in NOT_YET_MIGRATED).
+  "claims_key_state(p_probe_mac text)": [],
   // First writer wins and does not read the claims; identity-claims.spec.ts covers it (same key: ALREADY_INSTALLED,
   // other key: V1409). Listed so the guard stays exhaustive.
   "api_install_claims_key(p_key bytea)": [],
 };
+
+/** Registry entries whose migration is in review, not yet on develop: allowed to be absent, never extra. */
+const NOT_YET_MIGRATED = new Set(["claims_key_state(p_probe_mac text)"]);
 
 /** Runs every table read and every probe in the current context; returns what was NOT "nobody". */
 /** Tables whose policies depend on the persona alone (own rows, own memberships, signed-in reference data). */
@@ -255,7 +262,10 @@ describe.skipIf(!present)(
 
     it("SEC-DB-17 coverage guard: every function the request role may execute is in the registry, and only those", async () => {
       const executable = await asPersona(sql, PERSONA.alpha, "SECRETARIAT", (tx) => executableFunctions(tx));
-      expect(executable).toEqual(Object.keys(REGISTRY).sort());
+      const listed = Object.keys(REGISTRY).filter(
+        (sig) => executable.includes(sig) || !NOT_YET_MIGRATED.has(sig),
+      );
+      expect(executable).toEqual(listed.sort());
       expect(tables.length).toBeGreaterThanOrEqual(18);
     });
 
