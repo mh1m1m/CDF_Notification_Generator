@@ -17,6 +17,7 @@ import {
   inspectCaseContext,
   recordPayloads,
   recoverUtf8,
+  timeout,
   type PayloadAllowance,
 } from "./sentinel";
 import { refuseFrameEvaluation } from "./frames";
@@ -230,6 +231,13 @@ test.describe("sandboxed preview frames (SEC form for FE-006: sandbox + srcdoc, 
 });
 
 test.describe("payloads the browser does not hand over", () => {
+  test("a wait of 0 ms never reads the body, however fast it is (OI-046)", async () => {
+    for (const ms of [0, -1, Number.NaN]) {
+      await expect(timeout(Promise.resolve(Buffer.from("ready")), ms), String(ms)).rejects.toThrow("no body");
+    }
+    await expect(timeout(Promise.resolve("ready"), 1000)).resolves.toBe("ready");
+  });
+
   test("(n) a body that cannot be read, nor fetched again → P2, never a silent pass", async ({ page }) => {
     // A zero wait forces the fallback; the fixture origin exists only in page routing, so fetching again fails.
     const payloads = recordPayloads(page, FIXTURE_ORIGIN, { bodyTimeoutMs: 0 });

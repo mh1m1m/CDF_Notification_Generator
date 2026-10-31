@@ -152,6 +152,20 @@ Library `tests/sentinel/sentinel.ts`, called after every navigation in every sce
   a violation (`expect(() => sentinel.check(page)).rejects…`). The plants never touch application code or the
   database. The CI job fails if any plant is not detected.
 
+### 7.1 Defect triage: cross-case leaks (REQ-CASE-014, THREAT_MODEL TM-I1)
+
+Any cross-case data leak is a **CRITICAL** defect that **blocks merge and release**: a case's id, display number, row
+or content shown, returned, counted or readable in the context of another case, or for a persona or workspace that may
+not see that case. No severity downgrade, waiver or `test.fail()` pin applies to a leak; it is fixed before the PR
+merges and before any release. It is detected by:
+
+- the Case Context Sentinel on pages and payloads (`tests/sentinel/sentinel.ts`, rules S1–S8, P1–P2), run after every
+  step of Scenarios A–E (`tests/e2e/scenario-*.spec.ts`) and proven by `tests/sentinel/planted-leak.spec.ts`;
+- the Sentinel's database half (`tests/sentinel/db.spec.ts`, D1–D3, five persona/workspace pairs);
+- the negative-persona pins (`tests/e2e/negative-personas-pinning.spec.ts`: Epsilon and Zeta see nothing);
+- SEC's isolation suites: `tests/security/db/case-matrix.spec.ts` (SEC-DB-18, every case-keyed table) and
+  `tests/security/e2e/case-pages.spec.ts` (case pages and Server Actions).
+
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 
 Library `tests/truth/inspector.ts`.

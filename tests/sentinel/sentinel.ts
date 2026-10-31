@@ -326,11 +326,21 @@ const REPLAY_HEADERS =
 type PayloadRead =
   { where: string; text: string; via: "browser" | "refetch" } | { where: string; error: string };
 
-const timeout = <T>(p: Promise<T>, ms: number) =>
-  Promise.race([
+/**
+ * `p` if it settles within `ms`. A wait of 0 or less rejects at once, without racing: the self-test that forces the
+ * refetch fallback must never depend on how fast the browser hands over a body (OI-046). The abandoned promise's
+ * rejection is swallowed, so it never surfaces as an unhandled rejection.
+ */
+export function timeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  if (!(ms > 0)) {
+    p.catch(() => {});
+    return Promise.reject(new Error(`no body after ${ms} ms`));
+  }
+  return Promise.race([
     p,
     new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`no body after ${ms} ms`)), ms)),
   ]);
+}
 const firstLine = (e: unknown) =>
   String(e instanceof Error ? e.message : e)
     .split("\n")[0]!
