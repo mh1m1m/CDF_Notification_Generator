@@ -11,6 +11,7 @@ import {
   type CenterRow,
 } from "@/lib/adapters/notification-records/v13-notification-center";
 import { InvalidCursorError as AdapterCursorError } from "@/lib/adapters/case-source/cursor";
+import { InvalidCursorError as ContractCursorError } from "@/lib/contracts/cursor";
 import { InvalidCursorError, NOTIFICATION_CENTER_PAGE_MAX, type RequestIdentity } from "@/lib/contracts";
 import type { Tx } from "@/lib/db/security-context";
 import { SECRETARY } from "./support/identities";
@@ -47,7 +48,10 @@ function recorder(pageRows: CenterRow[], ...count: unknown[]) {
     const tx = ((strings: TemplateStringsArray, ...values: unknown[]) => {
       const text = strings.join("$");
       calls.push({ text, values, identity });
-      return Promise.resolve(text.includes("notifications_count") ? [{ total }] : pageRows);
+      // The joined statement: the total on every row, one null row for an empty page.
+      return Promise.resolve(
+        pageRows.length === 0 ? [{ total, notification_id: null }] : pageRows.map((r) => ({ total, ...r })),
+      );
     }) as unknown as Tx;
     return fn(tx);
   };
@@ -66,6 +70,7 @@ describe("center cursor", () => {
 
   it("is one error class with the portfolio cursor (OI-031)", () => {
     expect(AdapterCursorError).toBe(InvalidCursorError);
+    expect(ContractCursorError).toBe(InvalidCursorError);
   });
 
   const b64 = (v: unknown) => Buffer.from(JSON.stringify(v), "utf8").toString("base64url");
@@ -136,7 +141,7 @@ describe("rowToCenterRow", () => {
 });
 
 describe("listNotifications", () => {
-  it("calls only the two invoker read functions, in one transaction, with bound values and limit + 1", async () => {
+  it("one statement (one snapshot): count and page together, bound values, limit + 1", async () => {
     const { calls, transactions, reader } = recorder([row(1)], "1");
     await reader.listNotifications(SECRETARY, {
       limit: 25,
@@ -147,37 +152,27 @@ describe("listNotifications", () => {
       created_before: "2026-11-01T00:00:00+03:00",
     });
     expect(transactions()).toBe(1);
-    expect(calls).toHaveLength(2);
-    expect(calls.every((c) => c.identity === SECRETARY)).toBe(true);
-    expect(calls[0]!.text).toContain("cdf_notifications_v13.notifications_page(");
-    expect(calls[0]!.values).toEqual([
-      null,
-      null,
-      26,
+    expect(calls).toHaveLength(1);
+    const [call] = calls;
+    expect(call!.identity).toBe(SECRETARY);
+    expect(call!.text).toContain("cdf_notifications_v13.notifications_count(");
+    expect(call!.text).toContain("left join lateral cdf_notifications_v13.notifications_page(");
+    const filters = [
       "DRAFT",
       "CF-20_INVESTIGATION_ASSIGNED",
       "CDF-DEMO-2026-0001",
       "2026-10-01T00:00:00+03:00",
       "2026-11-01T00:00:00+03:00",
-    ]);
-    expect(calls[1]!.text).toContain("cdf_notifications_v13.notifications_count(");
-    expect(calls[1]!.values).toEqual([
-      "DRAFT",
-      "CF-20_INVESTIGATION_ASSIGNED",
-      "CDF-DEMO-2026-0001",
-      "2026-10-01T00:00:00+03:00",
-      "2026-11-01T00:00:00+03:00",
-    ]);
-    for (const c of calls) {
-      expect(c.text).not.toMatch(/DRAFT|CF-20|CDF-DEMO|from cdf_notifications_v13\.notification\b/);
-    }
+    ];
+    expect(call!.values).toEqual([...filters, null, null, 26, ...filters]);
+    expect(call!.text).not.toMatch(/DRAFT|CF-20|CDF-DEMO|from cdf_notifications_v13\.notification\b/);
   });
 
   it("passes the decoded cursor as both keyset values", async () => {
     const { calls, reader } = recorder([]);
     const cursor = encodeCenterCursor({ at: "2026-10-11T09:00:00.123456Z", id: nid(1) });
     await reader.listNotifications(SECRETARY, { limit: 25, cursor });
-    expect(calls[0]!.values.slice(0, 3)).toEqual(["2026-10-11T09:00:00.123456Z", nid(1), 26]);
+    expect(calls[0]!.values.slice(5, 8)).toEqual(["2026-10-11T09:00:00.123456Z", nid(1), 26]);
   });
 
   it("returns a next cursor from the last shown row's cursor text when one more row exists", async () => {

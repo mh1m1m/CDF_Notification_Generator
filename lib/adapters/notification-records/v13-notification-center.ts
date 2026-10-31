@@ -155,23 +155,29 @@ export function createV13NotificationCenterReader(run: RequestContextRunner): No
       const caseNumber = f.case_number ?? null;
       const from = f.created_from ?? null;
       const before = f.created_before ?? null;
-      // One transaction (one snapshot): the page (one extra row says whether another page exists) and the authorised
-      // total with exactly the same filters.
-      const { rows, total } = await run(identity, async (tx) => {
-        const page = await tx<CenterRow[]>`
-          select p.notification_id, p.case_id, p.case_number, p.case_title_ar, p.case_title_en, p.template_code,
-                 p.template_name_ar, p.template_name_en, p.template_version, p.language, p.recipient_class,
-                 p.lifecycle_status, p.created_at, p.created_at_cursor, p.last_event_at, p.row_version
-            from cdf_notifications_v13.notifications_page(
-                   ${after?.at ?? null}::text, ${after?.id ?? null}::uuid, ${f.limit + 1}::integer,
-                   ${status}::text, ${template}::text, ${caseNumber}::text,
-                   ${from}::timestamptz, ${before}::timestamptz) p`;
-        const count = await tx<{ total: string | number | bigint }[]>`
-          select cdf_notifications_v13.notifications_count(
-                   ${status}::text, ${template}::text, ${caseNumber}::text,
-                   ${from}::timestamptz, ${before}::timestamptz) as total`;
-        return { rows: [...page], total: toCount(count[0]?.total) };
-      });
+      // One statement, so one snapshot even at READ COMMITTED: the authorised total and the page (one extra row says
+      // whether another page exists) with exactly the same filters. The count row is always present; when the page is
+      // empty its notification columns are null.
+      const joined = await run(
+        identity,
+        (tx) =>
+          tx<(CenterRow & { total: string | number | bigint })[]>`
+          select t.total, p.notification_id, p.case_id, p.case_number, p.case_title_ar, p.case_title_en,
+                 p.template_code, p.template_name_ar, p.template_name_en, p.template_version, p.language,
+                 p.recipient_class, p.lifecycle_status, p.created_at, p.created_at_cursor, p.last_event_at,
+                 p.row_version
+            from (select cdf_notifications_v13.notifications_count(
+                    ${status}::text, ${template}::text, ${caseNumber}::text,
+                    ${from}::timestamptz, ${before}::timestamptz) as total) t
+            left join lateral cdf_notifications_v13.notifications_page(
+                    ${after?.at ?? null}::text, ${after?.id ?? null}::uuid, ${f.limit + 1}::integer,
+                    ${status}::text, ${template}::text, ${caseNumber}::text,
+                    ${from}::timestamptz, ${before}::timestamptz) p on true`,
+      );
+      const total = toCount(joined[0]?.total);
+      const rows: CenterRow[] = joined
+        .filter((r) => r.notification_id !== null)
+        .map(({ total: _total, ...row }) => row);
       const shown = rows.slice(0, f.limit);
       const items = shown.map(rowToCenterRow);
       // A page larger than its own authorised total is inconsistent: refuse it rather than show it.

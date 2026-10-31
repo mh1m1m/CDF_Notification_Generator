@@ -44,7 +44,10 @@ export const NotificationCenterRowSchema = z.strictObject({
 });
 export type NotificationCenterRow = z.infer<typeof NotificationCenterRowSchema>;
 
-/** Rows per page and the database's own bound (notifications_page clamps its limit to 1..100). */
+/**
+ * Largest page a caller may ask for. The reader asks the database for limit + 1 rows (the extra row tells whether a
+ * next page exists) and notifications_page clamps its limit to 1..100, so 99 is the most that can be asked safely.
+ */
 export const NOTIFICATION_CENTER_PAGE_MAX = 99;
 
 /**
@@ -73,16 +76,11 @@ export interface NotificationCenterPage {
   readonly total: number;
 }
 
-/** A cursor the reader did not issue, or one that does not decode. Callers answer with the generic error state. */
-export class InvalidCursorError extends Error {
-  override readonly name = "InvalidCursorError";
-  readonly code = "INVALID_CURSOR";
-}
-
 /**
  * The Center's reader. Contract: authorisation inside the call (RLS) before any filter, order, limit or count;
  * newest first (created_at, then notification_id, both descending); unknown and unauthorised cases look alike
- * (their rows are absent and uncounted). A cursor that does not decode throws InvalidCursorError.
+ * (their rows are absent and uncounted). Refusal of a cursor: a cursor the reader did not issue, or that does not
+ * decode, throws InvalidCursorError (lib/contracts/cursor.ts) before any read.
  */
 export interface NotificationCenterReader {
   listNotifications(

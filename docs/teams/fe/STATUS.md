@@ -39,7 +39,7 @@ Updated: 2026-10-31 21:45 UTC · Branch: feature/V13-FE-006-notification-center-
   class, never a person), status in words ("sent — delivery not confirmed", never "delivered"), created, last event.
   Reads DB-015 (`notifications_page` + `notifications_count`, one transaction). Proposed contract
   `lib/contracts/notification-center.ts` (NotificationCenterReader, row and filter schemas) and `InvalidCursorError`
-  moved into `lib/contracts` (OI-031; `lib/adapters/case-source/cursor.ts` re-exports it): needs ARCH + SEC ACCEPT.
+  moved into `lib/contracts` (OI-031, own file `lib/contracts/cursor.ts`; `lib/adapters/case-source/cursor.ts` re-exports it): needs ARCH + SEC ACCEPT.
   Rows link to the case's Notifications tab; the in-case preview (`?n=`) is part 3 — IN_REVIEW.
 
 ## Changed files
@@ -119,6 +119,7 @@ Updated: 2026-10-31 21:45 UTC · Branch: feature/V13-FE-006-notification-center-
 | Same: `pnpm db:reset` then `pnpm test:db` (new FE suite notification-center 13: Alpha 4 rows newest first, never 0009; row shape; Delta in both workspaces; 0009 Beta only; hidden, other-workspace and unknown case numbers and Epsilon → no rows, total 0; filters; one-row keyset walk with microsecond cursor; bad cursor refused; Scenario E draft in 0001 appears first with case 0001 only, rolled back) | pass | 26 files, 423 | FE-006 part 2 head |
 | Same: `pnpm db:reset` then `pnpm test:e2e` (new spec 6: Beta and Gamma 404 identical to an unknown route on 4 URLs, no nav item; Alpha via nav, rows name visible cases only, count = rows; case filter; hidden/unknown case → no results; edited URL → invalid with reference; Delta GOVERNANCE) | pass | 132 passed | FE-006 part 2 head |
 | FE-006 part 2 + keyed Center filter form (OI-043 fix applied to S4): `pnpm test` / `pnpm db:reset` + `pnpm test:e2e` with a throwaway probe (Center Clear empties status and case, Back restores them; not committed) | pass | 1765 / 133 (132 + probe) | FE-006 part 2 head |
+| FE-006 part 2 after ARCH CHANGES ac30892: `InvalidCursorError` in its own `lib/contracts/cursor.ts` (both ports name the refusal), `lib/server/cases.ts` imports it from contracts, page-max comment, page + count in one statement (one snapshot at READ COMMITTED): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 1765 / 423 / 132 | FE-006 part 2 head |
 
 ## Unresolved defects
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
