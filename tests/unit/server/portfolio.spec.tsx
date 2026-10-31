@@ -4,7 +4,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { CaseSourceAdapter } from "@/lib/contracts";
-import { InvalidCursorError } from "@/lib/adapters/case-source/cursor";
+import { InvalidCursorError } from "@/lib/contracts";
 import { createTranslator } from "@/lib/i18n";
 import { AppError } from "@/lib/server/errors";
 import { loadPortfolio, positionOf, type PortfolioView } from "@/lib/server/portfolio";
