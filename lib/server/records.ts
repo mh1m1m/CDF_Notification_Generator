@@ -1,7 +1,13 @@
 // The application's ProceduralRecordsReader and NotificationRecordsReader: the V13 adapters bound to
 // withRequestContext with this request's correlation id. Pages never construct adapters or touch lib/db themselves.
 import "server-only";
-import type { CorrelationId, NotificationRecordsReader, ProceduralRecordsReader } from "@/lib/contracts";
+import type {
+  CorrelationId,
+  NotificationCenterReader,
+  NotificationRecordsReader,
+  ProceduralRecordsReader,
+} from "@/lib/contracts";
+import { createV13NotificationCenterReader } from "@/lib/adapters/notification-records/v13-notification-center";
 import { createV13NotificationRecordsReader } from "@/lib/adapters/notification-records/v13-notification-records";
 import { createV13ProceduralRecordsReader } from "@/lib/adapters/procedural-records/v13-procedural-records";
 import { withRequestContext } from "@/lib/db/security-context";
@@ -14,6 +20,12 @@ export function proceduralRecordsFor(correlationId: CorrelationId): ProceduralRe
 
 export function notificationRecordsFor(correlationId: CorrelationId): NotificationRecordsReader {
   return createV13NotificationRecordsReader((identity, fn) =>
+    withRequestContext(identity, fn, { correlationId }),
+  );
+}
+
+export function notificationCenterFor(correlationId: CorrelationId): NotificationCenterReader {
+  return createV13NotificationCenterReader((identity, fn) =>
     withRequestContext(identity, fn, { correlationId }),
   );
 }
