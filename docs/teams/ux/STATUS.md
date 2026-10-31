@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 · Branch: `feature/V13-UX-005-shell-switcher` · Base: `develop` `ec8653a`
+Updated: 2026-10-31 · Branch: `fix/V13-UX-007-m1-design-review` · Base: `develop` `f5a8fba`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -95,6 +95,17 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   hostile document never ran (Chromium: "Blocked script execution … sandboxed"). Firefox and WebKit not installed here.
   No CSP change needed. The committed e2e under the page policy belongs with FE-006's page (FE DESIGN §13): the demo
   builder cannot be imported by Playwright's loader (JSON imports need import attributes).
+
+## V13-UX-007: M1 design review (IN_REVIEW once its PR is open; reviewer QA)
+- Review of Case Portfolio, My Work, Case Workspace (four tabs) and the Workspace Switcher in Arabic RTL and English LTR
+  at 360, 768, 1280 and 1920 px: `docs/design/reviews/M1_DESIGN_REVIEW.md` (14 findings).
+- Fixed in UX paths (`styles/globals.css`): M1-01 platform nav list, M1-02 workspace cards, M1-03 switcher menu panel
+  inside the viewport under 768 px.
+- Routed through ARCH: M1-04, 05, 06, 08, 10–13 → V13-UX-008 (next, after #69); M1-07 → FE-006 part 3; M1-09 →
+  FE-009. M1-14 ruled by ARCH (31 Oct 23:00), recorded as DESIGN_SYSTEM §6 D10.
+- Notification Operations Center (S4) waits for #61.
+- Evidence: temporary local Playwright capture (not committed), 64 page captures plus 4 open-menu captures, every page
+  200, no page-level horizontal scroll, every Tab stop with a visible focus ring.
 
 ## Unresolved defects
 - None known.
