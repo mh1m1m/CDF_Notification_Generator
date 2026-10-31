@@ -6,12 +6,10 @@ shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations
 `SEED_M1_LOADED`) and `database/seed/0002_m1_cases.sql` (cases and their history; needs 0001–0004; audit row
 `SEED_M1_CASES_LOADED`).
 
-Status: **IN_PROGRESS**. Delivered in two PRs. PR (a) `[V13-DB-001]` brings migration 0001 (identity, claims MAC, audit
-ledger), seed part 1, the app-side claims MAC (`lib/db/security-context.ts`) and the key install at server start
-(`instrumentation.ts` → `lib/db/claims-key-startup.ts`). PR (b) brings 0002–0004 and seed part 2; until it merges, the
-sections on cases, tasks and notifications below describe that PR, not `develop`. Tested on a local PostgreSQL 16
-cluster (`pnpm test:db`); not yet reviewed, not applied to the hosted schema (the Chief Architect applies merged
-migrations). PR `[V13-DB-007]`, stacked on PR (b), adds migration 0005 (`api_switch_workspace`); PR `[V13-DB-008]`, stacked on it, adds migration 0006 (Case Workspace reads).
+Status: **COMPLETE** for M1 on `develop` (c4b37c3): migrations 0001–0006 and both seed parts, merged through #12
+(0001, identity seed, claims MAC, key install at start), #15 (0002–0004, cases seed), #17 (0005 workspace switch) and
+#21 (0006 Case Workspace reads), each on SEC ACCEPT and green CI. Tested on a local PostgreSQL 16 cluster
+(`pnpm test:db`, 208 tests). Applied to the hosted schema only by the Chief Architect, with the plan procedure.
 
 ## 1. Principles
 
