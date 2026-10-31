@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, feature/V13-FE-004-case-workspace · Head: see PRs
+Updated: 2026-10-31 19:10 UTC · Branches: feature/V13-FE-003-case-portfolio, feature/V13-FE-004-case-workspace, feature/V13-FE-005-my-work · Head: see PRs
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -23,6 +23,14 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
   badges via `lib/domain` toBadgeEpistemic (server only). `app/not-found.tsx` gains `data-testid="not-found-state"` (ARCH
   path, ARCH ACCEPT needed). PR #23 (stacked on #19) — IN_REVIEW once #19 lands.
 - OI-023 — workspace switch runs `api_switch_workspace` before the cookie is re-issued — PR #27 — IN_REVIEW.
+- V13-FE-005 My Work (SCREENS S1) — `/my-work`: subtitle with the workspace, count strip (Overdue, Due this week,
+  Open; links that filter, counts from the authorised rows, Asia/Riyadh dates), own open tasks with case link by UUID,
+  deadline in words, recorded status badges (event id; untouched OPEN unmarked) and a short Server Action form that
+  offers only the transitions `api_update_task_status` accepts and sends `row_version`; closed case → no form. Stale
+  version → "تغيّرت هذه المهمة منذ فتحها…" + reference; every other refusal generic + reference; success in a polite
+  live region. Proposed contract `lib/contracts/my-work.ts` (MyWorkReader, TaskCommandPort,
+  UpdateTaskStatusCommandSchema): needs ARCH + SEC ACCEPT. Reads DB-010's columns (migration 0008, on develop
+  b5ee5f4). Draft PR stacked on #23 — IN_PROGRESS.
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -44,6 +52,10 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
   support/fake-case-source.ts}, tests/unit/contracts.spec.ts, tests/integration/fe/case-workspace-records.spec.ts
 - OI-023 (PR #27): app/(platform)/workspace-actions.ts, lib/server/workspace.ts,
   tests/unit/server/workspace-switch.spec.ts, tests/integration/fe/workspace-switch.spec.ts
+- FE-005: app/(platform)/my-work/{page.tsx,actions.ts,_components/{MyWorkView.tsx,my-work.module.css}},
+  lib/server/{my-work,my-work-binding}.ts, lib/adapters/my-work/v13-my-work.ts, lib/contracts/{my-work,index}.ts
+  (proposed), lib/i18n/myWork/{ar,en}.ts, tests/unit/server/{my-work.spec.tsx,v13-my-work-adapter.spec.ts,
+  support/fake-my-work.ts,support/fake-case-source.ts}, tests/integration/fe/{my-work-command,my-work-read}.spec.ts
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -78,6 +90,11 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
 | ARCH CHANGES 224d676 items 2–3 exactly: `getCase` returns `CaseHeader` (no separate method), `listForCase`: lint, typecheck, build; `pnpm test`; `pnpm test:db` | pass | 834; 233 | FE-004 head |
 | Same: `pnpm db:reset` then `pnpm test:db` (FE suites case-source 15 + case-workspace-records 10) | pass | 12 files, 233 | FE-004 head |
 | Same: `pnpm build && pnpm start`, `pnpm test:e2e` plus the throwaway FE probe (3: Truth Inspector 0 violations, axe 0 serious/critical on 4 tabs, negatives 404 with `not-found-state`, 360 px, LTR, Beta 0009, Delta other workspace) | pass | 59 passed (56 + 3), 17 skipped | FE-004 head |
+| FE-005 (merged develop b5ee5f4 with 0007 + 0008): lint, typecheck, format:check, db:lint (9 migrations, 0 findings), build | pass | — | bffeb64 |
+| Same: `pnpm test` (unit; My Work 47 + adapter 22 new) | pass | 38 files, 909 | bffeb64 |
+| Same: `pnpm db:reset` then `pnpm test:db` (new FE suites: my-work-command 8 — Scenario B one task/event/audit row in 0001 only, stale, 4× NOT_FOUND, CASE_CLOSED, INVALID_TRANSITION, all rolled back, seed unchanged; my-work-read 9 — 6 persona/workspace lists, 0009 only Beta, DONE excluded, titles/state/event) | pass | 20 files, 350 | bffeb64 |
+| Same: fresh `pnpm db:reset`, `pnpm build && pnpm start`, `pnpm test:e2e` | pass | 64 passed, 17 skipped | bffeb64 |
+| FE-005 throwaway browser probe (not committed; e2e is QA's): Alpha 7 rows = Open count, Truth Inspector 0 violations, axe 0 violations (wcag2a/aa, 21a/aa), OPEN task unmarked, IN_PROGRESS recorded; update OPEN → IN_PROGRESS shows the updated notice and the badge becomes recorded; a second tab's version-1 form → stale message; forged task id (0009) → generic reference, server logs code NOT_FOUND only; Due-this-week filter link; Gamma's closed-case task has no form | pass | 1/1 | bffeb64 |
 | OI-023 (PR #27, 17f4107 on develop c4b37c3): `pnpm test` / `pnpm test:db` / `pnpm test:e2e`; browser probe: forged target refused with cookie unchanged, real switch → exactly 1 WORKSPACE_SWITCHED row | pass | 725 / 212 / 56 (17 skipped) / 1 | 17f4107 |
 
 ## Unresolved defects
@@ -102,7 +119,13 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
   statuses (lib/domain: OPEN, IN_PROGRESS, ON_HOLD, RETURNED, COMPLETED, CANCELLED, FAILED) differ from DB's task
   statuses (OPEN, IN_PROGRESS, BLOCKED, DONE, CANCELLED), so task labels stay in `case.task.status.*` (raised to ARCH).
 
+- FE-005 known gaps: deadline text is FE's own (Intl.RelativeTimeFormat) until UX's DeadlineText lands; task status
+  labels stay in `case.task.status.*` (OI-029); the count strip has no "due today" bucket (today counts as this week).
+- Local note: with migration 0007 the database holds one claims key; after `pnpm test:db` (test key) run `pnpm db:reset`
+  before starting the app with another session secret, otherwise every read fails closed (CLAIMS_KEY_MISMATCH).
+
 ## Dependencies and requests
+- DB-010 (my_work_tasks columns, migration 0008): merged on develop b5ee5f4; FE-005 reads it.
 - FE owns `tests/integration/fe/**` (ARCH, 03:48). `tests/integration/fe/case-source.spec.ts` is committed with FE-003.
 - DB: merge of DB-001..005; the read-function columns per the ruling.
 - UX-002/003: FE-002 ships minimal nav/switcher markup; swapped for UX's SideNav/WorkspaceSwitcher when they land.
