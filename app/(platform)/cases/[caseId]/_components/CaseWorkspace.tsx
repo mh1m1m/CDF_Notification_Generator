@@ -8,6 +8,8 @@ import type { CaseEvent, CaseNotification, CaseSummary, CaseTask } from "@/lib/c
 import { toBadgeEpistemic } from "@/lib/domain";
 import { translateKey, type Locale, type MessageKey, type Translator } from "@/lib/i18n";
 import { CASE_TABS, type CaseTab, type CaseWorkspaceView } from "@/lib/server/case-workspace";
+import type { DraftFormView, DraftNotice } from "@/lib/server/notification-draft";
+import { DraftForm } from "../notifications/_components/DraftForm";
 import { ScrollRegion } from "../../../_components/ScrollRegion";
 import styles from "./case.module.css";
 import {
@@ -321,10 +323,12 @@ export function NotificationTable({
   t,
   locale,
   notifications,
+  createdId = null,
 }: {
   t: Translator;
   locale: Locale;
   notifications: readonly CaseNotification[];
+  createdId?: string | null;
 }) {
   if (notifications.length === 0) {
     return (
@@ -354,6 +358,7 @@ export function NotificationTable({
               key={n.notification_id}
               data-testid={`case-notification-${n.notification_id}`}
               data-notification-id={n.notification_id}
+              data-created={n.notification_id === createdId ? "true" : undefined}
             >
               <th scope="row">
                 <bdi dir="ltr">{n.template_code}</bdi>
@@ -380,6 +385,50 @@ export function NotificationTable({
         </tbody>
       </table>
     </ScrollRegion>
+  );
+}
+
+/** A created draft (redirected here with the id the database returned): a polite status. */
+function DraftNoticeView({ t, notice }: { t: Translator; notice: DraftNotice | null }) {
+  return (
+    <div role="status" aria-live="polite" data-testid="draft-live">
+      {notice?.kind === "created" ? (
+        <p className="v13-notice" data-testid="draft-created">
+          {t("case.draft.created")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Server-side preparation of the Scenario E form: ids and already-localised strings only. */
+function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; draft: DraftFormView }) {
+  const num = numberFormat(locale);
+  return (
+    <DraftForm
+      caseId={draft.caseId}
+      idempotencyKey={draft.idempotencyKey}
+      templates={draft.templates.map((o) => ({
+        value: o.template_version_id,
+        code: o.template_code,
+        label: t("case.draft.templateOption", {
+          name: o.template_name[locale],
+          code: o.template_code,
+          version: num.format(o.version),
+          language: t(o.language === "ar" ? "case.language.ar" : "case.language.en"),
+        }),
+      }))}
+      recipients={draft.recipientClasses.map((c) => ({ value: c.code, label: c.name[locale] }))}
+      text={{
+        heading: t("case.draft.heading"),
+        hint: t("case.draft.hint"),
+        template: t("case.draft.template"),
+        recipient: t("case.draft.recipient"),
+        submit: t("case.draft.submit"),
+        error: t("case.draft.error"),
+        correlation: t("case.error.correlation"),
+      }}
+    />
   );
 }
 
@@ -433,7 +482,18 @@ export function CaseTabContent({
         />
       );
     case "notifications":
-      return <NotificationTable t={t} locale={locale} notifications={view.notifications} />;
+      return (
+        <>
+          <DraftNoticeView t={t} notice={view.notice} />
+          <NotificationTable
+            t={t}
+            locale={locale}
+            notifications={view.notifications}
+            createdId={view.notice?.kind === "created" ? view.notice.notificationId : null}
+          />
+          {view.draft ? <DraftFormFor t={t} locale={locale} draft={view.draft} /> : null}
+        </>
+      );
   }
 }
 

@@ -130,3 +130,11 @@
 .nowrap {
   white-space: nowrap;
 }
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cdf-space-2);
+  align-items: end;
+  margin-block-start: var(--cdf-space-2);
+}
