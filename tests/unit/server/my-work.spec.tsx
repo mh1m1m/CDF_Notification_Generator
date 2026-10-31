@@ -21,6 +21,7 @@ import {
   type MyWorkView,
 } from "@/lib/server/my-work";
 import { caseIdOf } from "./support/fake-case-source";
+import { scrollRegionProblems } from "./support/scroll-regions";
 import { createFakeMyWork, taskEventIdOf, taskIdOf } from "./support/fake-my-work";
 import {
   ALPHA,
@@ -378,6 +379,12 @@ const viewFor = async (who = SECRETARY, raw: unknown = undefined, now = NOV9) =>
   loadMyWork({ ctx: ctxFor(who), reader: createFakeMyWork(), now }, raw);
 
 describe("MyWorkTable markup", () => {
+  it("the table sits in a focusable scroll region named by its caption (WCAG 2.1.1)", async () => {
+    for (const locale of ["ar", "en"] as const) {
+      expect(scrollRegionProblems(await render(await viewFor(), locale))).toEqual([]);
+    }
+  });
+
   it("has the S1 test ids, counts as data-count text and one row per task", async () => {
     const html = await render(await viewFor());
     expect(html).toContain('data-testid="my-work-table"');

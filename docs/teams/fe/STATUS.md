@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 19:10 UTC · Branches: feature/V13-FE-003-case-portfolio, feature/V13-FE-004-case-workspace, feature/V13-FE-005-my-work · Head: see PRs
+Updated: 2026-10-31 20:50 UTC · Branch: feature/V13-FE-005-my-work (#19, #23, #27 merged into develop) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -96,6 +96,7 @@ Updated: 2026-10-31 19:10 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
 | Same: fresh `pnpm db:reset`, `pnpm build && pnpm start`, `pnpm test:e2e` | pass | 64 passed, 17 skipped | bffeb64 |
 | FE-005 throwaway browser probe (not committed; e2e is QA's): Alpha 7 rows = Open count, Truth Inspector 0 violations, axe 0 violations (wcag2a/aa, 21a/aa), OPEN task unmarked, IN_PROGRESS recorded; update OPEN → IN_PROGRESS shows the updated notice and the badge becomes recorded; a second tab's version-1 form → stale message; forged task id (0009) → generic reference, server logs code NOT_FOUND only; Due-this-week filter link; Gamma's closed-case task has no form | pass | 1/1 | bffeb64 |
 | OI-023 (PR #27, 17f4107 on develop c4b37c3): `pnpm test` / `pnpm test:db` / `pnpm test:e2e`; browser probe: forged target refused with cookie unchanged, real switch → exactly 1 WORKSPACE_SWITCHED row | pass | 725 / 212 / 56 (17 skipped) / 1 | 17f4107 |
+| FE-005 after merging develop 69e03d6 (#23 merged), My Work table in `ScrollRegion` (caption `my-work-table-caption`) + guard test: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` / throwaway narrow axe probe incl. `/my-work` at 375 and 1280 px, ar + en (not committed) | pass | — / 1177 / 389 / 101 / 2/2 | FE-005 head |
 
 ## Unresolved defects
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database

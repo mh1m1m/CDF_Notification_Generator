@@ -7,6 +7,7 @@ import type { MyWorkTask } from "@/lib/contracts";
 import { toBadgeEpistemic } from "@/lib/domain";
 import type { Locale, MessageKey, Translator } from "@/lib/i18n";
 import type { Deadline, MyWorkFilter, MyWorkRow, MyWorkView as View } from "@/lib/server/my-work";
+import { ScrollRegion } from "../../_components/ScrollRegion";
 import { updateTaskStatus } from "../actions";
 import { dateFormat, numberFormat, TASK_STATUS_KEYS } from "../../cases/[caseId]/_components/labels";
 import styles from "./my-work.module.css";
@@ -160,9 +161,9 @@ export function MyWorkTable({
           {view.filter === "all" ? t("myWork.empty") : t("myWork.emptyFilter")}
         </p>
       ) : (
-        <div className={styles.scroll}>
+        <ScrollRegion className={styles.scroll} labelledBy="my-work-table-caption">
           <table className={styles.table} data-testid="my-work-table" data-count={view.rows.length}>
-            <caption>{t("myWork.table.caption")}</caption>
+            <caption id="my-work-table-caption">{t("myWork.table.caption")}</caption>
             <thead>
               <tr>
                 <th scope="col">{t("myWork.column.case")}</th>
@@ -204,7 +205,7 @@ export function MyWorkTable({
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollRegion>
       )}
     </>
   );
