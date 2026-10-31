@@ -56,6 +56,10 @@ Updated: 2026-10-31 18:15 UTC · Branch: feature/V13-FE-003-case-portfolio · He
 - FE-003 known gaps: stage names live in `case.stage.*` until PROC's stage catalogue exists; generic labels duplicate
   UX's `common.*` until UX-002 lands; `/cases/[id]` links answer 404 until FE-004; no sort control (S1/S2 sorting is
   by case number only, the keyset order).
+- FE-003: the "last recorded event" date carries `data-event-id` but not `data-epistemic`. The Truth Inspector (T2) needs
+  `data-status-kind` and `data-status` on every `data-epistemic` element, and the portfolio row has no event code or
+  status yet. It becomes a full `RecordedEventDate` once DB returns the event's status and PROC's status kinds land
+  (asked of ARCH, 31 Oct).
 
 ## Dependencies and requests
 - FE owns `tests/integration/fe/**` (ARCH, 03:48). The suite lands once DB's PR with the claims-key test support and
