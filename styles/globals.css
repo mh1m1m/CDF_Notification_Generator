@@ -248,6 +248,85 @@
     margin-block: var(--cdf-space-4) var(--cdf-space-6);
   }
 
+  /* V13-UX-007 (M1 design review, finding M1-01): PlatformNav's interim list, until the platform layout moves to the
+     TopBar + SideNav frame. A wrapping row of links, separated from the page heading. */
+  .v13-nav-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cdf-space-1) var(--cdf-space-2);
+    margin-block: 0 var(--cdf-space-6);
+    padding: 0 0 var(--cdf-space-2);
+    list-style: none;
+    border-block-end: var(--cdf-border-hairline) solid var(--cdf-border);
+  }
+
+  .v13-nav-list a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--cdf-touch-min);
+    padding-inline: var(--cdf-space-3);
+    color: var(--cdf-text);
+    border-radius: var(--cdf-radius-control);
+  }
+
+  .v13-nav-list a:hover {
+    background-color: var(--cdf-hover-bg);
+  }
+
+  .v13-nav-list a[aria-current="page"] {
+    font-weight: 700;
+    background-color: var(--cdf-selected-bg);
+  }
+
+  /* V13-UX-007 (M1-02): card list (the /workspaces page). One column at 360 px, more as the width allows. */
+  .v13-card-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: var(--cdf-space-4);
+    margin-block: 0 var(--cdf-space-6);
+    padding: 0;
+    list-style: none;
+  }
+
+  .v13-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--cdf-space-2);
+    min-inline-size: 0;
+    padding: var(--cdf-space-4);
+    background-color: var(--cdf-surface);
+    border: var(--cdf-border-hairline) solid var(--cdf-border-control);
+    border-radius: var(--cdf-radius-control);
+    overflow-wrap: anywhere;
+  }
+
+  .v13-card[aria-current="true"] {
+    background-color: var(--cdf-selected-bg);
+    border-inline-start: 4px solid var(--cdf-primary);
+  }
+
+  .v13-card > h2 {
+    margin: 0;
+    font-size: var(--cdf-text-h2);
+    line-height: var(--cdf-text-h2-lh);
+  }
+
+  .v13-card > p {
+    display: flex;
+    align-items: center;
+    gap: var(--cdf-space-1);
+    margin: 0;
+  }
+
+  .v13-card > p:not([data-testid]) {
+    color: var(--cdf-text-secondary);
+  }
+
+  .v13-card > form {
+    margin-block-start: auto;
+  }
+
   /* ---- V13-UX-002 shell ---------------------------------------------------------------------------------------- */
 
   .v13-icon {
@@ -402,6 +481,20 @@
     border: var(--cdf-border-hairline) solid var(--cdf-border-control);
     border-radius: var(--cdf-radius-control);
     box-shadow: var(--cdf-elevation);
+  }
+
+  /* V13-UX-007 (M1-03): under 768 px an anchored 16rem panel can cross the viewport edge, so the panel joins the flow
+     under its button and takes the row's width. */
+  @media (max-width: 767.98px) {
+    .v13-disclosure[open] {
+      flex-basis: 100%;
+    }
+
+    .v13-disclosure-panel {
+      position: static;
+      min-inline-size: 0;
+      margin-block-start: var(--cdf-space-1);
+    }
   }
 
   .v13-menu {
