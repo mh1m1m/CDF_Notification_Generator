@@ -7,7 +7,8 @@
 --     notification_event and outbox row carries the same case_id through a composite foreign key, so a row can never
 --     point at one case's notification under another case's id.
 --   * Template versions are immutable; their content hash is computed by the database.
---   * An idempotency key is used once: a second draft with the same key is refused (V1409).
+--   * An idempotency key is used once per author: a second draft by the same persona with the same key is refused
+--     (V1409). Keys are unique per (author, key), so another persona's key gives no signal (no oracle, no blocking).
 --   * The outbox is content-free (no subject, body or address) and unreadable by cdf_v13_user (ADR-010, used from M5).
 -- PRODUCTION_SUBSTITUTION_REQUIRED: the approved CDF mail gateway and scheduler (ADR-010); nothing here sends anything.
 
@@ -80,13 +81,16 @@ create table cdf_notifications_v13.notification (
   lifecycle_status      text        not null default 'DRAFT'
                                     check (lifecycle_status in ('DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'DISPATCHED',
                                                                 'CANCELLED', 'SUPERSEDED')),
-  idempotency_key       text        not null unique check (idempotency_key ~ '^[0-9a-f]{64}$'),
+  idempotency_key       text        not null check (idempotency_key ~ '^[0-9a-f]{64}$'),
   supersedes_id         uuid,
   created_by_persona_id uuid        not null references cdf_notifications_v13.persona (id),
   row_version           integer     not null default 1 check (row_version >= 1),
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now(),
   constraint notification_case_unique unique (id, case_id),
+  -- Keys are scoped to their author, so another persona's key is neither an existence oracle nor a way to block a
+  -- draft (SEC review of #15, MEDIUM).
+  constraint notification_author_idempotency_unique unique (created_by_persona_id, idempotency_key),
   -- A correction supersedes a notification of the same case only.
   constraint notification_supersedes_fk foreign key (supersedes_id, case_id)
     references cdf_notifications_v13.notification (id, case_id),
@@ -204,10 +208,12 @@ begin
     raise exception 'invalid input' using errcode = 'V1422';
   end if;
 
-  -- Serialise on the key so a concurrent duplicate gets V1409 rather than a raw unique violation.
+  -- Serialise on (author, key) so a concurrent duplicate gets V1409 rather than a raw unique violation. Only the
+  -- caller's own keys count: another persona's key, on any case, gives no signal.
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtext('cdf_notifications_v13'),
-                                           pg_catalog.hashtext('notification:' || p_idempotency_key));
-  if exists (select 1 from cdf_notifications_v13.notification n where n.idempotency_key = p_idempotency_key) then
+                                           pg_catalog.hashtext('notification:' || v_persona::text || ':' || p_idempotency_key));
+  if exists (select 1 from cdf_notifications_v13.notification n
+              where n.created_by_persona_id = v_persona and n.idempotency_key = p_idempotency_key) then
     raise exception 'duplicate idempotency key' using errcode = 'V1409';
   end if;
 
@@ -227,7 +233,7 @@ begin
   return next;
 end
 $fn$;
-comment on function cdf_notifications_v13.api_create_notification_draft(uuid, uuid, text, text) is 'Command: create a DRAFT notification for an authorised ACTIVE case (secretary or investigator role). Idempotency key used once (V1409). Writes notification, notification event and audit event in one transaction.';
+comment on function cdf_notifications_v13.api_create_notification_draft(uuid, uuid, text, text) is 'Command: create a DRAFT notification for an authorised ACTIVE case (secretary or investigator role). Idempotency key used once per author (V1409); another persona''s key gives no signal. Writes notification, notification event and audit event in one transaction.';
 
 -- Notification history of one case (RLS applies; an unauthorised or unknown case yields no rows).
 create function cdf_notifications_v13.case_notifications(p_case_id uuid)

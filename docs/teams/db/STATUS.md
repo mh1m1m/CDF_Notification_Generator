@@ -52,9 +52,12 @@ Commands and real counts are in the PR description, from runs on the PR head.
 
 ## Unresolved defects
 - None known.
+- SEC review of PR (b) (CHANGES 70f667f), fixed: idempotency keys are unique per author (`unique (created_by_persona_id,
+  idempotency_key)`), so another persona's key is no existence oracle and cannot block a draft; `api_update_task_status`
+  locks the task only after the access check; `p_correlation_id` dropped from both commands.
 - Open design points for the reviewer (PR (b)): (1) closed cases readable, not writable; (2) a duplicate idempotency
-  key is refused even for an identical replay; (3) a Governance Officer can change a task only when assigned to the
-  case; (4) commands accept a `p_correlation_id` argument that overrides the claims correlation id in the audit row.
+  key from the same author is refused even for an identical replay; (3) a Governance Officer can change a task only
+  when assigned to the case.
 
 ## Dependencies and requests
 - ARCH: a CI job that runs `node scripts/db/rehearse-shared.mjs` when `database/**` changes (V13-DB-006 acceptance;
