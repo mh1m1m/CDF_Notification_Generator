@@ -18,7 +18,8 @@
 // With --seed <version> it prints the text for ONE synthetic seed file of database/seed instead: the same guard in
 // front; begin; lock_timeout, search_path = '', the migration advisory lock; a guard that refuses unless the recorded
 // history equals every repository migration (name + sha256), so a seed runs only on the complete schema; the seed file,
-// verbatim; commit; (--dry-run: rollback;). Seeds have no history row (they are idempotent).
+// verbatim; commit; (--dry-run: rollback;). Seeds have no history row (they are idempotent). Every seed file must pass
+// db:lint's per-file rules first (no transaction control, no session-level role, SET LOCAL ROLE cdf_v13_owner first).
 //
 // Run the --dry-run text first. The dry-run and apply texts differ only in the final ROLLBACK/COMMIT and the guard's
 // expected final statement, so they carry the same guard hash. The output is deterministic for a given migration set,
@@ -38,7 +39,7 @@ import {
   V13_OWNER,
   V13_SCHEMA,
 } from "./lib/migrations.mjs";
-import { formatFinding, lintMigrationsDir } from "./lint-migrations.mjs";
+import { formatFinding, lintMigrationsDir, lintSeedsDir } from "./lint-migrations.mjs";
 
 /** @typedef {import("./lib/migrations.mjs").MigrationFile} MigrationFile */
 
@@ -266,6 +267,15 @@ export function buildHostedSeedBundle(options) {
     const details = lint.findings.map((f) => formatFinding(f, migrationsDir)).join("\n");
     throw new HostedBundleError(
       `db:lint reports ${lint.findings.length} finding(s); no bundle is produced:\n${details}`,
+    );
+  }
+  // The seeds get the same per-file rules (OI-041): a COMMIT, ROLLBACK or role change inside a seed would escape the
+  // bundle's transaction frame and could turn a dry run into an apply.
+  const seedLint = lintSeedsDir(seedDir);
+  if (seedLint.findings.length > 0) {
+    const details = seedLint.findings.map((f) => formatFinding(f, seedDir)).join("\n");
+    throw new HostedBundleError(
+      `db:lint reports ${seedLint.findings.length} seed finding(s); no bundle is produced:\n${details}`,
     );
   }
   const migrations = readMigrations(migrationsDir);

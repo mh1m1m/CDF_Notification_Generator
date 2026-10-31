@@ -8,6 +8,8 @@ concatenation). Keys are stable; text may be refined by review.
 Text for the screen namespaces (`portfolio`, `case`, `myWork`, `notifications`, `workspaces`) is FE's; SCREENS.md gives
 UX's proposed wording for them.
 
+As built (V13-UX-006): `common.preview.caption`, «معاينة معزولة لما سيصل إلى المستلم — بيانات اصطناعية، لم تُرسل» / "Isolated preview of what the recipient would receive — synthetic data, not sent".
+
 ## `shell`
 
 As built (V13-UX-002): the banner and skip-link text keep the foundation's keys `common.banner.synthetic` and

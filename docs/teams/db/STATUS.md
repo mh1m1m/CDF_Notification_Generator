@@ -17,7 +17,8 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-012]` | `feature/V13-DB-012-hosted-guard` | `scripts/db/hosted-bundle.mjs` generates the plan §5.7 text guard; unit + hosted-sim tests | COMPLETE — #44 merged 2766fd9 (CI 7/7, run 41237743471) |
 | `[V13-DB-014]` | `feature/V13-DB-013-guard-tail` | text guard runs first: start, body, final statement and trailer checked before any statement runs | COMPLETE — #47 merged (267944a) |
 | `[V13-DB-015]` | `feature/V13-DB-015-notification-ops` | migration 0010: `notifications_page` / `notifications_count` for the Notification Operations Center (S4, FE-006) | COMPLETE — #52 merged (77a9e18), SEC ACCEPT fcd2db3 |
-| `[V13-DB-016]` | `feature/V13-DB-016-hosted-resume-rehearsal` | rehearsal of the hosted resume 0005 → 0010 + seeds 0001/0002; seed bundles (`--seed`) | IN_PROGRESS — PR open, SEC review pending |
+| `[V13-DB-016]` | `feature/V13-DB-016-hosted-resume-rehearsal` | rehearsal of the hosted resume 0005 → 0010 + seeds 0001/0002; seed bundles (`--seed`) | COMPLETE — #56 merged (7a0eccb), SEC ACCEPT 54e1925 |
+| `[V13-DB-017]` | `feature/V13-DB-017-seed-lint` | OI-041: db:lint covers database/seed; seed bundle and db:reset refuse a seed with findings; transaction control inside DO/function bodies | IN_PROGRESS — PR open, SEC review pending |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -104,7 +105,7 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
   (uncommitted drafts seen through a context switch), Scenario E, filters, unknown filter values, paging (ties, cap,
   half cursor in both directions after SEC's CHANGES 0bb7f09, malformed cursor, foreign cursor), Epsilon/Zeta/unknown, forged contexts, app login 42501. Mutation-checked.
 
-## In progress: V13-DB-016 (hosted resume rehearsal)
+## Done: V13-DB-016 (hosted resume rehearsal), #56
 - The hosted project stands at 0005 (docs/TEST_EVIDENCE.md §2.1). ARCH will send, through the connector: bundles 0006,
   0007, 0008, 0009, 0010 (each `--dry-run`, then apply), then seeds 0001 and 0002 (each `--dry-run`, then apply).
 - `scripts/db/hosted-bundle.mjs --seed <version> [--dry-run]`: the seed file verbatim in the migration frame (begin,
@@ -121,6 +122,21 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
   primary fails the fingerprint comparison.
 - Evidence (local, dc52514 + working tree): lint, typecheck, prettier clean; unit 1658/1658 (hosted-bundle 37);
   test:db 418/418.
+
+## In progress: V13-DB-017 (OI-041, SEC LOW on #56)
+- `db:lint` now also lints `database/seed/*.sql` (`--seed-dir`) with every per-file rule of a migration after the
+  bootstrap: transaction-control, session-role and owner-role above all (SET LOCAL ROLE cdf_v13_owner first, RESET ROLE
+  only last). Seed file names NNNN_name.sql, unique versions, never 0000.
+- `hosted-bundle.mjs --seed` refuses to print a bundle while any seed has a finding; `db:reset` refuses before dropping
+  anything. A COMMIT in a seed could otherwise end the bundle's transaction early and turn a dry run into an apply.
+- Lint gap closed for migrations too: COMMIT, ROLLBACK, ABORT, SAVEPOINT and RELEASE inside DO and function bodies are
+  transaction-control findings (BEGIN/END stay PL/pgSQL block keywords there).
+- Tests: `tests/unit/hosted-bundle.spec.ts` 11 refusals (COMMIT, ROLLBACK, BEGIN, END, SAVEPOINT, SET ROLE, SET SESSION
+  AUTHORIZATION, early RESET ROLE, another role, no SET LOCAL ROLE first, COMMIT in a DO block), each by `lintSeedsDir`,
+  the generator (dry run and apply) and both CLIs; today's seeds pass; file-name rules. `tests/unit/lint-migrations.spec.ts`
+  +2 (COMMIT in a DO body, ROLLBACK in a procedure). Mutation-checked: without the generator's lint step 12 tests fail.
+- Evidence (local): db:lint 11 migrations + 2 seeds, 0 findings; lint, typecheck, prettier clean; unit 1700/1700;
+  test:db 418/418 after a fresh db:reset; REHEARSAL PASS.
 
 ## Next
 - Next free migration: 0011.

@@ -6,6 +6,7 @@ import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { lintSeedsDir } from "@/scripts/db/lint-migrations.mjs";
 import {
   buildHostedBundle,
   buildHostedSeedBundle,
@@ -25,6 +26,9 @@ import {
 } from "@/scripts/db/lib/migrations.mjs";
 
 const SCRIPT = join(ROOT, "scripts", "db", "hosted-bundle.mjs");
+const LINT_SCRIPT = join(ROOT, "scripts", "db", "lint-migrations.mjs");
+/** A seed in the required frame: SET LOCAL ROLE cdf_v13_owner first, RESET ROLE last. */
+const seedFixture = (statements: string) => `set local role cdf_v13_owner;\n${statements}\nreset role;\n`;
 const FIXTURE_0001 = `set local role cdf_v13_owner;
 comment on schema cdf_notifications_v13 is 'Synthetic fixture migration.';
 reset role;
@@ -383,12 +387,80 @@ describe("seed bundle (--seed, V13-DB-016)", () => {
     expect(() => buildHostedSeedBundle({ version: "0099" })).toThrow(/no seed with version 0099/);
     expect(() => buildHostedSeedBundle({ version: "1" })).toThrow(/four digits/);
     dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
-    writeFileSync(join(dir, "0001_a.sql"), "select 1;\n");
-    writeFileSync(join(dir, "0001_b.sql"), "select 1;\n");
-    writeFileSync(join(dir, "0002_tagged.sql"), `select '${GUARD_TAG}';\n`);
-    expect(() => buildHostedSeedBundle({ version: "0001", seedDir: dir })).toThrow(/more than one seed/);
+    writeFileSync(join(dir, "0001_a.sql"), seedFixture("select 1;"));
+    writeFileSync(join(dir, "0001_b.sql"), seedFixture("select 1;"));
+    expect(() => buildHostedSeedBundle({ version: "0001", seedDir: dir })).toThrow(
+      /seed version 0001 is also used by 0001_a\.sql/,
+    );
+    rmSync(dir, { recursive: true, force: true });
+    dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
+    writeFileSync(join(dir, "0002_tagged.sql"), seedFixture(`select '${GUARD_TAG}';`));
     expect(() => buildHostedSeedBundle({ version: "0002", seedDir: dir })).toThrow(HostedBundleError);
     expect(() => buildHostedSeedBundle({ version: "0002", seedDir: dir })).toThrow(/guard tag/);
+  });
+
+  describe("a seed must pass db:lint first (OI-041): no transaction control, no role change", () => {
+    // Each would escape the bundle's transaction frame: COMMIT ends it early (a dry run would apply), ROLLBACK ends it
+    // and runs the rest outside any transaction, a session-level SET ROLE outlives it, an early RESET ROLE or another
+    // role runs the rest without cdf_v13_owner.
+    const breaking: [string, string, string][] = [
+      ["COMMIT", seedFixture("select 1;\ncommit;\nselect 2;"), "transaction-control"],
+      ["ROLLBACK", seedFixture("select 1;\nrollback;"), "transaction-control"],
+      ["BEGIN", seedFixture("begin;\nselect 1;"), "transaction-control"],
+      ["END", seedFixture("select 1;\nend;"), "transaction-control"],
+      ["SAVEPOINT", seedFixture("savepoint s;\nselect 1;"), "transaction-control"],
+      ["SET ROLE", seedFixture("set role cdf_v13_owner;\nselect 1;"), "session-role"],
+      ["SET SESSION AUTHORIZATION", seedFixture("set session authorization postgres;"), "session-role"],
+      ["RESET ROLE early", seedFixture("reset role;\nselect 1;"), "owner-role"],
+      ["another role", seedFixture("set local role postgres;\nselect 1;"), "owner-role"],
+      ["no SET LOCAL ROLE first", "select 1;\nreset role;\n", "owner-role"],
+      ["COMMIT inside a DO block", seedFixture("do $s$ begin commit; end $s$;"), "transaction-control"],
+    ];
+
+    for (const [label, text, rule] of breaking) {
+      it(`${label}: db:lint reports ${rule} and the generator refuses (dry run and apply)`, () => {
+        dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
+        writeFileSync(join(dir, "0001_breaking.sql"), text);
+        expect(lintSeedsDir(dir).findings.map((f) => f.rule)).toContain(rule);
+        for (const dryRun of [true, false]) {
+          expect(() => buildHostedSeedBundle({ version: "0001", seedDir: dir, dryRun })).toThrow(
+            new RegExp(`seed finding\\(s\\); no bundle is produced:[\\s\\S]*\\[${rule}\\]`),
+          );
+        }
+        const cli = spawnSync(process.execPath, [SCRIPT, "--seed", "0001", "--dry-run", "--seed-dir", dir], {
+          encoding: "utf8",
+        });
+        expect(cli.status).toBe(1);
+        expect(cli.stdout).toBe("");
+        const lint = spawnSync(process.execPath, [LINT_SCRIPT, "--seed-dir", dir], { encoding: "utf8" });
+        expect(lint.status).toBe(1);
+        expect(lint.stderr).toContain(`[${rule}]`);
+      });
+    }
+
+    it("a well-formed seed passes, and today's seeds pass", () => {
+      dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
+      writeFileSync(join(dir, "0001_ok.sql"), seedFixture("select 1;"));
+      expect(lintSeedsDir(dir).findings).toEqual([]);
+      expect(() => buildHostedSeedBundle({ version: "0001", seedDir: dir, dryRun: true })).not.toThrow();
+      const today = lintSeedsDir();
+      expect(today.files).toEqual(["0001_m1_synthetic.sql", "0002_m1_cases.sql"]);
+      expect(today.findings).toEqual([]);
+      const lint = spawnSync(process.execPath, [LINT_SCRIPT], { encoding: "utf8" });
+      expect(lint.status).toBe(0);
+      expect(lint.stdout).toMatch(/migration file\(s\), 2 seed file\(s\), 0 finding\(s\)/);
+    });
+
+    it("seed file names: NNNN_name.sql, unique versions, never 0000", () => {
+      dir = mkdtempSync(join(tmpdir(), "v13-seed-"));
+      writeFileSync(join(dir, "0000_boot.sql"), "select 1;\n");
+      writeFileSync(join(dir, "seed.sql"), seedFixture("select 1;"));
+      const findings = lintSeedsDir(dir).findings;
+      expect(findings.map((f) => `${f.file}:${f.rule}`).sort()).toEqual([
+        "0000_boot.sql:file-name",
+        "seed.sql:file-name",
+      ]);
+    });
   });
 
   it("command line: --seed prints the seed bundle; --seed-dir without a value is a usage error", () => {

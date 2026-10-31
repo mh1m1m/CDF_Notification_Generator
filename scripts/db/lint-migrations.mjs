@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 // @ts-check
-// Static checks on database/migrations/*.sql (pnpm db:lint). Runs before any migration reaches a database and
-// again inside scripts/db/hosted-bundle.mjs. Every rule is listed in RULES with the reason it exists.
+// Static checks on database/migrations/*.sql and database/seed/*.sql (pnpm db:lint). Runs before any migration reaches
+// a database and again inside scripts/db/hosted-bundle.mjs. Every rule is listed in RULES with the reason it exists.
+//
+// Seed files get every per-file rule of a migration after the bootstrap (V13-DB-017, OI-041): above all
+// transaction-control (no BEGIN/COMMIT/ROLLBACK/…), session-role (no session-level SET ROLE) and owner-role (starts with
+// SET LOCAL ROLE cdf_v13_owner, RESET ROLE only as the last statement). The hosted seed bundle wraps a seed in its own
+// transaction and ends it with ROLLBACK for a dry run; a COMMIT inside the seed would turn that dry run into an apply.
 //
 // The checks read the SQL with a lexer (scripts/db/lib/sql-lexer.mjs), so comments are ignored and statements
 // inside DO blocks and LANGUAGE sql/plpgsql function bodies are checked too. Dynamic SQL built at run time
@@ -16,6 +21,7 @@ import {
   MIGRATIONS_DIR,
   nameOf,
   ROOT,
+  SEED_DIR,
   V13_APP,
   V13_OWNER,
   V13_ROLES,
@@ -183,6 +189,8 @@ const TRANSACTION_WORDS = new Set([
   "savepoint",
   "release",
 ]);
+/** Transaction control inside DO and function bodies (BEGIN and END are PL/pgSQL block keywords there). */
+const BODY_TRANSACTION_WORDS = new Set(["commit", "rollback", "abort", "savepoint", "release"]);
 const NESTED_HEAD_PREDECESSORS = new Set(["begin", "then", "else", "loop"]);
 const HEAD_VERBS = new Set([
   "create",
@@ -502,7 +510,7 @@ function nestedHeads(tokens) {
   /** @type {number[]} */
   const heads = [];
   tokens.forEach((t, k) => {
-    if (t.type !== "word" || !HEAD_VERBS.has(t.value)) return;
+    if (t.type !== "word" || !(HEAD_VERBS.has(t.value) || BODY_TRANSACTION_WORDS.has(t.value))) return;
     const prev = tokens[k - 1];
     if (k === 0 || (prev?.type === "word" && NESTED_HEAD_PREDECESSORS.has(prev.value))) heads.push(k);
   });
@@ -702,6 +710,14 @@ function analyzeHead(ctx, t, opts) {
     default:
       if (opts.topLevel && TRANSACTION_WORDS.has(head.value)) {
         ctx.report("transaction-control", head.start, `${head.value.toUpperCase()} inside a migration file`);
+      } else if (!opts.topLevel && BODY_TRANSACTION_WORDS.has(head.value)) {
+        // Inside a DO or function body BEGIN/END are block keywords; COMMIT, ROLLBACK and the rest are transaction
+        // control (PL/pgSQL), which the one-transaction frame must not contain either.
+        ctx.report(
+          "transaction-control",
+          head.start,
+          `${head.value.toUpperCase()} inside a DO or function body`,
+        );
       } else if (opts.topLevel && isWord(head, "prepare") && isWord(t[1], "transaction")) {
         ctx.report("transaction-control", head.start, "PREPARE TRANSACTION inside a migration file");
       }
@@ -1382,6 +1398,57 @@ export function lintMigrationsDir(dir = MIGRATIONS_DIR) {
   return { files, findings };
 }
 
+const SEED_FILE_PATTERN = /^\d{4}_[a-z0-9_]+\.sql$/;
+
+/**
+ * Lints every seed file of a directory with the per-file rules of a migration after the bootstrap. File-set rules:
+ * names NNNN_name.sql, versions unique and never 0000 (0000 is linted as the bootstrap, which skips owner-role).
+ * Missing directory → no files.
+ * @param {string} [dir]
+ * @returns {{ files: string[], findings: Finding[] }}
+ */
+export function lintSeedsDir(dir = SEED_DIR) {
+  const files = listFiles(dir);
+  /** @type {Finding[]} */
+  const findings = [];
+  /** @type {Map<string, string>} */
+  const versions = new Map();
+  for (const file of files) {
+    if (!SEED_FILE_PATTERN.test(file)) {
+      findings.push({
+        rule: "file-name",
+        file,
+        line: 1,
+        message: "seed file name must match NNNN_name.sql (lower-case name)",
+      });
+      continue;
+    }
+    const version = file.slice(0, 4);
+    if (version === "0000") {
+      findings.push({
+        rule: "file-name",
+        file,
+        line: 1,
+        message: "seed versions start at 0001 (0000 is the bootstrap's)",
+      });
+      continue;
+    }
+    const previous = versions.get(version);
+    if (previous) {
+      findings.push({
+        rule: "file-name",
+        file,
+        line: 1,
+        message: `seed version ${version} is also used by ${previous}`,
+      });
+    } else {
+      versions.set(version, file);
+    }
+    findings.push(...lintMigrationSource(file, readFileSync(join(dir, file), "utf8")));
+  }
+  return { files, findings };
+}
+
 /** @param {Finding} f @param {string} dir */
 export function formatFinding(f, dir = MIGRATIONS_DIR) {
   return `${relative(ROOT, join(dir, f.file))}:${f.line}: [${f.rule}] ${f.message}`;
@@ -1389,12 +1456,20 @@ export function formatFinding(f, dir = MIGRATIONS_DIR) {
 
 function main() {
   const args = process.argv.slice(2);
-  const dirFlag = args.indexOf("--migrations-dir");
-  const dir = dirFlag === -1 ? MIGRATIONS_DIR : /** @type {string} */ (args[dirFlag + 1]);
-  const { files, findings } = lintMigrationsDir(dir);
-  for (const f of findings) console.error(formatFinding(f, dir));
-  const summary = `db:lint: ${files.length} migration file(s), ${findings.length} finding(s), ${RULES.length} rules`;
-  if (findings.length > 0) {
+  /** @param {string} flag @param {string} fallback */
+  const valueOf = (flag, fallback) => {
+    const k = args.indexOf(flag);
+    return k === -1 ? fallback : /** @type {string} */ (args[k + 1]);
+  };
+  const dir = valueOf("--migrations-dir", MIGRATIONS_DIR);
+  const seedDir = valueOf("--seed-dir", SEED_DIR);
+  const migrations = lintMigrationsDir(dir);
+  const seeds = lintSeedsDir(seedDir);
+  for (const f of migrations.findings) console.error(formatFinding(f, dir));
+  for (const f of seeds.findings) console.error(formatFinding(f, seedDir));
+  const count = migrations.findings.length + seeds.findings.length;
+  const summary = `db:lint: ${migrations.files.length} migration file(s), ${seeds.files.length} seed file(s), ${count} finding(s), ${RULES.length} rules`;
+  if (count > 0) {
     console.error(`✗ ${summary}`);
     process.exit(1);
   }

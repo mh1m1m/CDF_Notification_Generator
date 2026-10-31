@@ -74,6 +74,18 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   Scenario C's `workspace-switcher-open` selector and leave exactly one `data-testid="workspace-switcher"` per page.
 - Run `pnpm db:reset` before every local `pnpm test:e2e` (CI e2e runs on a migrated, seeded database since #36).
 
+## V13-UX-006: NotificationPreviewFrame (IN_REVIEW once its PR is open; QA, plus SEC for the sandbox and CSP)
+- `components/data/NotificationPreviewFrame.tsx` (server component), `common.preview.caption`, preview styles,
+  `tests/unit/components/preview-frame.spec.tsx` (real renderer output from the demo builder, e-mail and platform, ar
+  and en; sandbox empty, no `src`, srcdoc round-trips exactly, nothing injected into the page, refusals log no
+  content, type-only imports from `lib/notifications`).
+- CSP check (local Chromium, 31 Oct, throwaway page served with the exact `pageContentSecurityPolicy` of
+  `lib/http/csp.ts`, not committed): all four documents render in `about:srcdoc`, the renderer's inline styles apply
+  (marking background set), headings present, no `securitypolicyviolation`; a script and an `onerror` handler in a
+  hostile document never ran (Chromium: "Blocked script execution … sandboxed"). Firefox and WebKit not installed here.
+  No CSP change needed. The committed e2e under the page policy belongs with FE-006's page (FE DESIGN §13): the demo
+  builder cannot be imported by Playwright's loader (JSON imports need import attributes).
+
 ## Unresolved defects
 - None known.
 
