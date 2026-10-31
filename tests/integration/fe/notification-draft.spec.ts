@@ -28,6 +28,7 @@ const who = (persona: number, active_workspace: string, role: string): RequestId
   });
 const ALPHA = who(1, "SECRETARIAT", "COMMITTEE_SECRETARY");
 const BETA = who(2, "INVESTIGATIONS", "INVESTIGATOR");
+const GAMMA = who(3, "INVESTIGATIONS", "INVESTIGATOR");
 const DELTA_GOV = who(4, "GOVERNANCE", "GOVERNANCE_OFFICER");
 const CASE = (n: number) => `0c000000-0000-4000-8000-0000000000${String(n).padStart(2, "0")}`;
 const TV = (n: number) => `1f000000-0000-4000-8000-00000000000${n}`;
@@ -203,10 +204,17 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
   });
 
   it.each([
-    ["Alpha on 0002 (another workspace case, not visible in Secretariat)", ALPHA, 2],
+    // SEC on #51 (1): a case the persona cannot see in its workspace.
+    ["Alpha (Secretariat) on 0002, not visible in Secretariat", ALPHA, 2],
+    ["Alpha (Secretariat) on 0005, not visible in Secretariat", ALPHA, 5],
+    // SEC (2): the restricted case for an unassigned persona.
     ["Alpha on restricted 0009 (not assigned)", ALPHA, 9],
-    ["Delta in Governance on 0001 (role may not draft)", DELTA_GOV, 1],
+    ["Gamma (Investigations) on restricted 0009 (not assigned)", GAMMA, 9],
+    // SEC (3): an unknown case UUID.
     ["Alpha on an unknown case id", ALPHA, 99],
+    // SEC (4): a case visible only in other workspaces, for a role that may draft.
+    ["Gamma (Investigations) on 0008, visible only in Governance and Secretariat", GAMMA, 8],
+    ["Delta in Governance on 0001 (role may not draft)", DELTA_GOV, 1],
   ] as const)("%s is NOT_FOUND and writes nothing", async (_n, identity, c) => {
     const { outcome, after } = await attempt(identity, { case_id: CASE(c) as never });
     expect(outcome).toBe("NOT_FOUND");
