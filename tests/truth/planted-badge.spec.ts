@@ -107,6 +107,17 @@ test.describe('planted unrecorded "completed" badges are detected', () => {
     );
     expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T5"]);
   });
+
+  test("(e′) DELIVERY_CONFIRMED (lib/domain completed class) dressed as expected → T5", async ({ page }) => {
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({
+        insideWorkspace: `<span data-epistemic="expected" data-status-kind="notification" data-status="DELIVERY_CONFIRMED">تأكد التسليم (متوقع)</span>`,
+      }),
+    );
+    expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T5"]);
+  });
 });
 
 test.describe("other truth rules", () => {
@@ -148,6 +159,52 @@ test.describe("other truth rules", () => {
     );
     expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T6"]);
   });
+
+  test("an unmarked OPEN task badge is allowed (ARCH ruling on FE-004)", async ({ page }) => {
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({
+        insideWorkspace: `<span data-testid="status-badge" data-status-kind="task" data-status="OPEN">مفتوحة</span>`,
+      }),
+    );
+    const v = await inspectTruth(page, oracle, NOW);
+    expect(v, formatTruthViolations(v)).toEqual([]);
+  });
+
+  test("a COMPLETED badge with no data-epistemic at all → T8", async ({ page }) => {
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({
+        insideWorkspace: `<span data-testid="status-badge" data-status-kind="task" data-status="COMPLETED">اكتملت</span>`,
+      }),
+    );
+    expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T8"]);
+  });
+
+  for (const [label, attrs] of [
+    ["an unmarked IN_PROGRESS task", 'data-status-kind="task" data-status="IN_PROGRESS"'],
+    [
+      "an unmarked OPEN element of another kind (notification)",
+      'data-status-kind="notification" data-status="OPEN"',
+    ],
+    [
+      "an unmarked OPEN task that carries data-event-id",
+      `data-status-kind="task" data-status="OPEN" data-event-id="${EVENTS.e0001task}"`,
+    ],
+    ["an element with data-status-kind but no data-status", 'data-status-kind="task"'],
+    ["an unmarked QUEUED notification", 'data-status-kind="notification" data-status="QUEUED"'],
+  ] as const) {
+    test(`${label} → T8`, async ({ page }) => {
+      await openFixture(
+        page,
+        casePath,
+        caseWorkspaceHtml({ insideWorkspace: `<span data-testid="status-badge" ${attrs}>حالة</span>` }),
+      );
+      expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T8"]);
+    });
+  }
 
   test("a planted badge inside a same-origin frame (notification preview) → T3", async ({ page }) => {
     const badge =
