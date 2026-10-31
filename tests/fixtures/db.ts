@@ -2,8 +2,9 @@
 // database as the started app, as cdf_v13_app, and reads every row inside the persona's own security context: one
 // transaction with the authenticated claims and SET LOCAL ROLE cdf_v13_user, exactly as lib/db/security-context.ts
 // does (ADR-003, ADR-014). So "what the database shows" is what RLS lets that persona see, never an owner's view.
-// It never writes. The claims key comes from the run's session secret (playwright.config.ts gives the app the same
-// one), so a wrong derivation makes every read empty and the scenarios fail; it cannot make them pass.
+// It never writes: every read is a read-only transaction that is rolled back. The claims key comes from the run's
+// session secret (playwright.config.ts gives the app the same one), so a wrong derivation makes every read empty and
+// the scenarios fail; it cannot make them pass.
 //
 // lib/db/security-context.ts and lib/auth/claims-key.ts start with `import "server-only"`, which throws outside a React
 // Server Components bundle, so the two derivations are repeated here; a drift makes every read empty, which fails the
@@ -61,6 +62,13 @@ function claimsKey(): Uint8Array {
 
 export type ScenarioTx = postgres.TransactionSql;
 
+/** Carries a read's result out of the transaction while making postgres.js roll it back. */
+class Rollback extends Error {
+  constructor(readonly result: unknown) {
+    super("rollback");
+  }
+}
+
 export interface ScenarioDb {
   /** Runs `fn` read-only as cdf_v13_user with the persona's claims in `workspace`. */
   asPersona<T>(slug: string, workspace: WorkspaceCode, fn: (tx: ScenarioTx) => Promise<T>): Promise<T>;
@@ -84,15 +92,22 @@ export function scenarioDb(): ScenarioDb {
         workspace_id: workspaceId,
         correlation_id: randomUUID(),
       });
-      return sql.begin("read only", async (tx) => {
-        const [row] = await tx<{ xid: string }[]>`select pg_catalog.pg_current_xact_id()::text as xid`;
-        const mac = createHmac("sha256", key).update(`${claims}|${row!.xid}`, "utf8").digest("base64url");
-        await tx`
-          select pg_catalog.set_config('request.v13.claims', ${claims}, true),
-                 pg_catalog.set_config('request.v13.claims_mac', ${mac}, true),
-                 pg_catalog.set_config('role', 'cdf_v13_user', true)`;
-        return fn(tx);
-      }) as Promise<T>;
+      // A read-only transaction that is always rolled back: the result leaves through the Rollback "error".
+      try {
+        await sql.begin("read only", async (tx) => {
+          const [row] = await tx<{ xid: string }[]>`select pg_catalog.pg_current_xact_id()::text as xid`;
+          const mac = createHmac("sha256", key).update(`${claims}|${row!.xid}`, "utf8").digest("base64url");
+          await tx`
+            select pg_catalog.set_config('request.v13.claims', ${claims}, true),
+                   pg_catalog.set_config('request.v13.claims_mac', ${mac}, true),
+                   pg_catalog.set_config('role', 'cdf_v13_user', true)`;
+          throw new Rollback(await fn(tx));
+        });
+      } catch (error) {
+        if (error instanceof Rollback) return error.result as T;
+        throw error;
+      }
+      throw new Error("unreachable: the scenario transaction always rolls back");
     },
     end: () => sql.end({ timeout: 5 }),
   };

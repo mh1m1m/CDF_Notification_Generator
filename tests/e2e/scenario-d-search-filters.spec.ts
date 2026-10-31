@@ -138,7 +138,7 @@ test("Scenario D — filters set through the form stay in the URL across open, b
   await expect(page.getByTestId("portfolio-mine")).toBeChecked();
 });
 
-// KNOWN DEFECT (QA finding F2, reported to ARCH 31 Oct): Clear and Back are client-side navigations, and the filter
+// KNOWN DEFECT (OI-043, V13-FE-007; QA finding F2): Clear and Back are client-side navigations, and the filter
 // form's fields are uncontrolled (defaultValue), so they keep the previous filters while the list below is unfiltered;
 // pressing Apply then silently re-applies them. Local probe: after Clear the search box resets but stage and state keep
 // INVESTIGATION/ACTIVE over 6 unfiltered rows; after Back from ?state=CLOSED the state field still reads CLOSED.
@@ -148,7 +148,7 @@ test("Scenario D — filters set through the form stay in the URL across open, b
 test("Scenario D — the filter form shows only the URL's filters after Clear and after Back", async ({
   page,
 }) => {
-  test.fail(true, "QA finding F2: filter fields keep stale values after a client-side navigation");
+  test.fail(true, "OI-043: filter fields keep stale values after a client-side navigation");
   await signInAs(page, GAMMA);
   const fields = () =>
     Promise.all(
