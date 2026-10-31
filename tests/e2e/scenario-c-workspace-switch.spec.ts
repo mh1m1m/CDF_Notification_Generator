@@ -49,7 +49,9 @@ test.describe("Scenario C — Delta switches workspace", () => {
     const firstCookie = await sessionCookie(context);
     const first = firstCookie?.value;
 
-    await page.getByTestId("workspace-switcher-open").click();
+    // UX-005: the TopBar control opens the shell menu; its "all workspaces" link leads to /workspaces.
+    await switcher(page).click();
+    await page.getByTestId("workspace-menu-all").click();
     await expect(page).toHaveURL(/\/workspaces$/);
     const governance = page.getByTestId("workspace-option-GOVERNANCE");
     const secretariat = page.getByTestId("workspace-option-SECRETARIAT");
@@ -120,7 +122,8 @@ test.describe("Scenario C — negatives leave the session unchanged", () => {
   }) => {
     await signInAs(page, "investigator-beta");
     await expect(switcher(page)).toHaveAttribute("data-workspace-code", "INVESTIGATIONS");
-    await expect(page.getByTestId("workspace-switcher-open")).toHaveCount(0);
+    await expect(page.getByTestId("workspace-menu-all")).toHaveCount(0);
+    await expect(page.locator('[data-testid^="workspace-menu-option-"]')).toHaveCount(0);
     await expect(page.getByTestId("nav-notifications")).toHaveCount(0); // ruling D6
     await page.goto("/workspaces");
     await expect(page.locator('[data-testid^="workspace-option-"]')).toHaveCount(1);
