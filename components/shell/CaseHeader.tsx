@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import { ActiveIcon, ArchiveIcon, LockIcon } from "@/components/icons";
 import type { Translator } from "@/lib/i18n";
-import { assertCaseIdentity } from "./case-identity";
+import { assertCaseIdentity } from "@/components/case-identity";
 
 export type RecordsState = "ACTIVE" | "CLOSED";
 

@@ -57,6 +57,13 @@ keys are lower case (`common.records.active`, `common.records.closed`) to match 
 
 ## `common`
 
+As built (V13-UX-003): the keys follow the i18n key pattern (each segment starts lower case). So `common.layerA.*` uses
+`completed`, `inProgress`, `pending`, `suspended`, `returned`, `cancelled`, `failed` and `notApplicable`.
+`common.epistemic.recorded` is `common.epistemic.recordedAria`. `common.notFound.*` is not added, because the
+foundation's `common.notFound.*` keys already serve `app/not-found.tsx` and `NotFoundState` takes its words as props.
+Added: `common.pagination.label`, `common.epistemic.awaitingApprover`, and `common.days.zero|one|two|few|many|other`
+(day counts with plural forms). `common.sending.*` waits for V13-PROC-005.
+
 | Key | العربية | English |
 | --- | ------- | ------- |
 | `common.loading` | جارٍ التحميل… | Loading… |
