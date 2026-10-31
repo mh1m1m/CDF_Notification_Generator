@@ -1,18 +1,20 @@
 // Case Workspace loader (FE-004, SCREENS S3). The URL's case id is the only case context: no cookie, storage or
-// "current case" state. Order: request context → getCaseForRoute (parse, lib/authz pre-check, CaseSourceAdapter) →
-// V13 records of that same case (CaseRecordsReader, RLS). Unknown, malformed, unauthorised, restricted and
+// "current case" state. Order: request context → getCaseHeaderForRoute (parse, lib/authz pre-check,
+// CaseSourceAdapter.getCaseHeader) → V13 records of that same case (ProceduralRecordsReader,
+// NotificationRecordsReader; RLS). Unknown, malformed, unauthorised, restricted and
 // other-workspace ids all end in AppError("NOT_FOUND"), which the page turns into the shared not-found page.
 import "server-only";
 import type {
   CaseCapacity,
   CaseEvent,
   CaseNotification,
-  CaseRecordsReader,
   CaseSourceAdapter,
   CaseSummary,
   CaseTask,
+  NotificationRecordsReader,
+  ProceduralRecordsReader,
 } from "@/lib/contracts";
-import { getCaseForRoute } from "./cases";
+import { getCaseHeaderForRoute } from "./cases";
 import type { RequestContext } from "./context";
 import { toUserError } from "./errors";
 
@@ -24,7 +26,8 @@ export const OVERVIEW_EVENTS = 5;
 export interface CaseWorkspaceDeps {
   readonly ctx: RequestContext;
   readonly source: CaseSourceAdapter;
-  readonly records: CaseRecordsReader;
+  readonly procedural: ProceduralRecordsReader;
+  readonly notifications: NotificationRecordsReader;
 }
 
 interface Frame {
@@ -46,18 +49,17 @@ const OPEN_STATUSES = new Set(["OPEN", "IN_PROGRESS", "BLOCKED"]);
 
 /** Loads one tab of one case. Throws AppError("NOT_FOUND") for anything the persona may not see. */
 export async function loadCaseWorkspace(
-  { ctx, source, records }: CaseWorkspaceDeps,
+  { ctx, source, procedural, notifications }: CaseWorkspaceDeps,
   rawCaseId: unknown,
   tab: CaseTab,
 ): Promise<CaseWorkspaceView> {
-  const summary = await getCaseForRoute({ ctx, source }, rawCaseId);
+  const { my_capacity: capacity, ...summary } = await getCaseHeaderForRoute({ ctx, source }, rawCaseId);
   const caseId = summary.case_id;
-  const capacity = await records.myCapacity(ctx.identity, caseId);
   const frame = { summary, capacity };
   switch (tab) {
     case "overview": {
-      const events = await records.listEvents(ctx.identity, caseId);
-      const tasks = await records.listTasks(ctx.identity, caseId);
+      const events = await procedural.listEvents(ctx.identity, caseId);
+      const tasks = await procedural.listTasks(ctx.identity, caseId);
       return {
         ...frame,
         tab,
@@ -66,11 +68,15 @@ export async function loadCaseWorkspace(
       };
     }
     case "events":
-      return { ...frame, tab, events: await records.listEvents(ctx.identity, caseId) };
+      return { ...frame, tab, events: await procedural.listEvents(ctx.identity, caseId) };
     case "tasks":
-      return { ...frame, tab, tasks: await records.listTasks(ctx.identity, caseId) };
+      return { ...frame, tab, tasks: await procedural.listTasks(ctx.identity, caseId) };
     case "notifications":
-      return { ...frame, tab, notifications: await records.listNotifications(ctx.identity, caseId) };
+      return {
+        ...frame,
+        tab,
+        notifications: await notifications.listCaseNotifications(ctx.identity, caseId),
+      };
   }
 }
 

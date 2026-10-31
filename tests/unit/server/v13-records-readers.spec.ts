@@ -1,16 +1,19 @@
-// V13 CaseRecordsReader (SQL) with a recording transaction stub: only the invoker read functions are called, with the
-// case id as a bound value, inside the identity's context; rows are validated against the contract; a row from another
+// V13 ProceduralRecordsReader and NotificationRecordsReader, and CaseSourceAdapter.getCaseHeader (SQL), with a
+// recording transaction stub: only the invoker read functions are called, with the case id as a bound value, inside
+// the identity's context; rows are validated against the contract; a row from another
 // case, or one that breaks the contract, refuses the whole result.
 import { describe, expect, it } from "vitest";
+import { createV13RecordsCaseSource } from "@/lib/adapters/case-source/v13-records";
+import { createV13NotificationRecordsReader } from "@/lib/adapters/notification-records/v13-notification-records";
 import {
   CaseRecordsMismatchError,
-  createV13CaseRecordsReader,
+  createV13ProceduralRecordsReader,
   rowToCaseTask,
-} from "@/lib/adapters/case-records/v13-case-records";
+} from "@/lib/adapters/procedural-records/v13-procedural-records";
 import type { CaseId, RequestIdentity } from "@/lib/contracts";
 import type { Tx } from "@/lib/db/security-context";
 import { caseIdOf } from "./support/fake-case-source";
-import { caseEventId, caseNotificationId, caseTaskId } from "./support/fake-case-records";
+import { caseEventId, caseNotificationId, caseTaskId } from "./support/fake-records";
 import { SECRETARY } from "./support/identities";
 
 const CASE = caseIdOf(1);
@@ -25,7 +28,16 @@ function recorder(rows: unknown[]) {
     }) as unknown as Tx;
     return fn(tx);
   };
-  return { calls, reader: createV13CaseRecordsReader(run) };
+  const procedural = createV13ProceduralRecordsReader(run);
+  const notifications = createV13NotificationRecordsReader(run);
+  const source = createV13RecordsCaseSource(run);
+  const reader = {
+    getCaseHeader: (i: RequestIdentity, c: CaseId) => source.getCaseHeader(i, c),
+    listEvents: (i: RequestIdentity, c: CaseId) => procedural.listEvents(i, c),
+    listTasks: (i: RequestIdentity, c: CaseId) => procedural.listTasks(i, c),
+    listCaseNotifications: (i: RequestIdentity, c: CaseId) => notifications.listCaseNotifications(i, c),
+  };
+  return { calls, reader };
 }
 
 const eventRow = (extra: Record<string, unknown> = {}) => ({
@@ -70,14 +82,29 @@ const notificationRow = (extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 
+const caseHeaderRow = (extra: Record<string, unknown> = {}) => ({
+  id: CASE,
+  display_number: "CDF-DEMO-2026-0001",
+  title_ar: "قضية تجريبية 1",
+  title_en: "Demo case 1",
+  stage: "INVESTIGATION",
+  is_restricted: false,
+  records_state: "ACTIVE",
+  source_system: "V13_SYNTHETIC",
+  source_ref: "demo-0001",
+  updated_at: new Date("2026-10-28T00:00:00Z"),
+  my_capacity: "SECRETARY",
+  ...extra,
+});
+
 const FUNCTIONS = [
-  ["myCapacity", "case_header", [{ my_capacity: "SECRETARY" }]],
+  ["getCaseHeader", "case_header", [caseHeaderRow()]],
   ["listEvents", "case_events", [eventRow()]],
   ["listTasks", "case_tasks", [taskRow()]],
-  ["listNotifications", "case_notifications", [notificationRow()]],
+  ["listCaseNotifications", "case_notifications", [notificationRow()]],
 ] as const;
 
-describe("createV13CaseRecordsReader", () => {
+describe("V13 record readers", () => {
   it.each(FUNCTIONS)(
     "%s calls cdf_notifications_v13.%s with the case id bound, inside the identity's context",
     async (method, fn, rows) => {
@@ -111,7 +138,7 @@ describe("createV13CaseRecordsReader", () => {
 
   it("maps notifications: metadata only", async () => {
     const { reader } = recorder([notificationRow()]);
-    const [n] = await reader.listNotifications(SECRETARY, CASE);
+    const [n] = await reader.listCaseNotifications(SECRETARY, CASE);
     expect(Object.keys(n!).sort()).toEqual(
       [
         "case_id",
@@ -127,22 +154,30 @@ describe("createV13CaseRecordsReader", () => {
     );
   });
 
-  it("myCapacity is null when the database returns no row or a null capacity", async () => {
-    expect(await recorder([]).reader.myCapacity(SECRETARY, CASE)).toBeNull();
-    expect(await recorder([{ my_capacity: null }]).reader.myCapacity(SECRETARY, CASE)).toBeNull();
+  it("getCaseHeader: the summary plus the caller's capacity; null capacity kept; no row is null", async () => {
+    expect(await recorder([caseHeaderRow()]).reader.getCaseHeader(SECRETARY, CASE)).toMatchObject({
+      case_id: CASE,
+      case_number: "CDF-DEMO-2026-0001",
+      my_capacity: "SECRETARY",
+    });
+    expect(
+      (await recorder([caseHeaderRow({ my_capacity: null })]).reader.getCaseHeader(SECRETARY, CASE))
+        ?.my_capacity,
+    ).toBeNull();
+    expect(await recorder([]).reader.getCaseHeader(SECRETARY, CASE)).toBeNull();
   });
 
   it("unknown or unauthorised cases give empty results (the database decides)", async () => {
     const { reader } = recorder([]);
     expect(await reader.listEvents(SECRETARY, OTHER)).toEqual([]);
     expect(await reader.listTasks(SECRETARY, OTHER)).toEqual([]);
-    expect(await reader.listNotifications(SECRETARY, OTHER)).toEqual([]);
+    expect(await reader.listCaseNotifications(SECRETARY, OTHER)).toEqual([]);
   });
 
   it.each([
     ["listEvents", eventRow({ case_id: OTHER })],
     ["listTasks", taskRow({ case_id: OTHER })],
-    ["listNotifications", notificationRow({ case_id: OTHER })],
+    ["listCaseNotifications", notificationRow({ case_id: OTHER })],
   ] as const)("%s refuses the whole result when a row belongs to another case", async (method, foreign) => {
     const own = method === "listEvents" ? eventRow() : method === "listTasks" ? taskRow() : notificationRow();
     const { reader } = recorder([own, foreign]);
@@ -150,11 +185,11 @@ describe("createV13CaseRecordsReader", () => {
   });
 
   it.each([
-    ["an unknown capacity", "myCapacity", [{ my_capacity: "CHAIR" }]],
+    ["an unknown capacity on the header", "getCaseHeader", [caseHeaderRow({ my_capacity: "CHAIR" })]],
     ["an unknown provenance", "listEvents", [eventRow({ provenance: "IMPORTED" })]],
     ["an event code that is not a code", "listEvents", [eventRow({ event_code: "case opened" })]],
     ["a non-UUID event id", "listEvents", [eventRow({ id: "1" })]],
-    ["an extra notification column", "listNotifications", [{ ...notificationRow(), body: "x" }]],
+    ["an extra notification column", "listCaseNotifications", [{ ...notificationRow(), body: "x" }]],
     ["an unknown task status", "listTasks", [taskRow({ status: "ARCHIVED" })]],
     [
       "a non-OPEN status without its event",
@@ -164,8 +199,8 @@ describe("createV13CaseRecordsReader", () => {
     ["a task title with control characters", "listTasks", [taskRow({ title_en: "a\u0007b" })]],
     ["an empty task title", "listTasks", [taskRow({ title_ar: "  " })]],
     ["a row version below 1", "listTasks", [taskRow({ row_version: 0 })]],
-    ["an unknown notification language", "listNotifications", [notificationRow({ language: "fr" })]],
-    ["a malformed template code", "listNotifications", [notificationRow({ template_code: "x" })]],
+    ["an unknown notification language", "listCaseNotifications", [notificationRow({ language: "fr" })]],
+    ["a malformed template code", "listCaseNotifications", [notificationRow({ template_code: "x" })]],
   ] as const)("refuses %s", async (_n, method, rows) => {
     const { reader } = recorder([...rows]);
     await expect(reader[method](SECRETARY, CASE as CaseId)).rejects.toThrow();

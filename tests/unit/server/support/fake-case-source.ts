@@ -2,6 +2,8 @@
 // visibility table of docs/architecture/DATA_MODEL.md §5 (DB, measured 28 Oct 2026). Unit tests only.
 import {
   CaseListFilterSchema,
+  type CaseCapacity,
+  type CaseHeader,
   type CaseId,
   type CaseListFilter,
   type CaseListItem,
@@ -55,6 +57,14 @@ const OPEN_TASKS: Readonly<Record<string, Readonly<Record<number, number>>>> = {
   "0b000000-0000-4000-8000-000000000003": { 2: 2, 6: 1 },
 };
 
+/** persona_id → capacity on its assigned cases (Alpha on 0001 is SECRETARY, DB-008 seed facts). */
+const CAPACITY: Readonly<Record<string, CaseCapacity>> = {
+  "0b000000-0000-4000-8000-000000000001": "SECRETARY",
+  "0b000000-0000-4000-8000-000000000002": "INVESTIGATOR",
+  "0b000000-0000-4000-8000-000000000003": "INVESTIGATOR",
+  "0b000000-0000-4000-8000-000000000004": "GOVERNANCE_REVIEWER",
+};
+
 export const eventIdOf = (i: number) => `0e000000-0000-4000-8000-0000000000${String(i).padStart(2, "0")}`;
 
 /** The row as the identity sees it: last event (none for 0005, to cover the empty case) and own open tasks. */
@@ -103,6 +113,13 @@ export function createFakeCaseSource(): CaseSourceAdapter & { calls: string[] } 
     async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null> {
       calls.push("getCase");
       return visibleTo(identity).find((c) => c.case_id === caseId) ?? null;
+    },
+    async getCaseHeader(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
+      calls.push("getCaseHeader");
+      const found = visibleTo(identity).find((c) => c.case_id === caseId);
+      if (!found) return null;
+      const assigned = (ASSIGNED[identity.persona_id] ?? []).includes(Number(found.case_number.slice(-4)));
+      return { ...found, my_capacity: assigned ? (CAPACITY[identity.persona_id] ?? null) : null };
     },
   };
 }

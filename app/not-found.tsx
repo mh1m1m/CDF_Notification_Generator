@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NotFound() {
   const { t } = await getTranslator();
   return (
-    <main id="main" className="v13-main" tabIndex={-1}>
+    <main id="main" className="v13-main" tabIndex={-1} data-testid="not-found-state">
       <h1>{t("common.notFound.heading")}</h1>
       <p className="v13-lead">{t("common.notFound.body")}</p>
       <Link href="/" className="v13-button-link" data-testid="not-found-home">

@@ -255,6 +255,10 @@ describe("CaseSourceAdapter contract", () => {
       );
       return allowed.find((c) => c.case_id === caseId) ?? null;
     },
+    async getCaseHeader(identity: RequestIdentity, caseId: CaseId) {
+      const found = await this.getCase(identity, caseId);
+      return found ? { ...found, my_capacity: null } : null;
+    },
   };
   const secretary = RequestIdentitySchema.parse({
     persona_id: "0b000000-0000-4000-8000-000000000001",

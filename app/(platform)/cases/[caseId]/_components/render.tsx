@@ -1,12 +1,12 @@
 // Shared page plumbing for the Case Workspace tabs (FE-004). One cached load per request, shared by generateMetadata
-// and the page: request context → getCaseForRoute (lib/authz pre-check + CaseSourceAdapter) → CaseRecordsReader.
+// and the page: request context → getCaseHeaderForRoute (lib/authz pre-check + CaseSourceAdapter) → V13 records.
 // Anything the persona may not see is notFound(), the same page as an unknown route; no session goes to sign-in.
 import "server-only";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { getTranslator } from "@/lib/i18n/server";
-import { caseRecordsFor } from "@/lib/server/case-records";
+import { notificationRecordsFor, proceduralRecordsFor } from "@/lib/server/records";
 import { caseSourceFor } from "@/lib/server/case-source";
 import { resolveCaseWorkspace, type CaseTab, type CaseWorkspaceResult } from "@/lib/server/case-workspace";
 import { requireRequestContext } from "@/lib/server/context";
@@ -21,7 +21,12 @@ const load = cache(async (rawCaseId: string, tab: CaseTab): Promise<CaseWorkspac
   try {
     const ctx = await requireRequestContext();
     return await resolveCaseWorkspace(
-      { ctx, source: caseSourceFor(ctx.correlationId), records: caseRecordsFor(ctx.correlationId) },
+      {
+        ctx,
+        source: caseSourceFor(ctx.correlationId),
+        procedural: proceduralRecordsFor(ctx.correlationId),
+        notifications: notificationRecordsFor(ctx.correlationId),
+      },
       rawCaseId,
       tab,
     );

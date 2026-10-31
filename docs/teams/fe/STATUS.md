@@ -16,10 +16,13 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
   first (6-argument read functions and the row summaries; the adapter refuses rows without them).
 - V13-FE-004 Case Workspace (SCREENS S3) — `/cases/[caseId]` with tabs overview, events, tasks, notifications (each its
   own URL; the route's UUID is the only case context). Header with number, stage, records state, named-access flag and
-  the persona's capacity; closed notice; overview = current stage + own open tasks + last 5 recorded events. New
-  `CaseRecordsReader` port proposed in `lib/contracts/case-records.ts` (needs ARCH + SEC ACCEPT); V13 adapter over DB-008
-  reads (`case_events`, `case_tasks`, `case_header.my_capacity`, PR #21) and `case_notifications` (0004). Stacked on
-  FE-003. Draft PR — IN_PROGRESS until DB #21 is on `develop` and the integration probe passes.
+  the persona's capacity; closed notice; overview = current stage + own open tasks + last 5 recorded events. Proposed
+  contracts (ARCH 31 Oct): `ProceduralRecordsReader` (listEvents, listTasks) in `lib/contracts/procedural-records.ts`,
+  `NotificationRecordsReader` (listCaseNotifications) in `lib/contracts/notification-records.ts`,
+  `CaseSourceAdapter.getCaseHeader` + `CaseHeader`/`CaseCapacitySchema` in `ports.ts`/`case-summary.ts`. Task status
+  badges via `lib/domain` toBadgeEpistemic (server only). `app/not-found.tsx` gains `data-testid="not-found-state"` (ARCH
+  path, ARCH ACCEPT needed). PR #23 (stacked on #19) — IN_REVIEW once #19 lands.
+- OI-023 — workspace switch runs `api_switch_workspace` before the cookie is re-issued — PR #27 — IN_REVIEW.
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -33,10 +36,14 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
   (proposed), lib/i18n/{portfolio,case}/{ar,en}.ts, tests/unit/server/{portfolio.spec.tsx,v13-records-adapter.spec.ts,
   support/fake-case-source.ts}, tests/unit/contracts.spec.ts
 - FE-004: app/(platform)/cases/[caseId]/{page.tsx,events/page.tsx,tasks/page.tsx,notifications/page.tsx,
-  _components/{CaseWorkspace.tsx,render.tsx,labels.ts,case.module.css}}, lib/server/{case-workspace,case-records}.ts,
-  lib/adapters/case-records/v13-case-records.ts, lib/contracts/{case-records,index}.ts (proposed),
-  lib/i18n/case/{ar,en}.ts, tests/unit/server/{case-workspace.spec.tsx,v13-case-records-adapter.spec.ts,
-  support/fake-case-records.ts}
+  _components/{CaseWorkspace.tsx,render.tsx,labels.ts,case.module.css}}, app/not-found.tsx (test id only),
+  lib/server/{case-workspace,records,cases}.ts, lib/adapters/{procedural-records/v13-procedural-records,
+  notification-records/v13-notification-records,case-source/v13-records}.ts, lib/contracts/{procedural-records,
+  notification-records,case-summary,ports,index}.ts (proposed), lib/i18n/case/{ar,en}.ts,
+  tests/unit/server/{case-workspace.spec.tsx,v13-records-readers.spec.ts,cases.spec.ts,support/fake-records.ts,
+  support/fake-case-source.ts}, tests/unit/contracts.spec.ts, tests/integration/fe/case-workspace-records.spec.ts
+- OI-023 (PR #27): app/(platform)/workspace-actions.ts, lib/server/workspace.ts,
+  tests/unit/server/workspace-switch.spec.ts, tests/integration/fe/workspace-switch.spec.ts
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -66,6 +73,12 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
 | Same: `pnpm test` (unit) | pass | 771 | FE-003 head |
 | Same: `pnpm db:reset` then `pnpm test:db` (includes the committed FE suite `tests/integration/fe/case-source.spec.ts`, 15) | pass | 11 files, 223 | FE-003 head |
 
+| FE-004 after ARCH's rulings (ProceduralRecordsReader, capacity via getCaseHeader, toBadgeEpistemic, not-found-state), merged with FE-003 983ad04: lint, typecheck, format:check, build | pass | — | FE-004 head |
+| Same: `pnpm test` (unit) | pass | 831 | FE-004 head |
+| Same: `pnpm db:reset` then `pnpm test:db` (FE suites case-source 15 + case-workspace-records 10) | pass | 12 files, 233 | FE-004 head |
+| Same: `pnpm build && pnpm start`, `pnpm test:e2e` plus the throwaway FE probe (3: Truth Inspector 0 violations, axe 0 serious/critical on 4 tabs, negatives 404 with `not-found-state`, 360 px, LTR, Beta 0009, Delta other workspace) | pass | 59 passed (56 + 3), 17 skipped | FE-004 head |
+| OI-023 (PR #27, 17f4107 on develop c4b37c3): `pnpm test` / `pnpm test:db` / `pnpm test:e2e`; browser probe: forged target refused with cookie unchanged, real switch → exactly 1 WORKSPACE_SWITCHED row | pass | 725 / 212 / 56 (17 skipped) / 1 | 17f4107 |
+
 ## Unresolved defects
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
   pattern `^[A-Za-z0-9._:-]{1,80}$` (both in `lib/contracts`, this PR, needs ARCH + SEC ACCEPT); DB returns
@@ -82,8 +95,11 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
 
 - FE-004 known gaps: notification status and recipient class are shown as recorded codes until PROC's status catalogue
   lands; event names exist for CASE_OPENED, CASE_CLOSED, TASK_STATUS_CHANGED (others show their code); timeline
-  entries carry `data-event-id` without `data-epistemic` and an untouched OPEN task carries no epistemic claim (FE's
-  default, asked of ARCH 31 Oct); `app/not-found.tsx` has no `data-testid="not-found-state"` (ARCH's file, asked).
+  entries and dates carry `data-event-id` without `data-epistemic`; task status badges are full recorded elements; an
+  untouched OPEN task carries no epistemic claim (ARCH ruling 31 Oct). Dates and timeline entries become inspectable
+  once PROC's status-kind vocabulary is used and DB returns each event's resulting status (later task). Domain task
+  statuses (lib/domain: OPEN, IN_PROGRESS, ON_HOLD, RETURNED, COMPLETED, CANCELLED, FAILED) differ from DB's task
+  statuses (OPEN, IN_PROGRESS, BLOCKED, DONE, CANCELLED), so task labels stay in `case.task.status.*` (raised to ARCH).
 
 ## Dependencies and requests
 - FE owns `tests/integration/fe/**` (ARCH, 03:48). `tests/integration/fe/case-source.spec.ts` is committed with FE-003.

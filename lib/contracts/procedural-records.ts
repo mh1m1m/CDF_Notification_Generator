@@ -1,8 +1,9 @@
-// V13's own procedural records of one case (events, tasks, notifications) and the caller's capacity on it. These are
-// not the external case source: they live in V13's schema and are read through CaseRecordsReader. Synthetic only.
-// Shapes mirror DB's read functions case_events, case_tasks, case_notifications and case_header.my_capacity
-// (DB-008, migrations 0004 and 0006). No field identifies a persona or a protected party; capacities are codes.
+// V13's own procedural records of one case: recorded events and tasks (procedural intelligence, E02). They are not the
+// external case registry (CaseSourceAdapter) and are read through ProceduralRecordsReader. Synthetic only. Shapes
+// mirror DB's read functions case_events and case_tasks (DB-008, migration 0006). No field identifies a persona or a
+// protected party; capacities are codes.
 import { z } from "zod";
+import { CaseCapacitySchema } from "./case-summary";
 import { CaseIdSchema, UuidSchema, type CaseId } from "./ids";
 import type { RequestIdentity } from "./identity";
 
@@ -10,16 +11,6 @@ const CODE = /^[A-Z][A-Z0-9_]{1,63}$/;
 // eslint-disable-next-line no-control-regex
 const NO_CONTROL_CHARS = /^[^\u0000-\u001f\u007f]*$/;
 const Instant = z.iso.datetime({ offset: true });
-
-/** A persona's capacity on a case (case_assignment.capacity), in DB's precedence order. */
-export const CASE_CAPACITIES = [
-  "LEAD_INVESTIGATOR",
-  "INVESTIGATOR",
-  "SECRETARY",
-  "GOVERNANCE_REVIEWER",
-] as const;
-export const CaseCapacitySchema = z.enum(CASE_CAPACITIES);
-export type CaseCapacity = z.infer<typeof CaseCapacitySchema>;
 
 /** One recorded procedural event (case_events). Only recorded entries exist; nothing here is expected or planned. */
 export const CaseEventSchema = z.strictObject({
@@ -65,36 +56,15 @@ export const CaseTaskSchema = z
   });
 export type CaseTask = z.infer<typeof CaseTaskSchema>;
 
-/** One notification of a case (case_notifications): metadata only, never its content or a recipient's details. */
-export const CaseNotificationSchema = z.strictObject({
-  notification_id: UuidSchema,
-  case_id: CaseIdSchema,
-  template_code: z.string().regex(/^[A-Z][A-Z0-9_-]{2,60}$/),
-  template_version: z.number().int().min(1),
-  language: z.enum(["ar", "en"]),
-  recipient_class: z.string().regex(CODE),
-  lifecycle_status: z.string().regex(CODE),
-  created_at: Instant,
-  row_version: z.number().int().min(1),
-});
-export type CaseNotification = z.infer<typeof CaseNotificationSchema>;
-
 /**
- * V13's procedural records of a case.
+ * V13's procedural records of a case. V13 is the system of record for them.
  *
  * Contract, as for CaseSourceAdapter: authorisation inside every call (database RLS); an unknown case and a case the
  * identity may not see give the same empty result; every row belongs to the case asked for.
- *
- * PRODUCTION_SUBSTITUTION_REQUIRED: production reads these records from the CDF platform's RDS PostgreSQL through the
- * ASP.NET Core API on Alibaba Cloud Riyadh.
  */
-export interface CaseRecordsReader {
-  /** The identity's capacity on the case, or null (none, unknown or unauthorised case). */
-  myCapacity(identity: RequestIdentity, caseId: CaseId): Promise<CaseCapacity | null>;
+export interface ProceduralRecordsReader {
   /** Recorded events, newest first (occurred_at, recorded_at, id). */
   listEvents(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseEvent[]>;
   /** Tasks, by due date (nulls last), task code, id. */
   listTasks(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseTask[]>;
-  /** Notifications, newest first. */
-  listNotifications(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseNotification[]>;
 }

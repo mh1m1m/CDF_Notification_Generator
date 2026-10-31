@@ -1,13 +1,13 @@
-// In-memory CaseRecordsReader for unit tests. Visibility follows the fake case source (seed table); case 0001 carries
+// In-memory ProceduralRecordsReader and NotificationRecordsReader for unit tests. Visibility follows the fake case source (seed table); case 0001 carries
 // DB's seed facts for Employee Alpha (DB-008, PR #21): two events newest first, task 1 LEAD_INVESTIGATOR IN_PROGRESS
-// with its status event, task 2 SECRETARY mine OPEN without one, Alpha's capacity SECRETARY. Synthetic only.
+// with its status event, task 2 SECRETARY mine OPEN without one. Synthetic only.
 import type {
-  CaseCapacity,
   CaseEvent,
   CaseId,
   CaseNotification,
-  CaseRecordsReader,
   CaseTask,
+  NotificationRecordsReader,
+  ProceduralRecordsReader,
   RequestIdentity,
 } from "@/lib/contracts";
 import { caseIdOf, visibleTo } from "./fake-case-source";
@@ -102,34 +102,35 @@ function notificationsOf(i: number): CaseNotification[] {
   ];
 }
 
-const CAPACITY: Readonly<Record<string, CaseCapacity>> = { [ALPHA]: "SECRETARY" };
+const indexOf = (identity: RequestIdentity, caseId: CaseId): number | null => {
+  const c = visibleTo(identity).find((s) => s.case_id === caseId);
+  return c ? Number(c.case_number.slice(-4)) : null;
+};
 
-export function createFakeCaseRecords(): CaseRecordsReader & { calls: string[] } {
+export function createFakeProceduralRecords(): ProceduralRecordsReader & { calls: string[] } {
   const calls: string[] = [];
-  const index = (identity: RequestIdentity, caseId: CaseId): number | null => {
-    const c = visibleTo(identity).find((s) => s.case_id === caseId);
-    return c ? Number(c.case_number.slice(-4)) : null;
-  };
   return {
     calls,
-    async myCapacity(identity, caseId) {
-      calls.push("myCapacity");
-      return index(identity, caseId) === null ? null : (CAPACITY[identity.persona_id] ?? null);
-    },
     async listEvents(identity, caseId) {
       calls.push("listEvents");
-      const i = index(identity, caseId);
+      const i = indexOf(identity, caseId);
       return i === null ? [] : eventsOf(i);
     },
     async listTasks(identity, caseId) {
       calls.push("listTasks");
-      const i = index(identity, caseId);
+      const i = indexOf(identity, caseId);
       return i === null ? [] : tasksOf(i, identity);
     },
-    async listNotifications(identity, caseId) {
-      calls.push("listNotifications");
-      const i = index(identity, caseId);
-      return i === null || i !== 1 ? [] : notificationsOf(i);
+  };
+}
+
+export function createFakeNotificationRecords(): NotificationRecordsReader & { calls: string[] } {
+  const calls: string[] = [];
+  return {
+    calls,
+    async listCaseNotifications(identity, caseId) {
+      calls.push("listCaseNotifications");
+      return indexOf(identity, caseId) === 1 ? notificationsOf(1) : [];
     },
   };
 }

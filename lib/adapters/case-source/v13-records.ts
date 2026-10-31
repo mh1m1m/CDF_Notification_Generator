@@ -10,9 +10,11 @@
 // system through the ASP.NET Core API on Alibaba Cloud Riyadh.
 import "server-only";
 import {
+  CaseCapacitySchema,
   CaseListExtrasSchema,
   CaseListFilterSchema,
   CaseSummarySchema,
+  type CaseHeader,
   type CaseId,
   type CaseListFilter,
   type CaseListItem,
@@ -137,6 +139,21 @@ export function createV13RecordsCaseSource(run: RequestContextRunner): CaseSourc
       );
       const row = rows[0];
       return row ? rowToCaseSummary(row) : null;
+    },
+
+    async getCaseHeader(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
+      const rows = await run(
+        identity,
+        (tx) =>
+          tx<(CaseRow & { my_capacity: string | null })[]>`
+          select h.id, h.display_number, h.title_ar, h.title_en, h.stage, h.is_restricted, h.records_state,
+                 h.updated_at, h.source_system, h.source_ref, h.my_capacity
+            from cdf_notifications_v13.case_header(${caseId}::uuid) h`,
+      );
+      const row = rows[0];
+      if (!row) return null;
+      const my_capacity = row.my_capacity === null ? null : CaseCapacitySchema.parse(row.my_capacity);
+      return { ...rowToCaseSummary(row), my_capacity };
     },
   };
 }

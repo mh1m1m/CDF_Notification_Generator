@@ -4,7 +4,7 @@
 // v13-case-records-adapter.spec.ts and, against the database, in tests/integration/fe.
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { CaseRecordsReader } from "@/lib/contracts";
+import type { NotificationRecordsReader, ProceduralRecordsReader } from "@/lib/contracts";
 import { createTranslator, type Locale } from "@/lib/i18n";
 import {
   CASE_TABS,
@@ -20,7 +20,12 @@ import {
   tabHref,
 } from "@/app/(platform)/cases/[caseId]/_components/CaseWorkspace";
 import { caseIdOf, createFakeCaseSource } from "./support/fake-case-source";
-import { caseEventId, caseTaskId, createFakeCaseRecords } from "./support/fake-case-records";
+import {
+  caseEventId,
+  caseTaskId,
+  createFakeNotificationRecords,
+  createFakeProceduralRecords,
+} from "./support/fake-records";
 import {
   CORRELATION,
   ctxFor,
@@ -36,8 +41,12 @@ import {
 const logServerError = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/http/errors", () => ({ logServerError }));
 
-function deps(identity = SECRETARY, records: CaseRecordsReader = createFakeCaseRecords()) {
-  return { ctx: ctxFor(identity), source: createFakeCaseSource(), records };
+function deps(
+  identity = SECRETARY,
+  procedural: ProceduralRecordsReader = createFakeProceduralRecords(),
+  notifications: NotificationRecordsReader = createFakeNotificationRecords(),
+) {
+  return { ctx: ctxFor(identity), source: createFakeCaseSource(), procedural, notifications };
 }
 
 async function view(tab: CaseTab, i = 1, identity = SECRETARY): Promise<CaseWorkspaceView> {
@@ -62,10 +71,9 @@ describe("loadCaseWorkspace", () => {
   });
 
   it("overview shows at most five events and only own tasks that are still open", async () => {
-    const many = createFakeCaseRecords();
+    const many = createFakeProceduralRecords();
     const base = await many.listEvents(SECRETARY, caseIdOf(1));
-    const records: CaseRecordsReader = {
-      ...many,
+    const records: ProceduralRecordsReader = {
       listEvents: async () =>
         Array.from({ length: 7 }, (_, k) => ({ ...base[0]!, id: caseEventId(1, 10 + k) })),
       listTasks: async () => {
@@ -84,22 +92,31 @@ describe("loadCaseWorkspace", () => {
     expect(v.myTasks.map((t) => t.id)).toEqual([caseTaskId(1, 2), caseTaskId(1, 4)]);
   });
 
-  it("each tab reads only its own records", async () => {
-    for (const [tab, read] of [
-      ["events", "listEvents"],
-      ["tasks", "listTasks"],
-      ["notifications", "listNotifications"],
+  it("reads the header once through the case source, then only the tab's own records", async () => {
+    for (const [tab, reads] of [
+      ["overview", ["listEvents", "listTasks"]],
+      ["events", ["listEvents"]],
+      ["tasks", ["listTasks"]],
+      ["notifications", ["listCaseNotifications"]],
     ] as const) {
-      const records = createFakeCaseRecords();
-      const v = await loadCaseWorkspace(deps(SECRETARY, records), caseIdOf(1), tab);
+      const procedural = createFakeProceduralRecords();
+      const notifications = createFakeNotificationRecords();
+      const d = deps(SECRETARY, procedural, notifications);
+      const v = await loadCaseWorkspace(d, caseIdOf(1), tab);
       expect(v.tab).toBe(tab);
-      expect(records.calls).toEqual(["myCapacity", read]);
+      expect(d.source.calls).toEqual(["getCaseHeader"]);
+      expect([...procedural.calls, ...notifications.calls]).toEqual(reads);
     }
   });
 
   it("a persona with no capacity on a visible case gets null", async () => {
     const v = await view("overview", 2, INVESTIGATOR_BETA);
     expect(v.capacity).toBeNull();
+  });
+
+  it("the capacity is not part of the summary handed to the view", async () => {
+    const v = await view("overview");
+    expect(v.summary).not.toHaveProperty("my_capacity");
   });
 
   it.each([
@@ -115,11 +132,12 @@ describe("loadCaseWorkspace", () => {
     ["unknown workspace code", id(SECRETARY.persona_id, "NOWHERE", ["COMMITTEE_SECRETARY"]), caseIdOf(1)],
   ])("%s → NOT_FOUND, and no V13 record is read", async (_n, identity, raw) => {
     for (const tab of CASE_TABS) {
-      const records = createFakeCaseRecords();
-      await expect(loadCaseWorkspace(deps(identity, records), raw, tab)).rejects.toEqual(
+      const procedural = createFakeProceduralRecords();
+      const notifications = createFakeNotificationRecords();
+      await expect(loadCaseWorkspace(deps(identity, procedural, notifications), raw, tab)).rejects.toEqual(
         new AppError("NOT_FOUND"),
       );
-      expect(records.calls).toEqual([]);
+      expect([...procedural.calls, ...notifications.calls]).toEqual([]);
     }
   });
 
@@ -129,7 +147,7 @@ describe("loadCaseWorkspace", () => {
   });
 
   it("a records failure is not hidden: it propagates from the loader", async () => {
-    const records = { ...createFakeCaseRecords(), listTasks: () => Promise.reject(new Error("boom")) };
+    const records = { ...createFakeProceduralRecords(), listTasks: () => Promise.reject(new Error("boom")) };
     await expect(loadCaseWorkspace(deps(SECRETARY, records), caseIdOf(1), "tasks")).rejects.toThrow("boom");
   });
 });
@@ -149,7 +167,7 @@ describe("resolveCaseWorkspace", () => {
   it("turns any other failure into a generic error with the correlation id, logged without detail", async () => {
     logServerError.mockClear();
     const records = {
-      ...createFakeCaseRecords(),
+      ...createFakeProceduralRecords(),
       listEvents: () => Promise.reject(new Error("relation case_event does not exist")),
     };
     const r = await resolveCaseWorkspace(deps(SECRETARY, records), caseIdOf(1), "events");
@@ -243,7 +261,7 @@ describe("Case Workspace markup", () => {
   });
 
   it("overview without own open tasks says so", async () => {
-    const markup = html(await view("overview", 1, INVESTIGATOR_BETA), "en");
+    const markup = html(await view("overview", 1, INVESTIGATOR_GAMMA), "en");
     expect(markup).toContain('data-testid="case-my-tasks-empty"');
     expect(markup).toContain("You hold no recorded capacity on this case");
   });
@@ -267,27 +285,33 @@ describe("Case Workspace markup", () => {
   });
 
   it("empty tabs say so", async () => {
-    const records: CaseRecordsReader = {
-      myCapacity: async () => null,
-      listEvents: async () => [],
-      listTasks: async () => [],
-      listNotifications: async () => [],
-    };
+    const records: ProceduralRecordsReader = { listEvents: async () => [], listTasks: async () => [] };
+    const none: NotificationRecordsReader = { listCaseNotifications: async () => [] };
     for (const [tab, testId] of [
       ["events", "case-events-empty"],
       ["tasks", "case-tasks-empty"],
       ["notifications", "case-notifications-empty"],
     ] as const) {
-      const v = await loadCaseWorkspace(deps(SECRETARY, records), caseIdOf(1), tab);
+      const v = await loadCaseWorkspace(deps(SECRETARY, records, none), caseIdOf(1), tab);
       expect(html(v)).toContain(`data-testid="${testId}"`);
     }
   });
 
   it("an unknown event code is shown as the code itself", async () => {
-    const base = createFakeCaseRecords();
+    const base = createFakeProceduralRecords();
     const [first] = await base.listEvents(SECRETARY, caseIdOf(1));
     const records = { ...base, listEvents: async () => [{ ...first!, event_code: "SOMETHING_NEW" }] };
     const v = await loadCaseWorkspace(deps(SECRETARY, records), caseIdOf(1), "events");
     expect(html(v)).toContain("SOMETHING_NEW");
+  });
+});
+
+describe("lib/domain stays on the server", () => {
+  it("no Case Workspace module is a client module", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const dir = "app/(platform)/cases/[caseId]/_components";
+    for (const name of readdirSync(dir).filter((n) => /\.tsx?$/.test(n))) {
+      expect(readFileSync(`${dir}/${name}`, "utf8"), name).not.toMatch(/^\s*["']use client["']/m);
+    }
   });
 });

@@ -5,6 +5,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CaseEvent, CaseNotification, CaseSummary, CaseTask } from "@/lib/contracts";
+import { toBadgeEpistemic } from "@/lib/domain";
 import { translateKey, type Locale, type MessageKey, type Translator } from "@/lib/i18n";
 import { CASE_TABS, type CaseTab, type CaseWorkspaceView } from "@/lib/server/case-workspace";
 import styles from "./case.module.css";
@@ -211,8 +212,9 @@ export function Timeline({
 }
 
 /**
- * A task's status. A status set by a recorded event is a recorded fact (ADR-013 epistemic attributes, naming that
- * event); an untouched OPEN task has no event, so it carries no epistemic claim.
+ * A task's status. A status set by a recorded event is a recorded fact: lib/domain's toBadgeEpistemic gives the
+ * ADR-013 attributes, with the event id from the authorised case's own task row (DB-008), never from the URL or
+ * client input. An untouched OPEN task has no event, so it carries no epistemic claim (ARCH, 31 Oct). Server only.
  */
 function TaskStatus({ t, task }: { t: Translator; task: CaseTask }) {
   const label = t(TASK_STATUS_KEYS[task.status]);
@@ -223,14 +225,15 @@ function TaskStatus({ t, task }: { t: Translator; task: CaseTask }) {
       </span>
     );
   }
+  const badge = toBadgeEpistemic({ epistemic: "RECORDED_FACT", event_id: task.status_event_id });
   return (
     <span
       data-testid="case-task-status"
       data-task-status={task.status}
-      data-epistemic="recorded"
+      data-epistemic={badge.value}
       data-status-kind="task"
       data-status={task.status}
-      data-event-id={task.status_event_id}
+      data-event-id={badge.event_id}
     >
       {label}
     </span>

@@ -49,6 +49,22 @@ export const CaseSummarySchema = z
   });
 export type CaseSummary = z.infer<typeof CaseSummarySchema>;
 
+/** A persona's capacity on a case (case_assignment.capacity, case-registry data), in DB's precedence order. */
+export const CASE_CAPACITIES = [
+  "LEAD_INVESTIGATOR",
+  "INVESTIGATOR",
+  "SECRETARY",
+  "GOVERNANCE_REVIEWER",
+] as const;
+export const CaseCapacitySchema = z.enum(CASE_CAPACITIES);
+export type CaseCapacity = z.infer<typeof CaseCapacitySchema>;
+
+/**
+ * The case header view (SCREENS S3): the summary plus the requesting identity's own active capacity on the case
+ * (null when it holds none). Read through CaseSourceAdapter.getCaseHeader; never shown for another identity.
+ */
+export type CaseHeader = CaseSummary & { readonly my_capacity: CaseCapacity | null };
+
 /** Rows the database returns per portfolio_page call at most (migration 0003, E02). */
 export const PORTFOLIO_DB_ROW_BOUND = 100;
 /** Largest page a caller may ask for: the adapter reads one look-ahead row to know whether a next page exists. */
