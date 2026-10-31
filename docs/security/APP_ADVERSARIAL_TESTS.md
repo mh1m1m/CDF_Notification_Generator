@@ -95,7 +95,12 @@ CI on the PR is the run of record.
   `server-actions.spec.ts`. SEC-APP-11 covers the workspace switch, the only session-bound command in the build; each
   new command action gets the same probe when it lands. SEC-APP-16 is a review checklist, applied by SEC on every
   `.github/**` change: pinned action SHAs, least `permissions`, no `pull_request_target` with checkout of the head, no
-  secret in a step that runs PR code, no new third-party action without a reason. SEC-APP-17 follows FE-006. With no session-bound action in the build yet, the "no session-bound action runs
-  without a session" probe has nothing to post; it covers every new action automatically.
+  secret in a step that runs PR code, no new third-party action without a reason. SEC-APP-17 is covered by FE's `tests/e2e/notification-center.spec.ts` (#61, SEC ACCEPT `7a729bc`): for Beta and
+  Gamma every URL of `/notifications` gives status 404 with the unknown route's text and title, and no navigation item.
+  The first session-bound command action besides the workspace switch is the notification draft (#51,
+  `app/(platform)/cases/[caseId]/notifications/actions.ts`). It reads four named form fields only (`case_id`,
+  `template_version_id`, `recipient_class`, `idempotency_key`); persona and workspace come from the session, and the
+  database decides access on the form's case id, which FE's integration and Scenario E tests tamper with (0002, 0005,
+  0009, 0010, unknown, malformed). `server-actions.spec.ts` takes it from the build's manifest like every other action.
 - Database adversarial tests are V13-SEC-002 (`tests/security/db`): see `docs/security/DB_ADVERSARIAL_TESTS.md`.
   `static-boundaries.spec.ts` also walks `instrumentation.ts` since V13-SEC-002.

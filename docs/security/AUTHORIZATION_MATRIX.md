@@ -57,6 +57,7 @@ right and the case is not closed. Enforcement: **A** application pre-check (`lib
 | Portfolio read function (counts, filters, pages) | in list + counted | in list + counted | in list + counted | in list + counted | **absent and not counted** | absent | — | — | — | — | — | A, P | SEC-DB-20, SEC-APP-07 |
 | Case header read function | R | R | R | R | — (same as U) | — (same as U) | — | — | — | — | — | A, P | SEC-DB-19, SEC-APP-01 |
 | `case_tasks`, `case_events` (0006), `case_notifications` (0004) | R | R | R | R | — | — | — | — | — | — | — | A, P | SEC-DB-18, -21 |
+| `notifications_page`, `notifications_count` (0010, SECURITY INVOKER) | rows of accessible cases only, removed by RLS before filters, order, keyset limit and count; `case_number` filter is applied after authorisation | = | = | = (the database answers; the Center route itself is refused to investigators by ruling D6, see §5) | **absent and not counted** | absent | — | — | — | — | — | A, P | context-forgery registry (null claims, 0001, 0009 → no rows; count 0), FE integration `notification-center` (0009 for Gamma, hidden and unknown numbers → total 0), SEC-APP-17 |
 | `my_work_tasks` (0003, columns 0008) | own work on accessible cases | = | = | = | — | — | — | — | — | — | — | A, P | SEC-DB-20 |
 | `claims_key_state` (0007) | request role only, health use; key state, no key material | = | = | = | = | = | — | — | — | — | — | G | P03 |
 | Foreign (GC Review) relations and functions | — | — | — | — | — | — | — | — | — | — | n/a | G | SEC-DB-23, isolation C04–C09 |
@@ -76,7 +77,7 @@ right and the case is not closed. Enforcement: **A** application pre-check (`lib
 | `api_update_task_status` (0003) | X? (own task or role right; current `row_version`) | X? | **—** (closed) | X? only own task | — | — | — | — | — | — | — | A, F | SEC-DB-08, -09, -10, -11, -17 |
 | `api_create_notification_draft` (0004) | X? (Committee Secretary or Investigator role on an ACTIVE accessible case; `case_id` server-derived; recipient class allowed) | X? | **—** | X? same rule (a Governance Officer never drafts) | — | — | — | — | — | — | — | A, F | SEC-DB-08, -10, -15, -22, -17 |
 | `api_switch_workspace` (0005) | to own member workspaces; V1404 otherwise; audit `WORKSPACE_SWITCHED` | = | = | = | = | = | — | — | — | — | — | A, F | SEC-DB-06, SEC-APP-05 |
-| `api_install_claims_key` (0001, deploy only) | first writer wins; another key refused V1409; audit `CLAIMS_KEY_INSTALLED` without key material | | | | | | | | | | | F, G | SEC-DB-29, P06 |
+| `api_install_claims_key` (0001, deploy only) | first writer wins; another key refused V1409; audit `CLAIMS_KEY_INSTALLED` without key material | — | — | — | — | — | — | — | — | — | — | F, G | SEC-DB-29, P06 |
 | Persona sign-in (`V13_PERSONA_SIGNIN=enabled`) | active personas only | | | | | | | refused | refused | | | A (+ DB re-check) | SEC-APP-03..06, -09 |
 | Any future `api_*` command | must appear in the coverage guard before merge | | | | | | | | | | | F | SEC-DB-17 |
 
@@ -94,7 +95,8 @@ answer for an unknown id (SEC-DB-19).
 | Sign-in flag off / absent / any value other than `enabled` | sign-in refused | A | SEC-APP-06 |
 | Portfolio, My Work, Notification Center | lists and counts only authorised rows; page size capped | A, P | SEC-APP-07 |
 | Notification Operations Center (`/notifications`) for **INV-R** (ruling D6, below) | not offered: absent from navigation; the route gives the same 404-equivalent as an unknown route; investigators use the case Notifications tab of cases they can access | A (+ P on every row in any case) | SEC-APP-17 |
-| SEC-APP-18 | Every exported Server Action, called by action id without a session, with an expired or foreign-secret cookie, and with another persona's session, changes nothing and returns the generic answer; also called through the public `/sign-in` path | TM-E5 |
+| Server Actions by action id (SEC-APP-18, TM-E5) | Every exported Server Action, called by action id without a session, with an expired or foreign-secret cookie, and with another persona's session, changes nothing and returns the generic answer; also called through the public `/sign-in` path | A, F | SEC-APP-18 |
+| Undecodable paths (`/cases/%C0%AF`, OI-040) | with a session: the generic not-found page, status 404, same visible text as an unknown page, headers set once; without a session: the usual redirect to /sign-in | A (proxy.ts) | SEC-APP-01, SEC-APP-08 |
 | Security headers | CSP (`frame-ancestors 'none'`, no `unsafe-eval`), `X-Content-Type-Options`, `Referrer-Policy`, HSTS, no `X-Powered-By` | A (proxy.ts) | SEC-APP-08 |
 | Server Actions | cross-origin `Origin` refused; GET cannot change state | A (Next.js) | SEC-APP-09 |
 | Errors | generic message + correlation id; no stack, SQL text, constraint or role name | A | SEC-APP-10 |
