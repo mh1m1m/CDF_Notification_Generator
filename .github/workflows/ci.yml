@@ -1,9 +1,11 @@
 # CI for CDF V13 Enterprise — SYNTHETIC-DATA REFERENCE IMPLEMENTATION, not CDF production.
 #
-# Jobs: quality (lint, typecheck, format, db:lint) · unit · integration (two throw-away PostgreSQL 17 containers: the
-# db:reset target, and a hosted simulation whose bootstrap superuser is supabase_admin) · build · e2e (Playwright smoke
-# and accessibility). No repository secrets are used; the database passwords below exist only inside the job's
-# containers and are deliberately not secret.
+# Jobs: quality (lint, typecheck, format, db:lint) · unit · rehearsal (scripts/db/rehearse-shared.mjs on a local
+# PostgreSQL 16 cluster) · integration (two throw-away PostgreSQL 17 containers: the db:reset target, and a hosted
+# simulation whose bootstrap superuser is supabase_admin) · build · e2e (Playwright end-to-end, accessibility and
+# browser security suites against the app started on a migrated, seeded throw-away PostgreSQL 17 container). No
+# repository secrets are used; the database passwords below exist only inside the job's containers and are
+# deliberately not secret.
 #
 # Actions are pinned to full commit SHAs (tag in the comment). The first run (40626543282, commit 5c53ec4) resolved
 # every pin. These versions target Node.js 20, which GitHub now runs on Node.js 24 with a deprecation warning; moving
@@ -121,6 +123,31 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  rehearsal:
+    # V13-DB-006: the scripted rehearsal of the shared-database procedure (ISOLATION_AND_RECOVERY_PLAN §6 step 0) on a
+    # throw-away local cluster laid out like the hosted project: dry run, apply, fingerprints, isolation checks, four
+    # planted faults, refused and clean rollback. It never connects anywhere else. The runner image ships PostgreSQL
+    # 16 binaries (no service is started; the script runs its own cluster in RUNNER_TEMP on port 54339).
+    name: Shared-database rehearsal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Locate PostgreSQL 16 binaries
+        run: |
+          if [ ! -x /usr/lib/postgresql/16/bin/initdb ]; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-16
+          fi
+          /usr/lib/postgresql/16/bin/initdb --version
+          echo "V13_PG_BIN=/usr/lib/postgresql/16/bin" >> "$GITHUB_ENV"
+      # The script uses Node built-ins only, so no dependency install is needed.
+      - run: node scripts/db/rehearse-shared.mjs --dir="$RUNNER_TEMP/v13-rehearsal" --port=54339
+
   build:
     name: Build
     runs-on: ubuntu-24.04
@@ -141,6 +168,26 @@ jobs:
     name: End-to-end smoke (Playwright)
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    # V13-ARCH-008: the app under test reads and writes a real database, as on staging. The container is rebuilt from
+    # Git by db:reset (migrations + synthetic seed) and nothing else touches it before the app starts, so the app is
+    # the first and only process to install its claims key (ADR-014): no test:db run, no test key, no mismatch.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      V13_ADMIN_DATABASE_URL: postgres://postgres:ci-only-not-a-secret@127.0.0.1:5432/v13_local
+      V13_MIGRATION_RUNNER: ci
+      # The app login with the local-only password db:reset gives it (scripts/db/reset-local.mjs); loopback only.
+      V13_E2E_DATABASE_URL: postgres://cdf_v13_app:local-only-not-a-secret@127.0.0.1:5432/v13_local
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -151,8 +198,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:reset
       - run: pnpm exec playwright install --with-deps chromium
-      # Builds and starts the app on port 3100 with a session secret generated for this run (playwright.config.ts).
+      # Builds and starts the app on port 3100 with a session secret generated for this run and V13_DATABASE_URL set to
+      # V13_E2E_DATABASE_URL (playwright.config.ts); the app installs its claims key at start (instrumentation.ts).
       - run: pnpm test:e2e
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

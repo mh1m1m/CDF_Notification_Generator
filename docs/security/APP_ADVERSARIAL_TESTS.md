@@ -73,4 +73,5 @@ CI on the PR is the run of record.
 - SEC-APP-01/02/05/09/11/16/17 need case pages and the BFF (FE-002..006); they follow when those land, using the
   same allow-list and probes. With no session-bound action in the build yet, the "no session-bound action runs
   without a session" probe has nothing to post; it covers every new action automatically.
-- Database adversarial tests are V13-SEC-002 (`tests/security/db`), after DB-001..004.
+- Database adversarial tests are V13-SEC-002 (`tests/security/db`): see `docs/security/DB_ADVERSARIAL_TESTS.md`.
+  `static-boundaries.spec.ts` also walks `instrumentation.ts` since V13-SEC-002.

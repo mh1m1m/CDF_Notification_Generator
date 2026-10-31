@@ -42,6 +42,7 @@ const DEFINER_ALLOWED = new Set([
   "api_switch_workspace",
   "api_update_task_status",
   "can_access_case",
+  "claims_key_state",
   "current_correlation_id",
   "current_persona",
   "current_persona_id",

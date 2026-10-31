@@ -1,0 +1,187 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "CF-33",
+  "title": {
+    "ar": "إسناد مراجعة قانونية: المراجعة كائن مستقل، واعتماد التوصية لا يظهر في مسارها",
+    "en": "Legal review assigned: the review is its own object; adoption of the recommendation does not appear in it"
+  },
+  "journey": "J-LEGAL-REVIEW",
+  "assignment_id": "CF-33",
+  "recipient_class": "LEGAL_REVIEWER",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6f7",
+    "internal_ref": "CDF-DEMO-2026-0033",
+    "track": "IR",
+    "classification": "INTERNAL",
+    "status": {
+      "code": "S4.02",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0033"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-949002e2ade5",
+    "type": "LEGAL_OPINION",
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e6f7",
+    "journey_id": "J-LEGAL-REVIEW",
+    "status": "OPEN",
+    "status_source_event_id": "evt-CF-33-01",
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-CF-33-01",
+      "type": "LEGAL_REVIEW_REQUESTED",
+      "occurred_at": "2026-10-24T08:00:00Z",
+      "recorded_at": "2026-10-24T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f7",
+      "object": {
+        "type": "LEGAL_OPINION",
+        "id": "0b1ec700-0000-4000-8000-949002e2ade5"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-33.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-33",
+      "payload": {
+        "target": "0b1ec700-0000-4000-8000-dd0a85acce12"
+      }
+    },
+    {
+      "event_id": "evt-CF-33-02",
+      "type": "RECOMMENDATION_ADOPTED",
+      "occurred_at": "2026-10-24T09:00:00Z",
+      "recorded_at": "2026-10-24T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e6f7",
+      "object": {
+        "type": "RECOMMENDATION",
+        "id": "0b1ec700-0000-4000-8000-dd0a85acce12"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-33.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-33",
+      "payload": {}
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S4",
+      "substate": "S4.02",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S4",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-LEGAL-REVIEW/1/1",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-33-01"
+      },
+      {
+        "step_id": "J-LEGAL-REVIEW/2/1",
+        "state": "PENDING"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-LEGAL-REVIEW/3/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-LEGAL-REVIEW/4/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-LEGAL-REVIEW/4/2",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-LEGAL-REVIEW/5/1",
+        "kind": "EXPECTED"
+      }
+    ],
+    "stage_n": 2,
+    "notice_location": "actual",
+    "derived": {
+      "recommendation_adopted": false
+    },
+    "ignored": [
+      {
+        "event_id": "evt-CF-33-02",
+        "reason": "OBJECT_MISMATCH"
+      }
+    ],
+    "must_not": ["● on J-LEGAL-REVIEW/1/1", "✔ on J-LEGAL-REVIEW/2/1", "derived.recommendation_adopted"]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "L2 «● 1. إسناد طلب المراجعة إليك»; L3 «● الإسناد والمهلة»; marker «↳ هذا الإشعار: لدى المراجعة القانونية»: the recorded assignment is shown in progress (W3 F5); L1 «S4.03» from the notification type.",
+    "evidence": [
+      "notifications/eml/ar/CF-33_LEGAL_REVIEW_ASSIGNED.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-33 ar",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md F5, F13"
+    ]
+  },
+  "variants": []
+}

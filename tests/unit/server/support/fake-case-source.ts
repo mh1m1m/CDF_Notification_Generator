@@ -4,6 +4,7 @@ import {
   CaseListFilterSchema,
   type CaseId,
   type CaseListFilter,
+  type CaseListItem,
   type CaseListPage,
   type CaseSourceAdapter,
   type CaseSummary,
@@ -39,6 +40,34 @@ const VISIBLE: Readonly<Record<string, readonly number[]>> = {
   "0b000000-0000-4000-8000-000000000004@SECRETARIAT": [1, 3, 4, 6, 7, 8, 10],
 };
 
+/** persona_id → case suffixes with an active case assignment (seed 0002_m1_cases, case_assignment). */
+const ASSIGNED: Readonly<Record<string, readonly number[]>> = {
+  "0b000000-0000-4000-8000-000000000001": [1, 3, 4, 7, 8, 10],
+  "0b000000-0000-4000-8000-000000000002": [1, 3, 5, 6, 9],
+  "0b000000-0000-4000-8000-000000000003": [2, 6, 10],
+  "0b000000-0000-4000-8000-000000000004": [8],
+};
+
+/** persona_id → case suffix → own open tasks (small synthetic sample). */
+const OPEN_TASKS: Readonly<Record<string, Readonly<Record<number, number>>>> = {
+  "0b000000-0000-4000-8000-000000000001": { 1: 1, 3: 1, 4: 2 },
+  "0b000000-0000-4000-8000-000000000002": { 1: 1, 3: 1, 5: 2 },
+  "0b000000-0000-4000-8000-000000000003": { 2: 2, 6: 1 },
+};
+
+export const eventIdOf = (i: number) => `0e000000-0000-4000-8000-0000000000${String(i).padStart(2, "0")}`;
+
+/** The row as the identity sees it: last event (none for 0005, to cover the empty case) and own open tasks. */
+function itemFor(identity: RequestIdentity, c: CaseSummary): CaseListItem {
+  const i = Number(c.case_number.slice(-4));
+  return {
+    ...c,
+    last_event_id: i === 5 ? null : eventIdOf(i),
+    last_event_at: i === 5 ? null : `2026-10-${String(10 + i).padStart(2, "0")}T09:00:00.000Z`,
+    my_open_task_count: OPEN_TASKS[identity.persona_id]?.[i] ?? 0,
+  };
+}
+
 export function visibleTo(identity: RequestIdentity): readonly CaseSummary[] {
   const allowed = VISIBLE[`${identity.persona_id}@${identity.active_workspace}`] ?? [];
   return FAKE_CASES.filter((_, k) => allowed.includes(k + 1));
@@ -53,12 +82,23 @@ export function createFakeCaseSource(): CaseSourceAdapter & { calls: string[] } 
       calls.push("listCases");
       const f = CaseListFilterSchema.parse(filter);
       const after = f.cursor ?? "";
-      const rows = visibleTo(identity)
-        .filter((c) => c.case_number > after)
+      const matching = visibleTo(identity)
         .filter((c) => !f.records_state || c.records_state === f.records_state)
-        .filter((c) => !f.text || c.case_number.includes(f.text));
+        .filter((c) => !f.lifecycle_stage || c.lifecycle_stage === f.lifecycle_stage)
+        .filter((c) => !f.text || c.case_number.includes(f.text))
+        .filter(
+          (c) =>
+            !f.assigned_to_me ||
+            (ASSIGNED[identity.persona_id] ?? []).includes(Number(c.case_number.slice(-4))),
+        )
+        .map((c) => itemFor(identity, c));
+      const rows = matching.filter((c) => c.case_number > after);
       const items = rows.slice(0, f.limit);
-      return { items, next_cursor: rows.length > f.limit ? (items.at(-1)?.case_number ?? null) : null };
+      return {
+        items,
+        next_cursor: rows.length > f.limit ? (items.at(-1)?.case_number ?? null) : null,
+        total: matching.length,
+      };
     },
     async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null> {
       calls.push("getCase");

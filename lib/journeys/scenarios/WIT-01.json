@@ -1,0 +1,157 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "WIT-01",
+  "title": {
+    "ar": "دعوة شاهد: لا مستوى أول للشاهد",
+    "en": "Witness summons: no Level 1 for the witness"
+  },
+  "journey": "J-WITNESS",
+  "assignment_id": "INV-10",
+  "recipient_class": "WITNESS",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-7a86fd037787",
+    "internal_ref": "CDF-DEMO-2026-0906",
+    "track": "IR",
+    "classification": "RESTRICTED",
+    "status": {
+      "code": "S3.05",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0906"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-06655a364379",
+    "type": "HEARING",
+    "case_id": "ca5e0000-0000-4000-8000-7a86fd037787",
+    "journey_id": "J-WITNESS",
+    "status": null,
+    "status_source_event_id": null,
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-WIT-01-01",
+      "type": "STATEMENT_REQUESTED",
+      "occurred_at": "2026-10-18T09:35:00Z",
+      "recorded_at": "2026-10-18T09:35:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a86fd037787",
+      "object": {
+        "type": "HEARING",
+        "id": "0b1ec700-0000-4000-8000-06655a364379"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/WIT-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-WIT-01",
+      "payload": {
+        "role": "WITNESS"
+      }
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S3",
+      "substate": "S3.05",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        },
+        {
+          "code": "S4",
+          "layer": "B",
+          "kind": "EXPECTED"
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-WITNESS/1/1",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-WIT-01-01"
+      },
+      {
+        "step_id": "J-WITNESS/3/1",
+        "state": "PENDING"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-WITNESS/2/1",
+        "kind": "OPTIONAL"
+      },
+      {
+        "step_id": "J-WITNESS/4/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-WITNESS/4/2",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-WITNESS/5/1",
+        "kind": "EXPECTED"
+      }
+    ],
+    "stage_n": 3,
+    "notice_location": "actual",
+    "view": {
+      "WITNESS": {
+        "level1": null,
+        "l1_mode": "NONE"
+      }
+    },
+    "must_not": ["L1 in the WITNESS view", "● on J-WITNESS/1/1"]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "V12 already withholds Level 1 from the witness: «يُعرض الحدث موضوع الإشعار فقط؛ لا يُعرض مسار الحالة لهذا المستلم.»; it shows L2 «● 1. دعوتك لحضور الجلسة» and L3 «● الدعوة والموعد» — the issued summons shown in progress.",
+    "evidence": ["notifications/generator/samples/INV-10.txt"]
+  },
+  "variants": []
+}
