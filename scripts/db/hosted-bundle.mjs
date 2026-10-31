@@ -10,9 +10,13 @@
 //           every recorded predecessor matches the repository (name + sha256);
 //   the migration file, verbatim;
 //   SET LOCAL ROLE cdf_v13_owner; the history insert with runner 'hosted'; RESET ROLE;
+//   the text guard (plan §5.7): the marker line, then a block that aborts unless the md5 of the text the server
+//           received, up to the marker, equals the md5 of the text generated here;
 //   commit;  (--dry-run: rollback;)
 //
-// Run the --dry-run text first. The output is deterministic for a given migration set, so it can be reviewed in a PR.
+// Run the --dry-run text first. The dry-run and apply texts differ only in their final ROLLBACK/COMMIT, so they carry
+// the same guard hash. The output is deterministic for a given migration set, so it can be reviewed in a PR.
+import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import {
   MIGRATION_LOCK_SQL,
@@ -38,6 +42,40 @@ const VERSION_PATTERN = /^\d{4}$/;
 
 /** A SQL string literal. Inputs are file names, versions and hex checksums validated before they get here. */
 const literal = (/** @type {string} */ value) => `'${value.replaceAll("'", "''")}'`;
+
+/**
+ * The text-guard marker (plan §5.7). The server hashes current_query() up to its first occurrence, so it must not
+ * appear anywhere before the guard; textGuard refuses a text that already contains it.
+ */
+export const TEXT_GUARD_MARKER = "-- V13-TEXT-END";
+
+/** md5 (hex) of the UTF-8 bytes of a text: what PostgreSQL's md5(text) returns in a UTF8 database. */
+export const md5Hex = (/** @type {string} */ text) => createHash("md5").update(text, "utf8").digest("hex");
+
+/**
+ * Appends the plan §5.7 text guard and the final statement to a text. The guard hashes every byte before the marker,
+ * so the result must be sent as one simple query (current_query() is then the whole text).
+ * @param {string} body everything before the guard; ends with a newline
+ * @param {"commit;" | "rollback;"} finalStatement
+ * @returns {string}
+ */
+export function textGuard(body, finalStatement) {
+  if (body.includes(TEXT_GUARD_MARKER))
+    throw new HostedBundleError(`the text already contains the guard marker "${TEXT_GUARD_MARKER}"`);
+  if (!body.endsWith("\n")) throw new HostedBundleError("the text before the guard must end with a newline");
+  return `${body}${TEXT_GUARD_MARKER}
+do $v13_text_guard$
+begin
+  if pg_catalog.md5(pg_catalog.split_part(pg_catalog.current_query(), ${literal(TEXT_GUARD_MARKER)}, 1))
+     is distinct from ${literal(md5Hex(body))} then
+    raise exception 'V13 text guard: the text received differs from the repository text' using errcode = 'P0001';
+  end if;
+end
+$v13_text_guard$;
+
+${finalStatement}
+`;
+}
 
 const HISTORY_PRESENT = `exists (
     select 1
@@ -137,7 +175,10 @@ export function buildHostedBundle(options) {
   const predecessors = files.slice(0, index);
   const fileText = m.sql.endsWith("\n") ? m.sql : `${m.sql}\n`;
 
-  return `-- V13 hosted migration bundle${dryRun ? " (DRY RUN: ends in ROLLBACK)" : ""}
+  if (m.sql.includes(TEXT_GUARD_MARKER))
+    throw new HostedBundleError(`${m.file} contains the text-guard marker "${TEXT_GUARD_MARKER}"`);
+
+  const body = `-- V13 hosted migration bundle (run the dry run first: identical text that ends in ROLLBACK)
 -- Migration: database/migrations/${m.file}
 -- sha256:    ${m.checksum}
 -- Classification: SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.
@@ -161,8 +202,8 @@ insert into cdf_notifications_v13.schema_migrations (version, name, checksum_sha
 values (${literal(m.version)}, ${literal(m.name)}, ${literal(m.checksum)}, 'hosted');
 reset role;
 
-${dryRun ? "rollback;" : "commit;"}
 `;
+  return textGuard(body, dryRun ? "rollback;" : "commit;");
 }
 
 function main() {
