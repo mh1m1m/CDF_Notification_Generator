@@ -17,6 +17,7 @@ import {
   inspectCaseContext,
   recordPayloads,
   recoverUtf8,
+  REFETCH_MAX_RETRIES,
   timeout,
   type PayloadAllowance,
 } from "./sentinel";
@@ -270,6 +271,40 @@ test.describe("payloads the browser does not hand over", () => {
       expect(formatViolations(p)).toContain("(fetched again)");
       expect(await payloads.summary()).toEqual({ browser: 0, refetch: 2, unreadable: 0 });
     } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+});
+
+test.describe("refetch retries (OI-047)", () => {
+  test("a refetch reset on every attempt is retried, then still P2, never a pass", async ({ page }) => {
+    // The browser gets the page; every later request (the refetches) has its connection reset.
+    expect(REFETCH_MAX_RETRIES).toBeGreaterThan(0);
+    let served = 0;
+    let reset = 0;
+    const server: Server = createServer((req, res) => {
+      if (served === 0 && req.url === casePath) {
+        served += 1;
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.end("<!doctype html><html><head><title>t</title></head><body>no case here</body></html>");
+        return;
+      }
+      if (req.url === casePath) reset += 1; // not /favicon.ico and the like
+      req.socket.destroy();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+      const payloads = recordPayloads(page, origin, { bodyTimeoutMs: 0 });
+      await page.goto(`${origin}${casePath}`);
+      const p = await payloads.violations(allowOn0001);
+      expect(rulesOf(p)).toEqual(["P2"]);
+      expect(await payloads.summary()).toEqual({ browser: 0, refetch: 0, unreadable: 1 });
+      expect(await payloads.count()).toBe(0);
+      // One first attempt plus the retries, each reset: the option reaches Playwright.
+      expect(reset).toBe(1 + REFETCH_MAX_RETRIES);
+    } finally {
+      server.closeAllConnections();
       await new Promise((resolve) => server.close(resolve));
     }
   });

@@ -319,6 +319,12 @@ export function recoverUtf8(text: string): string {
 const SCANNED_TYPES = /text\/html|text\/x-component|application\/json|text\/plain/;
 /** How long to wait for the browser to hand over a body before fetching it again. */
 const BODY_TIMEOUT_MS = 5_000;
+/**
+ * Retries of a refetch whose connection is reset (OI-047): the request context reuses idle keep-alive sockets that
+ * the server may already have closed. Playwright retries only ECONNRESET, with a backoff, so a body that still
+ * cannot be read stays P2.
+ */
+export const REFETCH_MAX_RETRIES = 2;
 /** Request headers that shape the answer (RSC flight, prefetch, router state); cookies come from the context. */
 const REPLAY_HEADERS =
   /^(accept|rsc|next-router-prefetch|next-router-state-tree|next-router-segment-prefetch|next-url)$/i;
@@ -374,7 +380,12 @@ export function recordPayloads(page: Page, origin: string, options: { bodyTimeou
         const headers = Object.fromEntries(
           Object.entries(await request.allHeaders()).filter(([name]) => REPLAY_HEADERS.test(name)),
         );
-        const again = await page.request.get(url, { headers, maxRedirects: 0, timeout: wait * 2 });
+        const again = await page.request.get(url, {
+          headers,
+          maxRedirects: 0,
+          maxRetries: REFETCH_MAX_RETRIES,
+          timeout: wait * 2,
+        });
         const againType = again.headers()["content-type"] ?? type;
         return {
           where: `${where} (fetched again)`,
