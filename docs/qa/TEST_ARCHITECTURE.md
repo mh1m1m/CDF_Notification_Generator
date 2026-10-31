@@ -146,6 +146,11 @@ Library `tests/sentinel/sentinel.ts`, called after every navigation in every sce
 - **DB layer (with SEC).** As `cdf_v13_user` with each persona's claims: every case-keyed table returns only rows of
   visible cases; no row of a task/notification/event has a `case_id` that disagrees with its parent; SEC owns the
   adversarial half (forged claims, bypass attempts), QA owns the "everything visible is consistent" half.
+  Built (V13-QA-003/004): `tests/fixtures/db-snapshot.ts` reads one persona's view in a single repeatable-read
+  transaction; `tests/sentinel/db-sentinel.ts` rules **D1** (a readable row of any case-keyed table, found in the
+  catalogue, belongs to a hidden case), **D2** (a child row readable while its parent is not), **D3** (a child's case
+  differs from its parent's); `tests/sentinel/db.spec.ts` runs them for the five persona/workspace pairs pinned to
+  DATA_MODEL §5 and plants each fault into a copy of a real snapshot.
 - **Planted-leak self-test** (acceptance). `planted-leak.spec.ts` serves a real case page and injects, through
   `page.route` on the HTML/RSC response, (a) a second `data-case-id` inside the case workspace, (b) another case's
   reference in text, (c) restricted 0009's UUID in an RSC payload. Each plant is asserted to make the Sentinel report
@@ -162,6 +167,10 @@ Library `tests/truth/inspector.ts`.
   `data-status`. Fails if a "completed"-class status is shown with any epistemic other than `recorded`.
 - For `expected`/`conditional`/`awaiting_approval`: fails if the element's accessible text is the same as a recorded
   element of the same status (they must be distinguishable without colour).
+- **Database half** (`tests/truth/db-truth.ts`, `tests/truth/db.spec.ts`): in each persona's snapshot, **U1** a
+  task's status equals the fold of its TASK_STATUS_CHANGED events from OPEN (each step starts where the last ended),
+  **U2** no event is recorded in the future or occurred after it was recorded, **U3** one CASE_OPENED per case and
+  CLOSED ⇔ CASE_CLOSED, **U4** every notification starts with DRAFT_CREATED. Planted-fault self-test as above.
 - **Notification preview frames** (ARCH ruling, 31 Oct): inside a preview frame T1 and T8 do not apply; **T9** every
   `data-epistemic` there is one of the renderer's values, `DATA_EPISTEMIC_VALUES` imported from
   `lib/notifications/data-epistemic.ts` (V13-PROC-011), never copied. A status badge planted in a frame still gets
