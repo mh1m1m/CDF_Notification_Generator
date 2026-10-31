@@ -4,7 +4,7 @@
 NOT_STARTED · PRODUCTION_SUBSTITUTION_REQUIRED. A capability is COMPLETE only with its implementation and verification
 evidence (`docs/TEST_EVIDENCE.md`). No overall completion percentage is given: each gate is reported on its own.
 
-Last updated: **31 Oct 2026 21:30 UTC** (Chief Architect), `develop` `b24db04`.
+Last updated: **31 Oct 2026 22:00 UTC** (Chief Architect), `develop` `b5d810c`.
 
 ## 1. Milestones
 
@@ -38,7 +38,7 @@ Last updated: **31 Oct 2026 21:30 UTC** (Chief Architect), `develop` `b24db04`.
 
 | Gate | Status | Evidence / reason |
 | ---- | ------ | ----------------- |
-| QG-01 Source integrity | NOT_STARTED | hash check of the V12/V13 evidence folders to be scripted; nothing in them has been modified |
+| QG-01 Source integrity | IN_PROGRESS | V13-PROC-010 (#64, in review): `scripts/integrity/source-ledger.mjs` captures and verifies path, size and sha256 of every file under the evidence roots; PROC's baseline ledger (31 Oct, r2: 19 roots, 2,544 files, 707,615,739 bytes) verified PASS straight after capture, and a later `verify` reports any change from it; the ledger stays outside the repository; no V13 task writes to these folders |
 | QG-02 / Gate B Multi-case integrity | IN_PROGRESS | Case Context Sentinel part 1 and frame rule merged (#7, #13); SEC's case-page adversarial tests run it on every Case Workspace tab (#49) |
 | QG-03 / Gate C Authorization | IN_PROGRESS | database: RLS, command checks and the persona × workspace × case adversarial suites (#29); application pre-check `lib/authz` (#9); application adversarial tests (#11, #49); negative-persona pins with a positive control (#43, #53); post-apply checks (#30). Not met until the notification screens and their negative tests land (FE-006) |
 | QG-04 / Gate I Procedural truth | IN_PROGRESS | domain status model (#18); Truth Inspector part 1, follow-ups and T8 (#7, #13, #22) |

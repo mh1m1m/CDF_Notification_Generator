@@ -6,6 +6,7 @@ import { navigationFor } from "@/lib/server/navigation";
 import { GOVERNANCE, INVESTIGATOR_BETA, SECRETARY } from "./support/identities";
 
 const t = createTranslator("ar");
+const noop = async (): Promise<void> => {};
 
 describe("navigationFor", () => {
   it("D6: investigators get no Notification Operations Center entry", () => {
@@ -28,23 +29,51 @@ describe("markup", () => {
     expect(html).not.toContain("/notifications");
   });
 
-  it("WorkspaceSwitcher with several memberships: labelled link to /workspaces carrying the active code", async () => {
-    const { WorkspaceSwitcher } = await import("@/app/(platform)/_components/WorkspaceSwitcher");
+  // UX-005: the TopBar switcher is the shell's menu (components/shell/WorkspaceSwitcher, unit-tested in
+  // tests/unit/components/shell.spec.tsx); these pin what the layout feeds it.
+  it("WorkspaceSwitcher with several memberships: a menu of own memberships carrying the active code", async () => {
+    const { WorkspaceSwitcher } = await import("@/components/shell/WorkspaceSwitcher");
+    const { workspaceOptions } = await import("@/app/(platform)/_components/workspace-options");
+    const options = workspaceOptions(GOVERNANCE, "ar", t);
+    expect(options.map((o) => o.code)).toEqual(["GOVERNANCE", "SECRETARIAT"]);
+    expect(options[0]!.name).toBe(t("workspaces.name.governance"));
+    expect(options[0]!.role).toBe(t("persona.role.governanceOfficer"));
     const html = renderToStaticMarkup(
-      <WorkspaceSwitcher t={t} active="GOVERNANCE" options={["GOVERNANCE", "SECRETARIAT"]} />,
+      <WorkspaceSwitcher t={t} current="GOVERNANCE" options={options} action={noop} pageHref="/workspaces" />,
     );
-    expect(html).toContain('data-testid="workspace-switcher"');
-    expect(html).toContain('data-workspace-code="GOVERNANCE"');
+    expect(html.match(/data-testid="workspace-switcher"/g)).toHaveLength(1);
+    expect(html).toMatch(/data-testid="workspace-switcher" data-workspace-code="GOVERNANCE"/);
+    expect(html).toContain('data-testid="workspace-menu-option-SECRETARIAT"');
     expect(html).toContain('href="/workspaces"');
-    expect(html).toContain(t("workspaces.switcher.button", { name: t("workspaces.name.governance") }));
+    expect(html).not.toContain("INVESTIGATIONS");
   });
 
   it("single membership: the code is shown, no form", async () => {
-    const { WorkspaceSwitcher } = await import("@/app/(platform)/_components/WorkspaceSwitcher");
+    const { WorkspaceSwitcher } = await import("@/components/shell/WorkspaceSwitcher");
+    const { workspaceOptions } = await import("@/app/(platform)/_components/workspace-options");
+    const options = workspaceOptions(SECRETARY, "ar", t);
+    expect(options.map((o) => o.code)).toEqual(["SECRETARIAT"]);
     const html = renderToStaticMarkup(
-      <WorkspaceSwitcher t={t} active="SECRETARIAT" options={["SECRETARIAT"]} />,
+      <WorkspaceSwitcher
+        t={t}
+        current="SECRETARIAT"
+        options={options}
+        action={noop}
+        pageHref="/workspaces"
+      />,
     );
     expect(html).toContain('data-workspace-code="SECRETARIAT"');
     expect(html).not.toContain("<a ");
+    expect(html).not.toContain("<form");
+  });
+
+  it("an active workspace that is not switchable is shown alone, with nothing to switch to", async () => {
+    const { workspaceOptions } = await import("@/app/(platform)/_components/workspace-options");
+    // A persona id outside the registry: no switchable memberships, so only the session's own workspace is shown.
+    const unknown = {
+      ...GOVERNANCE,
+      persona_id: "0b000000-0000-4000-8000-0000000000ff",
+    } as typeof GOVERNANCE;
+    expect(workspaceOptions(unknown, "en", t).map((o) => o.code)).toEqual(["GOVERNANCE"]);
   });
 });

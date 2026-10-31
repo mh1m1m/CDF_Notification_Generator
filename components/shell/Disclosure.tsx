@@ -2,6 +2,8 @@
 // Disclosure menu for the TopBar (WorkspaceSwitcher, PersonaMenu). Built on <details>/<summary>, so it opens and
 // closes without JavaScript; with JavaScript it adds the keyboard path of WORKSPACES.md §3: Escape closes and returns
 // focus to the button, Arrow Up/Down move between the menu's buttons and links, and a click outside closes it.
+// Choosing an item (a form submit or a link) closes it too: the TopBar survives a client-side navigation, so the
+// menu must not stay open over the next page.
 // The panel content is server-rendered and passed in as children.
 import { useEffect, useRef, type ReactNode } from "react";
 
@@ -59,10 +61,21 @@ export function Disclosure({
         details.open = false;
     };
 
+    const close = () => {
+      details.open = false;
+    };
+    const onClick = (event: MouseEvent) => {
+      if (event.target instanceof Element && event.target.closest("[data-disclosure-panel] a[href]")) close();
+    };
+
     details.addEventListener("keydown", onKeyDown);
+    details.addEventListener("submit", close);
+    details.addEventListener("click", onClick);
     document.addEventListener("pointerdown", onPointerDown);
     return () => {
       details.removeEventListener("keydown", onKeyDown);
+      details.removeEventListener("submit", close);
+      details.removeEventListener("click", onClick);
       document.removeEventListener("pointerdown", onPointerDown);
     };
   }, []);

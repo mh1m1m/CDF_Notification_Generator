@@ -1,20 +1,30 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 · Branch: `feature/V13-UX-003-data-components` · Base: `develop` `40901f3` (#14 merged; merged in)
+Updated: 2026-10-31 · Branch: `feature/V13-UX-005-shell-switcher` · Base: `develop` `ec8653a`
 
 ## Completed
-- V13-UX-004: information architecture, the five screen specs, design-system spec and strings, in `docs/design/`.
-  PR #4, merged into `develop` (`54a94f3`). COMPLETE.
-- V13-UX-001: one token source, `styles/tokens.css`, plus `globals.css` on semantic tokens, with 87 token tests. PR #8,
-  CI green on `070a371`. IN_REVIEW (reviewer: QA).
-- V13-UX-002: MERGED into `develop` (`40901f3`, PR #14, QA ACCEPT at `dd00ccc`). Shell components in `components/shell/` (AppShell frame form, TopBar, SideNav, WorkspaceSwitcher,
-  PersonaMenu, Breadcrumbs, PageHeading, CaseWorkspace, CaseHeader, CaseTabs, banner glyph). Also `Count`, icons, the
-  `shell` strings, and shell styles. PR #14, stacked on PR #8. IN_REVIEW (reviewer: QA).
-- V13-UX-003: data components in `components/data/`: StatusBadge (four epistemic variants, type-enforced, with runtime
-  guards), RecordedEventDate, DataTable (case scope), Pagination, Timeline, ExpectedSteps, Empty/Error/NotFound/Loading
-  states, DeadlineText, Button/ButtonLink, ConfirmDialog, FilterBar; `common` strings; data styles. Stacked on PR #14.
-  IN_REVIEW once its PR is open (reviewer: QA). Not built yet: the notification sending family (waits for
-  V13-PROC-005).
+- V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
+- V13-UX-001: token source `styles/tokens.css` and semantic `globals.css`. PR #8. Merged.
+- V13-UX-002: shell components (`components/shell/`), `Count`, icons, `shell` strings, shell styles. PR #14, QA ACCEPT
+  `dd00ccc`, merged into `develop` as `40901f3`.
+- V13-UX-003: data components (`components/data/`), formatting helpers, common strings, data styles. PR #16, QA
+  re-confirmed after the badge reflow fix, merged into `develop` as `78b278f`.
+
+## In progress: V13-UX-005 (swap in the shell's WorkspaceSwitcher menu)
+- `app/(platform)/layout.tsx` renders `components/shell/WorkspaceSwitcher` (in-place menu, options post to
+  `switchWorkspace`) instead of FE's link-only switcher; FE's `_components/WorkspaceSwitcher.tsx` is removed. The
+  options come from `app/(platform)/_components/workspace-options.ts`: switchable memberships with name and roles; an
+  active workspace that is not switchable is shown alone as text. `app/**` rides this PR by ARCH's prior agreement;
+  FE posts `REVIEW: ACCEPT` for that part, QA reviews the PR.
+- `Disclosure` now closes when an item is chosen (submit or link): the TopBar survives client-side navigation, and
+  the menu stayed open over the next page (found by the new e2e).
+- Test ids as SCREENS.md S5. Scenario C: its one `workspace-switcher-open` step now opens the menu and follows
+  `workspace-menu-all` to `/workspaces`; Beta's negative asserts no menu link and no menu option. Everything else is
+  unchanged. New `tests/e2e/shell-workspace-menu.spec.ts`: switch both ways from the menu, the menu closes after a
+  switch, keyboard Enter/Escape with focus return, one `workspace-switcher` per page and no page ids in the menu.
+- Local, after `pnpm db:local start` + `pnpm db:reset`: lint, typecheck, format, build pass; unit 60 files 1564;
+  test:db 22 files 372; e2e 104 passed. (Without `db:local start` the app cannot reach the database and the
+  negative-persona and switch e2e fail on develop too; that is the environment, not the code.)
 
 ## QA CHANGES on #14 at `1b0f29c` (28 Oct), fixed 31 Oct
 1. Workspace menu option buttons no longer carry `aria-label`; a visually hidden verb precedes the visible name and
