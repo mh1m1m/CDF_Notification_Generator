@@ -86,20 +86,21 @@ describe.skipIf(!available)("hosted simulation: runner as a non-superuser admini
     expect(who).toEqual({ rolsuper: false, rolcreaterole: true, rolbypassrls: true });
 
     const result = await migrate({ url: sim.adminUrl, runner: "ci" });
-    expect(result.applied).toEqual(["0000_bootstrap.sql"]);
-    const [bootstrap] = readMigrations();
-    expect(await history(sim.adminUrl)).toEqual([
-      {
-        version: "0000",
-        name: "bootstrap",
-        checksum_sha256: bootstrap?.checksum,
-        runner: "ci",
-        applied_by: "postgres",
-      },
-    ]);
+    const migrations = readMigrations();
+    expect(result.applied).toEqual(migrations.map((m) => m.file));
+    expect((await history(sim.adminUrl))[0]).toEqual({
+      version: "0000",
+      name: "bootstrap",
+      checksum_sha256: migrations[0]?.checksum,
+      runner: "ci",
+      applied_by: "postgres",
+    });
+    expect((await history(sim.adminUrl)).map((h) => h.version)).toEqual(migrations.map((m) => m.version));
     // Re-running applies nothing; a dry run has nothing to apply.
     expect((await migrate({ url: sim.adminUrl, runner: "ci" })).applied).toEqual([]);
-    expect((await migrate({ url: sim.adminUrl, runner: "ci", dryRun: true })).alreadyApplied).toBe(1);
+    expect((await migrate({ url: sim.adminUrl, runner: "ci", dryRun: true })).alreadyApplied).toBe(
+      migrations.length,
+    );
   });
 
   it("leaves the administrator without direct access to the history (RLS on, no grants)", async () => {

@@ -10,3 +10,5 @@ next-env.d.ts
 *.sql
 # Documentation is not format-gated (prettier would rewrite its tables).
 *.md
+# Frozen evidence copies are byte-exact and sha256-recorded (docs/DEPENDENCIES.md decision 15).
+tests/unit/**/__evidence__/
