@@ -1,0 +1,111 @@
+/* Notification Operations Center (FE-006). Logical properties only (RTL first). Colours and spacing come from styles/tokens.css. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cdf-space-3);
+  align-items: end;
+  margin-block: var(--cdf-space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cdf-space-1);
+  min-inline-size: 12rem;
+}
+
+.actions {
+  display: flex;
+  gap: var(--cdf-space-3);
+  align-items: center;
+}
+
+.results {
+  margin-block-start: var(--cdf-space-4);
+}
+
+.count {
+  font-weight: 600;
+}
+
+.scroll {
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+
+.table {
+  border-collapse: collapse;
+  inline-size: 100%;
+}
+
+.table caption {
+  text-align: start;
+  padding-block-end: var(--cdf-space-2);
+}
+
+.table th,
+.table td {
+  text-align: start;
+  padding-block: var(--cdf-space-2);
+  padding-inline: var(--cdf-space-3);
+  border-block-end: 1px solid var(--cdf-border);
+  vertical-align: top;
+}
+
+.glyph {
+  vertical-align: middle;
+  margin-inline-end: var(--cdf-space-1);
+}
+
+.flag {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--cdf-indicator-outline);
+  color: var(--cdf-indicator-text);
+  border-radius: 0;
+  padding-inline: var(--cdf-space-1);
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cdf-space-3);
+  align-items: center;
+  margin-block: var(--cdf-space-4);
+}
+
+.empty {
+  margin-block: var(--cdf-space-4);
+}
+
+.field input,
+.field select {
+  min-block-size: 2.5rem;
+  padding-inline: var(--cdf-space-2);
+  border: 1px solid var(--cdf-border-control);
+  border-radius: var(--cdf-radius-control);
+  background: var(--cdf-surface);
+  color: var(--cdf-text);
+  font: inherit;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.check {
+  display: flex;
+  gap: var(--cdf-space-2);
+  align-items: center;
+  min-block-size: 2.5rem;
+}
+
+.hint {
+  font-size: 0.875em;
+  color: var(--cdf-text-secondary);
+}
+
+.sub {
+  display: block;
+  font-size: 0.875em;
+}
