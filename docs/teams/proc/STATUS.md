@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 ~18:45 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 64aa5c1
+Updated: 2026-10-31 ~19:55 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` e8bba66
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -12,9 +12,10 @@ Updated: 2026-10-31 ~18:45 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | Task | State | Note |
 | ---- | ----- | ---- |
 | V13-PROC-001 domain status model | COMPLETE | PR #18 merged into `develop` 64aa5c1 (31 Oct) |
-| V13-PROC-002 journeys + BL-45 fixture fixes | IN_REVIEW | `lib/journeys` + `tests/unit/journeys` (81 tests); BL-45 fixed (five scenarios); BL-46 held (OI-020) |
-| V13-PROC-003 disclosure | NOT_STARTED | |
-| V13-PROC-004 authority | NOT_STARTED | |
+| V13-PROC-002 journeys + BL-45 fixture fixes | COMPLETE | PR #24 merged into `develop` 434f905 (31 Oct); BL-45 fixed (five scenarios); BL-46 held (OI-020) |
+| V13-PROC-006 case task status catalogue (OI-029) | COMPLETE | PR #35 merged into `develop` 6db4cd0 (31 Oct); `lib/domain/task-status.ts`: migration 0003's five `task.status` codes, DONE added to the T5 list; for FE's task badges |
+| V13-PROC-003 disclosure | IN_REVIEW | `lib/disclosure` + `Projected<T>` brand; DIS-02/03/04/06/18, PRJ-01..03, BND-05/06; the other 13 DIS tests land with PROC-005 (ARCH 31 Oct) |
+| V13-PROC-004 authority | COMPLETE | PR #39 merged into `develop` e8bba66 (31 Oct); `lib/authority` (server-only, fail closed) + `tests/unit/authority` (3 files, 88 tests incl. BND-01..04 data boundary and ST-28b) |
 | V13-PROC-005 notifications | NOT_STARTED | |
 
 ## Changed files
@@ -22,6 +23,15 @@ Updated: 2026-10-31 ~18:45 UTC · Branch: `claude/project-thread-94r9g5` · Base
 - PROC-001: `lib/domain/{badge,concepts,epistemic,index,invariants,nil,status,types}.ts`,
   `tests/unit/domain/{badge,evidence-scan,invariants,status}.spec.ts`, `tests/unit/domain/__evidence__/` (4 files),
   `docs/teams/proc/EVIDENCE_MANIFEST.md`, `docs/teams/proc/PORT_PLAN.md` (§5 note), this file
+- PROC-002: `lib/journeys/**`, `tests/unit/journeys/**` (+ 4 evidence copies), `lib/domain/badge.ts` (T5 code check),
+  `tests/unit/domain/badge.spec.ts`, EVIDENCE_MANIFEST, this file
+- PROC-006: `lib/domain/{task-status,badge,index}.ts`, `tests/unit/domain/{task-status,badge}.spec.ts`,
+  `tests/integration/task-status-catalogue.spec.ts` (outside PROC paths, at ARCH's request), this file
+- PROC-004: `lib/authority/{check,index}.ts`, `lib/authority/authority_v13.json`,
+  `tests/unit/authority/{authority,data-boundary,domain-evidence-names}.spec.ts`, this file
+- PROC-003: `lib/disclosure/{project,index}.ts`, `lib/disclosure/policy_v13.json`,
+  `tests/unit/disclosure/{disclosure,projected-brand}.spec.ts`, `tests/unit/authority/data-boundary.spec.ts` (BND-05/06),
+  this file
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -35,6 +45,12 @@ Updated: 2026-10-31 ~18:45 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | PROC-002: `pnpm format:check` · `pnpm lint` · `pnpm typecheck` · `pnpm test` (develop 64aa5c1 + PROC-002) | PASS | all exit 0; unit 33 files · 775 pass, (776 with BADGE-12, below), of which `tests/unit/journeys` 3 files · 81 pass · 0 skipped; evidence scan (EVS-01) now covers the journeys evidence and `lib/journeys/**/*.json`: 0 hits | PROC-002 head |
 | PROC-002 equivalence: reference `src/journeys/{resolve,progress}.js` vs `lib/journeys` on the same inputs (22 reference scenario files, refs `CDF-IC-2026-DEMO-NNNN` normalised to `CDF-DEMO-2026-NNNN`), 32 runs incl. variants × (resolve + 13 recipient classes) | PASS | 448 outputs compared, 0 differ; catalogue identical after the ref rename | PROC-002 working tree on 64aa5c1 (after prettier) |
 | PROC-002 fixture effect (BL-45): `lib/journeys` on reference vs ported fixtures | EXPECTED DIFFERENCES ONLY | 5 scenario files changed (EC-01, SUM-01, WIT-01, CF-35, CF-37); 448 outputs compared, 2 differ, both CF-37 (base and CF-37-V1: the added `AUTHORITY_DECISION_RECORDED` before the notice); ST-34 now lists only the 7 BL-46 scenarios | same |
+| PROC-006 (develop 434f905 + PROC-006, fresh `db:local start` + `db:reset`, 9 migrations): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` | PASS | all exit 0; unit 37 files · 813 pass, of which `tests/unit/domain` 5 files · 212 pass (CTS-01..08 new); test:db 18 files · 337 pass, 0 skipped (CTS-DB-01/02 new); e2e 92 pass | PROC-006 head |
+| PROC-006 mutation check: `CANCELLED` removed from `CASE_TASK_STATUSES` | FAIL (expected) | CTS-DB-01 and CTS-DB-02 both fail; reverted | local only |
+| PROC-004 (develop 6db4cd0 + PROC-004, fresh `db:reset`, 9 migrations): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` | PASS | all exit 0; unit 41 files · 955 pass, of which `tests/unit/authority` 3 files · 88 pass · 0 skipped; test:db 19 files · 352 pass; e2e 92 pass | PROC-004 head |
+| PROC-004 equivalence: reference `src/authority/check.js` vs `lib/authority/check.ts`, same model (JSON deep-equal to the reference file), 46 action ids (45 + one unknown) × 30 capacity values (the model's 26, plus PLATFORM_ADMIN, DB_ADMIN, none and a repeated SYSTEM) × 3 purposes × 5 actor flag sets × 4 object shapes × 2 manual flags | PASS | 165,600 results compared, 0 differ; every result code reached (ALLOWED 2,168; SOURCE_REQUIRED_DRAFT 276; SOURCE_REQUIRED 600; CONDITIONAL_SOURCE_REQUIRED 780; UNKNOWN_ACTION 3,600; PRECONDITION_MISSING 1,096; EXPIRED 328; OBJECT_CONDITION 128; APPROVAL_MISSING 32; and the DENIED actor checks) | scratch spec, not committed |
+| PROC-003 (develop e8bba66 + PROC-003): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` (fresh `db:reset`) | PASS | all exit 0; test:db 19 files · 352 pass; e2e 92 pass; unit 43 files · 965 pass, of which `tests/unit/disclosure` 2 files · 8 pass (DIS-02/03/04/06/18, PRJ-01..03) and BND-05/06 in `tests/unit/authority`; mutation: with `Projected<T> = T` typecheck fails on PRJ-02's unused `@ts-expect-error` (TS2578) | PROC-003 head |
+| PROC-003 equivalence: reference `src/disclosure/project.js` vs `lib/disclosure/project.ts`, same policy (JSON equal except the documented `case_number` example rename) | PASS | `decide()`: 87,360 queries (15 recipient values × 52 fields × 14 channels × 8 contexts), 0 differ; `project()`: 600 runs (15 recipient values × 5 channels × 8 contexts) on a model carrying every field, 0 differ (fields, log and summary; `policy_path` excluded), 80 refused identically | scratch spec, not committed |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
 
 ### Baseline without sibling evidence (`src/` + `tests/` only): causes

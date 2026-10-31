@@ -22,9 +22,14 @@ on it) · **SUPERSEDED**.
 | [ADR-011](#adr-011--append-only-hash-chained-audit-ledger) | Append-only hash-chained audit ledger | ACCEPTED | Chief Architect |
 | [ADR-012](#adr-012--v13-inside-the-shared-cdf-gc-review-supabase-project) | V13 inside the shared CDF GC Review Supabase project | ACCEPTED | Owner decision, 28 Oct 2026 00:29 UTC |
 | [ADR-013](#adr-013--ui-localisation-and-dom-evidence-conventions) | UI, localisation and DOM evidence conventions | ACCEPTED | Chief Architect, on UX, FE, PROC and QA requests |
-| [ADR-014](#adr-014--identity-and-request-claims-contract-with-authenticated-claims) | Identity and request-claims contract, with authenticated claims | ACCEPTED | Chief Architect, on SEC finding TM-S4 |
+| [ADR-014](#adr-014--identity-and-request-claims-contract-with-authenticated-claims) | Identity and request-claims contract, with authenticated claims | ACCEPTED (§4 rotation sentence superseded by ADR-018) | Chief Architect, on SEC finding TM-S4 |
+| [ADR-015](#adr-015--case-read-contract-portfolio-case-header-and-v13-records) | Case read contract: portfolio, case header and V13 records | ACCEPTED | Chief Architect, on FE-003/FE-004, DB-002/DB-008 and SEC reviews |
+| [ADR-016](#adr-016--domain-catalogues-labels-and-server-only-use-in-the-ui) | Domain catalogues, labels and server-only use in the UI | ACCEPTED | Chief Architect, on PROC-001 and QA-004 reviews |
+| [ADR-017](#adr-017--audit-attribution-from-verified-claims-and-the-audited-workspace-switch) | Audit attribution from verified claims, and the audited workspace switch | ACCEPTED | Chief Architect, on DB-001/DB-007 and SEC reviews |
+| [ADR-018](#adr-018--claims-key-installation-rotation-and-health) | Claims-key installation, rotation and health | ACCEPTED | Chief Architect, on DB-009 (OI-022) and SEC reviews |
+| [ADR-019](#adr-019--port-contracts-own-their-refusals) | Port contracts own their refusals | ACCEPTED | Chief Architect, on the FE-005 review (#32) |
 
-Next free number: **ADR-015**.
+Next free number: **ADR-020**.
 
 ---
 
@@ -246,6 +251,9 @@ Next free number: **ADR-015**.
 
 - **Status:** ACCEPTED. Chief Architect, 28 Oct 2026, on SEC finding TM-S4 (HIGH) and recommendations SEC-REC-01..04
   (`docs/security/THREAT_MODEL.md`), aligned with DB's migration 0001 draft. Extends ADR-003 and ADR-004.
+  **Supersession (31 Oct 2026):** the rotation sentence of §4 ("Rotation: the Chief Architect clears the key … the
+  application installs the new one") is superseded by [ADR-018](#adr-018--claims-key-installation-rotation-and-health),
+  which fixes the order of the steps. The rest of this ADR is unchanged.
 - **Context.** `request.v13.claims` is an ordinary setting: any SQL running inside the request transaction (for
   example through an injection in the BFF) can overwrite it, or `reset role`, and act as any persona. The foundation
   and DB's draft also used different claim shapes.
@@ -284,3 +292,159 @@ Next free number: **ADR-015**.
     transaction value costs one extra round trip per request.
   - `PRODUCTION_SUBSTITUTION_REQUIRED`: the CDF corporate IdP issues signed tokens, and the ASP.NET Core API on CDF
     Alibaba Cloud Riyadh sets the database context with a key held in KMS.
+
+---
+
+## ADR-015 — Case read contract: portfolio, case header and V13 records
+
+- **Status:** ACCEPTED. Chief Architect, 31 Oct 2026, on the reviews of FE-003 (#19), FE-004 (#23), DB-002 (#15) and
+  DB-008 (#21), with SEC's rulings. Extends ADR-001 and ADR-003.
+- **Context.** The five M1 screens read cases from the `CaseSourceAdapter` and V13's own procedural and notification
+  records. Totals and counts must never reveal a case the persona may not see (directive §40). Paging must be stable,
+  and the UI must never render a row that breaks the contract.
+- **Decision.**
+  1. **Case summary.** `CaseSummary` carries:
+     - `case_id`, the uuid key;
+     - `case_number`, `CDF-DEMO-2026-NNNN`, for display only and never a key;
+     - exactly one of `title_key` (an i18n key) or `synthetic_title` ({ar, en} synthetic text);
+     - `lifecycle_stage` (a code), `records_state` (ACTIVE or CLOSED) and `is_restricted`;
+     - `source_system` (a code), `source_ref` and `updated_at`. `source_ref` uses the database's pattern
+       `^[A-Za-z0-9._:-]{1,80}$`.
+  2. **Portfolio.** `CaseListFilter` has:
+     - `records_state` and `lifecycle_stage`;
+     - `text`: 1–100 characters, no control characters, matched only within the cases the identity may already see;
+     - `limit`: 1–99, default 25;
+     - an opaque cursor of at most 512 characters, where a malformed cursor is a generic validation error;
+     - `assigned_to_me`: an active case assignment in any capacity (task-only assignees excluded).
+
+     The adapter reads `portfolio_count` and `portfolio_page` in **one statement**. Both therefore see one snapshot, with
+     RLS applied before the count. `total` counts only authorised cases matching the same filters, cursor aside.
+     - `PORTFOLIO_DB_ROW_BOUND` = 100, the function's clamp.
+     - `PORTFOLIO_PAGE_MAX` = 99, because the adapter reads one look-ahead row to know whether a next page exists
+       (OI-025).
+     - A page longer than its own total is refused.
+     - The row summaries `last_event_id` and `last_event_at` are set together or are both null. `my_open_task_count`
+       counts the identity's own open tasks in that case.
+  3. **Case header.** `CaseSourceAdapter.getCase` returns `CaseHeader`: the summary plus `my_capacity`, the caller's own
+     active capacity on the case, as a code or null. An unknown case and an unauthorised case both give `null`.
+  4. **V13 records.** `ProceduralRecordsReader` (`listEvents`, `listTasks`) and `NotificationRecordsReader`
+     (`listForCase`) read through the SECURITY INVOKER functions `case_events`, `case_tasks` and `case_notifications`.
+     RLS applies inside every call, and an unknown case and an unauthorised case both give zero rows.
+     - Every row must belong to the case asked for, which the adapter checks again.
+     - Capacities appear as codes, plus `is_mine`. A persona id is never returned.
+     - V13 is the system of record for these records. Only their hosting is a production substitution.
+  5. **Fail closed.** A row that breaks the Zod contract refuses the whole result: the BFF answers UNAVAILABLE with a
+     correlation id, never a partial page. Reads use explicit column lists, never `select *`, and unit tests pin this.
+  6. **No column grants** on `case_assignment`, `task` and `procedural_event` (ruling on SEC's INFO note, #21).
+     - `cdf_v13_user` keeps SELECT under RLS on these tables, persona ids included, for the cases it may access. That is
+       within the access matrix.
+     - The invoker read functions need `persona_id` to compute `is_mine` and `my_capacity`. A column restriction would
+       force them to SECURITY DEFINER and take the check out of RLS.
+     - The BFF reads only through the read functions, and SEC's static boundary suite checks that.
+- **Consequences.**
+  - Lists of events, tasks and notifications per case are not paged in M1. Synthetic volumes are at most 20 rows per
+    case, and OI-026 tracks paging.
+  - Task statuses come from migration 0003. Their catalogue moves to `lib/domain` with PROC-006 (OI-029).
+  - `PRODUCTION_SUBSTITUTION_REQUIRED`: the production case source is the CDF case system of record, reached through the
+    ASP.NET Core API on CDF Alibaba Cloud Riyadh. V13's own records move to RDS PostgreSQL.
+
+---
+
+## ADR-016 — Domain catalogues, labels and server-only use in the UI
+
+- **Status:** ACCEPTED. Chief Architect, 31 Oct 2026, on the reviews of PROC-001 (#18) and QA-004 (#22). Extends ADR-013.
+- **Context.** Status codes, epistemic states and their labels must mean the same in the domain rules, the Truth
+  Inspector and the UI. The UI must not become a second place where procedural truth is decided.
+- **Decision.**
+  1. **Labels.** Domain labels are {ar, en} data in `lib/domain` and `lib/journeys`, next to their codes. The `status`
+     and `journeys` i18n namespaces mirror them when the first UI keys land, and a unit test pins the mirror.
+     Components render text only through `lib/i18n`.
+  2. **Catalogues.** `COMPLETED_CLASS_STATUSES` and the epistemic lists live in `lib/domain`. PROC owns them, and the
+     Truth Inspector (QA) imports them instead of keeping copies. The case task status catalogue (`CASE_TASK_STATUSES`,
+     PROC-006) follows the same rule and is pinned to the database constraint.
+  3. **Server-only.** UI code uses `lib/domain` only on the server, never in a `"use client"` module. A recorded
+     `event_id` shown on a badge comes only from the authorised case's own rows.
+- **Consequences.** A status shown in the UI is either derived from a recorded event or shown as not recorded (rule T5,
+  test T8). A new status code needs a catalogue change in `lib/domain` (PROC) before any UI uses it.
+
+---
+
+## ADR-017 — Audit attribution from verified claims, and the audited workspace switch
+
+- **Status:** ACCEPTED. Chief Architect, 31 Oct 2026, on the reviews of DB-001 (#12) and DB-007 (#17), with SEC's notes.
+  Extends ADR-011 and ADR-014 §2.
+- **Context.** An audit row is only as trustworthy as its attribution. A command parameter such as a correlation id
+  could be forged by the caller. A workspace switch changes what a persona sees, so it must leave a record.
+- **Decision.**
+  1. **Attribution.** Audit attribution comes only from the verified claims (ADR-014 §4). Commands take no
+     `p_correlation_id`. `_append_audit` takes five arguments, and the correlation id is read from
+     `current_correlation_id()`.
+  2. **Workspace switch.** It is the command `api_switch_workspace(p_workspace_id)`. The target must be an active
+     workspace in which the persona's membership is valid now. NULL, unknown, inactive and non-member targets are
+     refused alike, and a refused switch writes nothing.
+     - A successful switch writes one `WORKSPACE_SWITCHED` audit row with ids only.
+     - The BFF re-issues the session cookie only after the command commits, and a switch keeps the session's expiry.
+- **Consequences.**
+  - The database still re-checks the membership on every request, so even a cookie written early could not widen
+    access (OI-023).
+  - Repeated switches can pad the ledger at request rate. A BFF rate limit after M1 addresses that (OI-024).
+
+---
+
+## ADR-018 — Claims-key installation, rotation and health
+
+- **Status:** ACCEPTED. Chief Architect, 31 Oct 2026, on DB-009 (#28, OI-022) and SEC's review. Supersedes the
+  rotation sentence of ADR-014 §4.
+- **Context.** The claims key K (ADR-014 §4) is installed once, first writer wins. A deployment whose
+  `V13_SESSION_SECRET` derives a different K fails closed on every request. Before DB-009 nothing showed which state a
+  deployment was in.
+- **Decision.**
+  1. **Installation.** `instrumentation.ts` `register()` calls `installClaimsKeyAtStartup`.
+     - It never throws, and it logs one line holding a code only.
+     - If the install fails, `withRequestContext` retries it on the next request.
+     - `api_install_claims_key` is idempotent for the same key. It refuses a different key (V1409) and writes an audit
+       row without key material.
+  2. **Shared secret.** Every deployment that holds `V13_DATABASE_URL` must hold the same `V13_SESSION_SECRET`. ADR-014
+     §7 scopes both to the `develop` branch preview.
+  3. **Rotation order.**
+     1. Set the new secret in Vercel and redeploy. Health then shows `CLAIMS_KEY_MISMATCH`.
+     2. Run the reviewed `database/hosted/reset_claims_key.sql`. It deletes the key row and audits `CLAIMS_KEY_CLEARED`.
+        Health shows `CLAIMS_KEY_NOT_INSTALLED`.
+     3. The first request context installs the new key, and health shows `ok`.
+  4. **Health.** `/api/health` reports `db.claims_key` as a code only, computed with a transaction-bound HMAC probe over
+     a domain-separated label (`claims_key_state`, migration 0007).
+     - INSTALLED_MATCH means `ok`.
+     - INSTALLED_MISMATCH gives 503 `CLAIMS_KEY_MISMATCH`.
+     - NOT_INSTALLED gives 503 `CLAIMS_KEY_NOT_INSTALLED`.
+     - NOT_CHECKED, when the deployment has no usable session secret, does not degrade health. That deployment has no
+       claims context to verify.
+- **Consequences.**
+  - Monitoring must expect `CLAIMS_KEY_NOT_INSTALLED` after a reset, and on a fresh deployment until the first request
+    context (SEC INFO on #28).
+  - `PRODUCTION_SUBSTITUTION_REQUIRED`: production keeps the key in CDF KMS and checks it by key id.
+
+---
+
+## ADR-019 — Port contracts own their refusals
+
+- **Status:** ACCEPTED. Chief Architect, 31 Oct 2026, on the review of FE-005 (#32, ARCH CHANGES `38664b8`, ACCEPT
+  `018b46e`). Extends ADR-003 and ADR-015.
+- **Context.** A port in `lib/contracts` is the seam where the prototype implementation (V13's own PostgreSQL records)
+  is replaced by the production one (the CDF case system behind the ASP.NET Core API on Alibaba Cloud Riyadh). In #32,
+  `lib/server/my-work.ts` decided between the stale-version message and the generic message by catching an error class
+  exported by the prototype adapter. A production adapter could then only be substituted by importing from the
+  prototype adapter, which turns the dependency the wrong way.
+- **Decision.**
+  1. Any refusal a port's caller branches on is part of the port's contract. Its code list and its error class live in
+     `lib/contracts`, next to the port, as pure TypeScript.
+  2. The port's doc comment says how a refusal is signalled and that any other error is an unexpected failure. For
+     example: "a refusal throws `TaskCommandRefusedError` with one of `TASK_COMMAND_REFUSALS`".
+  3. Adapters map their own failure codes (for V13, the commands' SQLSTATEs) onto the contract's codes and let anything
+     unmapped propagate unchanged. `lib/server` imports refusal types only from `@/lib/contracts`. Adapters are imported
+     only by the composition roots (`lib/server/*-binding.ts`, `lib/server/case-source.ts`, `lib/server/records.ts`).
+  4. The refusal error's message is the refusal code only: nothing caller-supplied and nothing from the database.
+- **Consequences.**
+  - `TaskCommandRefusedError` moved into `lib/contracts/my-work.ts` (#32).
+  - `InvalidCursorError`, which `lib/server/cases.ts` still imports from `lib/adapters/case-source/cursor.ts`, follows
+    in an FE follow-up after #19 (OI-031).
+  - New command ports (notification drafts, FE-006) start this way.

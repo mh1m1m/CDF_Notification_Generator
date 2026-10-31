@@ -11,6 +11,7 @@ import {
 import * as Domain from "@/lib/domain";
 import { CONCEPT_IDS, getConcept } from "@/lib/domain/concepts";
 import { STATUS_OBJECTS } from "@/lib/domain/status";
+import { CASE_TASK_STATUSES } from "@/lib/domain/task-status";
 import { EPISTEMIC_CLASSES } from "@/lib/domain/epistemic";
 import type { DomainEvent } from "@/lib/domain/types";
 
@@ -200,7 +201,7 @@ describe("BADGE — epistemic class → data-epistemic", () => {
     assert.ok(Object.isFrozen(toBadgeEpistemic({ epistemic: "RECORDED_FACT", event_id: "evt-1" })));
     assert.ok(Object.isFrozen(toBadgeEpistemic({ epistemic: "EXPECTED_PROCESS" })));
   });
-  test("BADGE-10 rule T5: the completed-class list is exported from lib/domain, exactly the eleven statuses", () => {
+  test("BADGE-10 rule T5: the completed-class list is exported from lib/domain, exactly the twelve statuses", () => {
     assert.deepEqual(
       [...COMPLETED_CLASS_STATUSES],
       [
@@ -215,6 +216,7 @@ describe("BADGE — epistemic class → data-epistemic", () => {
         "MINUTES_FINAL",
         "ACCEPTED_BY_PROVIDER",
         "SUBSTANTIATED",
+        "DONE",
       ],
     );
     assert.ok(Object.isFrozen(COMPLETED_CLASS_STATUSES));
@@ -227,8 +229,10 @@ describe("BADGE — epistemic class → data-epistemic", () => {
     assert.equal(isCompletedClassStatus(null), false);
     // The list refuses; it never gives an object a status. Three entries are guards, not V13 statuses: APPROVED is an
     // outcome value in payloads; DELIVERED is forbidden as a status (ST-08, INV-10); ALLEGATION has no status object
-    // (SOURCE_REQUIRED, INV-15), so SUBSTANTIATED is never shown from the model either. The rest are domain states.
-    const states = new Set(Object.values(STATUS_OBJECTS).flatMap((o) => [...o.states]));
+    // (SOURCE_REQUIRED, INV-15), so SUBSTANTIATED is never shown from the model either. DONE is a case task status
+    // (OI-029). The rest are domain states.
+    const states = new Set<string>(Object.values(STATUS_OBJECTS).flatMap((o) => [...o.states]));
+    for (const s of CASE_TASK_STATUSES) states.add(s);
     for (const c of CONCEPT_IDS) for (const t of getConcept(c).transitions) states.add(t.to);
     assert.deepEqual(
       COMPLETED_CLASS_STATUSES.filter((s) => !states.has(s)),
