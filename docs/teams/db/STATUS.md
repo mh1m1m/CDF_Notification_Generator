@@ -16,7 +16,8 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-011]` | `feature/V13-DB-011-fk-indexes` | migration 0009: foreign-key index review (OI-032), FK coverage suite | COMPLETE — #42 merged f39af8b (SEC ACCEPT 3e78d52, ARCH accepted) |
 | `[V13-DB-012]` | `feature/V13-DB-012-hosted-guard` | `scripts/db/hosted-bundle.mjs` generates the plan §5.7 text guard; unit + hosted-sim tests | COMPLETE — #44 merged 2766fd9 (CI 7/7, run 41237743471) |
 | `[V13-DB-014]` | `feature/V13-DB-013-guard-tail` | text guard runs first: start, body, final statement and trailer checked before any statement runs | COMPLETE — #47 merged (267944a) |
-| `[V13-DB-015]` | `feature/V13-DB-015-notification-ops` | migration 0010: `notifications_page` / `notifications_count` for the Notification Operations Center (S4, FE-006) | IN_PROGRESS — PR open, SEC review and SEC-DB-17 registry entries pending |
+| `[V13-DB-015]` | `feature/V13-DB-015-notification-ops` | migration 0010: `notifications_page` / `notifications_count` for the Notification Operations Center (S4, FE-006) | COMPLETE — #52 merged (77a9e18), SEC ACCEPT fcd2db3 |
+| `[V13-DB-016]` | `feature/V13-DB-016-hosted-resume-rehearsal` | rehearsal of the hosted resume 0005 → 0010 + seeds 0001/0002; seed bundles (`--seed`) | IN_PROGRESS — PR open, SEC review pending |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -93,7 +94,7 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
   added blank line and CRLF each fail; unchanged passes, also with a trailer) and `tests/integration/hosted-sim.spec.ts`
   (PostgreSQL raises the guard for five tampered texts and applies nothing). Mutation-checked (a wrong hash fails 8).
 
-## In progress: V13-DB-015 (FE-006, UX S4)
+## Done: V13-DB-015 (FE-006, UX S4), #52
 - Migration 0010: SECURITY INVOKER `notifications_page` (keyset on created_at desc, id desc; text cursor
   `created_at_cursor` with microseconds, because a timestamptz parameter loses them in the driver's Date; limit 1..100)
   and `notifications_count` with one filter set (lifecycle, template code, case display number after authorisation,
@@ -101,7 +102,25 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 - Tests: `tests/integration/notification-ops.spec.ts` (21): shape and grants, values, per persona × workspace rows =
   union of the case tabs = expected and count = rows, restricted 0009, closed 0010, other workspace and other persona
   (uncommitted drafts seen through a context switch), Scenario E, filters, unknown filter values, paging (ties, cap,
-  half or malformed cursor, foreign cursor), Epsilon/Zeta/unknown, forged contexts, app login 42501. Mutation-checked.
+  half cursor in both directions after SEC's CHANGES 0bb7f09, malformed cursor, foreign cursor), Epsilon/Zeta/unknown, forged contexts, app login 42501. Mutation-checked.
+
+## In progress: V13-DB-016 (hosted resume rehearsal)
+- The hosted project stands at 0005 (docs/TEST_EVIDENCE.md §2.1). ARCH will send, through the connector: bundles 0006,
+  0007, 0008, 0009, 0010 (each `--dry-run`, then apply), then seeds 0001 and 0002 (each `--dry-run`, then apply).
+- `scripts/db/hosted-bundle.mjs --seed <version> [--dry-run]`: the seed file verbatim in the migration frame (begin,
+  lock_timeout, search_path '', advisory lock), with the text guard in front and a guard that refuses unless the recorded
+  history equals every repository migration (name + sha256), so a seed runs only on the complete schema. No history row
+  (seeds are idempotent). Migration bundles unchanged (0005 dry-run text byte-identical to develop's generator).
+- `tests/integration/hosted-resume.spec.ts` (8, ≈ 3 s, runs in `test:db` and CI): Supabase-like cluster, 0000–0005 by
+  their bundles; every text sent as ONE simple query with the trailer `-- source: connector`; seeds refused before 0010
+  (P0001, nothing left); each dry run leaves history, catalogue fingerprint and seed row counts unchanged; each apply
+  records the repository's row (runner `hosted`, applied_by `postgres`); seed rows equal a fresh build's; final
+  `database/hosted/v13_catalog_fingerprint.sql` equals a fresh build on the same layout AND the `db:reset` primary;
+  `post_apply_checks.sql` VERDICT PASS; re-sent seeds change nothing.
+- Mutation-checked: a trailer that can execute (`select 1;`) fails the guard on the first bundle; an extra function on the
+  primary fails the fingerprint comparison.
+- Evidence (local, dc52514 + working tree): lint, typecheck, prettier clean; unit 1658/1658 (hosted-bundle 37);
+  test:db 418/418.
 
 ## Next
 - Next free migration: 0011.
@@ -111,7 +130,9 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 - #29 `[V13-SEC-002]`: `REVIEW: ACCEPT ede6f46`, re-confirmed `ACCEPT bc89156` after the develop merge (294/294).
 - #30 `[V13-SEC-004]` post_apply_checks.sql: `REVIEW: ACCEPT 9f1e8bd` (PASS through 0008, spec 27/27).
 - #35 `[V13-PROC-006]`, DB-owned file `tests/integration/task-status-catalogue.spec.ts`: `REVIEW: ACCEPT 2264d61`.
-- #2 `[V13-SEC-001]` threat model and matrix: `REVIEW: CHANGES b1786c0` (doc fixes against the built 0001–0008).
+- #2 `[V13-SEC-001]` threat model and matrix: `REVIEW: CHANGES b1786c0` (doc fixes against the built 0001–0008), then
+  `REVIEW: ACCEPT 8fcb8b1` (all 11 points fixed).
+- #49 `[V13-SEC-006]` case-page adversarial tests: `REVIEW: ACCEPT 4960460` (CI 6/6; three non-blocking suggestions).
 - #41 `[V13-SEC-005]` secret-value scans + P08 order: `REVIEW: ACCEPT 7529200` (surface spec 12/12 locally, mutation-checked).
 
 ## Changed files (PR (a))
