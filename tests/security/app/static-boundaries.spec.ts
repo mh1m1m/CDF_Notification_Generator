@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import { PUBLIC_ACTIONS } from "../public-actions";
 
 const ROOT = join(import.meta.dirname, "..", "..", "..");
-const APP_ROOTS = ["app", "components", "lib", "proxy.ts", "next.config.ts"];
+const APP_ROOTS = ["app", "components", "lib", "proxy.ts", "next.config.ts", "instrumentation.ts"];
 const SOURCE = /\.(ts|tsx|mts|js|mjs)$/;
 
 function walk(path: string): string[] {
