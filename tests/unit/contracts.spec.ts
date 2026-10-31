@@ -8,6 +8,7 @@ import {
   CaseSummarySchema,
   I18N_KEY_PATTERN,
   RequestIdentitySchema,
+  SOURCE_REF_PATTERN,
   UUID_PATTERN,
   type CaseId,
   type CaseListFilter,
@@ -62,12 +63,38 @@ describe("CaseSummarySchema", () => {
 
   it("accepts a synthetic free-text title instead of a key", () => {
     expect(
-      CaseSummarySchema.safeParse(summary({ title_key: null, synthetic_title: "Demo case 0001" })).success,
+      CaseSummarySchema.safeParse(
+        summary({ title_key: null, synthetic_title: { ar: "قضية تجريبية ٠٠٠١", en: "Demo case 0001" } }),
+      ).success,
     ).toBe(true);
   });
 
+  it("requires a synthetic title in both languages, nothing else", () => {
+    for (const bad of [
+      "Demo case 0001",
+      { ar: "قضية" },
+      { en: "Demo" },
+      { ar: "", en: "Demo" },
+      { ar: "قضية", en: "x".repeat(201) },
+      { ar: "قضية", en: "Demo", fr: "Cas" },
+    ]) {
+      expect(
+        CaseSummarySchema.safeParse(summary({ title_key: null, synthetic_title: bad as never })).success,
+      ).toBe(false);
+    }
+  });
+
+  it("accepts only source references the database would accept", () => {
+    expect(SOURCE_REF_PATTERN.test("demo-0001")).toBe(true);
+    for (const bad of ["", "has space", "x".repeat(81), "a/b", "ref\u0000", "مرجع"]) {
+      expect(CaseSummarySchema.safeParse(summary({ source_ref: bad })).success, bad).toBe(false);
+    }
+  });
+
   it("requires exactly one of title_key and synthetic_title", () => {
-    expect(CaseSummarySchema.safeParse(summary({ synthetic_title: "Demo case" })).success).toBe(false);
+    expect(
+      CaseSummarySchema.safeParse(summary({ synthetic_title: { ar: "قضية", en: "Demo case" } })).success,
+    ).toBe(false);
     expect(CaseSummarySchema.safeParse(summary({ title_key: null })).success).toBe(false);
   });
 
@@ -76,7 +103,9 @@ describe("CaseSummarySchema", () => {
     expect(CaseSummarySchema.safeParse(summary({ case_number: "CDF-2026-0001" })).success).toBe(false);
     expect(CaseSummarySchema.safeParse(summary({ lifecycle_stage: "investigation" })).success).toBe(false);
     expect(
-      CaseSummarySchema.safeParse(summary({ title_key: null, synthetic_title: "line\u0000break" })).success,
+      CaseSummarySchema.safeParse(
+        summary({ title_key: null, synthetic_title: { ar: "قضية", en: "line\u0000break" } }),
+      ).success,
     ).toBe(false);
     expect(CaseSummarySchema.safeParse({ ...summary(), narrative: "x" }).success).toBe(false);
     expect(CaseSummarySchema.safeParse(summary({ updated_at: "yesterday" })).success).toBe(false);

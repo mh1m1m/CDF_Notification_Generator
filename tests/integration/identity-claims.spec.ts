@@ -373,6 +373,69 @@ describe.skipIf(!seeded)("claims, identity helpers and identity reads (migration
     });
   });
 
+  describe("TM-S4: a verified context cannot be rewritten inside its own transaction", () => {
+    const deltaClaims = claimsText(PERSONA.delta, WORKSPACE.SECRETARIAT);
+    const ATTACKER_KEY = new Uint8Array(32).fill(0x33);
+
+    /** Runs `fn` in a savepoint so a refused step does not abort the transaction; returns rows or the SQLSTATE. */
+    async function attempt<T>(tx: Tx, fn: (sp: Tx) => Promise<T>): Promise<T | { refused: string }> {
+      try {
+        return (await tx.savepoint((sp) => fn(sp as unknown as Tx))) as T;
+      } catch (error) {
+        return { refused: String((error as { code?: unknown }).code ?? "UNKNOWN") };
+      }
+    }
+
+    const xid = async (tx: Tx) =>
+      (await tx<{ xid: string }[]>`select pg_catalog.pg_current_xact_id()::text as xid`)[0]!.xid;
+
+    it("(a) Delta's claims under Alpha's MAC, or under a MAC from the caller's own key, are nobody", async () => {
+      const seen = await asPersona(app, PERSONA.alpha, "SECRETARIAT", async (tx) => {
+        const before = await who(tx);
+        await tx`select pg_catalog.set_config('request.v13.claims', ${deltaClaims}, true)`;
+        const keptMac = { who: await who(tx), visible: await visible(tx) };
+        const ownMac = claimsMac(ATTACKER_KEY, deltaClaims, await xid(tx));
+        await tx`select pg_catalog.set_config('request.v13.claims_mac', ${ownMac}, true)`;
+        const attackerMac = { who: await who(tx), visible: await visible(tx) };
+        const [user] = await tx<{ u: string }[]>`select current_user::text as u`;
+        return { before, keptMac, attackerMac, user: user!.u };
+      });
+      expect(seen.user).toBe("cdf_v13_user");
+      expect(seen.before.persona).toBe(PERSONA.alpha);
+      for (const step of [seen.keptMac, seen.attackerMac]) {
+        expect(step.who).toEqual(NOBODY);
+        expect(step.visible).toEqual({ personas: null, workspaces: null, memberships: 0, roles: 0 });
+      }
+    });
+
+    it("(b) RESET ROLE leaves the app login, which reads nothing, and SET ROLE cdf_v13_owner is refused", async () => {
+      const seen = await asPersona(app, PERSONA.alpha, "SECRETARIAT", async (tx) => {
+        const ownerFromUser = await attempt(tx, (sp) => sp.unsafe("set local role cdf_v13_owner"));
+        await tx.unsafe("reset role");
+        const [user] = await tx<{ u: string }[]>`select current_user::text as u`;
+        const reads = await attempt(tx, (sp) => visible(sp));
+        const helpers = await attempt(tx, (sp) => who(sp));
+        const ownerFromApp = await attempt(tx, (sp) => sp.unsafe("set local role cdf_v13_owner"));
+        const ownerViaSetConfig = await attempt(
+          tx,
+          (sp) => sp`select pg_catalog.set_config('role', 'cdf_v13_owner', true)`,
+        );
+        return { ownerFromUser, user: user!.u, reads, helpers, ownerFromApp, ownerViaSetConfig };
+      });
+      expect(seen.ownerFromUser).toEqual({ refused: "42501" });
+      expect(seen.user).toBe("cdf_v13_app");
+      // The app login holds no grant on the identity tables or helpers; if it ever did, the policies (current_user =
+      // 'cdf_v13_user') would still return no rows.
+      expect([
+        { refused: "42501" },
+        { personas: null, workspaces: null, memberships: 0, roles: 0 },
+      ]).toContainEqual(seen.reads);
+      expect([{ refused: "42501" }, NOBODY]).toContainEqual(seen.helpers);
+      expect(seen.ownerFromApp).toEqual({ refused: "42501" });
+      expect(seen.ownerViaSetConfig).toEqual({ refused: "42501" });
+    });
+  });
+
   describe("database HMAC equals the app's HMAC", () => {
     it("matches a fixed vector derived with requestClaimsKey from the synthetic test secret", async () => {
       const claims = claimsText(PERSONA.alpha, WORKSPACE.SECRETARIAT);
