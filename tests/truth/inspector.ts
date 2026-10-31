@@ -16,8 +16,14 @@
 //   T7 every child frame of the page could be read (evaluated, or parsed from its srcdoc); none passes silently
 //   T8 an element with data-status or data-status-kind but no data-epistemic is allowed only as an OPEN task with no
 //      data-event-id (ARCH ruling on FE-004, allow-list); every other unmarked status element is a violation
+//   T9 inside a notification preview frame, every data-epistemic is one of the renderer's values
+//      (DATA_EPISTEMIC_VALUES, V13-PROC-011, imported and never copied)
+// Preview frames (ARCH ruling, 31 Oct): the renderer is unchanged; inside a frame T1 and T8 do not apply and T9 does.
+// A status badge planted in a frame (data-status-kind with the badge vocabulary) still gets T2–T6 as well. An
+// unreadable frame is still T7. Outside a frame nothing changes.
 import type { Page } from "@playwright/test";
 import { BADGE_EPISTEMIC_VALUES, isCompletedClassStatus } from "@/lib/domain";
+import { DATA_EPISTEMIC_VALUES } from "@/lib/notifications/data-epistemic";
 import { readChildFrames, type FramePage, type UnreadableFrame } from "../sentinel/frames";
 
 // One source for both lists: lib/domain (PROC-001), the same ones the components use.
@@ -32,6 +38,8 @@ export interface EpistemicNode {
   status: string | null;
   caseId: string | null;
   text: string;
+  /** The element is inside a child frame (a notification preview), read by evaluation or from its srcdoc. */
+  inFrame?: boolean;
 }
 
 export interface RecordedEventFact {
@@ -97,7 +105,7 @@ export async function snapshotEpistemic(
   const { reads, unreadable } = await readChildFrames(frames, collectInPage);
   for (const { url, via, result } of reads) {
     const prefix = via === "frame" ? `frame(${url})` : `frame(${url}, srcdoc)`;
-    nodes.push(...result.map((n) => ({ ...n, path: `${prefix} ${n.path}` })));
+    nodes.push(...result.map((n) => ({ ...n, path: `${prefix} ${n.path}`, inFrame: true })));
   }
   return { nodes, unreadableFrames: unreadable };
 }
@@ -121,6 +129,21 @@ export async function checkTruth(
 
   for (const n of nodes) {
     const where = n.path;
+    if (n.inFrame) {
+      if (n.epistemic !== null && !(DATA_EPISTEMIC_VALUES as readonly string[]).includes(n.epistemic))
+        v.push({
+          rule: "T9",
+          where,
+          detail: `data-epistemic ${JSON.stringify(n.epistemic)} is not a notification renderer value`,
+        });
+      // T8 does not apply in a frame; a renderer marker is not a status badge (T1 does not apply).
+      // A status badge planted in the frame (badge vocabulary and a status) still gets T2–T6.
+      const badge =
+        n.epistemic !== null &&
+        (EPISTEMIC_VALUES as readonly string[]).includes(n.epistemic) &&
+        (n.statusKind !== null || n.status !== null);
+      if (!badge) continue;
+    }
     if (n.epistemic === null) {
       // Allow-list of one: an OPEN task with no status event. Anything else must say what it is.
       const openTask = n.statusKind === "task" && n.status === "OPEN" && n.eventId === null;

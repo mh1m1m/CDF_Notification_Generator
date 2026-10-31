@@ -92,6 +92,81 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 | QA | Playwright & Visual QA | 76 |
 | SEC | Security & Adversarial Testing | 39 |
 
+### 3.1 M1 coverage (V13-PROC-012)
+
+The 280 rows with `Milestone` = M1, counted from the CSV on `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026). The
+status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
+merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
+merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief
+Architect's rulings on #71:
+
+- A **document deliverable** is COMPLETE when the document is merged, an independent reviewer accepted it and it covers
+  what the row asks for M1; its `Test_ID` reads `review: #PR ACCEPT <sha>`. A living document that M1 only starts stays
+  IN_PROGRESS.
+- A **standing rule** (a prohibition or a process rule) is COMPLETE only when an automated check enforces it and
+  `Test_ID` names that check. Otherwise it stays IN_PROGRESS with `Evidence` "standing rule, review-enforced; no breach
+  found on develop `<sha>`".
+
+COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, were checked by SEC before merge. REQ-SEC-002 and REQ-GOV-001
+are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Later merges (#61, #68, #69 and onwards)
+were not re-assessed in this pass; their owners update their rows (§6).
+
+**By status**
+
+| Status | Rows |
+|---|---|
+| COMPLETE | 68 |
+| IN_PROGRESS | 171 |
+| — of which review-enforced standing rules | 51 |
+| — of which document or configuration evidence only, no test | 38 |
+| BLOCKED | 16 |
+| PRODUCTION_SUBSTITUTION_REQUIRED | 1 |
+| NOT_STARTED | 24 |
+| **Total** | **280** |
+
+**By owner team**
+
+| Owner team | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
+|---|---|---|---|---|---|---|
+| ARCH | 105 | 9 | 81 | 12 | 0 | 3 |
+| QA | 51 | 9 | 24 | 4 | 0 | 14 |
+| DB | 33 | 15 | 17 | 0 | 1 | 0 |
+| FE | 31 | 12 | 19 | 0 | 0 | 0 |
+| SEC | 27 | 14 | 13 | 0 | 0 | 0 |
+| UX | 26 | 5 | 14 | 0 | 0 | 7 |
+| PROC | 7 | 4 | 3 | 0 | 0 | 0 |
+
+PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
+
+**By gate** (a row with several gates counts under each; "(none)" is a row without a gate)
+
+| Gate | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
+|---|---|---|---|---|---|---|
+| QG-01 | 10 | 2 | 8 | 0 | 0 | 0 |
+| QG-02 | 29 | 10 | 16 | 3 | 0 | 0 |
+| QG-03 | 32 | 21 | 8 | 2 | 1 | 0 |
+| QG-04 | 11 | 5 | 6 | 0 | 0 | 0 |
+| QG-05 | 18 | 6 | 10 | 1 | 0 | 1 |
+| QG-06 | 23 | 4 | 16 | 2 | 0 | 1 |
+| QG-07 | 18 | 1 | 7 | 0 | 0 | 10 |
+| QG-08 | 17 | 3 | 10 | 0 | 0 | 4 |
+| QG-09 | 7 | 1 | 4 | 0 | 0 | 2 |
+| QG-10 | 4 | 1 | 3 | 0 | 0 | 0 |
+| QG-11 | 14 | 0 | 11 | 2 | 0 | 1 |
+| QG-12 | 15 | 0 | 4 | 10 | 0 | 1 |
+| QG-13 | 15 | 1 | 10 | 3 | 0 | 1 |
+| Gate A | 4 | 0 | 3 | 1 | 0 | 0 |
+| Gate B | 19 | 7 | 9 | 3 | 0 | 0 |
+| Gate C | 23 | 14 | 7 | 2 | 0 | 0 |
+| Gate D | 5 | 0 | 2 | 0 | 0 | 3 |
+| Gate E | 16 | 3 | 9 | 0 | 0 | 4 |
+| Gate F | 6 | 1 | 3 | 0 | 0 | 2 |
+| Gate G | 6 | 0 | 4 | 1 | 0 | 1 |
+| Gate H | 2 | 0 | 2 | 0 | 0 | 0 |
+| Gate I | 5 | 3 | 2 | 0 | 0 | 0 |
+| Gate J | 10 | 0 | 1 | 9 | 0 | 0 |
+| (none) | 110 | 18 | 85 | 2 | 0 | 5 |
+
 ## 4. Gate crosswalk
 
 PROMPT_A Part XXIII "Mandatory Gates" lists the conditions that block production deployment (register row REQ-CICD-010). The single gate rule — all gates pass with evidence, failed gates stay visible — is REQ-GOV-028. "Rows tagged" counts register rows whose `Gate` field names the gate.
