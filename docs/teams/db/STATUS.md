@@ -15,6 +15,8 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-010]` | `feature/V13-DB-010-my-work-columns` | migration 0008: `my_work_tasks` + `case_title_ar`, `case_title_en`, `case_records_state`, `status_event_id` (FE-005, ARCH request 31 Oct) | COMPLETE — #31 merged b5ee5f46 (SEC ACCEPT 3bd1c93) |
 | `[V13-DB-011]` | `feature/V13-DB-011-fk-indexes` | migration 0009: foreign-key index review (OI-032), FK coverage suite | COMPLETE — #42 merged f39af8b (SEC ACCEPT 3e78d52, ARCH accepted) |
 | `[V13-DB-012]` | `feature/V13-DB-012-hosted-guard` | `scripts/db/hosted-bundle.mjs` generates the plan §5.7 text guard; unit + hosted-sim tests | COMPLETE — #44 merged 2766fd9 (CI 7/7, run 41237743471) |
+| `[V13-DB-014]` | `feature/V13-DB-013-guard-tail` | text guard runs first: start, body, final statement and trailer checked before any statement runs | IN_PROGRESS — #47, SEC re-review of 8c6f4f4 pending (CI 7/7) |
+| `[V13-DB-015]` | `feature/V13-DB-015-notification-ops` | migration 0010: `notifications_page` / `notifications_count` for the Notification Operations Center (S4, FE-006) | IN_PROGRESS — PR open, SEC review and SEC-DB-17 registry entries pending |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -91,8 +93,18 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
   added blank line and CRLF each fail; unchanged passes, also with a trailer) and `tests/integration/hosted-sim.spec.ts`
   (PostgreSQL raises the guard for five tampered texts and applies nothing). Mutation-checked (a wrong hash fails 8).
 
+## In progress: V13-DB-015 (FE-006, UX S4)
+- Migration 0010: SECURITY INVOKER `notifications_page` (keyset on created_at desc, id desc; text cursor
+  `created_at_cursor` with microseconds, because a timestamptz parameter loses them in the driver's Date; limit 1..100)
+  and `notifications_count` with one filter set (lifecycle, template code, case display number after authorisation,
+  created range). Same access as `case_notifications`; no person columns. Index `notification_created_idx`.
+- Tests: `tests/integration/notification-ops.spec.ts` (21): shape and grants, values, per persona × workspace rows =
+  union of the case tabs = expected and count = rows, restricted 0009, closed 0010, other workspace and other persona
+  (uncommitted drafts seen through a context switch), Scenario E, filters, unknown filter values, paging (ties, cap,
+  half or malformed cursor, foreign cursor), Epsilon/Zeta/unknown, forged contexts, app login 42501. Mutation-checked.
+
 ## Next
-- Next free migration: 0010.
+- Next free migration: 0011.
 - OI-026 per-case paging: proposal accepted by ARCH (`*_page` functions next to the current reads), after M1.
 
 ## Review given
