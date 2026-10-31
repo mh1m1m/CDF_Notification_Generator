@@ -14,8 +14,19 @@ catalogue in `docs/security/AUTHORIZATION_MATRIX.md` §6 and the threats in `doc
 | `tests/security/e2e/surface.spec.ts`          | Playwright       | SEC-APP-08, -10, -13, -14, -15         | TM-I8, TM-I10, TM-I11, TM-I13 |
 | `tests/security/public-actions.ts`            | shared allow-list | SEC-APP-18                            | TM-E5                      |
 | `tests/security/e2e/case-pages.spec.ts` (V13-SEC-006) | Playwright | SEC-APP-01, -02, -09 (GET), -11 | TM-I1, TM-I2, TM-I3, TM-S7, TM-T6 |
+| `tests/security/app/repo-scans.spec.ts` + `tests/security/repo-scan.ts` (V13-SEC-008) | Vitest `unit` | SEC-APP-19, -20 | TM-I8 |
 
 What each suite proves:
+
+- **Repository scans (V13-SEC-008)**: SEC-APP-19 scans every file Git tracks (`git ls-files`; binary files and
+  symbolic links skipped, nothing outside the repository read) for credential shapes: private-key blocks, connection
+  strings with a password, signed tokens, GitHub/AWS/Slack/provider/Google key prefixes and literal secret
+  assignments (REQ-SEC-002). SEC-APP-20 runs the seven personal-data rules of the copy-time evidence scan (EVS-01)
+  over the seeds, fixtures, sentinel, integration, database-security and e2e specs (REQ-GOV-001). A finding reports
+  rule, file and line only, never the matched text. Synthetic credentials in tests, CI service containers and local
+  tooling carry the marker `not-a-secret` / `not-a-real-password`; anything else needs an ALLOW entry (one file, one
+  rule, a reason; unused entries fail). Planted samples are assembled at runtime from fragments in a temporary Git
+  repository, so no committed file holds a credential-shaped string.
 
 - **Session forgery**: algorithm and header confusion (HS384/HS512/none/RS256, missing alg, wrong typ, `crit`,
   `b64=false`, embedded `jwk`/`jku`/`kid`), malformed segments, claim type confusion and look-alike values
