@@ -71,4 +71,5 @@ export const en: Record<keyof typeof ar, string> = {
   "layerA.cancelled": "Cancelled",
   "layerA.failed": "Could not be completed",
   "layerA.notApplicable": "Not applicable",
+  "preview.caption": "Isolated preview of what the recipient would receive — synthetic data, not sent",
 };

@@ -217,6 +217,7 @@ Where the build differs from §3.1–§3.4:
 | Dates | Gregorian, Riyadh time, long month (`٢٠ أكتوبر ٢٠٢٦`), Arabic-Indic digits in Arabic (`components/format.ts`). |
 | `Button` | `Button` plus `ButtonLink`, for navigation only. `critical` is used only by `ConfirmDialog`. |
 | `ConfirmDialog` | A client component (`showModal`). It needs JavaScript to open, so pages use it only for confirmations. |
+| `NotificationPreviewFrame` (V13-UX-006) | `{ t, rendered: { html } (from renderEmail or renderPlatform, i.e. built from a `Projected<T>`), title, lang, testId? }`. A server component. Renders `<figure>` with `<iframe srcdoc sandbox="" referrerpolicy="no-referrer">` (no `src`, no `allow-*`) and the caption `common.preview.caption`. The frame has `title`, `lang` and `dir`; its height is fixed (`min(75vh, 48rem)`) because a frame without scripts cannot size itself. Runtime guard: anything that is not a full document carrying `data-marking="DESIGN_PREVIEW"`, or an empty title, renders nothing and logs a warning without content. The srcdoc document inherits the page CSP (FE DESIGN §13): checked in Chromium, it renders, its inline styles apply, there is no violation, and scripts never run. Test ids `notification-preview`, `notification-preview-frame`. |
 | Not built yet | The notification sending family (§3.3) waits for V13-PROC-005, so that "sent" and "delivered" are not shown before PROC fixes where they come from. `NamedAccessFlag` and `RecordsStateBadge` are inside `CaseHeader` (V13-UX-002) until a list needs them. |
 
 ### 3.5 Tests (V13-UX-002/003 acceptance)
