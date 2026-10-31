@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 31 Oct 2026 19:20 UTC · Branch: `docs/V13-SEC-001-threat-model` · `develop` now at `a6c224a`
+Updated: 31 Oct 2026 20:25 UTC · Branch: `docs/V13-SEC-001-threat-model` · `develop` now at `3b43530`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -18,7 +18,16 @@ Updated: 31 Oct 2026 19:20 UTC · Branch: `docs/V13-SEC-001-threat-model` · `de
   merged #30 (`a6c224a`), DB ACCEPT + ARCH ACCEPT `9f1e8bd`, CI run 41232084126 green; ARCH's hosted-like re-run PASS
   (7 planted faults each FAIL on the right check). ARCH runs it on hosted after each migration with isolation_checks.sql
 - Reviews since: #24 PROC-002 ACCEPT `2aed44d`; #26 DB-006 ACCEPT `3f2108a`; #28 DB-009 ACCEPT `125b1f0`;
-  #31 DB-010 ACCEPT `3bd1c93`; #32 FE-005 ACCEPT `018b46e`
+  #31 DB-010 ACCEPT `3bd1c93`; #32 FE-005 ACCEPT `018b46e`; #36 ARCH e2e database URL CHANGES (`?database=` override
+  bypassed the loopback guard, proved by probe; fixed `b7f3705`) then ACCEPT; #39 authority check ACCEPT (OI-033, four
+  LOWs); #40 disclosure project ACCEPT (OI-035, two LOWs); #42 DB-011 ACCEPT `3e78d52`; #44 DB-012 ACCEPT (INFO: also
+  assert the trailer after the marker); #27 re-confirm ACCEPT `6e62848`; #23 ACCEPT `d439d59`; #46 DB-013 ACCEPT
+  `0d9bbec`; #45 PROC-005 CHANGES `8384efe` (lifecycle projection port defaults to null, so a hand-made projected
+  model passes the VALIDATED gate; OI-035 (1) still open)
+- V13-SEC-005 — follow-ups: P08 detail ordered; e2e surface spec scans the bundle, HTML/flight data and health body for
+  the session secret value and the app database password value (asserted by label, value never printed) — COMPLETE,
+  merged #41 (`3b43530`), DB ACCEPT + ARCH ACCEPT `7529200`, CI run 41237017779 7/7; combined tree unit 1021,
+  test:db 358, e2e 95
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/teams/sec/STATUS.md`
@@ -30,12 +39,13 @@ Updated: 31 Oct 2026 19:20 UTC · Branch: `docs/V13-SEC-001-threat-model` · `de
 | Local, ARCH-001 head `5c53ec4`: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, then manual probes against `next start` (synthetic secret, no DB) | lint 0, typecheck 0, unit **251 passed / 17 files**, build ok; signOut action by id: runs via `/my-work` with cookie, refused cross-origin (500, digest only), **not run** via public `/sign-in` without cookie; health has resource CSP + no-store | 251 + 8 probes | `5c53ec4` |
 
 | Local, #32 head `018b46e` merged with `develop` `a6c224a` (throwaway branch): `pnpm db:reset`, `pnpm typecheck`, `pnpm test`, `pnpm test:db` | typecheck 0, unit **909/909**, test:db **377/377** (includes SEC-002 suites and post-apply checks) | 909 + 377 | `018b46e` + `a6c224a` |
+| Local, #41 head `7529200`: `pnpm db:reset`, `pnpm test:e2e`; post-apply spec | e2e **93/93**, post-apply spec **27/27** | 93 + 27 | `7529200` |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.
 - SEC-INFO-3 (LOW, residual risk ACCEPTED by ARCH, OPEN_ISSUES): PUBLIC holds TEMP on the database, so the request
   role can create temp tables; pinned by catalog-hardening so a change is visible.
-- Follow-up (cosmetic): P08 detail `string_agg` in post_apply_checks.sql has no ORDER BY (ARCH note); next SEC PR.
+- OI-033 (four LOWs, authority `check()` binding) and OI-035 (1) (disclosure context from server records) open.
 - INFO on #32: `?ref=`/`?stale=` echo any well-formed UUID as a reference (no disclosure).
 
 ## Dependencies and requests
