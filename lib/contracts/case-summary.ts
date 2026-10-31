@@ -69,11 +69,6 @@ export const CaseListFilterSchema = z.strictObject({
 export type CaseListFilter = z.input<typeof CaseListFilterSchema>;
 
 /**
- * One page of authorised cases. `total` counts only cases the identity may see that match the same filters (cursor
- * aside): it is computed after authorisation, in the same request transaction as the page, so it never reveals an
- * unauthorised case (§40; ARCH, 28 Oct 2026).
- */
-/**
  * Per-row portfolio summaries, computed by the source after authorisation (SCREENS S2): the case's last recorded
  * procedural event (both null when it has none) and the identity's own open tasks in that case.
  */
@@ -92,6 +87,11 @@ export type CaseListExtras = z.infer<typeof CaseListExtrasSchema>;
 /** One portfolio row: the case summary plus its row summaries. */
 export type CaseListItem = CaseSummary & CaseListExtras;
 
+/**
+ * One page of authorised cases. `total` counts only cases the identity may see that match the same filters (cursor
+ * aside): it is computed after authorisation, in the same request transaction as the page, so it never reveals an
+ * unauthorised case (§40; ARCH, 28 Oct 2026).
+ */
 export interface CaseListPage {
   readonly items: readonly CaseListItem[];
   readonly next_cursor: string | null;

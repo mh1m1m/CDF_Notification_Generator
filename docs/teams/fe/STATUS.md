@@ -62,6 +62,10 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
 | FE-004 integration probe (`tests/integration/fe-case-records.spec.ts`, not committed yet; lands in `tests/integration/fe/` once DB #21 is on `develop`) on a local merge of FE-004 45f0fec + DB PR #21 f53d007, after `pnpm db:reset` (7 migrations): Alpha on 0001 = SECRETARY, events TASK_STATUS_CHANGED then CASE_OPENED, own task SECRETARY OPEN without event, every task status event among the case's events; 0010 newest CASE_CLOSED 0e…0110; unknown, Alpha 0002, Alpha 0009, Gamma 0009, Delta@GOVERNANCE 0006, Epsilon expired → nothing on all four reads; Beta 0009 and Delta@SECRETARIAT 0006 readable; every visible case of Alpha and Beta parses. Plus the FE-003 probe on the same merge | pass | 10/10 + 15/15 | local |
 | FE-004 throwaway browser probe (not committed; e2e is QA's), `pnpm build && pnpm start` on the same merge: Alpha portfolio → 0001 by UUID, title starts with the number, capacity SECRETARY, 1 own task, 2 last events, Truth Inspector 0 violations on overview and tasks (task status names event 0e…0201), axe 0 serious/critical on all 4 tabs, one data-case-id on the page, no CSP errors; unknown, malformed, upper-case, 0002, 0009, 0099 → HTTP 404 with the unknown-route heading and no case number or workspace in the page; 0010 closed notice + CASE_CLOSED first; no horizontal scroll at 360 px on all tabs; English LTR; Beta 0009 with named-access flag; Delta@GOVERNANCE 0006 → 404 | pass | 3/3 | local |
 
+| FE-003 after merging develop c4b37c3 (DB #15, #17, #21, PROC #18), ARCH's two nits, explicit column lists for `portfolio_page` and `case_header` (SEC LOW): `pnpm lint`, `pnpm typecheck`, `pnpm format:check` | pass | — | FE-003 head |
+| Same: `pnpm test` (unit) | pass | 771 | FE-003 head |
+| Same: `pnpm db:reset` then `pnpm test:db` (includes the committed FE suite `tests/integration/fe/case-source.spec.ts`, 15) | pass | 11 files, 223 | FE-003 head |
+
 ## Unresolved defects
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
   pattern `^[A-Za-z0-9._:-]{1,80}$` (both in `lib/contracts`, this PR, needs ARCH + SEC ACCEPT); DB returns
@@ -82,8 +86,7 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
   default, asked of ARCH 31 Oct); `app/not-found.tsx` has no `data-testid="not-found-state"` (ARCH's file, asked).
 
 ## Dependencies and requests
-- FE owns `tests/integration/fe/**` (ARCH, 03:48). The suite lands once DB's PR with the claims-key test support and
-  the three columns is on `develop`.
+- FE owns `tests/integration/fe/**` (ARCH, 03:48). `tests/integration/fe/case-source.spec.ts` is committed with FE-003.
 - DB: merge of DB-001..005; the read-function columns per the ruling.
 - UX-002/003: FE-002 ships minimal nav/switcher markup; swapped for UX's SideNav/WorkspaceSwitcher when they land.
 - QA: Scenario C end-to-end (Delta GOVERNANCE ↔ SECRETARIAT) in QA-002; FE did not add e2e (tests/e2e is QA's).
