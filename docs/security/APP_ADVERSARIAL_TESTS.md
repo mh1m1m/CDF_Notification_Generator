@@ -14,8 +14,17 @@ catalogue in `docs/security/AUTHORIZATION_MATRIX.md` §6 and the threats in `doc
 | `tests/security/e2e/surface.spec.ts`          | Playwright       | SEC-APP-08, -10, -13, -14, -15         | TM-I8, TM-I10, TM-I11, TM-I13 |
 | `tests/security/public-actions.ts`            | shared allow-list | SEC-APP-18                            | TM-E5                      |
 | `tests/security/e2e/case-pages.spec.ts` (V13-SEC-006) | Playwright | SEC-APP-01, -02, -09 (GET), -11 | TM-I1, TM-I2, TM-I3, TM-S7, TM-T6 |
+| `tests/security/e2e/notification-center.spec.ts` (V13-SEC-007) | Playwright | SEC-APP-02, -07, -10 on `/notifications` | TM-I3, TM-I4, TM-I10 |
 
 What each suite proves:
+
+- **Notification Center (V13-SEC-007)**: for Alpha and Delta, every row names a case visible in the workspace and no
+  hidden case id or number appears in the HTML; a hidden number, also padded or lower-case, answers exactly like
+  CDF-DEMO-2026-0999 (no results, count 0), and fragments of it are refused as malformed; eleven forged cursors (not
+  JSON, wrong version, extra or missing key, millisecond instant, SQL in the instant, bad or upper-case id, wrong type,
+  `__proto__`), an over-long cursor, a forged trail, repeated parameters and impossible dates all give the generic
+  invalid state with a reference and no internals; a well-formed cursor the reader could have issued still pages only
+  visible cases.
 
 - **Session forgery**: algorithm and header confusion (HS384/HS512/none/RS256, missing alg, wrong typ, `crit`,
   `b64=false`, embedded `jwk`/`jku`/`kid`), malformed segments, claim type confusion and look-alike values

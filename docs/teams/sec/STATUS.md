@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 31 Oct 2026 22:45 UTC · Branch: `docs/V13-SEC-007-matrix-surface` · `develop` now at `4cc72ec`
+Updated: 31 Oct 2026 23:20 UTC · Branch: `docs/V13-SEC-007-matrix-surface` · `develop` now at `9290778`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -45,8 +45,14 @@ Updated: 31 Oct 2026 22:45 UTC · Branch: `docs/V13-SEC-007-matrix-surface` · `
 - V13-SEC-007 — matrix and surface follow-ups: `—` in the `api_install_claims_key` row; a reads row for
   `notifications_page` / `notifications_count` (0010); the SEC-APP-18 row given its own columns; an undecodable-path
   surface row; `surface.spec.ts` ROUTES add `/notifications`, a hidden case and two undecodable paths (headers once,
-  no-store with a session); APP_ADVERSARIAL_TESTS records SEC-APP-17 as covered by FE's Center e2e and the draft action
-  — IN_REVIEW
+  no-store with a session); APP_ADVERSARIAL_TESTS records SEC-APP-17 as covered by FE's Center e2e and the draft action;
+  after #61, `tests/security/e2e/notification-center.spec.ts` (Alpha and Delta: rows name visible cases only, hidden
+  numbers answer like unknown ones, 11 forged cursors, forged trails and odd parameters refused with a reference) —
+  IN_REVIEW (#70)
+- V13-SEC-008 — repository scans: SEC-APP-19 credential shapes in every tracked file (REQ-SEC-002), SEC-APP-20
+  personal-data shapes in seeds, fixtures and test inputs (REQ-GOV-001); findings report rule, file and line only —
+  IN_REVIEW (#72)
+- Review #71 PROC-012: 31 of 33 security rows accepted; REQ-SEC-002 and REQ-GOV-001 back to IN_PROGRESS until #72
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
