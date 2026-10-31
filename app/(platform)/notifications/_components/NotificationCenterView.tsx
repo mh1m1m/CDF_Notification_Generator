@@ -7,7 +7,12 @@ import Link from "next/link";
 import { NOTIFICATION_LIFECYCLE_STATUSES, type NotificationLifecycleStatus } from "@/lib/contracts";
 import type { Locale, MessageKey, Translator } from "@/lib/i18n";
 import type { NotificationCenterView as View } from "@/lib/server/notification-center";
-import { CENTER_PATH, hasCenterFilters, type CenterQuery } from "@/lib/server/notification-center-query";
+import {
+  CENTER_PATH,
+  centerFilterFormKey,
+  hasCenterFilters,
+  type CenterQuery,
+} from "@/lib/server/notification-center-query";
 import { ScrollRegion } from "../../_components/ScrollRegion";
 import styles from "./center.module.css";
 
@@ -213,7 +218,9 @@ export function NotificationCenterView({ t, locale, view }: { t: Translator; loc
   return (
     <section data-testid="notifications-page">
       <h1>{t("notifications.heading")}</h1>
-      {view.kind === "page" ? <Filters t={t} query={view.query} /> : null}
+      {view.kind === "page" ? (
+        <Filters key={centerFilterFormKey(view.query)} t={t} query={view.query} />
+      ) : null}
       {view.kind === "invalid" ? (
         <>
           <ErrorState

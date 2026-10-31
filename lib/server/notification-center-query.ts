@@ -110,6 +110,20 @@ export function toCenterFilter(query: CenterQuery): NotificationCenterFilter {
   };
 }
 
+/**
+ * Identity of the filter form's values (same fix as OI-043 on the Portfolio): the controls are uncontrolled, so the
+ * form is keyed on this value and remounts with the URL's filters after Clear, Back or any client-side navigation.
+ */
+export function centerFilterFormKey(query: CenterQuery): string {
+  return JSON.stringify([
+    query.status ?? "",
+    query.template ?? "",
+    query.caseNumber ?? "",
+    query.from ?? "",
+    query.to ?? "",
+  ]);
+}
+
 export function hasCenterFilters(query: CenterQuery): boolean {
   return (
     query.status !== undefined ||

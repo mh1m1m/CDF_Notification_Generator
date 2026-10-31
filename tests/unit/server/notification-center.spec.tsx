@@ -11,6 +11,7 @@ import { loadNotificationCenter, type NotificationCenterView } from "@/lib/serve
 import {
   CENTER_MAX_TRAIL,
   CENTER_PAGE_SIZE,
+  centerFilterFormKey,
   centerNextHref,
   centerPositionOf,
   centerPrevHref,
@@ -374,5 +375,36 @@ describe("NotificationCenterView markup", () => {
   it("no investigation content: the markup carries no event, author or narrative fields", async () => {
     const html = render("en", await load());
     expect(html).not.toMatch(/author|narrative|recipient_name|email/i);
+  });
+});
+
+describe("filter form identity (OI-043 on the Center)", () => {
+  it("changes with every filter and only then; the view keys the form with it", async () => {
+    const keys = [
+      {},
+      { status: "DRAFT" },
+      { template: "CF-24_MEETING_INVITATION" },
+      { case: "CDF-DEMO-2026-0001" },
+      { from: "2026-10-01" },
+      { to: "2026-10-01" },
+    ].map((p) => centerFilterFormKey(ok(p)));
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(centerFilterFormKey(ok({ status: "DRAFT", after: CURSOR_A, back: "~" }))).toBe(
+      centerFilterFormKey(ok({ status: "DRAFT" })),
+    );
+    for (const params of [{}, { status: "DRAFT" }]) {
+      const view = await loadNotificationCenter(
+        { ctx: ctxFor(SECRETARY), reader: createFakeNotificationCenter() },
+        params,
+      );
+      const tree = View({ t: createTranslator("en"), locale: "en", view }) as {
+        props: { children: unknown[] };
+      };
+      const form = tree.props.children.find(
+        (c): c is { key: string | null } =>
+          typeof c === "object" && c !== null && "props" in c && "query" in (c as { props: object }).props,
+      );
+      expect(form?.key).toBe(view.kind === "page" ? centerFilterFormKey(view.query) : null);
+    }
   });
 });
