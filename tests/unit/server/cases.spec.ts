@@ -2,7 +2,7 @@
 // authorisation, input validation. The V13-records adapter is covered in v13-records-adapter.spec.ts and integration.
 import { describe, expect, it } from "vitest";
 import type { CaseSourceAdapter, CaseSummary } from "@/lib/contracts";
-import { InvalidCursorError } from "@/lib/adapters/case-source/cursor";
+import { InvalidCursorError } from "@/lib/contracts";
 import { getCaseForRoute, listPortfolio } from "@/lib/server/cases";
 import { AppError } from "@/lib/server/errors";
 import { caseIdOf, createFakeCaseSource, FAKE_CASES } from "./support/fake-case-source";
