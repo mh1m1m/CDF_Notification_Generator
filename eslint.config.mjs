@@ -55,6 +55,7 @@ const APP_CODE = [
   "components/**/*.{ts,tsx}",
   "lib/**/*.{ts,tsx}",
   "proxy.ts",
+  "instrumentation.ts",
   "next.config.ts",
 ];
 
@@ -84,6 +85,8 @@ export default tseslint.config(
       "test-results/**",
       "blob-report/**",
       "next-env.d.ts",
+      // Frozen evidence copies (byte-exact, sha256-recorded; docs/DEPENDENCIES.md decision 15).
+      "tests/unit/**/__evidence__/**",
     ],
   },
   js.configs.recommended,
