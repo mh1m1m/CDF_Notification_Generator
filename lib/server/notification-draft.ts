@@ -2,9 +2,10 @@
 // lib/authz pre-check for the case named in the form → Zod parse (the contract's schema) → api_create_notification_draft,
 // which re-checks access, role, ACTIVE, input and the author's idempotency key and writes the audit event. The case id
 // comes from the route (rendered into the form by the server); the database decides whether this persona may draft
-// there. Outcomes carry ids only; logs carry codes only, never form values or database messages.
+// there, and only the case id it returns is used afterwards (SEC). Persona and workspace come only from the session.
+// Outcomes carry ids only; logs carry codes only, never form values or database messages.
 import "server-only";
-import { parseCaseId, precheck } from "@/lib/authz";
+import { precheck } from "@/lib/authz";
 import {
   CreateNotificationDraftCommandSchema,
   NotificationCommandRefusedError,
@@ -60,21 +61,26 @@ export interface DraftForm {
   readonly idempotency_key: unknown;
 }
 
+/**
+ * The command's outcome. A created draft carries the case id and notification id the database command returned (SEC
+ * condition 1: never the form's case id). Every refusal is the same generic outcome with the correlation id; the form's
+ * case id is never echoed, redirected to, shown or logged.
+ */
 export type DraftOutcome =
   | { readonly kind: "created"; readonly caseId: CaseId; readonly notificationId: string }
-  | { readonly kind: "duplicate"; readonly caseId: CaseId; readonly correlationId: string }
-  | { readonly kind: "error"; readonly caseId: CaseId | null; readonly correlationId: string };
+  | { readonly kind: "refused"; readonly correlationId: string };
 
 export async function createNotificationDraft(
   { ctx, drafts }: DraftDeps,
   form: DraftForm,
 ): Promise<DraftOutcome> {
   const correlationId = ctx.correlationId;
-  // Only a well-formed id is ever echoed into the redirect; the page re-authorises it like any route id.
-  const caseId = parseCaseId(form.case_id);
+  const refused = (code: string): DraftOutcome => {
+    logServerError("notification_draft_refused", correlationId, { code });
+    return { kind: "refused", correlationId };
+  };
   if (!precheck(ctx.identity, "notification.draft.create", { caseId: form.case_id }).allow) {
-    logServerError("notification_draft_refused", correlationId, { code: "PRECHECK" });
-    return { kind: "error", caseId, correlationId };
+    return refused("PRECHECK");
   }
   const parsed = CreateNotificationDraftCommandSchema.safeParse({
     case_id: form.case_id,
@@ -82,62 +88,29 @@ export async function createNotificationDraft(
     recipient_class: form.recipient_class,
     idempotency_key: form.idempotency_key,
   });
-  if (!parsed.success || caseId === null) {
-    logServerError("notification_draft_refused", correlationId, { code: "VALIDATION" });
-    return { kind: "error", caseId, correlationId };
-  }
+  if (!parsed.success) return refused("VALIDATION");
   try {
     const created = await drafts.createDraft(ctx.identity, parsed.data);
     return { kind: "created", caseId: created.case_id, notificationId: created.notification_id };
   } catch (error) {
-    if (error instanceof NotificationCommandRefusedError) {
-      logServerError("notification_draft_refused", correlationId, { code: error.refusal });
-      return error.refusal === "DUPLICATE"
-        ? { kind: "duplicate", caseId, correlationId }
-        : { kind: "error", caseId, correlationId };
-    }
+    if (error instanceof NotificationCommandRefusedError) return refused(error.refusal);
     logServerError("notification_draft_failed", correlationId, error);
-    return { kind: "error", caseId, correlationId };
+    return { kind: "refused", correlationId };
   }
 }
 
-/**
- * Where the action sends the browser: the case's Notifications tab with an outcome flag. A malformed case id (only a
- * tampered form has one) goes to the portfolio with no detail.
- */
-export function draftRedirectTarget(outcome: DraftOutcome): string {
-  if (outcome.caseId === null) return "/portfolio";
-  const base = `/cases/${outcome.caseId}/notifications`;
-  switch (outcome.kind) {
-    case "created":
-      return `${base}?created=${outcome.notificationId}`;
-    case "duplicate":
-      return `${base}?duplicate=${outcome.correlationId}`;
-    case "error":
-      return `${base}?ref=${outcome.correlationId}`;
-  }
+/** Where a created draft sends the browser: the Notifications tab of the case the database returned. */
+export function createdDraftTarget(outcome: Extract<DraftOutcome, { kind: "created" }>): string {
+  return `/cases/${outcome.caseId}/notifications?created=${outcome.notificationId}`;
 }
 
-/** The outcome flag on the Notifications tab's URL (untrusted: only well-formed ids are kept). */
-export type DraftNotice =
-  | { readonly kind: "created"; readonly notificationId: string }
-  | { readonly kind: "duplicate"; readonly correlationId: string }
-  | { readonly kind: "error"; readonly correlationId: string };
+/** The "created" flag on the Notifications tab's URL (untrusted: only a well-formed id is kept). */
+export type DraftNotice = { readonly kind: "created"; readonly notificationId: string };
 
 const one = (v: unknown): string | undefined =>
   typeof v === "string" ? v : Array.isArray(v) && typeof v[0] === "string" ? v[0] : undefined;
-const uuid = (v: unknown): string | null => {
-  const parsed = UuidSchema.safeParse(one(v));
-  return parsed.success ? parsed.data : null;
-};
 
 export function parseDraftNotice(params: Readonly<Record<string, unknown>> | undefined): DraftNotice | null {
-  if (!params) return null;
-  const created = uuid(params.created);
-  if (created) return { kind: "created", notificationId: created };
-  const duplicate = uuid(params.duplicate);
-  if (duplicate) return { kind: "duplicate", correlationId: duplicate };
-  const ref = uuid(params.ref);
-  if (ref) return { kind: "error", correlationId: ref };
-  return null;
+  const parsed = UuidSchema.safeParse(one(params?.created));
+  return parsed.success ? { kind: "created", notificationId: parsed.data } : null;
 }

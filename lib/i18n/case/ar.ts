@@ -71,7 +71,6 @@ export const ar = {
   "draft.recipient": "فئة المستلم",
   "draft.submit": "إنشاء المسودة",
   "draft.created": "أُنشئت مسودة الإشعار لهذه القضية.",
-  "draft.duplicate": "أُنشئت هذه المسودة من قبل، فلم تُنشأ مرة ثانية. رقم المتابعة: {reference}",
   "draft.error": "تعذّر إنشاء المسودة. لم يتغير شيء.",
   "error.title": "تعذّر عرض هذه الصفحة الآن",
   "error.body":

@@ -174,6 +174,20 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
     ]);
   });
 
+  it("a swapped id to another case Alpha may draft on (0003) lands the draft and its audit event there only (known limit)", async () => {
+    const { outcome, after } = await attempt(ALPHA, { case_id: CASE(3) as never });
+    expect(outcome).toBe("OK");
+    expect(after.created.map((r) => r.case_id)).toEqual([CASE(3)]);
+    for (const k of ["notifications", "events", "audit"] as const) {
+      for (const c of new Set([...Object.keys(before[k]), ...Object.keys(after[k])])) {
+        expect(after[k][c] ?? 0, `${k} ${c}`).toBe((before[k][c] ?? 0) + (c === CASE(3) ? 1 : 0));
+      }
+    }
+    expect(after.auditForCorrelation).toEqual([
+      { action: "NOTIFICATION_DRAFT_CREATED", case_id: CASE(3), entity_id: after.created[0]?.id },
+    ]);
+  });
+
   it("an investigator (Beta, Investigations) may draft on 0001 too", async () => {
     expect((await attempt(BETA, {})).outcome).toBe("OK");
   });
@@ -189,7 +203,7 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
   });
 
   it.each([
-    ["Alpha on 0002 (not visible in Secretariat)", ALPHA, 2],
+    ["Alpha on 0002 (another workspace case, not visible in Secretariat)", ALPHA, 2],
     ["Alpha on restricted 0009 (not assigned)", ALPHA, 9],
     ["Delta in Governance on 0001 (role may not draft)", DELTA_GOV, 1],
     ["Alpha on an unknown case id", ALPHA, 99],

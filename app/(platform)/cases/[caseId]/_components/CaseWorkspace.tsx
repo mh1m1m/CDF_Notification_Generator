@@ -9,7 +9,7 @@ import { toBadgeEpistemic } from "@/lib/domain";
 import { translateKey, type Locale, type MessageKey, type Translator } from "@/lib/i18n";
 import { CASE_TABS, type CaseTab, type CaseWorkspaceView } from "@/lib/server/case-workspace";
 import type { DraftFormView, DraftNotice } from "@/lib/server/notification-draft";
-import { createDraft } from "../notifications/actions";
+import { DraftForm } from "../notifications/_components/DraftForm";
 import { ScrollRegion } from "../../../_components/ScrollRegion";
 import styles from "./case.module.css";
 import {
@@ -388,80 +388,47 @@ export function NotificationTable({
   );
 }
 
-/** The outcome of the last draft action: a polite status for success, an alert with the reference otherwise. */
+/** A created draft (redirected here with the id the database returned): a polite status. */
 function DraftNoticeView({ t, notice }: { t: Translator; notice: DraftNotice | null }) {
   return (
-    <>
-      <div role="status" aria-live="polite" data-testid="draft-live">
-        {notice?.kind === "created" ? (
-          <p className="v13-notice" data-testid="draft-created">
-            {t("case.draft.created")}
-          </p>
-        ) : null}
-      </div>
-      {notice?.kind === "duplicate" ? (
-        <p className="v13-notice" role="alert" data-testid="draft-duplicate">
-          {t("case.draft.duplicate", { reference: notice.correlationId })}
+    <div role="status" aria-live="polite" data-testid="draft-live">
+      {notice?.kind === "created" ? (
+        <p className="v13-notice" data-testid="draft-created">
+          {t("case.draft.created")}
         </p>
       ) : null}
-      {notice?.kind === "error" ? (
-        <div role="alert" className="v13-error" data-testid="draft-error">
-          <p>{t("case.draft.error")}</p>
-          <p>
-            <span>{t("case.error.correlation")}</span>{" "}
-            <bdi dir="ltr" data-testid="correlation-id">
-              {notice.correlationId}
-            </bdi>
-          </p>
-        </div>
-      ) : null}
-    </>
+    </div>
   );
 }
 
-/**
- * Scenario E: a short Server Action form. The case id and the idempotency key are rendered by the server; the form
- * lists template versions by name, code, version and language, and recipient classes by name. No template text.
- */
-function DraftForm({ t, locale, draft }: { t: Translator; locale: Locale; draft: DraftFormView }) {
+/** Server-side preparation of the Scenario E form: ids and already-localised strings only. */
+function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; draft: DraftFormView }) {
   const num = numberFormat(locale);
   return (
-    <section aria-labelledby="draft-heading" data-testid="draft-section">
-      <h2 id="draft-heading">{t("case.draft.heading")}</h2>
-      <p className={styles.meta}>{t("case.draft.hint")}</p>
-      <form action={createDraft} className={styles.form} data-testid="draft-form">
-        <input type="hidden" name="case_id" value={draft.caseId} />
-        <input type="hidden" name="idempotency_key" value={draft.idempotencyKey} />
-        <label htmlFor="draft-template">{t("case.draft.template")}</label>
-        <select id="draft-template" name="template_version_id" required data-testid="draft-template">
-          {draft.templates.map((o) => (
-            <option
-              key={o.template_version_id}
-              value={o.template_version_id}
-              data-template-code={o.template_code}
-            >
-              {t("case.draft.templateOption", {
-                name: o.template_name[locale],
-                code: o.template_code,
-                version: num.format(o.version),
-                language: t(o.language === "ar" ? "case.language.ar" : "case.language.en"),
-              })}
-            </option>
-          ))}
-        </select>
-        <label htmlFor="draft-recipient">{t("case.draft.recipient")}</label>
-        <select id="draft-recipient" name="recipient_class" required data-testid="draft-recipient">
-          {draft.recipientClasses.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.name[locale]}
-            </option>
-          ))}
-        </select>
-        <button type="submit" data-testid="draft-submit">
-          {t("case.draft.submit")}
-        </button>
-      </form>
-    </section>
+    <DraftForm
+      caseId={draft.caseId}
+      idempotencyKey={draft.idempotencyKey}
+      templates={draft.templates.map((o) => ({
+        value: o.template_version_id,
+        code: o.template_code,
+        label: t("case.draft.templateOption", {
+          name: o.template_name[locale],
+          code: o.template_code,
+          version: num.format(o.version),
+          language: t(o.language === "ar" ? "case.language.ar" : "case.language.en"),
+        }),
+      }))}
+      recipients={draft.recipientClasses.map((c) => ({ value: c.code, label: c.name[locale] }))}
+      text={{
+        heading: t("case.draft.heading"),
+        hint: t("case.draft.hint"),
+        template: t("case.draft.template"),
+        recipient: t("case.draft.recipient"),
+        submit: t("case.draft.submit"),
+        error: t("case.draft.error"),
+        correlation: t("case.error.correlation"),
+      }}
+    />
   );
 }
 
@@ -524,7 +491,7 @@ export function CaseTabContent({
             notifications={view.notifications}
             createdId={view.notice?.kind === "created" ? view.notice.notificationId : null}
           />
-          {view.draft ? <DraftForm t={t} locale={locale} draft={view.draft} /> : null}
+          {view.draft ? <DraftFormFor t={t} locale={locale} draft={view.draft} /> : null}
         </>
       );
   }

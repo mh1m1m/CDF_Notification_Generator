@@ -34,8 +34,9 @@ Updated: 2026-10-31 21:10 UTC · Branch: feature/V13-FE-006-notification-center 
 
 - V13-FE-006 part 1, Scenario E draft — the case Notifications tab offers "Create a notification draft" to roles
   that may draft (COMMITTEE_SECRETARY, INVESTIGATOR) on ACTIVE cases; Server Action → lib/server (pre-check, Zod,
-  `api_create_notification_draft`); one fresh idempotency key per rendered form; outcomes created / duplicate / generic
-  error with reference. Contract proposed in `lib/contracts/notification-draft.ts` (needs ARCH + SEC ACCEPT). — IN_REVIEW.
+  `api_create_notification_draft`); one fresh idempotency key per rendered form; a created draft redirects to the case
+  id the command returned (SEC condition 1); every refusal (incl. a reused key) is one generic message with a reference,
+  shown in place (useActionState), nothing written. Contract proposed in `lib/contracts/notification-draft.ts` (needs ARCH + SEC ACCEPT). — IN_REVIEW.
   Part 2 (`/notifications` with the D6 guard, the list on DB-015, the in-case preview on PROC-008) follows.
 
 ## Changed files
@@ -106,11 +107,13 @@ Updated: 2026-10-31 21:10 UTC · Branch: feature/V13-FE-006-notification-center 
 
 | FE-006 part 1 (develop ec8653a): lint, typecheck, format:check, build / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (new `tests/integration/fe/notification-draft.spec.ts`, 12) / `pnpm db:reset` + `pnpm test:e2e` / throwaway Scenario E browser probe (not committed; e2e is QA's): Alpha drafts on 0001 (count +1, row marked, axe 0, no CSP console error), id absent from 0003, resubmitted old key → duplicate notice and no new row, case id tampered to 0009 → not-found page, no draft form on closed 0010 or for Delta | pass | — / 1615 (52 new: service+markup+action 33, adapter 19) / 384 / 101 / 2/2 | FE-006 head |
 
+| FE-006 part 1 after merging develop d694ff8 + ARCH/SEC conditions (DB-returned case id only, one generic refusal shown in place, swap test, negatives): lint, typecheck, format:check, build / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (FE draft suite 13) / `pnpm db:reset` + `pnpm test:e2e` / throwaway probe (`/mnt/project-files/v13-fe/probes/zz-fe-draft-probe.spec.ts`, offered to QA): Alpha WITNESS draft on 0001 (+1, axe 0, no CSP error), id absent from 0003; own key again, 0009, 0002, 0010, unknown and malformed case ids → same generic reference on the 0001 page, counts on 0001 and 0010 unchanged; no form on 0010 or for Delta | pass | — / 1706 / 402 / 101 / 2/2 | FE-006 head |
+
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
-  field. A tampered id to a case the persona may not draft on is refused (NOT_FOUND / CASE_CLOSED, nothing written);
-  a swap to another case it may draft on lands there, with the redirect to that case. Strict binding would need a
-  signing helper in lib/auth (asked of ARCH, 31 Oct).
+  field. A tampered id to a case the persona may not draft on is refused generically, nothing written; a swap to
+  another case it may draft on lands the draft and its audit event there only (tested). ARCH + SEC accepted this
+  binding without an HMAC helper (31 Oct).
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
   pattern `^[A-Za-z0-9._:-]{1,80}$` (both in `lib/contracts`, this PR, needs ARCH + SEC ACCEPT); DB returns
   `updated_at`, `source_system`, `source_ref` and makes `source_ref` NOT NULL in its PR (b). Until DB's PR lands the
