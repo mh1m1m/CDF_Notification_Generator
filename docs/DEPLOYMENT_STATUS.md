@@ -53,7 +53,7 @@ Deployments:
 | `dpl_cZWKWPdPL9suLcPBtJCnnKMMRBpG` | `develop` `b5ee5f4` | preview, behind the staging alias | READY | the alias pointed here at 19:05; the push of `a6c224a` builds the next one |
 | `dpl_5exSSyLjcmg7fMPDiBUEjM7A78gN` | `develop` `d694ff8` (#32) | preview | READY | still the newest `develop` deployment at 22:00 (created 20:47 UTC). No deployment exists for the fourteen later merges (`267944a` … `b5d810c`): the account's daily deployment limit refuses them (OI-038), so the staging alias lags `develop` until the limit resets |
 | `dpl_8EmseVV6PbaYTEX2mXeDRQP2pVPu` | `develop` `dabc11f` (#64) | preview | READY | created 22:16 UTC; the merges between `d694ff8` and `dabc11f` have no deployment (OI-038) |
-| `dpl_D4bipFNReuGFu81KoYVpPrrYtjjh` | `develop` `9290778` (#61) | preview | READY | the newest `develop` deployment at 23:28 (created 23:10 UTC); `9787419` and `4cc72ec` have none (OI-038). The staging alias was not re-read at 23:25 |
+| `dpl_D4bipFNReuGFu81KoYVpPrrYtjjh` | `develop` `9290778` (#61) | preview | READY | the newest `develop` deployment at 23:28 (created 23:10 UTC); `9787419` and `4cc72ec` have none (OI-038). The staging alias was not re-read at 23:28 |
 
 Staging alias check, 31 Oct 2026 19:05:36 UTC (through the Vercel connector's authenticated fetch; Vercel
 Authentication stays on): `GET /api/health` → **HTTP 503**
