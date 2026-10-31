@@ -3,5 +3,6 @@ export * from "./ids";
 export * from "./workspaces";
 export * from "./identity";
 export * from "./case-summary";
+export * from "./case-records";
 export * from "./ports";
 export * from "./personas";
