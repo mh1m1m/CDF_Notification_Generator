@@ -16,6 +16,7 @@
  * an expected, conditional or awaiting-approval mark carries its step code or a not-yet state instead.
  */
 import { EpistemicError, type EpistemicClass } from "./epistemic";
+import { isNil } from "./nil";
 import { statusFromEvents } from "./status";
 import type { DomainEvent } from "./types";
 
@@ -46,8 +47,20 @@ export const COMPLETED_CLASS_STATUSES = Object.freeze([
   "SUBSTANTIATED",
 ] as const);
 export type CompletedClassStatus = (typeof COMPLETED_CLASS_STATUSES)[number];
-export const isCompletedClassStatus = (s: unknown): s is CompletedClassStatus =>
-  typeof s === "string" && (COMPLETED_CLASS_STATUSES as readonly string[]).includes(s);
+/** A status code: upper snake case (e.g. `IN_PROGRESS`). */
+export const STATUS_CODE_PATTERN = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$/;
+/** A catalogue journey, stage or step id (e.g. `J-DEMO-COMMITTEE/2/1`): what an expected step shows instead. */
+export const STEP_CODE_PATTERN = /^J-[A-Z0-9]+(?:-[A-Z0-9]+)*(?:\/\d+){0,2}$/;
+/** True when `s` is a code a badge may show: a status code or a step code. Anything else (case, spacing) is refused. */
+export const isShownCode = (s: unknown): s is string =>
+  typeof s === "string" && (STATUS_CODE_PATTERN.test(s) || STEP_CODE_PATTERN.test(s));
+/**
+ * Rule T5 match, exact and fail closed (SEC LOW note, 31 Oct): true for a completed-class code, and also for any string
+ * that is not a shown code (e.g. "completed", " COMPLETED", "Completed"), so a variant spelling is never let through as
+ * "not completed". Only a well-formed code outside the list returns false.
+ */
+export const isCompletedClassStatus = (s: unknown): boolean =>
+  typeof s === "string" && (!isShownCode(s) || (COMPLETED_CLASS_STATUSES as readonly string[]).includes(s));
 
 /** What the UI may put on a badge: `event_id` is present exactly when the value is `recorded`. */
 export type BadgeEpistemicResult =
@@ -154,6 +167,11 @@ export function toBadgeEpistemic(input: BadgeInput): BadgeEpistemicResult {
     case "SUBJECT_TO_APPROVAL": {
       if (own(i, "event_id") && i.event_id !== null && i.event_id !== undefined) {
         refuse("EVENT_ID_NOT_ALLOWED", "only a recorded badge carries an event id", { epistemic: cls });
+      }
+      if (!isNil(i.shown_status) && !isShownCode(i.shown_status)) {
+        refuse("SHOWN_STATUS_NOT_A_CODE", "a badge shows an upper-snake status code or a step code only", {
+          epistemic: cls,
+        });
       }
       if (isCompletedClassStatus(i.shown_status)) {
         refuse(

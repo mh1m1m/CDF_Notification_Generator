@@ -1,0 +1,315 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "CF-25",
+  "title": {
+    "ar": "إلغاء اجتماع: لا شيء بعد الإلغاء يُعرض متقدماً أو متوقعاً",
+    "en": "Meeting cancelled: nothing after the cancellation is shown as progressing or expected"
+  },
+  "journey": "J-MEETING",
+  "assignment_id": "CF-25",
+  "recipient_class": "MEMBER",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e676",
+    "internal_ref": "CDF-DEMO-2026-0025",
+    "track": "IR",
+    "classification": "INTERNAL",
+    "status": {
+      "code": "S3.06",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0025"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-949002e2ad64",
+    "type": "MEETING",
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e676",
+    "journey_id": "J-MEETING",
+    "status": "CANCELLED",
+    "status_source_event_id": "evt-CF-25-05",
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-CF-25-01",
+      "type": "AGENDA_DRAFTED",
+      "occurred_at": "2026-10-21T08:00:00Z",
+      "recorded_at": "2026-10-21T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e676",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad64"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-25.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-25",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-25-02",
+      "type": "AGENDA_APPROVED",
+      "occurred_at": "2026-10-21T09:00:00Z",
+      "recorded_at": "2026-10-21T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e676",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad64"
+      },
+      "actor": {
+        "capacity": "CHAIR",
+        "id": "usr-demo-chair"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-25.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-25",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-25-03",
+      "type": "MEETING_SCHEDULED",
+      "occurred_at": "2026-10-21T10:00:00Z",
+      "recorded_at": "2026-10-21T10:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e676",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad64"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-25.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-25",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-25-04",
+      "type": "PARTICIPANTS_INVITED",
+      "occurred_at": "2026-10-21T11:00:00Z",
+      "recorded_at": "2026-10-21T11:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e676",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad64"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-25.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-25",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-25-05",
+      "type": "MEETING_CANCELLED",
+      "occurred_at": "2026-10-21T12:00:00Z",
+      "recorded_at": "2026-10-21T12:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e676",
+      "object": {
+        "type": "MEETING",
+        "id": "0b1ec700-0000-4000-8000-949002e2ad64"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-25.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-25",
+      "payload": {}
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S3",
+      "substate": "S3.06",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        },
+        {
+          "code": "S4",
+          "layer": "B",
+          "kind": "EXPECTED"
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-MEETING/1/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/1/2",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/1/3",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-MEETING/1/4",
+        "state": "NOT_APPLICABLE",
+        "note": "CONDITION_DID_NOT_ARISE"
+      },
+      {
+        "step_id": "J-MEETING/1/5",
+        "state": "CANCELLED",
+        "evidence_event_id": "evt-CF-25-05"
+      },
+      {
+        "step_id": "J-MEETING/2/1",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/2/2",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/2/3",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/2/4",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/3/1",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/3/2",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/3/3",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/3/4",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/4/1",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/4/2",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/4/3",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/5/1",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      },
+      {
+        "step_id": "J-MEETING/5/2",
+        "state": "NOT_APPLICABLE",
+        "note": "CANCELLED"
+      }
+    ],
+    "expected_steps": [],
+    "stage_n": 1,
+    "notice_location": "actual",
+    "lifecycle": {
+      "cancelled": true
+    },
+    "must_not": [
+      "○ on J-MEETING/2/1",
+      "● on J-MEETING/1/5",
+      "● on J-MEETING/1/4",
+      "○ on J-MEETING/5/1",
+      "✔ on J-MEETING/1/4"
+    ]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "L2 «● 1. تحديد الموعد وتوجيه الدعوات / ○ 2 … ○ 5. إقفال الاجتماع ومتابعة تكليفاته» and L3 «● إعادة الجدولة أو الإلغاء عند الاقتضاء»: a cancelled meeting rendered as progressing (W3 F6, F15); L1 «S4.01» from the notification type.",
+    "evidence": [
+      "notifications/eml/ar/CF-25_MEETING_CANCELLED.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-25 ar",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md F6, F15"
+    ]
+  },
+  "variants": []
+}

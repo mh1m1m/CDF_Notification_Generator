@@ -1,0 +1,434 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "SUM-01",
+  "title": {
+    "ar": "رفع مخرجات التكليف المباشر: ملخص المراحل الخمس لمسار خطي فقط، وخطوة داخلية محجوبة عن صاحب الصلاحية",
+    "en": "Direct mandate outputs submitted: the five-stage summary only on a linear journey; an internal step hidden from the authority"
+  },
+  "journey": "J-DR-AUTHORITY",
+  "assignment_id": "DR-06",
+  "recipient_class": "AUTHORITY",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+    "internal_ref": "CDF-DEMO-2026-0907",
+    "track": "DR",
+    "classification": "INTERNAL",
+    "status": {
+      "code": "S4.03",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0907"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-06423dd9823c",
+    "type": "REFERRAL",
+    "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+    "journey_id": "J-DR-AUTHORITY",
+    "status": null,
+    "status_source_event_id": null,
+    "related_objects": [
+      {
+        "type": "INVESTIGATION",
+        "id": "0b1ec700-0000-4000-8000-0919bdb890c9"
+      }
+    ],
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-SUM-01-01",
+      "type": "MANDATE_RECEIVED",
+      "occurred_at": "2026-10-01T08:00:00Z",
+      "recorded_at": "2026-10-01T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+      "object": {
+        "type": "REFERRAL",
+        "id": "0b1ec700-0000-4000-8000-06423dd9823c"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUM-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUM-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-SUM-01-02",
+      "type": "CASE_STATUS_RECORDED",
+      "occurred_at": "2026-10-01T09:00:00Z",
+      "recorded_at": "2026-10-01T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+      "object": {
+        "type": "CASE",
+        "id": "ca5e0000-0000-4000-8000-7a63e0a6b64a"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUM-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUM-01",
+      "payload": {
+        "transition_id": "T01",
+        "from": "S1.01",
+        "to": "S1.02"
+      }
+    },
+    {
+      "event_id": "evt-SUM-01-03",
+      "type": "CASE_REGISTERED",
+      "occurred_at": "2026-10-01T10:00:00Z",
+      "recorded_at": "2026-10-01T10:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+      "object": {
+        "type": "CASE",
+        "id": "ca5e0000-0000-4000-8000-7a63e0a6b64a"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUM-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUM-01",
+      "payload": {
+        "transition_id": "T02",
+        "from": "S1.02",
+        "to": "S1.03"
+      }
+    },
+    {
+      "event_id": "evt-SUM-01-04",
+      "type": "MANDATE_SCOPE_DEFINED",
+      "occurred_at": "2026-10-01T11:00:00Z",
+      "recorded_at": "2026-10-01T11:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+      "object": {
+        "type": "REFERRAL",
+        "id": "0b1ec700-0000-4000-8000-06423dd9823c"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUM-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUM-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-SUM-01-05",
+      "type": "HANDLING_PLAN_APPROVED",
+      "occurred_at": "2026-10-01T12:00:00Z",
+      "recorded_at": "2026-10-01T12:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+      "object": {
+        "type": "REFERRAL",
+        "id": "0b1ec700-0000-4000-8000-06423dd9823c"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUM-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUM-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-SUM-01-06",
+      "type": "INVESTIGATION_ASSIGNED",
+      "occurred_at": "2026-10-01T13:00:00Z",
+      "recorded_at": "2026-10-01T13:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+      "object": {
+        "type": "INVESTIGATION",
+        "id": "0b1ec700-0000-4000-8000-0919bdb890c9"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUM-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUM-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-SUM-01-07",
+      "type": "CASE_STATUS_RECORDED",
+      "occurred_at": "2026-10-01T14:00:00Z",
+      "recorded_at": "2026-10-01T14:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+      "object": {
+        "type": "CASE",
+        "id": "ca5e0000-0000-4000-8000-7a63e0a6b64a"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUM-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUM-01",
+      "payload": {
+        "transition_id": "T13",
+        "from": "S3.01",
+        "to": "S3.02"
+      }
+    },
+    {
+      "event_id": "evt-SUM-01-08",
+      "type": "CASE_STATUS_RECORDED",
+      "occurred_at": "2026-10-01T15:00:00Z",
+      "recorded_at": "2026-10-01T15:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+      "object": {
+        "type": "CASE",
+        "id": "ca5e0000-0000-4000-8000-7a63e0a6b64a"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUM-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUM-01",
+      "payload": {
+        "transition_id": "T19",
+        "from": "S3.06",
+        "to": "S3.07"
+      }
+    },
+    {
+      "event_id": "evt-SUM-01-09",
+      "type": "CASE_STATUS_RECORDED",
+      "occurred_at": "2026-10-01T16:00:00Z",
+      "recorded_at": "2026-10-01T16:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-7a63e0a6b64a",
+      "object": {
+        "type": "CASE",
+        "id": "ca5e0000-0000-4000-8000-7a63e0a6b64a"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/SUM-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-SUM-01",
+      "payload": {
+        "transition_id": "T23",
+        "from": "S4.02",
+        "to": "S4.03"
+      }
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S4",
+      "substate": "S4.03",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S4",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-DR-AUTHORITY/1/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/1/2",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/2/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/3/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/3/2",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/3/3",
+        "state": "NOT_APPLICABLE",
+        "note": "CONDITION_DID_NOT_ARISE"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/3/4",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/4/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/4/2",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/4/3",
+        "state": "NOT_APPLICABLE",
+        "note": "CONDITION_DID_NOT_ARISE"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/5/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/5/2",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-SUM-01-09"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/5/3",
+        "state": "PENDING"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-DR-AUTHORITY/4/4",
+        "kind": "OPTIONAL"
+      },
+      {
+        "step_id": "J-DR-AUTHORITY/5/4",
+        "kind": "EXPECTED"
+      }
+    ],
+    "stage_n": 5,
+    "notice_location": "actual",
+    "stages": [
+      {
+        "n": 1,
+        "state": "COMPLETED"
+      },
+      {
+        "n": 2,
+        "state": "COMPLETED"
+      },
+      {
+        "n": 3,
+        "state": "COMPLETED"
+      },
+      {
+        "n": 4,
+        "state": "COMPLETED"
+      },
+      {
+        "n": 5,
+        "state": "PENDING"
+      }
+    ],
+    "view": {
+      "AUTHORITY": {
+        "l1_mode": "STAGE_NAMES",
+        "hidden": ["J-DR-AUTHORITY/5/1"],
+        "summary5": 5
+      },
+      "SECRETARY": {
+        "l1_mode": "SUBSTATE",
+        "hidden": [],
+        "summary5": 5
+      }
+    },
+    "must_not": ["● on J-DR-AUTHORITY/5/2", "J-DR-AUTHORITY/5/1 in the AUTHORITY view"]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "L1 «● S2 … S2.01» with «الإشعار مرتبط بالموقع S4.03 ولم يصله سجل الحالة حتى تاريخ اللقطة.»; L2 «✔ 1 ✔ 2 ✔ 3 ✔ 4 ● 5»; L3 «✔ إعداد تقرير المخرجات ومراجعته / ● رفع المخرجات / ○ اعتماد المآل / ○ إقفال التكليف» — the internal step «إعداد تقرير المخرجات» shown to a scope recipient (W3 F8) and the recorded submission shown in progress (W3 F5).",
+    "evidence": [
+      "notifications/generator/samples/DR-06.txt",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md F8, F5, section 3.4"
+    ]
+  },
+  "variants": []
+}

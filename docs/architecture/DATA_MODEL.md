@@ -1,17 +1,16 @@
 # E03 — Enterprise data model (Milestone M1)
 
 **SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Owner: team DB. Schema `cdf_notifications_v13` in the
-shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0006`; seed in two parts:
+shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0008`; seed in two parts:
 `database/seed/0001_m1_synthetic.sql` (identity: workspaces, personas, memberships; needs migration 0001 only; audit row
 `SEED_M1_LOADED`) and `database/seed/0002_m1_cases.sql` (cases and their history; needs 0001–0004; audit row
 `SEED_M1_CASES_LOADED`).
 
-Status: **IN_PROGRESS**. Delivered in two PRs. PR (a) `[V13-DB-001]` brings migration 0001 (identity, claims MAC, audit
-ledger), seed part 1, the app-side claims MAC (`lib/db/security-context.ts`) and the key install at server start
-(`instrumentation.ts` → `lib/db/claims-key-startup.ts`). PR (b) brings 0002–0004 and seed part 2; until it merges, the
-sections on cases, tasks and notifications below describe that PR, not `develop`. Tested on a local PostgreSQL 16
-cluster (`pnpm test:db`); not yet reviewed, not applied to the hosted schema (the Chief Architect applies merged
-migrations). PR `[V13-DB-007]`, stacked on PR (b), adds migration 0005 (`api_switch_workspace`); PR `[V13-DB-008]`, stacked on it, adds migration 0006 (Case Workspace reads).
+Status: **COMPLETE** for M1 on `develop` (558d4ae): migrations 0001–0007 and both seed parts, merged through #12
+(0001, identity seed, claims MAC, key install at start), #15 (0002–0004, cases seed), #17 (0005 workspace switch),
+#21 (0006 Case Workspace reads) and #28 (0007 claims-key state for health), each on SEC ACCEPT and green CI. Migration
+0008 (My Work case columns, V13-DB-010) is IN_PROGRESS in its PR. Tested on a local PostgreSQL 16 cluster
+(`pnpm test:db`, 234 tests with 0008). Applied to the hosted schema only by the Chief Architect, with the plan procedure.
 
 ## 1. Principles
 
@@ -94,6 +93,7 @@ erDiagram
 | `current_correlation_id()` | definer, stable | yes | correlation id of the verified claims; the only source of an audit row's correlation id (no override argument) |
 | `current_persona()` | definer, stable | yes | own persona row incl. e-mail |
 | `api_install_claims_key(bytea)` | definer command | yes | installs K while none exists; same key → `ALREADY_INSTALLED`; other key → `V1409`; audited `CLAIMS_KEY_INSTALLED` without key material |
+| `claims_key_state(text)` (migration 0007, V13-DB-009) | definer, stable | yes (not `cdf_v13_app`) | health only: `NOT_INSTALLED`, `INSTALLED_MATCH` or `INSTALLED_MISMATCH` for a probe = base64url HMAC(K, `cdf-v13/claims-key-probe/v1\|<xid>`) of this transaction; a code only, never key material; not audited |
 | `current_persona_id()` | definer, stable | yes | claimed persona if it exists and is active, else NULL |
 | `current_workspace_id()` | definer, stable | yes | claimed workspace if active and the persona has an active membership, else NULL |
 | `current_role_codes()`, `has_role(text)` | definer, stable | yes | roles in the current workspace |
@@ -104,7 +104,7 @@ erDiagram
 | `case_events(uuid)` (migration 0006) | invoker | yes | the case's procedural events, newest first (`occurred_at`, `recorded_at`, `id`); the actor only as `actor_capacity` (the recorder's capacity on the case at `occurred_at`, or NULL) |
 | `case_tasks(uuid)` (migration 0006) | invoker | yes | the case's tasks; the assignee only as `assignee_capacity` (now) and `is_mine`; `status_event_id` = latest procedural event about the task |
 | `_capacity_rank(text)` (migration 0006) | immutable, no table access | yes | display order when a persona holds several capacities: LEAD_INVESTIGATOR, INVESTIGATOR, SECRETARY, GOVERNANCE_REVIEWER |
-| `my_work_tasks(boolean)` | invoker | yes | the persona's tasks in accessible cases |
+| `my_work_tasks(boolean)` | invoker | yes | the persona's own tasks in cases accessible in the current workspace (open only unless `true`); order due date nulls last, display number, task code. Migration 0008 appends `case_title_ar`, `case_title_en`, `case_records_state` (UI hint only; V1423 stays the authority) and `status_event_id` (as `case_tasks`) |
 | `case_notifications(uuid)` | invoker | yes | notification history of one case |
 | `api_update_task_status(uuid, text, int)` | definer command | yes | §6 |
 | `api_create_notification_draft(uuid, uuid, text, text)` | definer command | yes | §6 |
