@@ -1,6 +1,6 @@
 # DB status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 19:00 UTC · Team DB · Reviewer of DB PRs: SEC
+Updated: 2026-10-31 20:20 UTC · Team DB · Reviewer of DB PRs: SEC
 
 ## Delivery plan (ruled by the Chief Architect)
 
@@ -12,7 +12,8 @@ Updated: 2026-10-31 19:00 UTC · Team DB · Reviewer of DB PRs: SEC
 | (d) `[V13-DB-008]` | `feature/V13-DB-008-case-workspace-reads`, stacked on (c) | migration 0006: `case_events`, `case_tasks`, `case_header.my_capacity` (FE-004, ARCH ruling 28 Oct), case-workspace suite (22) | COMPLETE — #21 merged c4b37c3 (SEC ACCEPT) |
 | `[V13-DB-006]` | `feature/V13-DB-006-rehearsal-ci` | CI job "Shared-database rehearsal" (`.github/workflows/ci.yml`, ARCH-agreed edit) + this status refresh | COMPLETE — #26 merged f431b98 (SEC + ARCH ACCEPT 3f2108a) |
 | `[V13-DB-009]` | `feature/V13-DB-009-claims-key-health` | migration 0007 `claims_key_state`; `/api/health` reports `db.claims_key` (OI-022 resolved) | COMPLETE — #28 merged 558d4ae (SEC + ARCH ACCEPT 125b1f0) |
-| `[V13-DB-010]` | `feature/V13-DB-010-my-work-columns` | migration 0008: `my_work_tasks` + `case_title_ar`, `case_title_en`, `case_records_state`, `status_event_id` (FE-005, ARCH request 31 Oct) | IN_PROGRESS — PR open, SEC review pending |
+| `[V13-DB-010]` | `feature/V13-DB-010-my-work-columns` | migration 0008: `my_work_tasks` + `case_title_ar`, `case_title_en`, `case_records_state`, `status_event_id` (FE-005, ARCH request 31 Oct) | COMPLETE — #31 merged b5ee5f46 (SEC ACCEPT 3bd1c93) |
+| `[V13-DB-011]` | `feature/V13-DB-011-fk-indexes` | migration 0009: foreign-key index review (OI-032), FK coverage suite | IN_PROGRESS — PR open, SEC review pending |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -60,7 +61,7 @@ Updated: 2026-10-31 19:00 UTC · Team DB · Reviewer of DB PRs: SEC
 - Tests: `tests/integration/claims-key-state.spec.ts` (12), `tests/unit/claims-key-probe.spec.ts` (4), health-route
   unit cases (+2), definer allow-list entry. ARCH accepted `NOT_CHECKED` as built.
 
-## In progress: V13-DB-010 (FE-005)
+## Completed: V13-DB-010 (FE-005)
 - Migration 0008: `my_work_tasks(p_include_closed)` dropped and recreated (result type grows) with four columns
   appended after the nine existing ones: `case_title_ar`, `case_title_en`, `case_records_state` (UI hint only; V1423
   stays the authority) and `status_event_id` (same definition as `case_tasks`). Still SECURITY INVOKER, `search_path
@@ -71,9 +72,24 @@ Updated: 2026-10-31 19:00 UTC · Team DB · Reviewer of DB PRs: SEC
   assigned), closed (hint and V1423), unknown and forged contexts, app login 42501. Mutation-checked (dropping the
   same-case condition, or making the function a definer, fails the suite).
 
+## In progress: V13-DB-011 (OI-032)
+- Migration 0009: decides the advisor's 14 unindexed-FK findings. One index reshaped
+  (`notification_event_notification_idx` → `(notification_id, case_id, occurred_at)`, covers
+  `notification_event_notification_fk` and explains its "unused" finding); 13 accepted with reasons in the migration
+  (parents never deleted or re-keyed, no read by that key). The 9 unused_index findings are expected without traffic.
+- Tests: `tests/integration/fk-index-coverage.spec.ts` (5): every FK indexed or accepted (a new FK fails), the reshaped
+  index, NO ACTION on every FK, no application role can delete or re-key an accepted FK's parent. Mutation-checked
+  (the 0004 index shape fails 3 tests).
+
+## Next
+- V13-DB-012: the hosted text guard (plan §5.7) moves into `scripts/db/hosted-bundle.mjs` with unit tests.
+- OI-026 per-case paging: proposal accepted by ARCH (`*_page` functions next to the current reads), after M1.
+
 ## Review given
-- #29 `[V13-SEC-002]` (SEC database adversarial suites): `REVIEW: ACCEPT ede6f46` (test:db 282/282 as pushed, 294/294
-  with `develop` 558d4ae merged locally).
+- #29 `[V13-SEC-002]`: `REVIEW: ACCEPT ede6f46`, re-confirmed `ACCEPT bc89156` after the develop merge (294/294).
+- #30 `[V13-SEC-004]` post_apply_checks.sql: `REVIEW: ACCEPT 9f1e8bd` (PASS through 0008, spec 27/27).
+- #35 `[V13-PROC-006]`, DB-owned file `tests/integration/task-status-catalogue.spec.ts`: `REVIEW: ACCEPT 2264d61`.
+- #2 `[V13-SEC-001]` threat model and matrix: `REVIEW: CHANGES b1786c0` (doc fixes against the built 0001–0008).
 
 ## Changed files (PR (a))
 - database/migrations/0001_identity_access_audit.sql, database/seed/0001_m1_synthetic.sql,
@@ -86,12 +102,12 @@ Updated: 2026-10-31 19:00 UTC · Team DB · Reviewer of DB PRs: SEC
 - docs/architecture/DATA_MODEL.md, docs/teams/db/STATUS.md
 
 ## Test evidence
-Per-PR counts are in each PR description, from runs on the PR head. Latest local run, on the V13-DB-010 branch
-(`develop` 558d4ae + migration 0008; 31 Oct 2026, local PostgreSQL 16 via `pnpm db:local`):
-- `pnpm lint`: exit 0 · `pnpm typecheck`: 0 errors · `pnpm db:lint`: 9 migration files, 0 findings
-- `pnpm test`: 723/723 · `pnpm db:reset` then `pnpm test:db`: 234/234 (12 files)
-- `node scripts/db/rehearse-shared.mjs`: REHEARSAL PASS · `pnpm build`: ok · `pnpm test:e2e`: 81/81
-- CI green on each merged head (e.g. #26 3f2108a run 41229690020, #28 125b1f0 run 41230326573).
+Per-PR counts are in each PR description, from runs on the PR head. Latest local run, on the V13-DB-011 branch
+(`develop` b0f68a8 + migration 0009; 31 Oct 2026, local PostgreSQL 16 via `pnpm db:local`):
+- `pnpm lint`: exit 0 · `pnpm typecheck`: 0 errors · `pnpm db:lint`: 10 migration files, 0 findings
+- `pnpm test`: 965/965 · `pnpm db:reset` then `pnpm test:db`: 357/357 (20 files, incl. SEC's suites)
+- `node scripts/db/rehearse-shared.mjs`: REHEARSAL PASS · `pnpm test:e2e`: 92/92
+- CI green on each merged head (e.g. #28 125b1f0 run 41230326573, #31 3bd1c93 run 41231559873).
 
 ## Unresolved defects
 - None known.
@@ -106,7 +122,7 @@ Per-PR counts are in each PR description, from runs on the PR head. Latest local
 - ARCH: a CI job that runs `node scripts/db/rehearse-shared.mjs` when `database/**` changes (V13-DB-006 acceptance;
   the script lands in PR (b)).
 - ARCH follow-up after (a): report a key mismatch in `/api/health` — V13-DB-009 (above).
-- Hosted: the Chief Architect applies 0001–0007 (0008 after V13-DB-010 merges) with the plan procedure. DB never connects. Hosted notes:
+- Hosted: the Chief Architect applies 0001–0008 (0009 after V13-DB-011 merges; paused at 0006 for OI-034) with the plan procedure. DB never connects. Hosted notes:
   every deployment that shares the schema (previews included) must use the same `V13_SESSION_SECRET`, because the
   claims key is installed first-writer-wins at server start; seed part 2 needs 0001–0004; every request now takes a
   transaction id (`pg_current_xact_id()`), negligible at prototype load (SEC INFO); a health call with a session secret takes one too (V13-DB-009).
