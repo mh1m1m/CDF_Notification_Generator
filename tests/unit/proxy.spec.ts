@@ -1,12 +1,14 @@
 // proxy.ts: the first of the two session checks (which paths it gates, and what it does with valid, missing and
 // invalid session cookies) and the per-request page CSP (threat TM-I13). Pages and layouts re-check the session on the
 // server (app/(platform)/layout.tsx).
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import { base64url } from "jose";
 import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { config, proxy, PUBLIC_PAGES } from "@/proxy";
+import { config, isDecodablePath, proxy, PUBLIC_PAGES, UNDECODABLE_PATH_REWRITE } from "@/proxy";
 
 const ORIGIN = "http://localhost:3100";
 const secret = () => base64url.encode(crypto.getRandomValues(new Uint8Array(32)));
@@ -202,6 +204,88 @@ describe("proxy: page Content-Security-Policy (TM-I13)", () => {
     const vercel = (await proxy(request("/sign-in"))).headers.get("content-security-policy");
     expect(vercel).not.toContain("unsafe-eval");
     expect(vercel).toContain("upgrade-insecure-requests");
+  });
+});
+
+describe("proxy: undecodable paths (SEC-F-006-1)", () => {
+  // Percent-escapes that are not valid UTF-8 (overlong, lone continuation, truncated), in a case id, on a tab, on other
+  // pages and on the public page's path.
+  const UNDECODABLE = [
+    "/cases/%C0%AF",
+    "/cases/%FF",
+    "/cases/%E0%A4%A",
+    "/cases/%C0%AF/events",
+    "/cases/0c000000-0000-4000-8000-000000000001%FF/tasks",
+    "/my-work/%FF",
+    "/%FF",
+    "/sign-in%FF",
+  ];
+
+  it("redirects an undecodable path without a valid session to /sign-in, like any gated path", async () => {
+    for (const path of UNDECODABLE) {
+      for (const [cookie, cookieExpired] of [
+        [undefined, false],
+        ["not-a-jwt", true],
+      ] as const) {
+        const response = await proxy(request(path, cookie));
+        expect(response.headers.get("x-middleware-rewrite"), path).toBeNull();
+        expectSignInRedirect(response, { cookieExpired });
+      }
+    }
+  });
+
+  it("sends a signed-in request for an undecodable path to the generic not-found page", async () => {
+    const valid = await token(ALPHA, "SECRETARIAT");
+    for (const path of UNDECODABLE) {
+      const response = await proxy(request(`${path}?tab=1`, valid));
+      expect(isPassThrough(response), path).toBe(false);
+      expect(response.headers.get("x-middleware-rewrite"), path).toBe(`${ORIGIN}${UNDECODABLE_PATH_REWRITE}`);
+      expect(response.headers.get("location"), path).toBeNull();
+      expect(response.headers.get("set-cookie"), path).toBeNull();
+      expect(response.headers.get("cache-control"), path).toBe("no-store");
+      const csp = response.headers.get("content-security-policy");
+      nonceOf(csp);
+      expect(response.headers.get("x-middleware-request-content-security-policy"), path).toBe(csp);
+    }
+  });
+
+  it("passes decodable paths through unchanged: encoded characters, an encoded slash and a bad query string", async () => {
+    const valid = await token(ALPHA, "SECRETARIAT");
+    for (const path of ["/cases/%41", "/cases/a%2Fb", "/cases/%F0%9F%92%A5", "/my-work?q=%FF"]) {
+      const passed = await proxy(request(path, valid));
+      expect(isPassThrough(passed), path).toBe(true);
+      expect(passed.headers.get("x-middleware-rewrite"), path).toBeNull();
+      expectSignInRedirect(await proxy(request(path)), { cookieExpired: false });
+    }
+  });
+
+  it("decides decodability exactly as decodeURIComponent does", () => {
+    for (const path of ["/", "/cases/%20", "/cases/%F0%9F%92%A5", "/a%2Fb", "/%25"]) {
+      expect(isDecodablePath(path), path).toBe(true);
+    }
+    for (const path of ["/%C0%AF", "/%FF", "/%E0%A4%A", "/%", "/%G0", "/%ED%A0%80"]) {
+      expect(isDecodablePath(path), path).toBe(false);
+    }
+  });
+
+  it("rewrites to a path no route can serve: private (leading underscore), and no dynamic segment at the root", () => {
+    expect(UNDECODABLE_PATH_REWRITE.startsWith("/_")).toBe(true);
+    expect(isDecodablePath(UNDECODABLE_PATH_REWRITE)).toBe(true);
+    // A dynamic folder directly under app/ or under a route group at the root would match /_v13; there must be none.
+    const roots = readdirSync("app", { withFileTypes: true }).filter((e) => e.isDirectory());
+    const groups = roots.filter((e) => /^\(.+\)$/.test(e.name));
+    const rootSegments = [
+      ...roots.map((e) => e.name),
+      ...groups.flatMap((g) =>
+        readdirSync(join("app", g.name), { withFileTypes: true })
+          .filter((e) => e.isDirectory())
+          .map((e) => e.name),
+      ),
+    ];
+    expect(
+      rootSegments.filter((name) => name.startsWith("[")),
+      "dynamic segments at the app root",
+    ).toEqual([]);
   });
 });
 
