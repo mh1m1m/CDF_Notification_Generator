@@ -1,0 +1,1640 @@
+{
+  "version": "WD2-SUBSET-of-L2-2026-10-26b",
+  "status": "PROPOSED",
+  "provenance": {
+    "copied_from": "notifications/journeys/level2_journeys.json (V12 evidence, read-only; version L2-2026-10-26b)",
+    "sub_state_arabic_from": "notifications/review/v12-forensic/deliverables/csv/D4_D5__D4_{Committee_43,Generator_69,Reconciliation_112}.csv (Level 1 sub-state column)",
+    "kinds": "step and stage kinds annotated by W-D2 from the wording (PROPOSAL)",
+    "superseded_by": "src/journeys/catalogue_v13.json (W-C) when present",
+    "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production"
+  },
+  "master": [
+    {
+      "code": "S1",
+      "ar": "الاستقبال والتسجيل",
+      "en": "Receipt and registration"
+    },
+    {
+      "code": "S2",
+      "ar": "فحص الاكتمال والاختصاص والتقييم",
+      "en": "Completeness, jurisdiction and assessment"
+    },
+    {
+      "code": "S3",
+      "ar": "المعالجة والتحقيق المختص",
+      "en": "Competent handling and investigation"
+    },
+    {
+      "code": "S4",
+      "ar": "التوصية والقرار المختص",
+      "en": "Recommendation and competent decision"
+    },
+    {
+      "code": "S5",
+      "ar": "التبليغ والتنفيذ والإغلاق",
+      "en": "Notification, execution and closure"
+    }
+  ],
+  "master_sub": {
+    "S1.01": {
+      "ar": "ورود الطلب",
+      "en": "Request received"
+    },
+    "S1.02": {
+      "ar": "استيفاء متطلبات القيد",
+      "en": "Registration requirements met"
+    },
+    "S1.03": {
+      "ar": "تسجيل الحالة",
+      "en": "Case registered"
+    },
+    "S1.04": {
+      "ar": null,
+      "en": "Source and confidentiality set"
+    },
+    "S2.01": {
+      "ar": null,
+      "en": "Completeness check"
+    },
+    "S2.02": {
+      "ar": "بانتظار استكمال معلومات",
+      "en": "Awaiting additional information"
+    },
+    "S2.03": {
+      "ar": null,
+      "en": "Jurisdiction check"
+    },
+    "S2.04": {
+      "ar": "التقييم الأولي",
+      "en": "Preliminary assessment"
+    },
+    "S2.05": {
+      "ar": null,
+      "en": "Screening outcome approved"
+    },
+    "S3.01": {
+      "ar": "إسناد المعالجة المختصة",
+      "en": "Competent handling assigned"
+    },
+    "S3.02": {
+      "ar": "جمع المعلومات والأدلة",
+      "en": "Information and evidence gathering"
+    },
+    "S3.03": {
+      "ar": null,
+      "en": "Preliminary investigation"
+    },
+    "S3.04": {
+      "ar": null,
+      "en": "Approved escalation (where applicable)"
+    },
+    "S3.05": {
+      "ar": "إجراءات التحقيق الموسع",
+      "en": "Extended investigation procedures"
+    },
+    "S3.06": {
+      "ar": "إعداد التقرير النهائي للمعالجة",
+      "en": "Final handling report prepared"
+    },
+    "S3.07": {
+      "ar": null,
+      "en": "Handling outputs approved"
+    },
+    "S4.01": {
+      "ar": "إعداد المخرجات والتوصيات",
+      "en": "Outputs and recommendations prepared"
+    },
+    "S4.02": {
+      "ar": "اعتماد التوصيات من جهة الاختصاص",
+      "en": "Recommendations adopted by the competent body"
+    },
+    "S4.03": {
+      "ar": "رفع التوصية لصاحب الصلاحية",
+      "en": "Recommendation raised to the authority"
+    },
+    "S4.04": {
+      "ar": null,
+      "en": "Awaiting the authorised body's decision"
+    },
+    "S4.05": {
+      "ar": "صدور مآل القرار المختص",
+      "en": "Competent decision issued"
+    },
+    "S5.01": {
+      "ar": "تبليغ القرار عند انطباقه",
+      "en": "Decision notified (where applicable)"
+    },
+    "S5.02": {
+      "ar": null,
+      "en": "Decision execution followed up"
+    },
+    "S5.03": {
+      "ar": null,
+      "en": "Conditional grievance handled"
+    },
+    "S5.04": {
+      "ar": null,
+      "en": "Obligations verified complete"
+    },
+    "S5.05": {
+      "ar": null,
+      "en": "Case path closed"
+    },
+    "S5.06": {
+      "ar": null,
+      "en": "File archived"
+    },
+    "S5.07": {
+      "ar": null,
+      "en": "Referral path closed after transfer"
+    }
+  },
+  "journeys": [
+    {
+      "id": "J-CHAIR-DIRECTION",
+      "object": {
+        "ar": "الموضوع المعروض على رئيس اللجنة للتوجيه",
+        "en": "The matter presented to the chair for direction"
+      },
+      "capacity": {
+        "ar": "رئيس اللجنة، والأمانة المنفذة",
+        "en": "Committee chair, and the executing secretariat"
+      },
+      "disclosure": "internal",
+      "structure": "BRANCHING",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "عرض الموضوع على الرئيس",
+          "en": "Matter presented to the chair",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-CHAIR-DIRECTION/1/1",
+              "ar": "إعداد ملخص العرض",
+              "en": "Presentation summary prepared",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-CHAIR-DIRECTION/1/2",
+              "ar": "العرض",
+              "en": "Presented",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "توجيه الرئيس بالإجراء التالي",
+          "en": "Chair's direction on the next step",
+          "kind": "CHOICE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-CHAIR-DIRECTION/2/1",
+              "ar": "اجتماع",
+              "en": "Meeting",
+              "kind": "ALTERNATIVE",
+              "alternative_group": "J-CHAIR-DIRECTION/2"
+            },
+            {
+              "id": "J-CHAIR-DIRECTION/2/2",
+              "ar": "جلسة استماع",
+              "en": "Hearing",
+              "kind": "ALTERNATIVE",
+              "alternative_group": "J-CHAIR-DIRECTION/2"
+            },
+            {
+              "id": "J-CHAIR-DIRECTION/2/3",
+              "ar": "طلب بيانات",
+              "en": "Information request",
+              "kind": "ALTERNATIVE",
+              "alternative_group": "J-CHAIR-DIRECTION/2"
+            },
+            {
+              "id": "J-CHAIR-DIRECTION/2/4",
+              "ar": "ترك الأمر لتصويت اللجنة",
+              "en": "Left to the committee's vote",
+              "kind": "ALTERNATIVE",
+              "alternative_group": "J-CHAIR-DIRECTION/2"
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "تنفيذ التوجيه",
+          "en": "Direction executed",
+          "kind": "CHOICE",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-CHAIR-DIRECTION/3/1",
+              "ar": "جدولة الاجتماع أو الجلسة",
+              "en": "Meeting or hearing scheduled",
+              "kind": "ALTERNATIVE",
+              "alternative_group": "J-CHAIR-DIRECTION/3"
+            },
+            {
+              "id": "J-CHAIR-DIRECTION/3/2",
+              "ar": "إرسال طلب البيانات",
+              "en": "Information request sent",
+              "kind": "ALTERNATIVE",
+              "alternative_group": "J-CHAIR-DIRECTION/3"
+            },
+            {
+              "id": "J-CHAIR-DIRECTION/3/3",
+              "ar": "فتح بند التصويت",
+              "en": "Vote item opened",
+              "kind": "ALTERNATIVE",
+              "alternative_group": "J-CHAIR-DIRECTION/3"
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "عرض النتيجة على الرئيس",
+          "en": "Result presented to the chair",
+          "kind": "SEQUENCE",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-CHAIR-DIRECTION/4/1",
+              "ar": "استلام النتيجة",
+              "en": "Result received",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-CHAIR-DIRECTION/4/2",
+              "ar": "العرض",
+              "en": "Presented",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "إقفال طلب التوجيه",
+          "en": "Direction request closed",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-CHAIR-DIRECTION/5/1",
+              "ar": "تسجيل التوجيه ونتيجته",
+              "en": "Direction and result recorded",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-CHAIR-DIRECTION/5/2",
+              "ar": "متابعة الموضوع في مساره",
+              "en": "Matter continues on its path",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "يُقفل طلب التوجيه فقط؛ يستمر الموضوع في مساره الرئيسي.",
+        "en": "Only the direction request closes; the matter continues on its master journey."
+      },
+      "status": "PROPOSED"
+    },
+    {
+      "id": "J-RECOMMENDATION-COMMITTEE",
+      "object": {
+        "ar": "توصيات اللجنة",
+        "en": "The committee's recommendations"
+      },
+      "capacity": {
+        "ar": "أمين اللجنة ورئيسها وأعضاؤها",
+        "en": "Secretary, chair and members"
+      },
+      "disclosure": "internal",
+      "structure": "BRANCHING",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "إعداد حزمة التوصيات وعرضها للمداولة",
+          "en": "Recommendation package prepared for deliberation",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/1/1",
+              "ar": "الإعداد",
+              "en": "Prepared",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/1/2",
+              "ar": "العرض للمداولة",
+              "en": "Submitted for deliberation",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "المداولة والتصويت واعتماد التوصيات",
+          "en": "Deliberation, vote and adoption",
+          "kind": "SEQUENCE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/2/1",
+              "ar": "المداولة",
+              "en": "Deliberation",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/2/2",
+              "ar": "التصويت",
+              "en": "Vote",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/2/3",
+              "ar": "الاعتماد والمحضر",
+              "en": "Adoption and minutes",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "المراجعة القانونية عند الاقتضاء",
+          "en": "Legal review where required",
+          "kind": "CONDITION",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/3/1",
+              "ar": "إسناد المراجعة",
+              "en": "Review assigned",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            },
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/3/2",
+              "ar": "الرأي القانوني",
+              "en": "Legal opinion",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            },
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/3/3",
+              "ar": "الإعادة إلى اللجنة عند الاقتضاء",
+              "en": "Returned to the committee where required",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "الرفع إلى صاحب الصلاحية وانتظار القرار",
+          "en": "Raised to the authority, awaiting the decision",
+          "kind": "SEQUENCE",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/4/1",
+              "ar": "الرفع",
+              "en": "Raised",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/4/2",
+              "ar": "النظر",
+              "en": "Considered",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/4/3",
+              "ar": "الإعادة عند الاقتضاء",
+              "en": "Returned where required",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "تسجيل القرار وإقفال مسار التوصية",
+          "en": "Decision recorded, recommendation path closed",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/5/1",
+              "ar": "تسجيل القرار",
+              "en": "Decision recorded",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-RECOMMENDATION-COMMITTEE/5/2",
+              "ar": "الإقفال",
+              "en": "Closed",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "يُقفل مسار التوصية عند تسجيل قرار صاحب الصلاحية؛ التبليغ والتنفيذ يتبعان في المسار الرئيسي.",
+        "en": "The recommendation path closes when the authority's decision is recorded; notification and execution follow on the master journey."
+      },
+      "status": "PROPOSED"
+    },
+    {
+      "id": "J-DECISION-AUTHORITY",
+      "object": {
+        "ar": "التوصية المرفوعة إليكم وقراركم",
+        "en": "The recommendation raised to you and your decision"
+      },
+      "capacity": {
+        "ar": "صاحب الصلاحية",
+        "en": "Competent authority"
+      },
+      "disclosure": "internal",
+      "structure": "LINEAR",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "رفع التوصية إليكم",
+          "en": "Recommendation raised to you",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-DECISION-AUTHORITY/1/1",
+              "ar": "الرفع",
+              "en": "Raised",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-AUTHORITY/1/2",
+              "ar": "تسلّم الحزمة",
+              "en": "Package received",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "النظر في التوصية",
+          "en": "Consideration",
+          "kind": "SEQUENCE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-DECISION-AUTHORITY/2/1",
+              "ar": "النظر",
+              "en": "Considered",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-AUTHORITY/2/2",
+              "ar": "الاستيضاح أو الإعادة عند الاقتضاء",
+              "en": "Clarified or returned where required",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "اعتماد القرار",
+          "en": "Decision approved",
+          "kind": "SEQUENCE",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-DECISION-AUTHORITY/3/1",
+              "ar": "الاعتماد",
+              "en": "Approved",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-AUTHORITY/3/2",
+              "ar": "تسجيل القرار",
+              "en": "Decision recorded",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "تبليغ القرار وتنفيذه",
+          "en": "Decision notified and executed",
+          "kind": "SEQUENCE",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-DECISION-AUTHORITY/4/1",
+              "ar": "التبليغ",
+              "en": "Notified",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-AUTHORITY/4/2",
+              "ar": "التنفيذ",
+              "en": "Executed",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-AUTHORITY/4/3",
+              "ar": "التظلم عند تقديمه",
+              "en": "Grievance if filed",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "إقفال متابعة القرار",
+          "en": "Decision follow-up closed",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-DECISION-AUTHORITY/5/1",
+              "ar": "التحقق من اكتمال التنفيذ",
+              "en": "Execution verified complete",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-AUTHORITY/5/2",
+              "ar": "الإقفال",
+              "en": "Closed",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "إقفال متابعة القرار بعد التحقق من تنفيذه؛ ويليه إغلاق المسار الرئيسي للقضية.",
+        "en": "Closure of the decision follow-up once execution is verified; the master case closure follows it."
+      },
+      "status": "PROPOSED"
+    },
+    {
+      "id": "J-DECISION-SUBJECT",
+      "object": {
+        "ar": "القرار الصادر في شأنك",
+        "en": "The decision issued concerning you"
+      },
+      "capacity": {
+        "ar": "الطرف المعني",
+        "en": "Party concerned"
+      },
+      "disclosure": "restricted",
+      "structure": "BRANCHING",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "تبليغك بالقرار",
+          "en": "Decision notified to you",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-DECISION-SUBJECT/1/1",
+              "ar": "التبليغ الرسمي",
+              "en": "Formal notification",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-SUBJECT/1/2",
+              "ar": "الإقرار بالاستلام",
+              "en": "Receipt acknowledged",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "مهلة التظلم",
+          "en": "Grievance period",
+          "kind": "SEQUENCE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-DECISION-SUBJECT/2/1",
+              "ar": "بدء المهلة",
+              "en": "Period starts",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-SUBJECT/2/2",
+              "ar": "انتهاؤها",
+              "en": "Period ends",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "قيد التظلم عند تقديمه",
+          "en": "Grievance registered if filed",
+          "kind": "CONDITION",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-DECISION-SUBJECT/3/1",
+              "ar": "تقديم التظلم",
+              "en": "Grievance filed",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-SUBJECT/3/2",
+              "ar": "تأكيد القيد",
+              "en": "Registration confirmed",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "النظر في التظلم والبت فيه",
+          "en": "Grievance considered and decided",
+          "kind": "CONDITION",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-DECISION-SUBJECT/4/1",
+              "ar": "النظر",
+              "en": "Considered",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DECISION-SUBJECT/4/2",
+              "ar": "البت",
+              "en": "Decided",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "إقفال إجراءات التبليغ والتظلم",
+          "en": "Notification and grievance procedure closed",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-DECISION-SUBJECT/5/1",
+              "ar": "الإقفال",
+              "en": "Closed",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "إقفال إجراءات التبليغ والتظلم في شأنك فقط.",
+        "en": "Closure of the notification and grievance procedure concerning you only."
+      },
+      "status": "PROPOSED"
+    },
+    {
+      "id": "J-WITNESS",
+      "object": {
+        "ar": "مشاركتك في جلسة الاستماع",
+        "en": "Your participation in the hearing"
+      },
+      "capacity": {
+        "ar": "الشاهد",
+        "en": "Witness"
+      },
+      "disclosure": "restricted",
+      "structure": "LINEAR",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "دعوتك لحضور الجلسة",
+          "en": "Summons to the hearing",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-WITNESS/1/1",
+              "ar": "الدعوة والموعد",
+              "en": "Summons and date",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "التذكير بواجب السرية",
+          "en": "Confidentiality reminder",
+          "kind": "SEQUENCE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-WITNESS/2/1",
+              "ar": "التذكير",
+              "en": "Reminder",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "الإدلاء بالإفادة",
+          "en": "Testimony given",
+          "kind": "SEQUENCE",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-WITNESS/3/1",
+              "ar": "الجلسة",
+              "en": "Session",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "تحرير المحضر وإتاحة طلب التصحيح",
+          "en": "Record drafted, correction request enabled",
+          "kind": "SEQUENCE",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-WITNESS/4/1",
+              "ar": "تحرير المحضر",
+              "en": "Record drafted",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WITNESS/4/2",
+              "ar": "طلب التصحيح",
+              "en": "Correction requested",
+              "kind": "OPTIONAL",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "إقفال مشاركتك في الجلسة",
+          "en": "Your participation closed",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-WITNESS/5/1",
+              "ar": "اعتماد محضر الإفادة",
+              "en": "Statement record approved",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "تنتهي مشاركتك عند اعتماد محضر إفادتك؛ لا يُعرض عليك شيء عن القضية.",
+        "en": "Your participation ends when your statement record is approved; nothing about the case is shown to you."
+      },
+      "status": "PROPOSED"
+    },
+    {
+      "id": "J-IR-REFERRER",
+      "object": {
+        "ar": "إحالتكم المؤسسية",
+        "en": "Your institutional referral"
+      },
+      "capacity": {
+        "ar": "الجهة المُحيلة",
+        "en": "Referring body"
+      },
+      "disclosure": "scope",
+      "structure": "LINEAR",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "استلام إحالتكم",
+          "en": "Your referral received",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-IR-REFERRER/1/1",
+              "ar": "ورود الإحالة",
+              "en": "Referral arrives",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/1/2",
+              "ar": "التأكد من أن الإحالة واردة من جهة مخوّلة",
+              "en": "Check that the referral comes from an authorised body",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/1/3",
+              "ar": "فحص المرفقات الأساسية",
+              "en": "Core attachments checked",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "قيد الإحالة وإصدار رقم الحالة",
+          "en": "Referral registered, case number issued",
+          "kind": "SEQUENCE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-IR-REFERRER/2/1",
+              "ar": "القيد وإصدار المرجع",
+              "en": "Registration and reference",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/2/2",
+              "ar": "إشعاركم برقم الحالة",
+              "en": "You are told the case number",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "التحقق من الاكتمال والاختصاص وتحديد المسار",
+          "en": "Completeness, jurisdiction and handling path",
+          "kind": "SEQUENCE",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-IR-REFERRER/3/1",
+              "ar": "مراجعة اكتمال المستندات",
+              "en": "Document completeness review",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/3/2",
+              "ar": "طلب استكمال عند الحاجة",
+              "en": "Completion requested if needed",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/3/3",
+              "ar": "التحقق من الاختصاص",
+              "en": "Jurisdiction verified",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/3/4",
+              "ar": "اعتماد مسار المعالجة",
+              "en": "Handling path approved",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "المعالجة المؤسسية المختصة",
+          "en": "Competent institutional handling",
+          "kind": "SEQUENCE",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-IR-REFERRER/4/1",
+              "ar": "إسناد المعالجة",
+              "en": "Handling assigned",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/4/2",
+              "ar": "طلب الإيضاحات عند الحاجة",
+              "en": "Clarifications requested if needed",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/4/3",
+              "ar": "استكمال المعالجة",
+              "en": "Handling completed",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "إفادتكم بالمآل المصرح به وإغلاق الإحالة",
+          "en": "Authorised outcome communicated to you, referral closed",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-IR-REFERRER/5/1",
+              "ar": "إعداد الإفادة وتحديد ما يُصرَّح به لكم",
+              "en": "Reply prepared; what may be disclosed to you determined",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/5/2",
+              "ar": "تبليغ المآل المصرح به",
+              "en": "Authorised outcome communicated",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-IR-REFERRER/5/3",
+              "ar": "إغلاق الإحالة",
+              "en": "Referral closed",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "تُغلق الإحالة بإفادتكم بالمآل المصرح به؛ ما يلي ذلك من تنفيذ داخلي لا يُعرض عليكم، ولا يعني إغلاق القضية الداخلية.",
+        "en": "The referral closes when the authorised outcome is communicated to you; internal execution after that is not shown to you, and it is not the internal case closure."
+      },
+      "status": "PROPOSED"
+    },
+    {
+      "id": "J-STATEMENT-PARTY",
+      "object": {
+        "ar": "إفادتك بشأن وقائع محددة",
+        "en": "Your statement on specified facts"
+      },
+      "capacity": {
+        "ar": "الطرف المعني",
+        "en": "Party concerned"
+      },
+      "disclosure": "restricted",
+      "structure": "BRANCHING",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "دعوتك لتقديم الإفادة",
+          "en": "Invitation to give your statement",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-STATEMENT-PARTY/1/1",
+              "ar": "الدعوة وموعدها",
+              "en": "Invitation and its date",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-STATEMENT-PARTY/1/2",
+              "ar": "سند الطلب",
+              "en": "Basis of the request",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "إشعارك بالوقائع المنسوبة",
+          "en": "Notice of the attributed facts",
+          "kind": "SEQUENCE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-STATEMENT-PARTY/2/1",
+              "ar": "إشعار الوقائع",
+              "en": "Facts notified",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-STATEMENT-PARTY/2/2",
+              "ar": "تمكينك من الرد",
+              "en": "You are enabled to reply",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "تقديم الإفادة أو الرد",
+          "en": "Statement or reply given",
+          "kind": "CHOICE",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-STATEMENT-PARTY/3/1",
+              "ar": "جلسة الإفادة",
+              "en": "Statement session",
+              "kind": "ALTERNATIVE",
+              "alternative_group": "J-STATEMENT-PARTY/3"
+            },
+            {
+              "id": "J-STATEMENT-PARTY/3/2",
+              "ar": "الرد الكتابي",
+              "en": "Written reply",
+              "kind": "ALTERNATIVE",
+              "alternative_group": "J-STATEMENT-PARTY/3"
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "تحرير المحضر وإتاحة التصحيح",
+          "en": "Record drafted, correction enabled",
+          "kind": "SEQUENCE",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-STATEMENT-PARTY/4/1",
+              "ar": "تحرير المحضر",
+              "en": "Record drafted",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-STATEMENT-PARTY/4/2",
+              "ar": "طلب التصحيح",
+              "en": "Correction requested",
+              "kind": "OPTIONAL",
+              "alternative_group": null
+            },
+            {
+              "id": "J-STATEMENT-PARTY/4/3",
+              "ar": "اعتماد المحضر",
+              "en": "Record approved",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "إقفال إجراء الإفادة",
+          "en": "Statement procedure closed",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-STATEMENT-PARTY/5/1",
+              "ar": "ضم الإفادة إلى ملف التحقيق",
+              "en": "Statement added to the investigation file",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "إقفال إجراء الإفادة فقط؛ لا يعني انتهاء التحقيق أو القضية.",
+        "en": "Closure of the statement procedure only; neither the investigation nor the case ends."
+      },
+      "status": "PROPOSED"
+    },
+    {
+      "id": "J-WB-REPORTER",
+      "object": {
+        "ar": "بلاغك",
+        "en": "Your report"
+      },
+      "capacity": {
+        "ar": "مقدم البلاغ",
+        "en": "Reporter"
+      },
+      "disclosure": "public",
+      "structure": "LINEAR",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "استلام بلاغك",
+          "en": "Your report received",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-WB-REPORTER/1/1",
+              "ar": "وصول البلاغ عبر القناة المعتمدة",
+              "en": "Report arrives through the approved channel",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WB-REPORTER/1/2",
+              "ar": "إثبات الورود وإصدار إيصال الاستلام",
+              "en": "Receipt recorded and acknowledged",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "تسجيل بلاغك وإصدار رقمه المرجعي",
+          "en": "Your report registered, reference issued",
+          "kind": "SEQUENCE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-WB-REPORTER/2/1",
+              "ar": "اكتمال متطلبات تسجيل بلاغك",
+              "en": "Registration requirements for your report completed",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WB-REPORTER/2/2",
+              "ar": "إصدار الرقم المرجعي",
+              "en": "Reference number issued",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WB-REPORTER/2/3",
+              "ar": "تحديد مستوى السرية",
+              "en": "Confidentiality level set",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "مراجعة بلاغك وتقييمه الأولي",
+          "en": "Review and preliminary assessment of your report",
+          "kind": "SEQUENCE",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-WB-REPORTER/3/1",
+              "ar": "فحص اكتمال البيانات",
+              "en": "Completeness check",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WB-REPORTER/3/2",
+              "ar": "طلب استكمال عند الحاجة",
+              "en": "Completion requested if needed",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WB-REPORTER/3/3",
+              "ar": "التأكد من أن بلاغك ضمن نطاق عمل الصندوق",
+              "en": "Check that your report falls within the Fund's remit",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WB-REPORTER/3/4",
+              "ar": "التقييم الأولي واعتماد نتيجته",
+              "en": "Preliminary assessment and its approval",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "معالجة بلاغك لدى الجهة المختصة",
+          "en": "Handling of your report by the competent body",
+          "kind": "SEQUENCE",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-WB-REPORTER/4/1",
+              "ar": "إسناد المعالجة",
+              "en": "Handling assigned",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WB-REPORTER/4/2",
+              "ar": "المعالجة أو التحقيق",
+              "en": "Handling or investigation",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WB-REPORTER/4/3",
+              "ar": "اعتماد المخرجات",
+              "en": "Outputs approved",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "إبلاغك بمآل بلاغك وإغلاق متابعتك له",
+          "en": "Outcome of your report communicated, your follow-up closed",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-WB-REPORTER/5/1",
+              "ar": "إبلاغك بالمآل المصرح به",
+              "en": "Authorised outcome communicated to you",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-WB-REPORTER/5/2",
+              "ar": "إغلاق البلاغ في القناة أو تحويله",
+              "en": "Report closed in the channel or transferred",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "إغلاق متابعتك للبلاغ: إبلاغك بالمآل المصرح به، أو تحويل البلاغ، أو إقفاله لعدم الاستكمال. لا يعني إغلاق القضية الداخلية.",
+        "en": "Closure of your follow-up of the report: the authorised outcome communicated, the report transferred, or closed as incomplete. It does not mean the internal case is closed."
+      },
+      "status": "PROPOSED"
+    },
+    {
+      "id": "J-MEETING",
+      "object": {
+        "ar": "اجتماع اللجنة",
+        "en": "The committee meeting"
+      },
+      "capacity": {
+        "ar": "رئيس اللجنة وأعضاؤها وأمينها",
+        "en": "Chair, members and secretary"
+      },
+      "disclosure": "internal",
+      "structure": "LINEAR",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "تحديد الموعد وتوجيه الدعوات",
+          "en": "Scheduling and invitations",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-MEETING/1/1",
+              "ar": "اعتماد جدول الأعمال",
+              "en": "Agenda approved",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/1/2",
+              "ar": "تحديد الموعد",
+              "en": "Date set",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/1/3",
+              "ar": "الدعوات والتذكير",
+              "en": "Invitations and reminders",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/1/4",
+              "ar": "إعادة الجدولة أو الإلغاء عند الاقتضاء",
+              "en": "Rescheduled or cancelled where required",
+              "kind": "CONDITIONAL",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "إتاحة المواد والإفصاح عن التعارض",
+          "en": "Materials and conflict disclosures",
+          "kind": "SEQUENCE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-MEETING/2/1",
+              "ar": "إتاحة مواد الاجتماع",
+              "en": "Meeting materials released",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/2/2",
+              "ar": "طلب الإفصاح",
+              "en": "Disclosure requested",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/2/3",
+              "ar": "استلام الإفصاحات",
+              "en": "Disclosures received",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/2/4",
+              "ar": "البت في التعارض",
+              "en": "Conflict decided",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "الانعقاد والمداولة والتصويت",
+          "en": "Session, deliberation and vote",
+          "kind": "SEQUENCE",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-MEETING/3/1",
+              "ar": "إثبات الحضور",
+              "en": "Attendance recorded",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/3/2",
+              "ar": "المداولة",
+              "en": "Deliberation",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/3/3",
+              "ar": "فتح التصويت والتصويت",
+              "en": "Vote opened and cast",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/3/4",
+              "ar": "احتساب الأصوات وإقفال البند",
+              "en": "Votes counted, item closed",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "المحضر: الإعداد والمراجعة والتوقيع",
+          "en": "Minutes: drafting, review and signature",
+          "kind": "SEQUENCE",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-MEETING/4/1",
+              "ar": "رفع المسودة إلى الرئيس",
+              "en": "Draft raised to the chair",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/4/2",
+              "ar": "تعميم المسودة والمراجعة",
+              "en": "Draft circulated and reviewed",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/4/3",
+              "ar": "الاعتماد والتوقيع",
+              "en": "Approved and signed",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "إقفال الاجتماع ومتابعة تكليفاته",
+          "en": "Meeting closed, its assignments followed up",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-MEETING/5/1",
+              "ar": "توثيق المحضر الموقّع",
+              "en": "Signed minutes filed",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-MEETING/5/2",
+              "ar": "إسناد التكليفات ومتابعتها",
+              "en": "Assignments issued and tracked",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "إقفال سجل الاجتماع ومتابعة تكليفاته فقط؛ القضية تستمر في مسارها الرئيسي.",
+        "en": "Closure of the meeting record and its follow-ups only; the case continues on its master journey."
+      },
+      "status": "PROPOSED"
+    },
+    {
+      "id": "J-DEFENCE",
+      "object": {
+        "ar": "حقوقك ودفاعك",
+        "en": "Your rights and defence"
+      },
+      "capacity": {
+        "ar": "الموظف المعني",
+        "en": "Subject employee"
+      },
+      "disclosure": "restricted",
+      "structure": "LINEAR",
+      "summary5": true,
+      "stages": [
+        {
+          "n": 1,
+          "ar": "إشعار الحقوق",
+          "en": "Rights notice",
+          "kind": "SEQUENCE",
+          "v12_stage": 1,
+          "steps": [
+            {
+              "id": "J-DEFENCE/1/1",
+              "ar": "إصدار إشعار الحقوق",
+              "en": "Rights notice issued",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DEFENCE/1/2",
+              "ar": "الإقرار بالاطلاع",
+              "en": "Acknowledged",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 2,
+          "ar": "إشعار الدفاع وبدء المهلة",
+          "en": "Defence notice, period starts",
+          "kind": "SEQUENCE",
+          "v12_stage": 2,
+          "steps": [
+            {
+              "id": "J-DEFENCE/2/1",
+              "ar": "إصدار إشعار الدفاع",
+              "en": "Defence notice issued",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DEFENCE/2/2",
+              "ar": "بدء المهلة",
+              "en": "Period starts",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 3,
+          "ar": "إتاحة حزمة الدفاع",
+          "en": "Defence packet released",
+          "kind": "SEQUENCE",
+          "v12_stage": 3,
+          "steps": [
+            {
+              "id": "J-DEFENCE/3/1",
+              "ar": "إتاحة الحزمة",
+              "en": "Packet released",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DEFENCE/3/2",
+              "ar": "الاطلاع",
+              "en": "Examined",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 4,
+          "ar": "تقديم الدفاع قبل انتهاء المهلة",
+          "en": "Defence submitted before the deadline",
+          "kind": "SEQUENCE",
+          "v12_stage": 4,
+          "steps": [
+            {
+              "id": "J-DEFENCE/4/1",
+              "ar": "التذكير بالاستحقاق",
+              "en": "Due reminder",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DEFENCE/4/2",
+              "ar": "تقديم الدفاع",
+              "en": "Defence submitted",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        },
+        {
+          "n": 5,
+          "ar": "إقفال مهلة الدفاع وإحالة الدفاع إلى اللجنة",
+          "en": "Defence period closed, defence passed to the committee",
+          "kind": "SEQUENCE",
+          "v12_stage": 5,
+          "steps": [
+            {
+              "id": "J-DEFENCE/5/1",
+              "ar": "إقفال المهلة",
+              "en": "Period closed",
+              "kind": "STEP",
+              "alternative_group": null
+            },
+            {
+              "id": "J-DEFENCE/5/2",
+              "ar": "إحالة الدفاع",
+              "en": "Defence passed on",
+              "kind": "STEP",
+              "alternative_group": null
+            }
+          ]
+        }
+      ],
+      "closure": {
+        "ar": "إقفال مهلة الدفاع فقط؛ القضية مستمرة حتى القرار وتبليغه.",
+        "en": "Closure of the defence period only; the case continues to the decision and its notification."
+      },
+      "status": "PROPOSED"
+    }
+  ]
+}

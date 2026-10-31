@@ -1,0 +1,2981 @@
+{
+ "version": "L2-2026-10-26b",
+ "status": "PROPOSED",
+ "owner_rule": "26 Oct 2026 12:32 + 12:36 UTC: three levels; level-2 wording per notification's object and recipient capacity; closure names that object, never the case",
+ "master": [
+  {
+   "code": "S1",
+   "key": "INTAKE_REGISTER",
+   "ar": "الاستقبال والتسجيل",
+   "en": "Receipt and registration"
+  },
+  {
+   "code": "S2",
+   "key": "SCREENING",
+   "ar": "فحص الاكتمال والاختصاص والتقييم",
+   "en": "Completeness, jurisdiction and assessment"
+  },
+  {
+   "code": "S3",
+   "key": "PROCESS_INVESTIGATE",
+   "ar": "المعالجة والتحقيق المختص",
+   "en": "Competent handling and investigation"
+  },
+  {
+   "code": "S4",
+   "key": "RECOMMEND_DECIDE",
+   "ar": "التوصية والقرار المختص",
+   "en": "Recommendation and competent decision"
+  },
+  {
+   "code": "S5",
+   "key": "EXECUTE_CLOSE",
+   "ar": "التبليغ والتنفيذ والإغلاق",
+   "en": "Notification, execution and closure"
+  }
+ ],
+ "master_sub_en": {
+  "S1.01": "Request received",
+  "S1.02": "Registration requirements met",
+  "S1.03": "Case registered",
+  "S1.04": "Source and confidentiality set",
+  "S2.01": "Completeness check",
+  "S2.02": "Awaiting additional information",
+  "S2.03": "Jurisdiction check",
+  "S2.04": "Preliminary assessment",
+  "S2.05": "Screening outcome approved",
+  "S3.01": "Competent handling assigned",
+  "S3.02": "Information and evidence gathering",
+  "S3.03": "Preliminary investigation",
+  "S3.04": "Approved escalation (where applicable)",
+  "S3.05": "Extended investigation procedures",
+  "S3.06": "Final handling report prepared",
+  "S3.07": "Handling outputs approved",
+  "S4.01": "Outputs and recommendations prepared",
+  "S4.02": "Recommendations adopted by the competent body",
+  "S4.03": "Recommendation raised to the authority",
+  "S4.04": "Awaiting the authorised body's decision",
+  "S4.05": "Competent decision issued",
+  "S5.01": "Decision notified (where applicable)",
+  "S5.02": "Decision execution followed up",
+  "S5.03": "Conditional grievance handled",
+  "S5.04": "Obligations verified complete",
+  "S5.05": "Case path closed",
+  "S5.06": "File archived",
+  "S5.07": "Referral path closed after transfer"
+ },
+ "journeys": [
+  {
+   "id": "J-WB-REPORTER",
+   "object_ar": "بلاغك",
+   "object_en": "Your report",
+   "capacity_ar": "مقدم البلاغ",
+   "capacity_en": "Reporter",
+   "disclosure": "public",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "استلام بلاغك",
+     "en": "Your report received",
+     "sub": [
+      {
+       "ar": "وصول البلاغ عبر القناة المعتمدة",
+       "en": "Report arrives through the approved channel"
+      },
+      {
+       "ar": "إثبات الورود وإصدار إيصال الاستلام",
+       "en": "Receipt recorded and acknowledged"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "تسجيل بلاغك وإصدار رقمه المرجعي",
+     "en": "Your report registered, reference issued",
+     "sub": [
+      {
+       "ar": "اكتمال متطلبات تسجيل بلاغك",
+       "en": "Registration requirements for your report completed"
+      },
+      {
+       "ar": "إصدار الرقم المرجعي",
+       "en": "Reference number issued"
+      },
+      {
+       "ar": "تحديد مستوى السرية",
+       "en": "Confidentiality level set"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "مراجعة بلاغك وتقييمه الأولي",
+     "en": "Review and preliminary assessment of your report",
+     "sub": [
+      {
+       "ar": "فحص اكتمال البيانات",
+       "en": "Completeness check"
+      },
+      {
+       "ar": "طلب استكمال عند الحاجة",
+       "en": "Completion requested if needed"
+      },
+      {
+       "ar": "التأكد من أن بلاغك ضمن نطاق عمل الصندوق",
+       "en": "Check that your report falls within the Fund's remit"
+      },
+      {
+       "ar": "التقييم الأولي واعتماد نتيجته",
+       "en": "Preliminary assessment and its approval"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "معالجة بلاغك لدى الجهة المختصة",
+     "en": "Handling of your report by the competent body",
+     "sub": [
+      {
+       "ar": "إسناد المعالجة",
+       "en": "Handling assigned"
+      },
+      {
+       "ar": "المعالجة أو التحقيق",
+       "en": "Handling or investigation"
+      },
+      {
+       "ar": "اعتماد المخرجات",
+       "en": "Outputs approved"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إبلاغك بمآل بلاغك وإغلاق متابعتك له",
+     "en": "Outcome of your report communicated, your follow-up closed",
+     "sub": [
+      {
+       "ar": "إبلاغك بالمآل المصرح به",
+       "en": "Authorised outcome communicated to you"
+      },
+      {
+       "ar": "إغلاق البلاغ في القناة أو تحويله",
+       "en": "Report closed in the channel or transferred"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إغلاق متابعتك للبلاغ: إبلاغك بالمآل المصرح به، أو تحويل البلاغ، أو إقفاله لعدم الاستكمال. لا يعني إغلاق القضية الداخلية.",
+   "closure_en": "Closure of your follow-up of the report: the authorised outcome communicated, the report transferred, or closed as incomplete. It does not mean the internal case is closed.",
+   "note_en": "Public level only: the reporter never sees internal statuses; stage names are the reporter's view of the V8 reporter journey.",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-IR-REFERRER",
+   "object_ar": "إحالتكم المؤسسية",
+   "object_en": "Your institutional referral",
+   "capacity_ar": "الجهة المُحيلة",
+   "capacity_en": "Referring body",
+   "disclosure": "scope",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "استلام إحالتكم",
+     "en": "Your referral received",
+     "sub": [
+      {
+       "ar": "ورود الإحالة",
+       "en": "Referral arrives"
+      },
+      {
+       "ar": "التأكد من أن الإحالة واردة من جهة مخوّلة",
+       "en": "Check that the referral comes from an authorised body"
+      },
+      {
+       "ar": "فحص المرفقات الأساسية",
+       "en": "Core attachments checked"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "قيد الإحالة وإصدار رقم الحالة",
+     "en": "Referral registered, case number issued",
+     "sub": [
+      {
+       "ar": "القيد وإصدار المرجع",
+       "en": "Registration and reference"
+      },
+      {
+       "ar": "إشعاركم برقم الحالة",
+       "en": "You are told the case number"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "التحقق من الاكتمال والاختصاص وتحديد المسار",
+     "en": "Completeness, jurisdiction and handling path",
+     "sub": [
+      {
+       "ar": "مراجعة اكتمال المستندات",
+       "en": "Document completeness review"
+      },
+      {
+       "ar": "طلب استكمال عند الحاجة",
+       "en": "Completion requested if needed"
+      },
+      {
+       "ar": "التحقق من الاختصاص",
+       "en": "Jurisdiction verified"
+      },
+      {
+       "ar": "اعتماد مسار المعالجة",
+       "en": "Handling path approved"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "المعالجة المؤسسية المختصة",
+     "en": "Competent institutional handling",
+     "sub": [
+      {
+       "ar": "إسناد المعالجة",
+       "en": "Handling assigned"
+      },
+      {
+       "ar": "طلب الإيضاحات عند الحاجة",
+       "en": "Clarifications requested if needed"
+      },
+      {
+       "ar": "استكمال المعالجة",
+       "en": "Handling completed"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إفادتكم بالمآل المصرح به وإغلاق الإحالة",
+     "en": "Authorised outcome communicated to you, referral closed",
+     "sub": [
+      {
+       "ar": "إعداد الإفادة وتحديد ما يُصرَّح به لكم",
+       "en": "Reply prepared; what may be disclosed to you determined"
+      },
+      {
+       "ar": "تبليغ المآل المصرح به",
+       "en": "Authorised outcome communicated"
+      },
+      {
+       "ar": "إغلاق الإحالة",
+       "en": "Referral closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "تُغلق الإحالة بإفادتكم بالمآل المصرح به؛ ما يلي ذلك من تنفيذ داخلي لا يُعرض عليكم، ولا يعني إغلاق القضية الداخلية.",
+   "closure_en": "The referral closes when the authorised outcome is communicated to you; internal execution after that is not shown to you, and it is not the internal case closure.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-INTAKE-SECRETARY",
+   "object_ar": "الإحالة أو الحالة الواردة إلى الأمانة",
+   "object_en": "The referral or case arriving at the secretariat",
+   "capacity_ar": "أمين اللجنة",
+   "capacity_en": "Committee secretary",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "ورود الإحالة أو الحالة إلى الأمانة",
+     "en": "Arrival at the secretariat",
+     "sub": [
+      {
+       "ar": "ورود الإحالة أو الحالة",
+       "en": "Referral or case arrives"
+      },
+      {
+       "ar": "إشعار الأمانة",
+       "en": "Secretariat notified"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "التحقق من السند والمرفقات والسرية",
+     "en": "Basis, attachments and confidentiality checked",
+     "sub": [
+      {
+       "ar": "التحقق من صفة الجهة أو سند الإحالة",
+       "en": "Referring body's standing or referral basis verified"
+      },
+      {
+       "ar": "فحص المرفقات",
+       "en": "Attachments checked"
+      },
+      {
+       "ar": "تحديد مستوى السرية",
+       "en": "Confidentiality level set"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "قيد الحالة وإصدار مرجعها",
+     "en": "Case registered, reference issued",
+     "sub": [
+      {
+       "ar": "القيد",
+       "en": "Registration"
+      },
+      {
+       "ar": "إصدار المرجع",
+       "en": "Reference issued"
+      },
+      {
+       "ar": "إشعار الاستلام للجهة المُحيلة",
+       "en": "Receipt notice to the referring body"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "عرض الموضوع على رئيس اللجنة",
+     "en": "Matter presented to the committee chair",
+     "sub": [
+      {
+       "ar": "إعداد ملخص العرض",
+       "en": "Presentation summary prepared"
+      },
+      {
+       "ar": "العرض على الرئيس",
+       "en": "Presented to the chair"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال مهمة الاستلام بإحالة الموضوع إلى المسار المعتمد",
+     "en": "Intake task closed: matter handed to the approved path",
+     "sub": [
+      {
+       "ar": "تلقي توجيه الرئيس",
+       "en": "Chair's direction received"
+      },
+      {
+       "ar": "إحالة الموضوع إلى المسار المعتمد",
+       "en": "Matter handed to the approved path"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال مهمة الاستلام لدى الأمانة فقط؛ تستمر القضية في مسارها الرئيسي.",
+   "closure_en": "Closure of the secretariat's intake task only; the case continues on its master journey.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-DR-PREPARER",
+   "object_ar": "الإحالة المباشرة التي أعددتموها",
+   "object_en": "The direct referral you prepared",
+   "capacity_ar": "المُعِد ورئيس القطاع",
+   "capacity_en": "Preparer and sector head",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "إعداد الإحالة وتقديمها",
+     "en": "Referral prepared and submitted",
+     "sub": [
+      {
+       "ar": "إعداد الإحالة",
+       "en": "Referral prepared"
+      },
+      {
+       "ar": "التقديم إلى رئيس القطاع",
+       "en": "Submitted to the sector head"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "اعتماد رئيس القطاع",
+     "en": "Sector head approval",
+     "sub": [
+      {
+       "ar": "مراجعة رئيس القطاع",
+       "en": "Sector head review"
+      },
+      {
+       "ar": "الاعتماد أو الإعادة للاستكمال",
+       "en": "Approved or returned for completion"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "استلام أمانة اللجنة وفحصها",
+     "en": "Receipt and check by the committee secretariat",
+     "sub": [
+      {
+       "ar": "إشعاركم بالاستلام",
+       "en": "Receipt acknowledged to you"
+      },
+      {
+       "ar": "فحص السند والمرفقات",
+       "en": "Basis and attachments checked"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "القبول أو الإعادة أو الرفض أو التصعيد",
+     "en": "Accepted, returned, rejected or escalated",
+     "sub": [
+      {
+       "ar": "قرار الأمانة",
+       "en": "Secretariat decision"
+      },
+      {
+       "ar": "الاعتراض والتصعيد عند الرفض",
+       "en": "Objection and escalation on rejection"
+      },
+      {
+       "ar": "البت في التصعيد",
+       "en": "Escalation decided"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال إجراءات الإحالة لديكم بقيدها حالةً",
+     "en": "Your referral closed: registered as a case",
+     "sub": [
+      {
+       "ar": "قيد الحالة",
+       "en": "Case registered"
+      },
+      {
+       "ar": "إشعاركم بالقبول",
+       "en": "Acceptance notified to you"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "تنتهي إجراءات الإحالة لديكم عند قيدها حالةً (أو رفضها نهائياً)؛ لا تعني إغلاق القضية التي تنشأ عنها.",
+   "closure_en": "Your referral procedure ends when it is registered as a case (or finally rejected); it does not mean the resulting case is closed.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-DR-SECRETARY",
+   "object_ar": "الإحالة المباشرة الواردة من القطاع",
+   "object_en": "The direct referral received from the sector",
+   "capacity_ar": "أمين اللجنة ورئيسها",
+   "capacity_en": "Committee secretary and chair",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "ورود الإحالة من القطاع",
+     "en": "Referral received from the sector",
+     "sub": [
+      {
+       "ar": "تقديم الإحالة",
+       "en": "Referral submitted"
+      },
+      {
+       "ar": "اعتماد رئيس القطاع",
+       "en": "Sector head approval"
+      },
+      {
+       "ar": "الورود إلى الأمانة",
+       "en": "Arrival at the secretariat"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "فحص السند والمرفقات",
+     "en": "Basis and attachments checked",
+     "sub": [
+      {
+       "ar": "فحص السند",
+       "en": "Basis checked"
+      },
+      {
+       "ar": "فحص المرفقات",
+       "en": "Attachments checked"
+      },
+      {
+       "ar": "طلب الاستكمال عند الحاجة",
+       "en": "Completion requested if needed"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "القبول أو الإعادة أو الرفض",
+     "en": "Accepted, returned or rejected",
+     "sub": [
+      {
+       "ar": "قرار الأمانة",
+       "en": "Secretariat decision"
+      },
+      {
+       "ar": "إشعار المُعِد والقطاع",
+       "en": "Preparer and sector notified"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "التصعيد والبت عند الاعتراض",
+     "en": "Escalation and decision on objection",
+     "sub": [
+      {
+       "ar": "اعتراض القطاع",
+       "en": "Sector objection"
+      },
+      {
+       "ar": "التصعيد إلى مقعد البت",
+       "en": "Escalated to the deciding seat"
+      },
+      {
+       "ar": "قرار التصعيد",
+       "en": "Escalation decided"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "قيد الحالة وإقفال مهمة الاستلام",
+     "en": "Case registered, intake task closed",
+     "sub": [
+      {
+       "ar": "القيد وإصدار المرجع",
+       "en": "Registration and reference"
+      },
+      {
+       "ar": "العرض على الرئيس",
+       "en": "Presented to the chair"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال مهمة استلام الإحالة فقط؛ تبدأ القضية مسارها الرئيسي.",
+   "closure_en": "Closure of the referral intake task only; the case starts its master journey.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-DR-AUTHORITY",
+   "object_ar": "تكليفكم المباشر",
+   "object_en": "Your direct mandate",
+   "capacity_ar": "صاحب الصلاحية",
+   "capacity_en": "Mandating authority",
+   "disclosure": "scope",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "استلام تكليفكم",
+     "en": "Your mandate received",
+     "sub": [
+      {
+       "ar": "ورود التكليف",
+       "en": "Mandate arrives"
+      },
+      {
+       "ar": "التحقق من هوية مصدره وسنده",
+       "en": "Source identity and basis verified"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "تسجيل التكليف وتحديد مرجعه",
+     "en": "Mandate registered, reference set",
+     "sub": [
+      {
+       "ar": "التسجيل والربط بالمرجع",
+       "en": "Registration and linking to its reference"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "تحديد نطاق التكليف واعتماد مساره",
+     "en": "Scope defined and handling path approved",
+     "sub": [
+      {
+       "ar": "مراجعة النطاق",
+       "en": "Scope reviewed"
+      },
+      {
+       "ar": "تحديد الجهة المنفذة",
+       "en": "Executing body determined"
+      },
+      {
+       "ar": "طلب إيضاح النطاق عند الحاجة",
+       "en": "Scope clarification requested if needed"
+      },
+      {
+       "ar": "اعتماد خطة المعالجة",
+       "en": "Handling plan approved"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "تنفيذ التكليف ومتابعة تقدمه",
+     "en": "Mandate execution and progress",
+     "sub": [
+      {
+       "ar": "إسناد التنفيذ",
+       "en": "Execution assigned"
+      },
+      {
+       "ar": "مباشرة الإجراءات",
+       "en": "Procedures started"
+      },
+      {
+       "ar": "طلب المعلومات",
+       "en": "Information requested"
+      },
+      {
+       "ar": "تحديثات التقدم المعتمدة",
+       "en": "Approved progress updates"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "رفع المخرجات إليكم وإقفال التكليف",
+     "en": "Outputs submitted to you, mandate closed",
+     "sub": [
+      {
+       "ar": "إعداد تقرير المخرجات ومراجعته",
+       "en": "Outputs report prepared and reviewed"
+      },
+      {
+       "ar": "رفع المخرجات",
+       "en": "Outputs submitted"
+      },
+      {
+       "ar": "اعتماد المآل",
+       "en": "Outcome approved"
+      },
+      {
+       "ar": "إقفال التكليف",
+       "en": "Mandate closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "يُقفل التكليف برفع مخرجاته واعتماد مآله؛ ولا يعني الاطلاع على مداولات اللجنة ولا إغلاق القضية الداخلية.",
+   "closure_en": "The mandate closes with its outputs submitted and its outcome approved; it implies no access to committee deliberations and is not the internal case closure.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-CHAIR-DIRECTION",
+   "object_ar": "الموضوع المعروض على رئيس اللجنة للتوجيه",
+   "object_en": "The matter presented to the chair for direction",
+   "capacity_ar": "رئيس اللجنة، والأمانة المنفذة",
+   "capacity_en": "Committee chair, and the executing secretariat",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "عرض الموضوع على الرئيس",
+     "en": "Matter presented to the chair",
+     "sub": [
+      {
+       "ar": "إعداد ملخص العرض",
+       "en": "Presentation summary prepared"
+      },
+      {
+       "ar": "العرض",
+       "en": "Presented"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "توجيه الرئيس بالإجراء التالي",
+     "en": "Chair's direction on the next step",
+     "sub": [
+      {
+       "ar": "اجتماع",
+       "en": "Meeting"
+      },
+      {
+       "ar": "جلسة استماع",
+       "en": "Hearing"
+      },
+      {
+       "ar": "طلب بيانات",
+       "en": "Information request"
+      },
+      {
+       "ar": "ترك الأمر لتصويت اللجنة",
+       "en": "Left to the committee's vote"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "تنفيذ التوجيه",
+     "en": "Direction executed",
+     "sub": [
+      {
+       "ar": "جدولة الاجتماع أو الجلسة",
+       "en": "Meeting or hearing scheduled"
+      },
+      {
+       "ar": "إرسال طلب البيانات",
+       "en": "Information request sent"
+      },
+      {
+       "ar": "فتح بند التصويت",
+       "en": "Vote item opened"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "عرض النتيجة على الرئيس",
+     "en": "Result presented to the chair",
+     "sub": [
+      {
+       "ar": "استلام النتيجة",
+       "en": "Result received"
+      },
+      {
+       "ar": "العرض",
+       "en": "Presented"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال طلب التوجيه",
+     "en": "Direction request closed",
+     "sub": [
+      {
+       "ar": "تسجيل التوجيه ونتيجته",
+       "en": "Direction and result recorded"
+      },
+      {
+       "ar": "متابعة الموضوع في مساره",
+       "en": "Matter continues on its path"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "يُقفل طلب التوجيه فقط؛ يستمر الموضوع في مساره الرئيسي.",
+   "closure_en": "Only the direction request closes; the matter continues on its master journey.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-MEETING",
+   "object_ar": "اجتماع اللجنة",
+   "object_en": "The committee meeting",
+   "capacity_ar": "رئيس اللجنة وأعضاؤها وأمينها",
+   "capacity_en": "Chair, members and secretary",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "تحديد الموعد وتوجيه الدعوات",
+     "en": "Scheduling and invitations",
+     "sub": [
+      {
+       "ar": "اعتماد جدول الأعمال",
+       "en": "Agenda approved"
+      },
+      {
+       "ar": "تحديد الموعد",
+       "en": "Date set"
+      },
+      {
+       "ar": "الدعوات والتذكير",
+       "en": "Invitations and reminders"
+      },
+      {
+       "ar": "إعادة الجدولة أو الإلغاء عند الاقتضاء",
+       "en": "Rescheduled or cancelled where required"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "إتاحة المواد والإفصاح عن التعارض",
+     "en": "Materials and conflict disclosures",
+     "sub": [
+      {
+       "ar": "إتاحة مواد الاجتماع",
+       "en": "Meeting materials released"
+      },
+      {
+       "ar": "طلب الإفصاح",
+       "en": "Disclosure requested"
+      },
+      {
+       "ar": "استلام الإفصاحات",
+       "en": "Disclosures received"
+      },
+      {
+       "ar": "البت في التعارض",
+       "en": "Conflict decided"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "الانعقاد والمداولة والتصويت",
+     "en": "Session, deliberation and vote",
+     "sub": [
+      {
+       "ar": "إثبات الحضور",
+       "en": "Attendance recorded"
+      },
+      {
+       "ar": "المداولة",
+       "en": "Deliberation"
+      },
+      {
+       "ar": "فتح التصويت والتصويت",
+       "en": "Vote opened and cast"
+      },
+      {
+       "ar": "احتساب الأصوات وإقفال البند",
+       "en": "Votes counted, item closed"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "المحضر: الإعداد والمراجعة والتوقيع",
+     "en": "Minutes: drafting, review and signature",
+     "sub": [
+      {
+       "ar": "رفع المسودة إلى الرئيس",
+       "en": "Draft raised to the chair"
+      },
+      {
+       "ar": "تعميم المسودة والمراجعة",
+       "en": "Draft circulated and reviewed"
+      },
+      {
+       "ar": "الاعتماد والتوقيع",
+       "en": "Approved and signed"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال الاجتماع ومتابعة تكليفاته",
+     "en": "Meeting closed, its assignments followed up",
+     "sub": [
+      {
+       "ar": "توثيق المحضر الموقّع",
+       "en": "Signed minutes filed"
+      },
+      {
+       "ar": "إسناد التكليفات ومتابعتها",
+       "en": "Assignments issued and tracked"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال سجل الاجتماع ومتابعة تكليفاته فقط؛ القضية تستمر في مسارها الرئيسي.",
+   "closure_en": "Closure of the meeting record and its follow-ups only; the case continues on its master journey.",
+   "note_en": "A paper ballot confirmation (2120 F4) sits in stage 3: ballot bound, awaiting the member's confirmation, counted.",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-COMMITTEE-TASK",
+   "object_ar": "التكليف الصادر عن اللجنة",
+   "object_en": "The assignment issued by the committee",
+   "capacity_ar": "المكلَّف",
+   "capacity_en": "Assignee",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "إسناد التكليف إليك",
+     "en": "Assignment issued to you",
+     "sub": [
+      {
+       "ar": "قرار اللجنة بالتكليف",
+       "en": "Committee decides the assignment"
+      },
+      {
+       "ar": "إشعار الإسناد",
+       "en": "Assignment notified"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "استلام التكليف وتحديد نطاقه ومهلته",
+     "en": "Assignment received, scope and deadline set",
+     "sub": [
+      {
+       "ar": "تأكيد الاستلام",
+       "en": "Receipt confirmed"
+      },
+      {
+       "ar": "فهم النطاق والمهلة",
+       "en": "Scope and deadline understood"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "التنفيذ والمتابعة",
+     "en": "Execution and follow-up",
+     "sub": [
+      {
+       "ar": "التنفيذ",
+       "en": "Execution"
+      },
+      {
+       "ar": "تذكيرات المتابعة",
+       "en": "Follow-up reminders"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "تسليم مخرجات التكليف",
+     "en": "Deliverables submitted",
+     "sub": [
+      {
+       "ar": "تسليم المخرجات",
+       "en": "Deliverables submitted"
+      },
+      {
+       "ar": "مراجعة الأمانة",
+       "en": "Secretariat review"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "توثيق استكمال التكليف وإقفاله",
+     "en": "Completion documented, assignment closed",
+     "sub": [
+      {
+       "ar": "توثيق الاستكمال",
+       "en": "Completion documented"
+      },
+      {
+       "ar": "الإقفال",
+       "en": "Closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال التكليف وحده.",
+   "closure_en": "Closure of the assignment only.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-INVESTIGATION",
+   "object_ar": "مهمة التحقيق",
+   "object_en": "The investigation task",
+   "capacity_ar": "المكلَّف بالتحقيق",
+   "capacity_en": "Assigned investigator",
+   "disclosure": "restricted",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "التكليف بالتحقيق وإقرار الاستقلالية",
+     "en": "Assignment and independence declaration",
+     "sub": [
+      {
+       "ar": "إشعار التكليف",
+       "en": "Assignment notified"
+      },
+      {
+       "ar": "إقرار الاستقلالية وعدم التعارض",
+       "en": "Independence and no-conflict declaration"
+      },
+      {
+       "ar": "تعديل النطاق أو المدة عند اعتماده",
+       "en": "Scope or duration amended when approved"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "جمع المستندات والأدلة",
+     "en": "Documents and evidence gathering",
+     "sub": [
+      {
+       "ar": "طلبات المستندات",
+       "en": "Document requests"
+      },
+      {
+       "ar": "تأكيد الاستلام",
+       "en": "Receipt confirmed"
+      },
+      {
+       "ar": "التوثيق",
+       "en": "Documented"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "الإفادات وجلسات الاستماع",
+     "en": "Statements and hearings",
+     "sub": [
+      {
+       "ar": "دعوات الإفادة",
+       "en": "Statement invitations"
+      },
+      {
+       "ar": "إشعار الوقائع المنسوبة",
+       "en": "Notice of attributed facts"
+      },
+      {
+       "ar": "جلسات الاستماع والشهود",
+       "en": "Hearings and witnesses"
+      },
+      {
+       "ar": "استكمال الجلسات",
+       "en": "Hearings completed"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "تقرير التحقيق ورفعه",
+     "en": "Investigation report and submission",
+     "sub": [
+      {
+       "ar": "إعداد التقرير",
+       "en": "Report prepared"
+      },
+      {
+       "ar": "رفعه للمراجعة المختصة",
+       "en": "Raised for competent review"
+      },
+      {
+       "ar": "عرض النتائج على اللجنة",
+       "en": "Results presented to the committee"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال مهمة التحقيق",
+     "en": "Investigation task closed",
+     "sub": [
+      {
+       "ar": "اعتماد المخرجات",
+       "en": "Outputs approved"
+      },
+      {
+       "ar": "إقفال المهمة",
+       "en": "Task closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال مهمة التحقيق فقط؛ تنتقل القضية إلى التوصية والقرار.",
+   "closure_en": "Closure of the investigation task only; the case moves on to recommendation and decision.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-EVIDENCE-REQUEST",
+   "object_ar": "طلب المستندات أو الأدلة الموجّه إليكم",
+   "object_en": "The document or evidence request addressed to you",
+   "capacity_ar": "الجهة الحائزة للمستند",
+   "capacity_en": "Document holder",
+   "disclosure": "scope",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "صدور الطلب إليكم",
+     "en": "Request issued to you",
+     "sub": [
+      {
+       "ar": "تحديد المطلوب وسنده والمهلة",
+       "en": "What is required, its basis and deadline"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "تقديم المستندات",
+     "en": "Documents provided",
+     "sub": [
+      {
+       "ar": "التقديم عبر القناة المحددة",
+       "en": "Provided through the designated channel"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "تأكيد الاستلام والتحقق",
+     "en": "Receipt confirmed and verified",
+     "sub": [
+      {
+       "ar": "تأكيد الاستلام",
+       "en": "Receipt confirmed"
+      },
+      {
+       "ar": "التحقق من الاكتمال",
+       "en": "Completeness verified"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "طلب الاستكمال عند الحاجة",
+     "en": "Completion requested if needed",
+     "sub": [
+      {
+       "ar": "طلب استكمال",
+       "en": "Completion requested"
+      },
+      {
+       "ar": "تقديم الاستكمال",
+       "en": "Completion provided"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال الطلب",
+     "en": "Request closed",
+     "sub": [
+      {
+       "ar": "إقفال الطلب",
+       "en": "Request closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال طلب المستندات فقط.",
+   "closure_en": "Closure of the document request only.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-STATEMENT-PARTY",
+   "object_ar": "إفادتك بشأن وقائع محددة",
+   "object_en": "Your statement on specified facts",
+   "capacity_ar": "الطرف المعني",
+   "capacity_en": "Party concerned",
+   "disclosure": "restricted",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "دعوتك لتقديم الإفادة",
+     "en": "Invitation to give your statement",
+     "sub": [
+      {
+       "ar": "الدعوة وموعدها",
+       "en": "Invitation and its date"
+      },
+      {
+       "ar": "سند الطلب",
+       "en": "Basis of the request"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "إشعارك بالوقائع المنسوبة",
+     "en": "Notice of the attributed facts",
+     "sub": [
+      {
+       "ar": "إشعار الوقائع",
+       "en": "Facts notified"
+      },
+      {
+       "ar": "تمكينك من الرد",
+       "en": "You are enabled to reply"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "تقديم الإفادة أو الرد",
+     "en": "Statement or reply given",
+     "sub": [
+      {
+       "ar": "جلسة الإفادة",
+       "en": "Statement session"
+      },
+      {
+       "ar": "الرد الكتابي",
+       "en": "Written reply"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "تحرير المحضر وإتاحة التصحيح",
+     "en": "Record drafted, correction enabled",
+     "sub": [
+      {
+       "ar": "تحرير المحضر",
+       "en": "Record drafted"
+      },
+      {
+       "ar": "طلب التصحيح",
+       "en": "Correction requested"
+      },
+      {
+       "ar": "اعتماد المحضر",
+       "en": "Record approved"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال إجراء الإفادة",
+     "en": "Statement procedure closed",
+     "sub": [
+      {
+       "ar": "ضم الإفادة إلى ملف التحقيق",
+       "en": "Statement added to the investigation file"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال إجراء الإفادة فقط؛ لا يعني انتهاء التحقيق أو القضية.",
+   "closure_en": "Closure of the statement procedure only; neither the investigation nor the case ends.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-WITNESS",
+   "object_ar": "مشاركتك في جلسة الاستماع",
+   "object_en": "Your participation in the hearing",
+   "capacity_ar": "الشاهد",
+   "capacity_en": "Witness",
+   "disclosure": "restricted",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "دعوتك لحضور الجلسة",
+     "en": "Summons to the hearing",
+     "sub": [
+      {
+       "ar": "الدعوة والموعد",
+       "en": "Summons and date"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "التذكير بواجب السرية",
+     "en": "Confidentiality reminder",
+     "sub": [
+      {
+       "ar": "التذكير",
+       "en": "Reminder"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "الإدلاء بالإفادة",
+     "en": "Testimony given",
+     "sub": [
+      {
+       "ar": "الجلسة",
+       "en": "Session"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "تحرير المحضر وإتاحة طلب التصحيح",
+     "en": "Record drafted, correction request enabled",
+     "sub": [
+      {
+       "ar": "تحرير المحضر",
+       "en": "Record drafted"
+      },
+      {
+       "ar": "طلب التصحيح",
+       "en": "Correction requested"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال مشاركتك في الجلسة",
+     "en": "Your participation closed",
+     "sub": [
+      {
+       "ar": "اعتماد محضر الإفادة",
+       "en": "Statement record approved"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "تنتهي مشاركتك عند اعتماد محضر إفادتك؛ لا يُعرض عليك شيء عن القضية.",
+   "closure_en": "Your participation ends when your statement record is approved; nothing about the case is shown to you.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-DEFENCE",
+   "object_ar": "حقوقك ودفاعك",
+   "object_en": "Your rights and defence",
+   "capacity_ar": "الموظف المعني",
+   "capacity_en": "Subject employee",
+   "disclosure": "restricted",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "إشعار الحقوق",
+     "en": "Rights notice",
+     "sub": [
+      {
+       "ar": "إصدار إشعار الحقوق",
+       "en": "Rights notice issued"
+      },
+      {
+       "ar": "الإقرار بالاطلاع",
+       "en": "Acknowledged"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "إشعار الدفاع وبدء المهلة",
+     "en": "Defence notice, period starts",
+     "sub": [
+      {
+       "ar": "إصدار إشعار الدفاع",
+       "en": "Defence notice issued"
+      },
+      {
+       "ar": "بدء المهلة",
+       "en": "Period starts"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "إتاحة حزمة الدفاع",
+     "en": "Defence packet released",
+     "sub": [
+      {
+       "ar": "إتاحة الحزمة",
+       "en": "Packet released"
+      },
+      {
+       "ar": "الاطلاع",
+       "en": "Examined"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "تقديم الدفاع قبل انتهاء المهلة",
+     "en": "Defence submitted before the deadline",
+     "sub": [
+      {
+       "ar": "التذكير بالاستحقاق",
+       "en": "Due reminder"
+      },
+      {
+       "ar": "تقديم الدفاع",
+       "en": "Defence submitted"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال مهلة الدفاع وإحالة الدفاع إلى اللجنة",
+     "en": "Defence period closed, defence passed to the committee",
+     "sub": [
+      {
+       "ar": "إقفال المهلة",
+       "en": "Period closed"
+      },
+      {
+       "ar": "إحالة الدفاع",
+       "en": "Defence passed on"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال مهلة الدفاع فقط؛ القضية مستمرة حتى القرار وتبليغه.",
+   "closure_en": "Closure of the defence period only; the case continues to the decision and its notification.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-RECOMMENDATION-COMMITTEE",
+   "object_ar": "توصيات اللجنة",
+   "object_en": "The committee's recommendations",
+   "capacity_ar": "أمين اللجنة ورئيسها وأعضاؤها",
+   "capacity_en": "Secretary, chair and members",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "إعداد حزمة التوصيات وعرضها للمداولة",
+     "en": "Recommendation package prepared for deliberation",
+     "sub": [
+      {
+       "ar": "الإعداد",
+       "en": "Prepared"
+      },
+      {
+       "ar": "العرض للمداولة",
+       "en": "Submitted for deliberation"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "المداولة والتصويت واعتماد التوصيات",
+     "en": "Deliberation, vote and adoption",
+     "sub": [
+      {
+       "ar": "المداولة",
+       "en": "Deliberation"
+      },
+      {
+       "ar": "التصويت",
+       "en": "Vote"
+      },
+      {
+       "ar": "الاعتماد والمحضر",
+       "en": "Adoption and minutes"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "المراجعة القانونية عند الاقتضاء",
+     "en": "Legal review where required",
+     "sub": [
+      {
+       "ar": "إسناد المراجعة",
+       "en": "Review assigned"
+      },
+      {
+       "ar": "الرأي القانوني",
+       "en": "Legal opinion"
+      },
+      {
+       "ar": "الإعادة إلى اللجنة عند الاقتضاء",
+       "en": "Returned to the committee where required"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "الرفع إلى صاحب الصلاحية وانتظار القرار",
+     "en": "Raised to the authority, awaiting the decision",
+     "sub": [
+      {
+       "ar": "الرفع",
+       "en": "Raised"
+      },
+      {
+       "ar": "النظر",
+       "en": "Considered"
+      },
+      {
+       "ar": "الإعادة عند الاقتضاء",
+       "en": "Returned where required"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "تسجيل القرار وإقفال مسار التوصية",
+     "en": "Decision recorded, recommendation path closed",
+     "sub": [
+      {
+       "ar": "تسجيل القرار",
+       "en": "Decision recorded"
+      },
+      {
+       "ar": "الإقفال",
+       "en": "Closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "يُقفل مسار التوصية عند تسجيل قرار صاحب الصلاحية؛ التبليغ والتنفيذ يتبعان في المسار الرئيسي.",
+   "closure_en": "The recommendation path closes when the authority's decision is recorded; notification and execution follow on the master journey.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-LEGAL-REVIEW",
+   "object_ar": "طلب المراجعة القانونية المسند إليك",
+   "object_en": "The legal review request assigned to you",
+   "capacity_ar": "المراجع القانوني",
+   "capacity_en": "Legal reviewer",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "إسناد طلب المراجعة إليك",
+     "en": "Review request assigned to you",
+     "sub": [
+      {
+       "ar": "الإسناد والمهلة",
+       "en": "Assignment and deadline"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "الاطلاع على حزمة التوصيات",
+     "en": "Package examined",
+     "sub": [
+      {
+       "ar": "الاطلاع",
+       "en": "Examined"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "إعداد الرأي القانوني",
+     "en": "Legal opinion prepared",
+     "sub": [
+      {
+       "ar": "الإعداد",
+       "en": "Prepared"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "تسجيل الرأي وإعادة الحزمة إلى اللجنة",
+     "en": "Opinion recorded, package returned",
+     "sub": [
+      {
+       "ar": "التسجيل",
+       "en": "Recorded"
+      },
+      {
+       "ar": "الإعادة",
+       "en": "Returned"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال طلب المراجعة",
+     "en": "Review request closed",
+     "sub": [
+      {
+       "ar": "الإقفال",
+       "en": "Closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال طلب المراجعة فقط.",
+   "closure_en": "Closure of the review request only.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-DECISION-AUTHORITY",
+   "object_ar": "التوصية المرفوعة إليكم وقراركم",
+   "object_en": "The recommendation raised to you and your decision",
+   "capacity_ar": "صاحب الصلاحية",
+   "capacity_en": "Competent authority",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "رفع التوصية إليكم",
+     "en": "Recommendation raised to you",
+     "sub": [
+      {
+       "ar": "الرفع",
+       "en": "Raised"
+      },
+      {
+       "ar": "تسلّم الحزمة",
+       "en": "Package received"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "النظر في التوصية",
+     "en": "Consideration",
+     "sub": [
+      {
+       "ar": "النظر",
+       "en": "Considered"
+      },
+      {
+       "ar": "الاستيضاح أو الإعادة عند الاقتضاء",
+       "en": "Clarified or returned where required"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "اعتماد القرار",
+     "en": "Decision approved",
+     "sub": [
+      {
+       "ar": "الاعتماد",
+       "en": "Approved"
+      },
+      {
+       "ar": "تسجيل القرار",
+       "en": "Decision recorded"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "تبليغ القرار وتنفيذه",
+     "en": "Decision notified and executed",
+     "sub": [
+      {
+       "ar": "التبليغ",
+       "en": "Notified"
+      },
+      {
+       "ar": "التنفيذ",
+       "en": "Executed"
+      },
+      {
+       "ar": "التظلم عند تقديمه",
+       "en": "Grievance if filed"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال متابعة القرار",
+     "en": "Decision follow-up closed",
+     "sub": [
+      {
+       "ar": "التحقق من اكتمال التنفيذ",
+       "en": "Execution verified complete"
+      },
+      {
+       "ar": "الإقفال",
+       "en": "Closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال متابعة القرار بعد التحقق من تنفيذه؛ ويليه إغلاق المسار الرئيسي للقضية.",
+   "closure_en": "Closure of the decision follow-up once execution is verified; the master case closure follows it.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-DECISION-SUBJECT",
+   "object_ar": "القرار الصادر في شأنك",
+   "object_en": "The decision issued concerning you",
+   "capacity_ar": "الطرف المعني",
+   "capacity_en": "Party concerned",
+   "disclosure": "restricted",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "تبليغك بالقرار",
+     "en": "Decision notified to you",
+     "sub": [
+      {
+       "ar": "التبليغ الرسمي",
+       "en": "Formal notification"
+      },
+      {
+       "ar": "الإقرار بالاستلام",
+       "en": "Receipt acknowledged"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "مهلة التظلم",
+     "en": "Grievance period",
+     "sub": [
+      {
+       "ar": "بدء المهلة",
+       "en": "Period starts"
+      },
+      {
+       "ar": "انتهاؤها",
+       "en": "Period ends"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "قيد التظلم عند تقديمه",
+     "en": "Grievance registered if filed",
+     "sub": [
+      {
+       "ar": "تقديم التظلم",
+       "en": "Grievance filed"
+      },
+      {
+       "ar": "تأكيد القيد",
+       "en": "Registration confirmed"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "النظر في التظلم والبت فيه",
+     "en": "Grievance considered and decided",
+     "sub": [
+      {
+       "ar": "النظر",
+       "en": "Considered"
+      },
+      {
+       "ar": "البت",
+       "en": "Decided"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال إجراءات التبليغ والتظلم",
+     "en": "Notification and grievance procedure closed",
+     "sub": [
+      {
+       "ar": "الإقفال",
+       "en": "Closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال إجراءات التبليغ والتظلم في شأنك فقط.",
+   "closure_en": "Closure of the notification and grievance procedure concerning you only.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-SANCTION-EXTRACT",
+   "object_ar": "طلب اعتماد مستخرج العقوبة",
+   "object_en": "The sanction extract approval request",
+   "capacity_ar": "صاحب صلاحية القضية المقيدة",
+   "capacity_en": "Restricted case authority",
+   "disclosure": "restricted",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "طلب الاعتماد",
+     "en": "Approval requested",
+     "sub": [
+      {
+       "ar": "إعداد المستخرج",
+       "en": "Extract prepared"
+      },
+      {
+       "ar": "تقديم الطلب",
+       "en": "Request submitted"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "المراجعة",
+     "en": "Review",
+     "sub": [
+      {
+       "ar": "مراجعة المستخرج",
+       "en": "Extract reviewed"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "الاعتماد أو الإعادة",
+     "en": "Approved or returned",
+     "sub": [
+      {
+       "ar": "القرار",
+       "en": "Decision"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "إصدار المستخرج وتبليغه",
+     "en": "Extract issued and communicated",
+     "sub": [
+      {
+       "ar": "الإصدار",
+       "en": "Issued"
+      },
+      {
+       "ar": "التبليغ",
+       "en": "Communicated"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال الطلب",
+     "en": "Request closed",
+     "sub": [
+      {
+       "ar": "الإقفال",
+       "en": "Closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال طلب المستخرج فقط.",
+   "closure_en": "Closure of the extract request only.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-IMPLEMENTATION",
+   "object_ar": "مهمة متابعة تنفيذ القرار",
+   "object_en": "The decision implementation follow-up task",
+   "capacity_ar": "إدارة الحوكمة والامتثال",
+   "capacity_en": "Governance and compliance",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "استلام مهمة المتابعة",
+     "en": "Follow-up task received",
+     "sub": [
+      {
+       "ar": "الإسناد",
+       "en": "Assigned"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "تنفيذ القرار",
+     "en": "Decision executed",
+     "sub": [
+      {
+       "ar": "الإجراءات التنفيذية",
+       "en": "Execution steps"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "التحقق من اكتمال الالتزامات",
+     "en": "Obligations verified complete",
+     "sub": [
+      {
+       "ar": "التحقق",
+       "en": "Verified"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "توثيق الإنجاز",
+     "en": "Completion documented",
+     "sub": [
+      {
+       "ar": "التوثيق",
+       "en": "Documented"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال متابعة التنفيذ",
+     "en": "Implementation follow-up closed",
+     "sub": [
+      {
+       "ar": "الإقفال",
+       "en": "Closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال مهمة المتابعة؛ يليه إغلاق القضية وأرشفتها في المسار الرئيسي.",
+   "closure_en": "Closure of the follow-up task; case closure and archiving follow on the master journey.",
+   "note_en": "",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-ALERT",
+   "object_ar": "التنبيه",
+   "object_en": "The alert",
+   "capacity_ar": "المسؤول الرقابي أو أمين اللجنة",
+   "capacity_en": "Control officer or committee secretary",
+   "disclosure": "internal",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "رصد الحدث",
+     "en": "Event detected",
+     "sub": [
+      {
+       "ar": "الرصد",
+       "en": "Detected"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "تحقق القاعدة",
+     "en": "Rule triggered",
+     "sub": [
+      {
+       "ar": "التحقق من القاعدة والموعد",
+       "en": "Rule and date verified"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "التنبيه الداخلي",
+     "en": "Internal alert",
+     "sub": [
+      {
+       "ar": "التنبيه",
+       "en": "Alert"
+      },
+      {
+       "ar": "التصعيد عند التجاوز",
+       "en": "Escalation when overdue"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "المعالجة",
+     "en": "Handling",
+     "sub": [
+      {
+       "ar": "الإجراء التصحيحي",
+       "en": "Corrective action"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال التنبيه",
+     "en": "Alert closed",
+     "sub": [
+      {
+       "ar": "الإقفال",
+       "en": "Closed"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال التنبيه فقط؛ لا يغيّر حالة القضية.",
+   "closure_en": "Closure of the alert only; the case state is unchanged.",
+   "note_en": "V8 SYS journey kept as is.",
+   "status": "PROPOSED"
+  },
+  {
+   "id": "J-RESTRICTION-LIFT",
+   "object_ar": "طلب رفع التقييد عن القضية",
+   "object_en": "The restriction-lift request",
+   "capacity_ar": "الموافق الثاني وصاحب صلاحية القضية المقيدة",
+   "capacity_en": "Second approver and restricted case authority",
+   "disclosure": "restricted",
+   "stages": [
+    {
+     "n": 1,
+     "ar": "المعاينة وتقديم الطلب",
+     "en": "Preview and request",
+     "sub": [
+      {
+       "ar": "المعاينة",
+       "en": "Preview"
+      },
+      {
+       "ar": "تقديم الطلب",
+       "en": "Request submitted"
+      }
+     ]
+    },
+    {
+     "n": 2,
+     "ar": "إشعار الموافق الثاني",
+     "en": "Second approver notified",
+     "sub": [
+      {
+       "ar": "الإشعار",
+       "en": "Notified"
+      },
+      {
+       "ar": "الاطلاع على الطلب",
+       "en": "Request examined"
+      }
+     ]
+    },
+    {
+     "n": 3,
+     "ar": "القرار: موافقة أو رفض",
+     "en": "Decision: approve or reject",
+     "sub": [
+      {
+       "ar": "القرار",
+       "en": "Decision"
+      },
+      {
+       "ar": "الرفض عند تغيّر المعاينة",
+       "en": "Refused when the preview changed"
+      }
+     ]
+    },
+    {
+     "n": 4,
+     "ar": "تنفيذ الرفع خلال النافذة",
+     "en": "Lift executed within the window",
+     "sub": [
+      {
+       "ar": "إعادة التحقق من شروط الموافق",
+       "en": "Approver conditions re-checked"
+      },
+      {
+       "ar": "التنفيذ",
+       "en": "Executed"
+      }
+     ]
+    },
+    {
+     "n": 5,
+     "ar": "إقفال الطلب",
+     "en": "Request closed",
+     "sub": [
+      {
+       "ar": "الإقفال بالتنفيذ أو الانتهاء أو السحب",
+       "en": "Closed by execution, expiry or withdrawal"
+      }
+     ]
+    }
+   ],
+   "closure_ar": "إقفال طلب الرفع فقط؛ القضية تستمر، نشطة كانت أو مغلقة.",
+   "closure_en": "Closure of the lift request only; the case continues, active or closed.",
+   "note_en": "",
+   "status": "PROPOSED"
+  }
+ ],
+ "assignments": [
+  {
+   "id": "WB-01",
+   "source": "generator",
+   "journey": "J-WB-REPORTER",
+   "stage": 1,
+   "master": "S1.01",
+   "note": ""
+  },
+  {
+   "id": "WB-02",
+   "source": "generator",
+   "journey": "J-WB-REPORTER",
+   "stage": 2,
+   "master": "S1.03",
+   "note": ""
+  },
+  {
+   "id": "WB-03",
+   "source": "generator",
+   "journey": "J-WB-REPORTER",
+   "stage": 3,
+   "master": "S2.02",
+   "note": "awaiting your completion"
+  },
+  {
+   "id": "WB-04",
+   "source": "generator",
+   "journey": "J-WB-REPORTER",
+   "stage": 3,
+   "master": "S2.01",
+   "note": ""
+  },
+  {
+   "id": "WB-05",
+   "source": "generator",
+   "journey": "J-WB-REPORTER",
+   "stage": 3,
+   "master": "S2.04",
+   "note": ""
+  },
+  {
+   "id": "WB-06",
+   "source": "generator",
+   "journey": "J-WB-REPORTER",
+   "stage": 5,
+   "master": "S5.07",
+   "note": "transferred: your follow-up in this channel closes"
+  },
+  {
+   "id": "WB-07",
+   "source": "generator",
+   "journey": "J-WB-REPORTER",
+   "stage": 5,
+   "master": "S5.05",
+   "note": "closed as incomplete"
+  },
+  {
+   "id": "WB-08",
+   "source": "generator",
+   "journey": "J-WB-REPORTER",
+   "stage": 5,
+   "master": "S5.05",
+   "note": "handling completed"
+  },
+  {
+   "id": "IR-01",
+   "source": "generator",
+   "journey": "J-IR-REFERRER",
+   "stage": 1,
+   "master": "S1.01",
+   "note": ""
+  },
+  {
+   "id": "IR-02",
+   "source": "generator",
+   "journey": "J-IR-REFERRER",
+   "stage": 2,
+   "master": "S1.03",
+   "note": ""
+  },
+  {
+   "id": "IR-03",
+   "source": "generator",
+   "journey": "J-IR-REFERRER",
+   "stage": 3,
+   "master": "S2.03",
+   "note": ""
+  },
+  {
+   "id": "IR-04",
+   "source": "generator",
+   "journey": "J-IR-REFERRER",
+   "stage": 3,
+   "master": "S2.02",
+   "note": ""
+  },
+  {
+   "id": "IR-05",
+   "source": "generator",
+   "journey": "J-IR-REFERRER",
+   "stage": 3,
+   "master": "S2.01",
+   "note": ""
+  },
+  {
+   "id": "IR-06",
+   "source": "generator",
+   "journey": "J-IR-REFERRER",
+   "stage": 3,
+   "master": "S2.05",
+   "note": "path approved: stage 3 completes"
+  },
+  {
+   "id": "IR-07",
+   "source": "generator",
+   "journey": "J-IR-REFERRER",
+   "stage": 5,
+   "master": "S3.07",
+   "note": "handling completed: reply being prepared"
+  },
+  {
+   "id": "IR-08",
+   "source": "generator",
+   "journey": "J-IR-REFERRER",
+   "stage": 5,
+   "master": "S5.05",
+   "note": ""
+  },
+  {
+   "id": "DR-01",
+   "source": "generator",
+   "journey": "J-DR-AUTHORITY",
+   "stage": 1,
+   "master": "S1.01",
+   "note": ""
+  },
+  {
+   "id": "DR-02",
+   "source": "generator",
+   "journey": "J-DR-AUTHORITY",
+   "stage": 2,
+   "master": "S1.03",
+   "note": ""
+  },
+  {
+   "id": "DR-03",
+   "source": "generator",
+   "journey": "J-CHAIR-DIRECTION",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "DR-04",
+   "source": "generator",
+   "journey": "J-DR-AUTHORITY",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "DR-05",
+   "source": "generator",
+   "journey": "J-DR-AUTHORITY",
+   "stage": 4,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "DR-06",
+   "source": "generator",
+   "journey": "J-DR-AUTHORITY",
+   "stage": 5,
+   "master": "S4.03",
+   "note": ""
+  },
+  {
+   "id": "COM-01",
+   "source": "generator",
+   "journey": "J-CHAIR-DIRECTION",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-02",
+   "source": "generator",
+   "journey": "J-CHAIR-DIRECTION",
+   "stage": 2,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-03",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": "agenda approval"
+  },
+  {
+   "id": "COM-04",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-05",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-06",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-07",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": "cancelled: the meeting record closes without stages 2–5"
+  },
+  {
+   "id": "COM-08",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 2,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-09",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 2,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-10",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 2,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-11",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 2,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-12",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 4,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-13",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 4,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-14",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 4,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-15",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 4,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-16",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 4,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-17",
+   "source": "generator",
+   "journey": "J-MEETING",
+   "stage": 4,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-18",
+   "source": "generator",
+   "journey": "J-COMMITTEE-TASK",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-19",
+   "source": "generator",
+   "journey": "J-COMMITTEE-TASK",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "COM-20",
+   "source": "generator",
+   "journey": "J-COMMITTEE-TASK",
+   "stage": 5,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "INV-01",
+   "source": "generator",
+   "journey": "J-INVESTIGATION",
+   "stage": 1,
+   "master": "S3.01",
+   "note": ""
+  },
+  {
+   "id": "INV-02",
+   "source": "generator",
+   "journey": "J-INVESTIGATION",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "INV-03",
+   "source": "generator",
+   "journey": "J-EVIDENCE-REQUEST",
+   "stage": 1,
+   "master": "S3.02",
+   "note": ""
+  },
+  {
+   "id": "INV-04",
+   "source": "generator",
+   "journey": "J-EVIDENCE-REQUEST",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "INV-05",
+   "source": "generator",
+   "journey": "J-STATEMENT-PARTY",
+   "stage": 1,
+   "master": "S3.05",
+   "note": ""
+  },
+  {
+   "id": "INV-06",
+   "source": "generator",
+   "journey": "J-STATEMENT-PARTY",
+   "stage": 2,
+   "master": "S3.05",
+   "note": ""
+  },
+  {
+   "id": "INV-07",
+   "source": "generator",
+   "journey": "J-INVESTIGATION",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": "scope or duration amended"
+  },
+  {
+   "id": "INV-08",
+   "source": "generator",
+   "journey": "J-INVESTIGATION",
+   "stage": 4,
+   "master": "S3.07",
+   "note": ""
+  },
+  {
+   "id": "INV-09",
+   "source": "generator",
+   "journey": "J-INVESTIGATION",
+   "stage": 4,
+   "master": "S3.06",
+   "note": "hearings completed: stage 3 done, report next"
+  },
+  {
+   "id": "INV-10",
+   "source": "generator",
+   "journey": "J-WITNESS",
+   "stage": 1,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "INV-11",
+   "source": "generator",
+   "journey": "J-WITNESS",
+   "stage": 2,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "INV-12",
+   "source": "generator",
+   "journey": "J-WITNESS",
+   "stage": 4,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "DEC-01",
+   "source": "generator",
+   "journey": "J-DECISION-AUTHORITY",
+   "stage": 1,
+   "master": "S4.03",
+   "note": ""
+  },
+  {
+   "id": "DEC-02",
+   "source": "generator",
+   "journey": "J-DECISION-AUTHORITY",
+   "stage": 2,
+   "master": "S4.04",
+   "note": ""
+  },
+  {
+   "id": "DEC-03",
+   "source": "generator",
+   "journey": "J-RECOMMENDATION-COMMITTEE",
+   "stage": 5,
+   "master": "S4.05",
+   "note": ""
+  },
+  {
+   "id": "DEC-04",
+   "source": "generator",
+   "journey": "J-DECISION-SUBJECT",
+   "stage": 1,
+   "master": "S5.01",
+   "note": ""
+  },
+  {
+   "id": "DEC-05",
+   "source": "generator",
+   "journey": "J-DECISION-SUBJECT",
+   "stage": 3,
+   "master": "S5.03",
+   "note": ""
+  },
+  {
+   "id": "DEC-06",
+   "source": "generator",
+   "journey": "J-IMPLEMENTATION",
+   "stage": 1,
+   "master": "S5.02",
+   "note": ""
+  },
+  {
+   "id": "DEC-07",
+   "source": "generator",
+   "journey": "J-DECISION-AUTHORITY",
+   "stage": 5,
+   "master": "S5.05",
+   "note": ""
+  },
+  {
+   "id": "SYS-01",
+   "source": "generator",
+   "journey": "J-ALERT",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "SYS-02",
+   "source": "generator",
+   "journey": "J-ALERT",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "SYS-03",
+   "source": "generator",
+   "journey": "J-ALERT",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "SYS-04",
+   "source": "generator",
+   "journey": "J-ALERT",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "SYS-05",
+   "source": "generator",
+   "journey": "J-ALERT",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": "escalation"
+  },
+  {
+   "id": "SYS-06",
+   "source": "generator",
+   "journey": "J-ALERT",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "SYS-07",
+   "source": "generator",
+   "journey": "J-ALERT",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "SYS-08",
+   "source": "generator",
+   "journey": "J-ALERT",
+   "stage": 3,
+   "master": "CASE_UNCHANGED",
+   "note": ""
+  },
+  {
+   "id": "CF-01",
+   "source": "committee",
+   "journey": "J-DR-PREPARER",
+   "stage": 2,
+   "master": "S1.01",
+   "note": ""
+  },
+  {
+   "id": "CF-02",
+   "source": "committee",
+   "journey": "J-DR-PREPARER",
+   "stage": 1,
+   "master": "S1.01",
+   "note": "returned for completion"
+  },
+  {
+   "id": "CF-03",
+   "source": "committee",
+   "journey": "J-DR-SECRETARY",
+   "stage": 2,
+   "master": "S1.02",
+   "note": ""
+  },
+  {
+   "id": "CF-04",
+   "source": "committee",
+   "journey": "J-DR-PREPARER",
+   "stage": 3,
+   "master": "S1.02",
+   "note": ""
+  },
+  {
+   "id": "CF-05",
+   "source": "committee",
+   "journey": "J-DR-PREPARER",
+   "stage": 5,
+   "master": "S1.03",
+   "note": ""
+  },
+  {
+   "id": "CF-06",
+   "source": "committee",
+   "journey": "J-DR-PREPARER",
+   "stage": 4,
+   "master": "S1.02",
+   "note": "rejected"
+  },
+  {
+   "id": "CF-07",
+   "source": "committee",
+   "journey": "J-DR-SECRETARY",
+   "stage": 4,
+   "master": "S1.02",
+   "note": ""
+  },
+  {
+   "id": "CF-08",
+   "source": "committee",
+   "journey": "J-DR-PREPARER",
+   "stage": 4,
+   "master": "S1.03",
+   "note": "decided; accepted referrals move to stage 5"
+  },
+  {
+   "id": "CF-09",
+   "source": "committee",
+   "journey": "J-INTAKE-SECRETARY",
+   "stage": 1,
+   "master": "S3.01",
+   "note": "Compliance refers the report; master S3.01 competent handling assigned"
+  },
+  {
+   "id": "CF-10",
+   "source": "committee",
+   "journey": "J-INTAKE-SECRETARY",
+   "stage": 1,
+   "master": "S1.01",
+   "note": ""
+  },
+  {
+   "id": "CF-11",
+   "source": "committee",
+   "journey": "J-IR-REFERRER",
+   "stage": 2,
+   "master": "S1.03",
+   "note": ""
+  },
+  {
+   "id": "CF-12",
+   "source": "committee",
+   "journey": "J-WB-REPORTER",
+   "stage": 1,
+   "master": "S1.01",
+   "note": ""
+  },
+  {
+   "id": "CF-13",
+   "source": "committee",
+   "journey": "J-WB-REPORTER",
+   "stage": 3,
+   "master": "S2.02",
+   "note": ""
+  },
+  {
+   "id": "CF-14",
+   "source": "committee",
+   "journey": "J-WB-REPORTER",
+   "stage": 3,
+   "master": "S2.04",
+   "note": "sample; the changed public status decides"
+  },
+  {
+   "id": "CF-15",
+   "source": "committee",
+   "journey": "J-CHAIR-DIRECTION",
+   "stage": 2,
+   "master": "S3.01",
+   "note": ""
+  },
+  {
+   "id": "CF-16",
+   "source": "committee",
+   "journey": "J-CHAIR-DIRECTION",
+   "stage": 3,
+   "master": "S3.01",
+   "note": "direction: meeting"
+  },
+  {
+   "id": "CF-17",
+   "source": "committee",
+   "journey": "J-CHAIR-DIRECTION",
+   "stage": 3,
+   "master": "S3.05",
+   "note": "direction: hearing"
+  },
+  {
+   "id": "CF-18",
+   "source": "committee",
+   "journey": "J-CHAIR-DIRECTION",
+   "stage": 3,
+   "master": "S3.02",
+   "note": "direction: information"
+  },
+  {
+   "id": "CF-19",
+   "source": "committee",
+   "journey": "J-CHAIR-DIRECTION",
+   "stage": 3,
+   "master": "S3.01",
+   "note": "direction: committee vote"
+  },
+  {
+   "id": "CF-20",
+   "source": "committee",
+   "journey": "J-INVESTIGATION",
+   "stage": 1,
+   "master": "S3.01",
+   "note": ""
+  },
+  {
+   "id": "CF-21",
+   "source": "committee",
+   "journey": "J-STATEMENT-PARTY",
+   "stage": 1,
+   "master": "S3.05",
+   "note": ""
+  },
+  {
+   "id": "CF-22",
+   "source": "committee",
+   "journey": "J-DEFENCE",
+   "stage": 1,
+   "master": "S3.05",
+   "note": ""
+  },
+  {
+   "id": "CF-23",
+   "source": "committee",
+   "journey": "J-DEFENCE",
+   "stage": 2,
+   "master": "S3.05",
+   "note": ""
+  },
+  {
+   "id": "CF-23b",
+   "source": "committee",
+   "journey": "J-DEFENCE",
+   "stage": 4,
+   "master": "S3.05",
+   "note": "due reminder"
+  },
+  {
+   "id": "CF-23c",
+   "source": "committee",
+   "journey": "J-DEFENCE",
+   "stage": 3,
+   "master": "S3.05",
+   "note": ""
+  },
+  {
+   "id": "CF-23d",
+   "source": "committee",
+   "journey": "J-INVESTIGATION",
+   "stage": 4,
+   "master": "S3.06",
+   "note": ""
+  },
+  {
+   "id": "CF-24",
+   "source": "committee",
+   "journey": "J-MEETING",
+   "stage": 1,
+   "master": "S4.01",
+   "note": "sample: deliberation meeting; a hearing meeting sits at master S3.05"
+  },
+  {
+   "id": "CF-25",
+   "source": "committee",
+   "journey": "J-MEETING",
+   "stage": 1,
+   "master": "S4.01",
+   "note": "cancelled"
+  },
+  {
+   "id": "CF-26",
+   "source": "committee",
+   "journey": "J-MEETING",
+   "stage": 2,
+   "master": "S4.01",
+   "note": ""
+  },
+  {
+   "id": "CF-27",
+   "source": "committee",
+   "journey": "J-MEETING",
+   "stage": 4,
+   "master": "S4.02",
+   "note": ""
+  },
+  {
+   "id": "CF-28",
+   "source": "committee",
+   "journey": "J-MEETING",
+   "stage": 4,
+   "master": "S4.02",
+   "note": ""
+  },
+  {
+   "id": "CF-29",
+   "source": "committee",
+   "journey": "J-MEETING",
+   "stage": 1,
+   "master": "S4.01",
+   "note": ""
+  },
+  {
+   "id": "CF-30",
+   "source": "committee",
+   "journey": "J-MEETING",
+   "stage": 3,
+   "master": "S4.02",
+   "note": ""
+  },
+  {
+   "id": "CF-31",
+   "source": "committee",
+   "journey": "J-RECOMMENDATION-COMMITTEE",
+   "stage": 1,
+   "master": "S4.01",
+   "note": ""
+  },
+  {
+   "id": "CF-32",
+   "source": "committee",
+   "journey": "J-RECOMMENDATION-COMMITTEE",
+   "stage": 2,
+   "master": "S4.02",
+   "note": ""
+  },
+  {
+   "id": "CF-33",
+   "source": "committee",
+   "journey": "J-LEGAL-REVIEW",
+   "stage": 1,
+   "master": "S4.03",
+   "note": ""
+  },
+  {
+   "id": "CF-34",
+   "source": "committee",
+   "journey": "J-RECOMMENDATION-COMMITTEE",
+   "stage": 3,
+   "master": "S4.03",
+   "note": "opinion recorded, returned to the committee"
+  },
+  {
+   "id": "CF-35",
+   "source": "committee",
+   "journey": "J-RECOMMENDATION-COMMITTEE",
+   "stage": 5,
+   "master": "S4.05",
+   "note": ""
+  },
+  {
+   "id": "CF-36",
+   "source": "committee",
+   "journey": "J-SANCTION-EXTRACT",
+   "stage": 1,
+   "master": "S5.01",
+   "note": ""
+  },
+  {
+   "id": "CF-37",
+   "source": "committee",
+   "journey": "J-DECISION-SUBJECT",
+   "stage": 1,
+   "master": "S5.01",
+   "note": ""
+  },
+  {
+   "id": "CF-38",
+   "source": "committee",
+   "journey": "J-RESTRICTION-LIFT",
+   "stage": 2,
+   "master": null,
+   "note": "any master stage; case ACTIVE or CLOSED"
+  },
+  {
+   "id": "CF-39",
+   "source": "committee",
+   "journey": "J-RESTRICTION-LIFT",
+   "stage": 3,
+   "master": null,
+   "note": "any master stage; fires on APPROVE and REJECT alike"
+  },
+  {
+   "id": "CF-40",
+   "source": "committee",
+   "journey": "J-MEETING",
+   "stage": 3,
+   "master": "S4.02",
+   "note": "paper ballot awaiting the member's confirmation"
+  }
+ ]
+}

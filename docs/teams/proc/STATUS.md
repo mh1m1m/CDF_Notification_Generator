@@ -16,7 +16,7 @@ Updated: 2026-10-31 ~19:55 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | V13-PROC-006 case task status catalogue (OI-029) | COMPLETE | PR #35 merged into `develop` 6db4cd0 (31 Oct); `lib/domain/task-status.ts`: migration 0003's five `task.status` codes, DONE added to the T5 list; for FE's task badges |
 | V13-PROC-003 disclosure | IN_REVIEW | `lib/disclosure` + `Projected<T>` brand; DIS-02/03/04/06/18, PRJ-01..03, BND-05/06; the other 13 DIS tests land with PROC-005 (ARCH 31 Oct) |
 | V13-PROC-004 authority | COMPLETE | PR #39 merged into `develop` e8bba66 (31 Oct); `lib/authority` (server-only, fail closed) + `tests/unit/authority` (3 files, 88 tests incl. BND-01..04 data boundary and ST-28b) |
-| V13-PROC-005 notifications | NOT_STARTED | |
+| V13-PROC-005 notifications | IN_PROGRESS | built locally after PROC-003: `lib/notifications` (lifecycle, consistency PC-00..29, next action, render); renderers take only `Projected<T>`; the 13 deferred DIS tests; NDB-01/02 (diagnostics never reach a recipient); reference skip guards made strict |
 
 ## Changed files
 - PR #3: `docs/teams/proc/PORT_PLAN.md`, `docs/teams/proc/STATUS.md`
@@ -32,6 +32,8 @@ Updated: 2026-10-31 ~19:55 UTC · Branch: `claude/project-thread-94r9g5` · Base
 - PROC-003: `lib/disclosure/{project,index}.ts`, `lib/disclosure/policy_v13.json`,
   `tests/unit/disclosure/{disclosure,projected-brand}.spec.ts`, `tests/unit/authority/data-boundary.spec.ts` (BND-05/06),
   this file
+- PROC-005: `lib/notifications/**` (21 files), `tests/unit/notifications/**` (10 specs, 4 support, 7 fakes, 7 evidence
+  copies), `tests/unit/disclosure/disclosure-render.spec.ts`, EVIDENCE_MANIFEST (7 rows), this file
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -51,6 +53,9 @@ Updated: 2026-10-31 ~19:55 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | PROC-004 equivalence: reference `src/authority/check.js` vs `lib/authority/check.ts`, same model (JSON deep-equal to the reference file), 46 action ids (45 + one unknown) × 30 capacity values (the model's 26, plus PLATFORM_ADMIN, DB_ADMIN, none and a repeated SYSTEM) × 3 purposes × 5 actor flag sets × 4 object shapes × 2 manual flags | PASS | 165,600 results compared, 0 differ; every result code reached (ALLOWED 2,168; SOURCE_REQUIRED_DRAFT 276; SOURCE_REQUIRED 600; CONDITIONAL_SOURCE_REQUIRED 780; UNKNOWN_ACTION 3,600; PRECONDITION_MISSING 1,096; EXPIRED 328; OBJECT_CONDITION 128; APPROVAL_MISSING 32; and the DENIED actor checks) | scratch spec, not committed |
 | PROC-003 (develop e8bba66 + PROC-003): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` (fresh `db:reset`) | PASS | all exit 0; test:db 19 files · 352 pass; e2e 92 pass; unit 43 files · 965 pass, of which `tests/unit/disclosure` 2 files · 8 pass (DIS-02/03/04/06/18, PRJ-01..03) and BND-05/06 in `tests/unit/authority`; mutation: with `Projected<T> = T` typecheck fails on PRJ-02's unused `@ts-expect-error` (TS2578) | PROC-003 head |
 | PROC-003 equivalence: reference `src/disclosure/project.js` vs `lib/disclosure/project.ts`, same policy (JSON equal except the documented `case_number` example rename) | PASS | `decide()`: 87,360 queries (15 recipient values × 52 fields × 14 channels × 8 contexts), 0 differ; `project()`: 600 runs (15 recipient values × 5 channels × 8 contexts) on a model carrying every field, 0 differ (fields, log and summary; `policy_path` excluded), 80 refused identically | scratch spec, not committed |
+| PROC-005 (develop e8bba66 + PROC-003 + PROC-005, fresh `db:reset`): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` · `build` | PASS | all exit 0; unit 54 files · 1,336 pass · 0 skipped, of which `tests/unit/notifications` + `tests/unit/disclosure` 13 files · 379 pass; test:db 19 files · 352 pass; e2e 92 pass | local |
+| PROC-005 equivalence: reference `src/demo/build_demo.js` `renderAll()` (reference `src/` with its W-E `design/tokens.json`, JSON-equal to `lib/notifications/render/email_tokens.json`) vs the port's, same inline scenarios | PASS | 516 rendered files (platform HTML, e-mail HTML, text, EML, card) compared after the `CDF-IC-2026-DEMO-` → `CDF-DEMO-2026-` rename: 0 differ, none missing on either side; refusals equal (5) | scratch spec, not committed |
+| PROC-005: V12 quotes not re-verified here | UNVERIFIED here (by ruling) | 22 `evidenceLine` quotes from V12 sample EMLs (`eml/en/…`) and `generator/samples/WB-08.txt`, and the 77/77 X-Unsent check: ARCH ruled the EMLs are never copied; they pass in the reference package run (726/726). Any other missing evidence file now fails | local |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
 
 ### Baseline without sibling evidence (`src/` + `tests/` only): causes

@@ -1,0 +1,2638 @@
+{
+  "color": {
+    "brand": {
+      "cinder_black": {
+        "value": "#101820",
+        "source": "CDF Design Guide(4).pdf p12 (Cinder Black)",
+        "status": "FACT"
+      },
+      "warm_gray": {
+        "value": "#D7D2CB",
+        "source": "CDF Design Guide(4).pdf p12 (Warm Gray)",
+        "status": "FACT"
+      },
+      "powder_blue": {
+        "value": "#BBDDE6",
+        "source": "CDF Design Guide(4).pdf p12 (Powder Blue)",
+        "status": "FACT"
+      },
+      "wistful_blue": {
+        "value": "#A5B0E3",
+        "source": "CDF Design Guide(4).pdf p12 (Wistful Blue)",
+        "status": "FACT"
+      },
+      "chardonnay_yellow": {
+        "value": "#FDD086",
+        "source": "CDF Design Guide(4).pdf p12 (Chardonnay Yellow)",
+        "status": "FACT"
+      },
+      "light_salmon": {
+        "value": "#FA9370",
+        "source": "CDF Design Guide(4).pdf p12 (Light Salmon)",
+        "status": "FACT"
+      },
+      "jetstream_green": {
+        "value": "#B5E1C4",
+        "source": "CDF Design Guide(4).pdf p12 (Jetstream Green)",
+        "status": "FACT"
+      }
+    },
+    "tint": {
+      "cb90": {
+        "value": "#283037",
+        "source": "CDF Design Guide(4).pdf p13 (CB 90)",
+        "status": "FACT"
+      },
+      "cb70": {
+        "value": "#40464D",
+        "source": "CDF Design Guide(4).pdf p13 (CB 70)",
+        "status": "FACT"
+      },
+      "cb50": {
+        "value": "#878B8F",
+        "source": "CDF Design Guide(4).pdf p13 (CB 50)",
+        "status": "FACT"
+      },
+      "cb30": {
+        "value": "#B8BABD",
+        "source": "CDF Design Guide(4).pdf p13 (CB 30)",
+        "status": "FACT"
+      },
+      "cb10": {
+        "value": "#E8E8E9",
+        "source": "CDF Design Guide(4).pdf p13 (CB 10)",
+        "status": "FACT"
+      },
+      "cb5": {
+        "value": "#F3F3F4",
+        "source": "CDF Design Guide(4).pdf p13 (CB 5)",
+        "status": "FACT"
+      },
+      "wg90": {
+        "value": "#DBD7D1",
+        "source": "CDF Design Guide(4).pdf p13 (WG 90)",
+        "status": "FACT"
+      },
+      "wg70": {
+        "value": "#E3E0DB",
+        "source": "CDF Design Guide(4).pdf p13 (WG 70)",
+        "status": "FACT"
+      },
+      "wg50": {
+        "value": "#EAE8E4",
+        "source": "CDF Design Guide(4).pdf p13 (WG 50)",
+        "status": "FACT"
+      },
+      "wg30": {
+        "value": "#F3F2F0",
+        "source": "CDF Design Guide(4).pdf p13 (WG 30)",
+        "status": "FACT"
+      },
+      "wg10": {
+        "value": "#FBFBFA",
+        "source": "CDF Design Guide(4).pdf p13 (WG 10)",
+        "status": "FACT"
+      },
+      "wg5": {
+        "value": "#FDFCFC",
+        "source": "CDF Design Guide(4).pdf p13 (WG 5)",
+        "status": "FACT"
+      },
+      "pb90": {
+        "value": "#C2E1E9",
+        "source": "CDF Design Guide(4).pdf p13 (PB 90)",
+        "status": "FACT"
+      },
+      "pb70": {
+        "value": "#D0E8EE",
+        "source": "CDF Design Guide(4).pdf p13 (PB 70)",
+        "status": "FACT"
+      },
+      "pb50": {
+        "value": "#DCEDF2",
+        "source": "CDF Design Guide(4).pdf p13 (PB 50)",
+        "status": "FACT"
+      },
+      "pb30": {
+        "value": "#EBF5F8",
+        "source": "CDF Design Guide(4).pdf p13 (PB 30)",
+        "status": "FACT"
+      },
+      "pb10": {
+        "value": "#F9FCFD",
+        "source": "CDF Design Guide(4).pdf p13 (PB 10)",
+        "status": "FACT"
+      },
+      "pb5": {
+        "value": "#FBFDFD",
+        "source": "CDF Design Guide(4).pdf p13 (PB 5)",
+        "status": "FACT"
+      },
+      "wb90": {
+        "value": "#AEB8E6",
+        "source": "CDF Design Guide(4).pdf p13 (WB 90)",
+        "status": "FACT"
+      },
+      "wb70": {
+        "value": "#C0C8EC",
+        "source": "CDF Design Guide(4).pdf p13 (WB 70)",
+        "status": "FACT"
+      },
+      "wb50": {
+        "value": "#D1D7F0",
+        "source": "CDF Design Guide(4).pdf p13 (WB 50)",
+        "status": "FACT"
+      },
+      "wb30": {
+        "value": "#E4E8F7",
+        "source": "CDF Design Guide(4).pdf p13 (WB 30)",
+        "status": "FACT"
+      },
+      "wb10": {
+        "value": "#F6F8FD",
+        "source": "CDF Design Guide(4).pdf p13 (WB 10)",
+        "status": "FACT"
+      },
+      "wb5": {
+        "value": "#FAFBFD",
+        "source": "CDF Design Guide(4).pdf p13 (WB 5)",
+        "status": "FACT"
+      },
+      "cy90": {
+        "value": "#FED593",
+        "source": "CDF Design Guide(4).pdf p13 (CY 90)",
+        "status": "FACT"
+      },
+      "cy70": {
+        "value": "#FEDFAB",
+        "source": "CDF Design Guide(4).pdf p13 (CY 70)",
+        "status": "FACT"
+      },
+      "cy50": {
+        "value": "#FDE7C2",
+        "source": "CDF Design Guide(4).pdf p13 (CY 50)",
+        "status": "FACT"
+      },
+      "cy30": {
+        "value": "#FFF1DB",
+        "source": "CDF Design Guide(4).pdf p13 (CY 30)",
+        "status": "FACT"
+      },
+      "cy10": {
+        "value": "#FFFBF3",
+        "source": "CDF Design Guide(4).pdf p13 (CY 10)",
+        "status": "FACT"
+      },
+      "cy5": {
+        "value": "#FFFCF9",
+        "source": "CDF Design Guide(4).pdf p13 (CY 5)",
+        "status": "FACT"
+      },
+      "ls90": {
+        "value": "#FB9E7F",
+        "source": "CDF Design Guide(4).pdf p13 (LS 90)",
+        "status": "FACT"
+      },
+      "ls70": {
+        "value": "#FCB49B",
+        "source": "CDF Design Guide(4).pdf p13 (LS 70)",
+        "status": "FACT"
+      },
+      "ls50": {
+        "value": "#FCC8B7",
+        "source": "CDF Design Guide(4).pdf p13 (LS 50)",
+        "status": "FACT"
+      },
+      "ls30": {
+        "value": "#FEDFD5",
+        "source": "CDF Design Guide(4).pdf p13 (LS 30)",
+        "status": "FACT"
+      },
+      "ls10": {
+        "value": "#FFF5F1",
+        "source": "CDF Design Guide(4).pdf p13 (LS 10)",
+        "status": "FACT"
+      },
+      "ls5": {
+        "value": "#FEF9F8",
+        "source": "CDF Design Guide(4).pdf p13 (LS 5)",
+        "status": "FACT"
+      },
+      "jg90": {
+        "value": "#BDE4CA",
+        "source": "CDF Design Guide(4).pdf p13 (JG 90)",
+        "status": "FACT"
+      },
+      "jg70": {
+        "value": "#CCEAD6",
+        "source": "CDF Design Guide(4).pdf p13 (JG 70)",
+        "status": "FACT"
+      },
+      "jg50": {
+        "value": "#D9EFE1",
+        "source": "CDF Design Guide(4).pdf p13 (JG 50)",
+        "status": "FACT"
+      },
+      "jg30": {
+        "value": "#E9F6EE",
+        "source": "CDF Design Guide(4).pdf p13 (JG 30)",
+        "status": "FACT"
+      },
+      "jg10": {
+        "value": "#F8FCFA",
+        "source": "CDF Design Guide(4).pdf p13 (JG 10)",
+        "status": "FACT"
+      },
+      "jg5": {
+        "value": "#FBFDFC",
+        "source": "CDF Design Guide(4).pdf p13 (JG 5)",
+        "status": "FACT"
+      }
+    },
+    "neutral": {
+      "c_dark": {
+        "value": "#19212B",
+        "source": "CDF Design Guide(4).pdf p14 (C Dark)",
+        "status": "FACT"
+      },
+      "c_dark_90": {
+        "value": "#303841",
+        "source": "CDF Design Guide(4).pdf p14 (C Dark 90)",
+        "status": "FACT"
+      },
+      "c_dark_70": {
+        "value": "#5E646B",
+        "source": "CDF Design Guide(4).pdf p14 (C Dark 70)",
+        "status": "FACT"
+      },
+      "c_dark_50": {
+        "value": "#8B9095",
+        "source": "CDF Design Guide(4).pdf p14 (C Dark 50)",
+        "status": "FACT"
+      },
+      "c_dark_30": {
+        "value": "#BABDC0",
+        "source": "CDF Design Guide(4).pdf p14 (C Dark 30)",
+        "status": "FACT"
+      },
+      "c_dark_10": {
+        "value": "#E8E9EA",
+        "source": "CDF Design Guide(4).pdf p14 (C Dark 10)",
+        "status": "FACT"
+      },
+      "c_dark_5": {
+        "value": "#F3F4F4",
+        "source": "CDF Design Guide(4).pdf p14 (C Dark 5)",
+        "status": "FACT"
+      },
+      "white": {
+        "value": "#FFFFFF",
+        "source": "CDF Design Guide(4).pdf p14 (White)",
+        "status": "FACT"
+      }
+    },
+    "semantic_guide": {
+      "red": {
+        "value": "#FA9370",
+        "source": "CDF Design Guide(4).pdf p15 (C Red) / p34 RAG red",
+        "status": "FACT",
+        "note": "danger; guide: 'red signifies danger' and must be paired with complementary indicators (p15)"
+      },
+      "amber": {
+        "value": "#FDD086",
+        "source": "CDF Design Guide(4).pdf p15 (C Amber) / p34 RAG amber",
+        "status": "FACT",
+        "note": "caution"
+      },
+      "green": {
+        "value": "#B5E1C4",
+        "source": "CDF Design Guide(4).pdf p15 (C Green) / p34 RAG green",
+        "status": "FACT",
+        "note": "positive feedback"
+      }
+    },
+    "ink": {
+      "success_ink": {
+        "value": "#22633D",
+        "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED",
+        "status": "FACT",
+        "note": "text/glyph colour on Jetstream tints (the guide's green #B5E1C4 is too light for text: 1.45:1 on white)"
+      },
+      "warning_ink": {
+        "value": "#7A4A00",
+        "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED",
+        "status": "FACT",
+        "note": "text/glyph colour on Chardonnay tints"
+      },
+      "danger_ink": {
+        "value": "#8A2F1B",
+        "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED",
+        "status": "FACT",
+        "note": "text/glyph colour on Light Salmon tints"
+      },
+      "info_ink": {
+        "value": "#245667",
+        "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED",
+        "status": "FACT",
+        "note": "text/glyph colour on Powder Blue tints"
+      },
+      "returned_ink": {
+        "value": "#2C3470",
+        "source": "V12 generator/DESIGN_TOKENS.md (V11 current-state tones: returned #2C3470 on #EEF0FB)",
+        "status": "FACT",
+        "note": "kept for RETURNED ↩ on Wistful Blue tints"
+      },
+      "focus_blue_asset": {
+        "value": "#4B6FFF",
+        "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED (semantic.light.focus)",
+        "status": "FACT",
+        "note": "NOT used by V13 (not a guide colour); V13 focus ring = Cinder Black 2 px + white 2 px offset"
+      }
+    },
+    "semantic": {
+      "light": {
+        "canvas": {
+          "value": "#F3F4F4",
+          "source": "CDF Design Guide(4).pdf p14 (C Dark 5); TOK semantic.light.background",
+          "status": "FACT",
+          "note": "page/e-mail canvas"
+        },
+        "surface": {
+          "value": "#FFFFFF",
+          "source": "CDF Design Guide(4).pdf p37–p38, p42 (component background White)",
+          "status": "FACT"
+        },
+        "surface_subtle": {
+          "value": "#FBFBFA",
+          "source": "CDF Design Guide(4).pdf p13 (WG 10)",
+          "status": "FACT",
+          "note": "quiet panels; usage PROPOSAL"
+        },
+        "text_primary": {
+          "value": "#101820",
+          "source": "CDF Design Guide(4).pdf p29, p33, p37 (font colour Cinder Black)",
+          "status": "FACT"
+        },
+        "text_secondary": {
+          "value": "#40464D",
+          "source": "CDF Design Guide(4).pdf p37–p38 (trend text CB 70)",
+          "status": "FACT"
+        },
+        "text_muted": {
+          "value": "#5E646B",
+          "source": "CDF Design Guide(4).pdf p14 (C Dark 70); TOK semantic.light.textSecondary",
+          "status": "FACT",
+          "note": "smallest-contrast text colour allowed on white (6.11:1); #8B9095 is NOT used for text (3.22:1)"
+        },
+        "border": {
+          "value": "#D7D2CB",
+          "source": "CDF Design Guide(4).pdf p34, p37, p38, p42 (border Warm Gray)",
+          "status": "FACT",
+          "note": "decorative container border; never the only carrier of meaning"
+        },
+        "border_card_home": {
+          "value": "#E3E0DB",
+          "source": "CDF Design Guide(4).pdf p63 (card border WG 70, 2 px)",
+          "status": "FACT"
+        },
+        "border_strong": {
+          "value": "#101820",
+          "source": "CDF Design Guide(4).pdf p33 (secondary button border Cinder Black)",
+          "status": "FACT"
+        },
+        "header_bg": {
+          "value": "#D7D2CB",
+          "source": "CDF Design Guide(4).pdf p29, p63 (header Warm Gray)",
+          "status": "FACT"
+        },
+        "footer_bg": {
+          "value": "#101820",
+          "source": "CDF Design Guide(4).pdf p30 (footer Cinder Black)",
+          "status": "FACT"
+        },
+        "footer_text": {
+          "value": "#FFFFFF",
+          "source": "CDF Design Guide(4).pdf p30 (footer text White)",
+          "status": "FACT"
+        },
+        "table_header_bg": {
+          "value": "#101820",
+          "source": "CDF Design Guide(4).pdf p43 (table header Cinder Black, text White)",
+          "status": "FACT"
+        },
+        "table_row_alt": {
+          "value": "#F3F3F4",
+          "source": "CDF Design Guide(4).pdf p44 (alternate rows CB 5 / White)",
+          "status": "FACT"
+        },
+        "action_primary_bg": {
+          "value": "#101820",
+          "source": "CDF Design Guide(4).pdf p33 (primary button)",
+          "status": "FACT"
+        },
+        "action_primary_text": {
+          "value": "#FFFFFF",
+          "source": "CDF Design Guide(4).pdf p33 (primary button font White)",
+          "status": "FACT"
+        },
+        "action_secondary_bg": {
+          "value": "#FFFFFF",
+          "source": "CDF Design Guide(4).pdf p33 (secondary button background White)",
+          "status": "FACT"
+        },
+        "action_secondary_text": {
+          "value": "#101820",
+          "source": "CDF Design Guide(4).pdf p33",
+          "status": "FACT"
+        },
+        "link": {
+          "value": "#101820",
+          "source": "CDF Design Guide(4).pdf p33 (text button Cinder Black)",
+          "status": "FACT",
+          "note": "links underlined; the guide's 'View More' colour #878B8F (p43, CB 50) is NOT used for text: 3.52:1 on white fails WCAG 1.4.3"
+        },
+        "selected_bg": {
+          "value": "#101820",
+          "source": "CDF Design Guide(4).pdf p35 (content switcher selected)",
+          "status": "FACT"
+        },
+        "focus_ring": {
+          "value": "#101820 2px solid + 2px #FFFFFF offset",
+          "source": "W-E PROPOSAL — basis: WCAG 2.2 SC 1.4.11 / 2.4.7; colours from DG p12/p14",
+          "status": "UNVERIFIED",
+          "note": "V12 used 3 px Powder Blue (1.38:1 on white — fails 1.4.11 on white)"
+        }
+      },
+      "dark": {
+        "canvas": {
+          "value": "#101820",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED (background)",
+          "status": "FACT"
+        },
+        "surface": {
+          "value": "#19212B",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED (surface)",
+          "status": "FACT"
+        },
+        "surface_subtle": {
+          "value": "#303841",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED (surfaceSubtle)",
+          "status": "FACT"
+        },
+        "surface_elevated": {
+          "value": "#252E38",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED (surfaceElevated)",
+          "status": "FACT"
+        },
+        "text_primary": {
+          "value": "#FFFFFF",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED",
+          "status": "FACT"
+        },
+        "text_secondary": {
+          "value": "#D8DADD",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED",
+          "status": "FACT"
+        },
+        "text_muted": {
+          "value": "#BABDC0",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED",
+          "status": "FACT"
+        },
+        "border": {
+          "value": "#46505A",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED",
+          "status": "FACT"
+        },
+        "action_primary_bg": {
+          "value": "#FFFFFF",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED (primary)",
+          "status": "FACT"
+        },
+        "action_primary_text": {
+          "value": "#101820",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED (primaryText)",
+          "status": "FACT"
+        },
+        "focus_ring": {
+          "value": "#BBDDE6",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED (focus) = DG p12 Powder Blue",
+          "status": "FACT"
+        },
+        "success": {
+          "value": "#B5E1C4",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED = DG p12 Jetstream",
+          "status": "FACT"
+        },
+        "warning": {
+          "value": "#FDD086",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED = DG p12 Chardonnay",
+          "status": "FACT"
+        },
+        "danger": {
+          "value": "#FFB19A",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED (not a guide colour)",
+          "status": "FACT"
+        },
+        "info": {
+          "value": "#BBDDE6",
+          "source": "asset CDF_Design_Tokens.json semantic.dark — the Design Guide defines no dark mode; brand approval UNVERIFIED = DG p12 Powder Blue",
+          "status": "FACT"
+        }
+      }
+    },
+    "progress": {
+      "layer_a_actual": {
+        "COMPLETED": {
+          "symbol": {
+            "value": "✔",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "text_presentation_selector": true,
+          "label_ar": {
+            "value": "اكتمل",
+            "source": "W-E PROPOSAL (short visible label); aria text = CHARTER §3.6",
+            "status": "UNVERIFIED"
+          },
+          "label_en": {
+            "value": "Completed",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "aria_ar": {
+            "value": "اكتمل — تم تسجيل الإجراء",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "aria_en": {
+            "value": "Completed — the action is recorded",
+            "source": "W-E PROPOSAL — basis: English twin of the charter aria text",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#22633D",
+            "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED success",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "bg": {
+            "value": "#E9F6EE",
+            "source": "CDF Design Guide(4).pdf p13 JG 30",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border": {
+            "value": "#B5E1C4",
+            "source": "CDF Design Guide(4).pdf p12 Jetstream",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border_style": {
+            "value": "solid 1px",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.6 (Layer B dashed; Layer A solid)",
+            "status": "UNVERIFIED"
+          },
+          "epistemic_default": {
+            "value": "RECORDED_FACT",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.5",
+            "status": "UNVERIFIED"
+          }
+        },
+        "IN_PROGRESS": {
+          "symbol": {
+            "value": "●",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "text_presentation_selector": false,
+          "label_ar": {
+            "value": "جارٍ",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "In progress",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "aria_ar": {
+            "value": "جارٍ",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "aria_en": {
+            "value": "In progress",
+            "source": "W-E PROPOSAL — basis: English twin of the charter aria text",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#FFFFFF",
+            "source": "CDF Design Guide(4).pdf p35 selected font White",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "bg": {
+            "value": "#101820",
+            "source": "CDF Design Guide(4).pdf p35 selected background Cinder Black",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border": {
+            "value": "#101820",
+            "source": "CDF Design Guide(4).pdf p12",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border_style": {
+            "value": "solid 2px",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.6 (Layer B dashed; Layer A solid)",
+            "status": "UNVERIFIED"
+          },
+          "epistemic_default": {
+            "value": "RECORDED_FACT",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.5",
+            "status": "UNVERIFIED"
+          }
+        },
+        "PENDING": {
+          "symbol": {
+            "value": "○",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "text_presentation_selector": false,
+          "label_ar": {
+            "value": "بانتظار إجراء",
+            "source": "W-E PROPOSAL (short visible label); aria text = CHARTER §3.6",
+            "status": "UNVERIFIED"
+          },
+          "label_en": {
+            "value": "Awaiting action",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "aria_ar": {
+            "value": "بانتظار إجراء محدد",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "aria_en": {
+            "value": "Awaiting a specified action",
+            "source": "W-E PROPOSAL — basis: English twin of the charter aria text",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#7A4A00",
+            "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED warning",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "bg": {
+            "value": "#FFF1DB",
+            "source": "CDF Design Guide(4).pdf p13 CY 30",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border": {
+            "value": "#FDD086",
+            "source": "CDF Design Guide(4).pdf p12 Chardonnay",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border_style": {
+            "value": "solid 1px",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.6 (Layer B dashed; Layer A solid)",
+            "status": "UNVERIFIED"
+          },
+          "epistemic_default": {
+            "value": "RECORDED_FACT",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.5",
+            "status": "UNVERIFIED"
+          }
+        },
+        "SUSPENDED": {
+          "symbol": {
+            "value": "⏸",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "text_presentation_selector": true,
+          "label_ar": {
+            "value": "موقوف مؤقتاً",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "Suspended",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "aria_ar": {
+            "value": "موقوف مؤقتاً",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "aria_en": {
+            "value": "Temporarily suspended",
+            "source": "W-E PROPOSAL — basis: English twin of the charter aria text",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#7A4A00",
+            "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED warning",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "bg": {
+            "value": "#FFF1DB",
+            "source": "CDF Design Guide(4).pdf p13 CY 30",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border": {
+            "value": "#FDD086",
+            "source": "CDF Design Guide(4).pdf p12 Chardonnay",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border_style": {
+            "value": "solid 1px",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.6 (Layer B dashed; Layer A solid)",
+            "status": "UNVERIFIED"
+          },
+          "epistemic_default": {
+            "value": "RECORDED_FACT",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.5",
+            "status": "UNVERIFIED"
+          }
+        },
+        "RETURNED": {
+          "symbol": {
+            "value": "↩",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "text_presentation_selector": false,
+          "label_ar": {
+            "value": "أُعيد",
+            "source": "W-E PROPOSAL (short visible label); aria text = CHARTER §3.6",
+            "status": "UNVERIFIED"
+          },
+          "label_en": {
+            "value": "Returned",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "aria_ar": {
+            "value": "أُعيد لاستكمال متطلبات",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "aria_en": {
+            "value": "Returned to complete requirements",
+            "source": "W-E PROPOSAL — basis: English twin of the charter aria text",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#2C3470",
+            "source": "V12 generator/DESIGN_TOKENS.md returned ink",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "bg": {
+            "value": "#E4E8F7",
+            "source": "CDF Design Guide(4).pdf p13 WB 30",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border": {
+            "value": "#A5B0E3",
+            "source": "CDF Design Guide(4).pdf p12 Wistful Blue",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border_style": {
+            "value": "solid 1px",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.6 (Layer B dashed; Layer A solid)",
+            "status": "UNVERIFIED"
+          },
+          "epistemic_default": {
+            "value": "RECORDED_FACT",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.5",
+            "status": "UNVERIFIED"
+          }
+        },
+        "CANCELLED": {
+          "symbol": {
+            "value": "✕",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "text_presentation_selector": false,
+          "label_ar": {
+            "value": "أُلغي",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "Cancelled",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "aria_ar": {
+            "value": "أُلغي",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "aria_en": {
+            "value": "Cancelled",
+            "source": "W-E PROPOSAL — basis: English twin of the charter aria text",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#40464D",
+            "source": "CDF Design Guide(4).pdf p13 CB 70",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "bg": {
+            "value": "#F3F3F4",
+            "source": "CDF Design Guide(4).pdf p13 CB 5",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border": {
+            "value": "#B8BABD",
+            "source": "CDF Design Guide(4).pdf p13 CB 30",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border_style": {
+            "value": "solid 1px",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.6 (Layer B dashed; Layer A solid)",
+            "status": "UNVERIFIED"
+          },
+          "epistemic_default": {
+            "value": "RECORDED_FACT",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.5",
+            "status": "UNVERIFIED"
+          }
+        },
+        "FAILED": {
+          "symbol": {
+            "value": "⚠",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "text_presentation_selector": true,
+          "label_ar": {
+            "value": "تعذّر إتمامه",
+            "source": "W-E PROPOSAL (short visible label); aria text = CHARTER §3.6",
+            "status": "UNVERIFIED"
+          },
+          "label_en": {
+            "value": "Failed",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "aria_ar": {
+            "value": "تعذر إتمامه",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "aria_en": {
+            "value": "Could not be completed",
+            "source": "W-E PROPOSAL — basis: English twin of the charter aria text",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#8A2F1B",
+            "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED danger",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "bg": {
+            "value": "#FEDFD5",
+            "source": "CDF Design Guide(4).pdf p13 LS 30",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border": {
+            "value": "#FA9370",
+            "source": "CDF Design Guide(4).pdf p12 Light Salmon",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border_style": {
+            "value": "solid 1px",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.6 (Layer B dashed; Layer A solid)",
+            "status": "UNVERIFIED"
+          },
+          "epistemic_default": {
+            "value": "RECORDED_FACT",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.5",
+            "status": "UNVERIFIED"
+          }
+        },
+        "NOT_APPLICABLE": {
+          "symbol": {
+            "value": "—",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "text_presentation_selector": false,
+          "label_ar": {
+            "value": "لا ينطبق",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "Not applicable",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "aria_ar": {
+            "value": "لا ينطبق",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "aria_en": {
+            "value": "Not applicable",
+            "source": "W-E PROPOSAL — basis: English twin of the charter aria text",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#5E646B",
+            "source": "CDF Design Guide(4).pdf p14 C Dark 70",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "bg": {
+            "value": "#FFFFFF",
+            "source": "CDF Design Guide(4).pdf p14 White",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border": {
+            "value": "#E8E9EA",
+            "source": "CDF Design Guide(4).pdf p14 C Dark 10",
+            "status": "FACT",
+            "note": "usage for this state: W-E PROPOSAL"
+          },
+          "border_style": {
+            "value": "solid 1px",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.6 (Layer B dashed; Layer A solid)",
+            "status": "UNVERIFIED"
+          },
+          "epistemic_default": {
+            "value": "NOT_APPLICABLE",
+            "source": "W-E PROPOSAL — basis: CHARTER §3.5",
+            "status": "UNVERIFIED"
+          }
+        }
+      },
+      "layer_b_expected": {
+        "EXPECTED": {
+          "symbol": {
+            "value": "◇",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_ar": {
+            "value": "خطوة متوقعة",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "Expected step",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#5E646B",
+            "source": "CDF Design Guide(4).pdf p14 (C Dark 70)",
+            "status": "FACT",
+            "note": "muted text, still 6.11:1 on white"
+          },
+          "bg": {
+            "value": "#FFFFFF",
+            "source": "CDF Design Guide(4).pdf p14 (White)",
+            "status": "FACT"
+          },
+          "border": {
+            "value": "#878B8F",
+            "source": "CDF Design Guide(4).pdf p13 (CB 50)",
+            "status": "FACT",
+            "note": "dashed 1 px; non-text contrast 3.52:1 on white (≥ 3:1)"
+          },
+          "border_style": {
+            "value": "dashed 1px",
+            "source": "CHARTER §3.6 (dashed outline, muted colour)",
+            "status": "FACT"
+          },
+          "forbidden": {
+            "value": ["✔", "●", "سُجل", "اكتُمل", "تم"],
+            "source": "CHARTER §3.6 (never ✔/●, never the words سُجل / اكتُمل / تم)",
+            "status": "FACT"
+          },
+          "epistemic_default": {
+            "value": "EXPECTED_PROCESS",
+            "source": "CHARTER §3.5",
+            "status": "FACT"
+          }
+        },
+        "CONDITIONAL": {
+          "symbol": {
+            "value": "◇",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_ar": {
+            "value": "خطوة محتملة — بحسب …",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "Possible step — depending on …",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#5E646B",
+            "source": "CDF Design Guide(4).pdf p14 (C Dark 70)",
+            "status": "FACT",
+            "note": "muted text, still 6.11:1 on white"
+          },
+          "bg": {
+            "value": "#FFFFFF",
+            "source": "CDF Design Guide(4).pdf p14 (White)",
+            "status": "FACT"
+          },
+          "border": {
+            "value": "#878B8F",
+            "source": "CDF Design Guide(4).pdf p13 (CB 50)",
+            "status": "FACT",
+            "note": "dashed 1 px; non-text contrast 3.52:1 on white (≥ 3:1)"
+          },
+          "border_style": {
+            "value": "dashed 1px",
+            "source": "CHARTER §3.6 (dashed outline, muted colour)",
+            "status": "FACT"
+          },
+          "forbidden": {
+            "value": ["✔", "●", "سُجل", "اكتُمل", "تم"],
+            "source": "CHARTER §3.6 (never ✔/●, never the words سُجل / اكتُمل / تم)",
+            "status": "FACT"
+          },
+          "epistemic_default": {
+            "value": "EXPECTED_PROCESS",
+            "source": "CHARTER §3.5",
+            "status": "FACT"
+          }
+        },
+        "OPTIONAL": {
+          "symbol": {
+            "value": "◇",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_ar": {
+            "value": "خطوة اختيارية",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "Optional step",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#5E646B",
+            "source": "CDF Design Guide(4).pdf p14 (C Dark 70)",
+            "status": "FACT",
+            "note": "muted text, still 6.11:1 on white"
+          },
+          "bg": {
+            "value": "#FFFFFF",
+            "source": "CDF Design Guide(4).pdf p14 (White)",
+            "status": "FACT"
+          },
+          "border": {
+            "value": "#878B8F",
+            "source": "CDF Design Guide(4).pdf p13 (CB 50)",
+            "status": "FACT",
+            "note": "dashed 1 px; non-text contrast 3.52:1 on white (≥ 3:1)"
+          },
+          "border_style": {
+            "value": "dashed 1px",
+            "source": "CHARTER §3.6 (dashed outline, muted colour)",
+            "status": "FACT"
+          },
+          "forbidden": {
+            "value": ["✔", "●", "سُجل", "اكتُمل", "تم"],
+            "source": "CHARTER §3.6 (never ✔/●, never the words سُجل / اكتُمل / تم)",
+            "status": "FACT"
+          },
+          "epistemic_default": {
+            "value": "EXPECTED_PROCESS",
+            "source": "CHARTER §3.5",
+            "status": "FACT"
+          }
+        },
+        "ALTERNATIVE": {
+          "symbol": {
+            "value": "◇",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_ar": {
+            "value": "مسار بديل",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "Alternative path",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#5E646B",
+            "source": "CDF Design Guide(4).pdf p14 (C Dark 70)",
+            "status": "FACT",
+            "note": "muted text, still 6.11:1 on white"
+          },
+          "bg": {
+            "value": "#FFFFFF",
+            "source": "CDF Design Guide(4).pdf p14 (White)",
+            "status": "FACT"
+          },
+          "border": {
+            "value": "#878B8F",
+            "source": "CDF Design Guide(4).pdf p13 (CB 50)",
+            "status": "FACT",
+            "note": "dashed 1 px; non-text contrast 3.52:1 on white (≥ 3:1)"
+          },
+          "border_style": {
+            "value": "dashed 1px",
+            "source": "CHARTER §3.6 (dashed outline, muted colour)",
+            "status": "FACT"
+          },
+          "forbidden": {
+            "value": ["✔", "●", "سُجل", "اكتُمل", "تم"],
+            "source": "CHARTER §3.6 (never ✔/●, never the words سُجل / اكتُمل / تم)",
+            "status": "FACT"
+          },
+          "epistemic_default": {
+            "value": "EXPECTED_PROCESS",
+            "source": "CHARTER §3.5",
+            "status": "FACT"
+          }
+        },
+        "PARALLEL": {
+          "symbol": {
+            "value": "◇",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_ar": {
+            "value": "بالتوازي",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "In parallel",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#5E646B",
+            "source": "CDF Design Guide(4).pdf p14 (C Dark 70)",
+            "status": "FACT",
+            "note": "muted text, still 6.11:1 on white"
+          },
+          "bg": {
+            "value": "#FFFFFF",
+            "source": "CDF Design Guide(4).pdf p14 (White)",
+            "status": "FACT"
+          },
+          "border": {
+            "value": "#878B8F",
+            "source": "CDF Design Guide(4).pdf p13 (CB 50)",
+            "status": "FACT",
+            "note": "dashed 1 px; non-text contrast 3.52:1 on white (≥ 3:1)"
+          },
+          "border_style": {
+            "value": "dashed 1px",
+            "source": "CHARTER §3.6 (dashed outline, muted colour)",
+            "status": "FACT"
+          },
+          "forbidden": {
+            "value": ["✔", "●", "سُجل", "اكتُمل", "تم"],
+            "source": "CHARTER §3.6 (never ✔/●, never the words سُجل / اكتُمل / تم)",
+            "status": "FACT"
+          },
+          "epistemic_default": {
+            "value": "EXPECTED_PROCESS",
+            "source": "CHARTER §3.5",
+            "status": "FACT"
+          }
+        },
+        "SUBJECT_TO_APPROVAL": {
+          "symbol": {
+            "value": "◇",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_ar": {
+            "value": "رهن الاعتماد",
+            "source": "CHARTER §3.6",
+            "status": "FACT"
+          },
+          "label_en": {
+            "value": "Subject to approval",
+            "source": "W-E PROPOSAL — basis: English twin of the charter label",
+            "status": "UNVERIFIED"
+          },
+          "fg": {
+            "value": "#5E646B",
+            "source": "CDF Design Guide(4).pdf p14 (C Dark 70)",
+            "status": "FACT",
+            "note": "muted text, still 6.11:1 on white"
+          },
+          "bg": {
+            "value": "#FFFFFF",
+            "source": "CDF Design Guide(4).pdf p14 (White)",
+            "status": "FACT"
+          },
+          "border": {
+            "value": "#878B8F",
+            "source": "CDF Design Guide(4).pdf p13 (CB 50)",
+            "status": "FACT",
+            "note": "dashed 1 px; non-text contrast 3.52:1 on white (≥ 3:1)"
+          },
+          "border_style": {
+            "value": "dashed 1px",
+            "source": "CHARTER §3.6 (dashed outline, muted colour)",
+            "status": "FACT"
+          },
+          "forbidden": {
+            "value": ["✔", "●", "سُجل", "اكتُمل", "تم"],
+            "source": "CHARTER §3.6 (never ✔/●, never the words سُجل / اكتُمل / تم)",
+            "status": "FACT"
+          },
+          "epistemic_default": {
+            "value": "EXPECTED_PROCESS",
+            "source": "CHARTER §3.5",
+            "status": "FACT"
+          }
+        }
+      },
+      "dark": {
+        "COMPLETED": {
+          "fg": {
+            "value": "#B5E1C4",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.success = DG p12 Jetstream",
+            "status": "UNVERIFIED"
+          },
+          "bg": {
+            "value": "#19212B",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.surface",
+            "status": "UNVERIFIED"
+          },
+          "border": {
+            "value": "#B5E1C4",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.success = DG p12 Jetstream",
+            "status": "UNVERIFIED"
+          }
+        },
+        "IN_PROGRESS": {
+          "fg": {
+            "value": "#101820",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.primaryText",
+            "status": "UNVERIFIED"
+          },
+          "bg": {
+            "value": "#FFFFFF",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.primary",
+            "status": "UNVERIFIED"
+          },
+          "border": {
+            "value": "#FFFFFF",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.primary",
+            "status": "UNVERIFIED"
+          }
+        },
+        "PENDING": {
+          "fg": {
+            "value": "#FDD086",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.warning = DG p12 Chardonnay",
+            "status": "UNVERIFIED"
+          },
+          "bg": {
+            "value": "#19212B",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.surface",
+            "status": "UNVERIFIED"
+          },
+          "border": {
+            "value": "#FDD086",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.warning = DG p12 Chardonnay",
+            "status": "UNVERIFIED"
+          }
+        },
+        "SUSPENDED": {
+          "fg": {
+            "value": "#FDD086",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.warning",
+            "status": "UNVERIFIED"
+          },
+          "bg": {
+            "value": "#19212B",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.surface",
+            "status": "UNVERIFIED"
+          },
+          "border": {
+            "value": "#FDD086",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.warning",
+            "status": "UNVERIFIED"
+          }
+        },
+        "RETURNED": {
+          "fg": {
+            "value": "#A5B0E3",
+            "source": "W-E PROPOSAL — basis: DG p12 Wistful Blue",
+            "status": "UNVERIFIED"
+          },
+          "bg": {
+            "value": "#19212B",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.surface",
+            "status": "UNVERIFIED"
+          },
+          "border": {
+            "value": "#A5B0E3",
+            "source": "W-E PROPOSAL — basis: DG p12 Wistful Blue",
+            "status": "UNVERIFIED"
+          }
+        },
+        "CANCELLED": {
+          "fg": {
+            "value": "#D8DADD",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.textSecondary / border",
+            "status": "UNVERIFIED"
+          },
+          "bg": {
+            "value": "#19212B",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.surface",
+            "status": "UNVERIFIED"
+          },
+          "border": {
+            "value": "#46505A",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.textSecondary / border",
+            "status": "UNVERIFIED"
+          }
+        },
+        "FAILED": {
+          "fg": {
+            "value": "#FFB19A",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.danger",
+            "status": "UNVERIFIED"
+          },
+          "bg": {
+            "value": "#19212B",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.surface",
+            "status": "UNVERIFIED"
+          },
+          "border": {
+            "value": "#FFB19A",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.danger",
+            "status": "UNVERIFIED"
+          }
+        },
+        "NOT_APPLICABLE": {
+          "fg": {
+            "value": "#BABDC0",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.textMuted",
+            "status": "UNVERIFIED"
+          },
+          "bg": {
+            "value": "#19212B",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.surface",
+            "status": "UNVERIFIED"
+          },
+          "border": {
+            "value": "#46505A",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.textMuted",
+            "status": "UNVERIFIED"
+          }
+        },
+        "EXPECTED_ANY_KIND": {
+          "fg": {
+            "value": "#BABDC0",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.textMuted",
+            "status": "UNVERIFIED"
+          },
+          "bg": {
+            "value": "#19212B",
+            "source": "W-E PROPOSAL — basis: TOK semantic.dark.surface",
+            "status": "UNVERIFIED"
+          },
+          "border": {
+            "value": "1px dashed #8B9095",
+            "source": "W-E PROPOSAL — basis: DG p14 C Dark 50, dashed per CHARTER §3.6",
+            "status": "UNVERIFIED"
+          }
+        }
+      }
+    },
+    "status_chip": {
+      "neutral": {
+        "fg": {
+          "value": "#40464D",
+          "source": "CDF Design Guide(4).pdf p13 CB 70",
+          "status": "FACT"
+        },
+        "bg": {
+          "value": "#F3F3F4",
+          "source": "CDF Design Guide(4).pdf p13 CB 5",
+          "status": "FACT"
+        },
+        "border": {
+          "value": "#B8BABD",
+          "source": "CDF Design Guide(4).pdf p13 CB 30",
+          "status": "FACT"
+        }
+      },
+      "info": {
+        "fg": {
+          "value": "#245667",
+          "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED info",
+          "status": "FACT"
+        },
+        "bg": {
+          "value": "#EBF5F8",
+          "source": "CDF Design Guide(4).pdf p13 PB 30",
+          "status": "FACT"
+        },
+        "border": {
+          "value": "#BBDDE6",
+          "source": "CDF Design Guide(4).pdf p12",
+          "status": "FACT"
+        }
+      },
+      "success": {
+        "fg": {
+          "value": "#22633D",
+          "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED success",
+          "status": "FACT"
+        },
+        "bg": {
+          "value": "#E9F6EE",
+          "source": "CDF Design Guide(4).pdf p13 JG 30",
+          "status": "FACT"
+        },
+        "border": {
+          "value": "#B5E1C4",
+          "source": "CDF Design Guide(4).pdf p12",
+          "status": "FACT"
+        }
+      },
+      "caution": {
+        "fg": {
+          "value": "#7A4A00",
+          "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED warning",
+          "status": "FACT"
+        },
+        "bg": {
+          "value": "#FFF1DB",
+          "source": "CDF Design Guide(4).pdf p13 CY 30",
+          "status": "FACT"
+        },
+        "border": {
+          "value": "#FDD086",
+          "source": "CDF Design Guide(4).pdf p12",
+          "status": "FACT"
+        }
+      },
+      "danger": {
+        "fg": {
+          "value": "#8A2F1B",
+          "source": "asset CDF_Design_Tokens.json (uploads/hearth/975d5e3b…) semantic.light — not printed in the Design Guide; brand approval UNVERIFIED danger",
+          "status": "FACT"
+        },
+        "bg": {
+          "value": "#FEDFD5",
+          "source": "CDF Design Guide(4).pdf p13 LS 30",
+          "status": "FACT"
+        },
+        "border": {
+          "value": "#FA9370",
+          "source": "CDF Design Guide(4).pdf p12",
+          "status": "FACT"
+        }
+      },
+      "shape": {
+        "value": "pill (999px)",
+        "source": "CDF Design Guide(4).pdf p34 trend chips / p44 table status pills (visual)",
+        "status": "FACT"
+      },
+      "height": {
+        "value": "21px (dashboard) — V13 uses ≥ 24px",
+        "source": "CDF Design Guide(4).pdf p34 (height 21 px)",
+        "status": "FACT",
+        "note": "24 px minimum = WCAG 2.2 SC 2.5.8 when a chip is interactive (PROPOSAL)"
+      },
+      "border_width": {
+        "value": "0.75px",
+        "source": "CDF Design Guide(4).pdf p34",
+        "status": "FACT"
+      }
+    },
+    "notification_status": {
+      "DRAFT": {
+        "value": "neutral",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4 lifecycle; colour family by meaning",
+        "status": "UNVERIFIED"
+      },
+      "VALIDATED": {
+        "value": "info",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4",
+        "status": "UNVERIFIED"
+      },
+      "AUTHORIZATION_PENDING": {
+        "value": "caution",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4",
+        "status": "UNVERIFIED"
+      },
+      "AUTHORIZED": {
+        "value": "info",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4",
+        "status": "UNVERIFIED"
+      },
+      "QUEUED": {
+        "value": "neutral",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4",
+        "status": "UNVERIFIED"
+      },
+      "SENT": {
+        "value": "info",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4; lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026)",
+        "status": "UNVERIFIED",
+        "note": "EMAIL: a sender success leaves the notification SENT = 'sent; delivery not confirmed' (delivery status DELIVERY_ACCEPTED_BY_PROVIDER); shown with delivery badge SENT_UNCONFIRMED, never 'delivered'"
+      },
+      "DELIVERY_CONFIRMED": {
+        "value": "success",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4; lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026); lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026)",
+        "status": "UNVERIFIED",
+        "note": "EMAIL: only from a provider delivery report (none today: SOURCE_REQUIRED, PRODUCTION_SUBSTITUTION_REQUIRED); IN_APP: coincides with SENT; delivery is never acknowledgement (PC-16)"
+      },
+      "DELIVERY_FAILED": {
+        "value": "danger",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4; lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026)",
+        "status": "UNVERIFIED",
+        "note": "sender failure after the last attempt"
+      },
+      "CANCELLED": {
+        "value": "neutral",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4",
+        "status": "UNVERIFIED"
+      },
+      "CORRECTED": {
+        "value": "caution",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4; lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026)",
+        "status": "UNVERIFIED",
+        "note": "entry state of the correcting version n+1 (corrects_version = n) → VALIDATED | CANCELLED; version n stays current and carries only the quiet CORRECTION_PENDING marker"
+      },
+      "SUPERSEDED": {
+        "value": "neutral",
+        "source": "W-E PROPOSAL — basis: CHARTER §3.4; lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026)",
+        "status": "UNVERIFIED",
+        "note": "version n becomes SUPERSEDED only in the step where version n+1 reaches SENT; if n+1 is CANCELLED, n stays current"
+      }
+    },
+    "delivery_badge": {
+      "SENT_UNCONFIRMED": {
+        "symbol": {
+          "value": "✉",
+          "source": "W-E PROPOSAL — basis: non-colour cue required by coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026); glyph present in DejaVu Sans / FreeSans (fc-query); never ✔",
+          "status": "UNVERIFIED"
+        },
+        "family": {
+          "value": "info",
+          "source": "W-E PROPOSAL — basis: reuses a status_chip family (DG p12–p13 colours) so no new colour pair is introduced",
+          "status": "UNVERIFIED"
+        },
+        "quiet": {
+          "value": false,
+          "source": "W-E PROPOSAL — basis: default chip weight",
+          "status": "UNVERIFIED"
+        },
+        "label_ar": {
+          "value": "أُرسل — لم يُؤكَّد التسليم",
+          "source": "coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026) (suggested Arabic wording, used verbatim)",
+          "status": "FACT"
+        },
+        "label_en": {
+          "value": "Sent — delivery not confirmed",
+          "source": "lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026) ('sent; delivery not confirmed') and coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026)",
+          "status": "FACT"
+        },
+        "shown_when": {
+          "value": "EMAIL with NotificationStatus SENT and DeliveryStatus DELIVERY_ACCEPTED_BY_PROVIDER (sender accepted, no provider delivery report)",
+          "source": "lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "FACT"
+        }
+      },
+      "DELIVERED_REPORT": {
+        "symbol": {
+          "value": "⬇",
+          "source": "W-E PROPOSAL — basis: non-colour cue required by coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026); glyph present in DejaVu Sans / FreeSans (fc-query); never ✔",
+          "status": "UNVERIFIED"
+        },
+        "family": {
+          "value": "success",
+          "source": "W-E PROPOSAL — basis: reuses a status_chip family (DG p12–p13 colours) so no new colour pair is introduced",
+          "status": "UNVERIFIED"
+        },
+        "quiet": {
+          "value": false,
+          "source": "W-E PROPOSAL — basis: default chip weight",
+          "status": "UNVERIFIED"
+        },
+        "label_ar": {
+          "value": "سُلّم — بتقرير تسليم من المزوّد",
+          "source": "W-E PROPOSAL — basis: lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "UNVERIFIED"
+        },
+        "label_en": {
+          "value": "Delivered — provider delivery report",
+          "source": "W-E PROPOSAL — basis: lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "UNVERIFIED"
+        },
+        "shown_when": {
+          "value": "EMAIL with DELIVERY_CONFIRMED backed by a provider delivery report — the platform receives none today (SOURCE_REQUIRED), so this badge is specified but not reachable",
+          "source": "lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "FACT"
+        }
+      },
+      "DELIVERED_IN_APP": {
+        "symbol": {
+          "value": "⬇",
+          "source": "W-E PROPOSAL — basis: non-colour cue required by coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026); glyph present in DejaVu Sans / FreeSans (fc-query); never ✔",
+          "status": "UNVERIFIED"
+        },
+        "family": {
+          "value": "success",
+          "source": "W-E PROPOSAL — basis: reuses a status_chip family (DG p12–p13 colours) so no new colour pair is introduced",
+          "status": "UNVERIFIED"
+        },
+        "quiet": {
+          "value": false,
+          "source": "W-E PROPOSAL — basis: default chip weight",
+          "status": "UNVERIFIED"
+        },
+        "label_ar": {
+          "value": "سُلّم داخل المنصة",
+          "source": "W-E PROPOSAL — basis: lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "UNVERIFIED"
+        },
+        "label_en": {
+          "value": "Delivered in the platform",
+          "source": "W-E PROPOSAL — basis: lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "UNVERIFIED"
+        },
+        "shown_when": {
+          "value": "IN_APP: SENT and DELIVERY_CONFIRMED coincide (committed outbox row)",
+          "source": "lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "FACT"
+        }
+      },
+      "FAILED": {
+        "symbol": {
+          "value": "⚠",
+          "source": "W-E PROPOSAL — basis: non-colour cue required by coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026); glyph present in DejaVu Sans / FreeSans (fc-query); never ✔",
+          "status": "UNVERIFIED"
+        },
+        "family": {
+          "value": "danger",
+          "source": "W-E PROPOSAL — basis: reuses a status_chip family (DG p12–p13 colours) so no new colour pair is introduced",
+          "status": "UNVERIFIED"
+        },
+        "quiet": {
+          "value": false,
+          "source": "W-E PROPOSAL — basis: default chip weight",
+          "status": "UNVERIFIED"
+        },
+        "label_ar": {
+          "value": "تعذّر التسليم",
+          "source": "W-E PROPOSAL — basis: CHARTER §3.6 FAILED wording pattern (تعذّر …) and lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "UNVERIFIED"
+        },
+        "label_en": {
+          "value": "Delivery failed",
+          "source": "W-E PROPOSAL — English twin",
+          "status": "UNVERIFIED"
+        },
+        "shown_when": {
+          "value": "DELIVERY_FAILED: sender failure after the last attempt",
+          "source": "lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "FACT"
+        }
+      },
+      "CORRECTION_PENDING": {
+        "symbol": {
+          "value": "✎",
+          "source": "W-E PROPOSAL — basis: non-colour cue required by coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026); glyph present in DejaVu Sans / FreeSans (fc-query); never ✔",
+          "status": "UNVERIFIED"
+        },
+        "family": {
+          "value": "neutral",
+          "source": "W-E PROPOSAL — basis: reuses a status_chip family (DG p12–p13 colours) so no new colour pair is introduced",
+          "status": "UNVERIFIED"
+        },
+        "quiet": {
+          "value": true,
+          "source": "W-E PROPOSAL — basis: 'a quiet \"correction being prepared\" marker' — coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026)",
+          "status": "UNVERIFIED"
+        },
+        "label_ar": {
+          "value": "يُعدّ تصحيح — هذا الإصدار ما زال سارياً",
+          "source": "W-E PROPOSAL — basis: coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026) ('correction being prepared') and L-04 item 2 ('version n stays the current version')",
+          "status": "UNVERIFIED"
+        },
+        "label_en": {
+          "value": "Correction being prepared — this version is still current",
+          "source": "W-E PROPOSAL — basis: coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026) ('correction being prepared') and L-04 item 2",
+          "status": "UNVERIFIED"
+        },
+        "shown_when": {
+          "value": "version n while its correcting version n+1 is in any state before SENT (CORRECTED, VALIDATED, AUTHORIZATION_PENDING, AUTHORIZED, QUEUED)",
+          "source": "lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "FACT"
+        }
+      },
+      "SUPERSEDED": {
+        "symbol": {
+          "value": "↻",
+          "source": "W-E PROPOSAL — basis: non-colour cue required by coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026); glyph present in DejaVu Sans / FreeSans (fc-query); never ✔",
+          "status": "UNVERIFIED"
+        },
+        "family": {
+          "value": "neutral",
+          "source": "W-E PROPOSAL — basis: reuses a status_chip family (DG p12–p13 colours) so no new colour pair is introduced",
+          "status": "UNVERIFIED"
+        },
+        "quiet": {
+          "value": false,
+          "source": "W-E PROPOSAL — basis: default chip weight",
+          "status": "UNVERIFIED"
+        },
+        "label_ar": {
+          "value": "استُبدل بالإصدار {n} — أُرسل التصحيح",
+          "source": "W-E PROPOSAL — basis: lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "UNVERIFIED"
+        },
+        "label_en": {
+          "value": "Superseded by version {n} — the correction was sent",
+          "source": "W-E PROPOSAL — basis: lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "UNVERIFIED"
+        },
+        "shown_when": {
+          "value": "version n after version n+1 reached SENT (the only way into SUPERSEDED)",
+          "source": "lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026) / lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026)",
+          "status": "FACT"
+        }
+      },
+      "rules": {
+        "no_completion_mark": {
+          "value": "no delivery badge uses ✔; ✔ stays reserved for Layer A COMPLETED (a recorded fact)",
+          "source": "coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026) ('none may use the completion mark ✔ unless it is a recorded fact'); CHARTER §3.6",
+          "status": "FACT"
+        },
+        "non_colour_cue": {
+          "value": "glyph + words on every badge; colour is redundant",
+          "source": "coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026) ('Each needs a non-colour cue'); WCAG 2.2 SC 1.4.1",
+          "status": "FACT"
+        },
+        "never_delivered_on_acceptance": {
+          "value": "an e-mail the sender accepted is 'sent; delivery not confirmed', never 'delivered'",
+          "source": "lead ruling L-07 (work/LEAD_notes.md, 27 Oct 2026); coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026)",
+          "status": "FACT"
+        },
+        "read_is_not_acknowledgement": {
+          "value": "a read mark (NOTIFICATION_READ) is never an acknowledgement; acknowledgement of service is a domain record (ACKNOWLEDGED)",
+          "source": "lead ruling L-02 (work/LEAD_notes.md, 27 Oct 2026); coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026)",
+          "status": "FACT"
+        },
+        "superseded_only_after_send": {
+          "value": "a notice shows as superseded only once its correcting version has been sent; until then it stays current with the quiet CORRECTION_PENDING marker",
+          "source": "lead ruling L-04 (work/LEAD_notes.md, 27 Oct 2026); coordinator instruction to W-E relaying lead rulings L-04/L-07 (27 Oct 2026)",
+          "status": "FACT"
+        },
+        "visibility": {
+          "value": "platform surfaces only; delivery_status is R/A for SECRETARY and P (prohibited) for every other recipient class",
+          "source": "policy_v13.json (W-F, DP-V13-draft-2026-10-27, rows PROPOSED) delivery_status rows",
+          "status": "FACT",
+          "note": "never in an e-mail body; never on an external surface; the oversight dashboard (UI-12, V13-07) shows aggregate counts and technical ids only — no recipient, no case number, no content"
+        }
+      }
+    }
+  },
+  "type": {
+    "family": {
+      "latin_brand": {
+        "value": "Calibri",
+        "source": "CDF Design Guide(4).pdf p21 (Font Family: Calibri)",
+        "status": "FACT"
+      },
+      "latin_stack": {
+        "value": "Calibri,Carlito,'Segoe UI',Arial,sans-serif",
+        "source": "W-E PROPOSAL — basis: Carlito is metric-compatible with Calibri and installed on the render host; Segoe UI/Arial are e-mail-safe",
+        "status": "UNVERIFIED"
+      },
+      "arabic": {
+        "value": "IBM Plex Sans Arabic",
+        "source": "V12 generator/DESIGN_TOKENS.md (computed font of the public CDF website as captured by V12 on 2026-10-18)",
+        "status": "UNVERIFIED",
+        "note": "the Design Guide names no Arabic typeface; brand matrix row 'Typography' = BRAND_SOURCE_REQUIRED for the Arabic brand font"
+      },
+      "arabic_stack": {
+        "value": "'IBM Plex Sans Arabic','Segoe UI',Tahoma,Arial,sans-serif",
+        "source": "V12 generator/DESIGN_TOKENS.md (e-mail and tool stack)",
+        "status": "FACT",
+        "note": "as a brand rule: UNVERIFIED (see arabic)"
+      },
+      "symbol_stack": {
+        "value": "'Segoe UI Symbol','DejaVu Sans',FreeSans,sans-serif",
+        "source": "W-E PROPOSAL — basis: the Arabic face has no glyphs for ✔ ● ○ ◇ ⏸ ✕ ⚠ (fc-query on IBM Plex Sans Arabic v15); VS15 (U+FE0E) after ✔ ⏸ ⚠ forces text presentation",
+        "status": "UNVERIFIED"
+      },
+      "email_web_font": {
+        "value": "Google Fonts link for IBM Plex Sans Arabic; clients that ignore web fonts fall back to the stack",
+        "source": "W-E PROPOSAL — basis: e-mail client web-font support is UNVERIFIED (no tenant)",
+        "status": "UNVERIFIED"
+      }
+    },
+    "weight": {
+      "light": {
+        "value": 300,
+        "source": "CDF Design Guide(4).pdf p21",
+        "status": "FACT"
+      },
+      "regular": {
+        "value": 400,
+        "source": "CDF Design Guide(4).pdf p21",
+        "status": "FACT"
+      },
+      "bold": {
+        "value": 700,
+        "source": "CDF Design Guide(4).pdf p21",
+        "status": "FACT"
+      },
+      "semibold": {
+        "value": 600,
+        "source": "W-E PROPOSAL — basis: Arabic headings read better at 600 than 700 in IBM Plex Sans Arabic; not in the guide",
+        "status": "UNVERIFIED"
+      }
+    },
+    "scale": {
+      "display": {
+        "value": {
+          "size": 32,
+          "line": 39
+        },
+        "source": "CDF Design Guide(4).pdf p21–p22 (Display 32/39)",
+        "status": "FACT"
+      },
+      "h1": {
+        "value": {
+          "size": 24,
+          "line": 29
+        },
+        "source": "CDF Design Guide(4).pdf p21–p22 (H1 24/29)",
+        "status": "FACT"
+      },
+      "h2": {
+        "value": {
+          "size": 20,
+          "line": 24
+        },
+        "source": "CDF Design Guide(4).pdf p21, p23 (H2 20/24)",
+        "status": "FACT"
+      },
+      "h3": {
+        "value": {
+          "size": 16,
+          "line": 20
+        },
+        "source": "CDF Design Guide(4).pdf p21, p23 (H3 16/20)",
+        "status": "FACT"
+      },
+      "body1": {
+        "value": {
+          "size": 14,
+          "line": 17
+        },
+        "source": "CDF Design Guide(4).pdf p21, p24 (Body 1 14/17)",
+        "status": "FACT"
+      },
+      "body2": {
+        "value": {
+          "size": 12,
+          "line": 15
+        },
+        "source": "CDF Design Guide(4).pdf p21, p24 (Body 2 12/15)",
+        "status": "FACT"
+      },
+      "body3": {
+        "value": {
+          "size": 10,
+          "line": 12
+        },
+        "source": "CDF Design Guide(4).pdf p21, p25 (Body 3 10/12)",
+        "status": "FACT",
+        "note": "NOT used in V13 notifications (below the 12 px floor)"
+      },
+      "button_sm": {
+        "value": {
+          "size": 14,
+          "line": 17
+        },
+        "source": "CDF Design Guide(4).pdf p21, p26–p27",
+        "status": "FACT"
+      },
+      "button_md": {
+        "value": {
+          "size": 16,
+          "line": 20
+        },
+        "source": "CDF Design Guide(4).pdf p21, p27",
+        "status": "FACT"
+      },
+      "button_lg": {
+        "value": {
+          "size": 18,
+          "line": 22
+        },
+        "source": "CDF Design Guide(4).pdf p21, p27",
+        "status": "FACT"
+      }
+    },
+    "notification_scale": {
+      "title": {
+        "value": {
+          "size": 24,
+          "line_ar": 1.5,
+          "line_en": 1.25
+        },
+        "source": "W-E PROPOSAL — basis: guide H1 size (p22) with an Arabic line-height override",
+        "status": "UNVERIFIED"
+      },
+      "action": {
+        "value": {
+          "size": 18,
+          "line_ar": 1.6,
+          "weight": 600
+        },
+        "source": "W-E PROPOSAL — basis: guide Button lg size (p27) reused for the required-action sentence",
+        "status": "UNVERIFIED"
+      },
+      "section": {
+        "value": {
+          "size": 16,
+          "line_ar": 1.6,
+          "weight": 600
+        },
+        "source": "W-E PROPOSAL — basis: guide H3 size (p23)",
+        "status": "UNVERIFIED"
+      },
+      "body": {
+        "value": {
+          "size": 16,
+          "line_ar": 1.8,
+          "line_en": 1.55
+        },
+        "source": "W-E PROPOSAL — basis: WCAG 1.4.12 / readability on phones; the guide's Body 1 (14) is a dashboard size",
+        "status": "UNVERIFIED"
+      },
+      "meta": {
+        "value": {
+          "size": 13,
+          "line_ar": 1.7
+        },
+        "source": "W-E PROPOSAL — basis: W5 C4 / D8 §7 floor",
+        "status": "UNVERIFIED"
+      },
+      "floor": {
+        "value": 12,
+        "source": "W-E PROPOSAL — basis: D8 §7 (≥ 12 px mobile), W5 C4; nothing in V13 is set below 12 px",
+        "status": "UNVERIFIED"
+      }
+    },
+    "rtl_notes": {
+      "value": [
+        "Arabic text never gets letter-spacing, uppercase transforms or monospace (V12 rule kept).",
+        "Arabic line-height ≥ 1.6 for body text (the guide's 1.2 ratios clip diacritics).",
+        "Latin runs inside Arabic (codes, e-mails, URLs) are isolated with <bdi> or dir=ltr spans and carry lang=en.",
+        "Digits stay Western (0–9) as in V12; dates '27 أكتوبر 2026، 10:15 ص' — 12-hour clock with ص/م, no time-zone label (owner decision).",
+        "Use logical CSS properties (margin-inline-start, padding-inline, border-inline-start, text-align:start) so one stylesheet serves RTL and LTR.",
+        "Directional icons (arrows/chevrons) mirror; progress symbols, logos and numbers never mirror."
+      ],
+      "source": "W-E PROPOSAL — basis: V12 DESIGN_TOKENS.md rules + CLAUDE.md §9 (logical CSS) + owner decision on time format",
+      "status": "UNVERIFIED"
+    }
+  },
+  "space": {
+    "s4": {
+      "value": 4,
+      "source": "TOK spacing[0]",
+      "status": "FACT"
+    },
+    "s6": {
+      "value": 6,
+      "source": "CDF Design Guide(4).pdf p42 (6 px heading/sub-heading gap)",
+      "status": "FACT"
+    },
+    "s8": {
+      "value": 8,
+      "source": "CDF Design Guide(4).pdf p29 (8 px vertical header padding)",
+      "status": "FACT"
+    },
+    "s12": {
+      "value": 12,
+      "source": "CDF Design Guide(4).pdf p42–p43 (12 px from border)",
+      "status": "FACT"
+    },
+    "s16": {
+      "value": 16,
+      "source": "CDF Design Guide(4).pdf p43 (16 px drill-down spacing)",
+      "status": "FACT"
+    },
+    "s20": {
+      "value": 20,
+      "source": "TOK spacing",
+      "status": "FACT"
+    },
+    "s22": {
+      "value": 22,
+      "source": "CDF Design Guide(4).pdf p29–p30 (22 px horizontal header/footer padding)",
+      "status": "FACT"
+    },
+    "s24": {
+      "value": 24,
+      "source": "TOK spacing",
+      "status": "FACT"
+    },
+    "s32": {
+      "value": 32,
+      "source": "CDF Design Guide(4).pdf p64 (32 px card padding and gaps)",
+      "status": "FACT"
+    },
+    "s48": {
+      "value": 48,
+      "source": "CDF Design Guide(4).pdf p29 (header height 48)",
+      "status": "FACT"
+    },
+    "s64": {
+      "value": 64,
+      "source": "TOK spacing",
+      "status": "FACT"
+    },
+    "touch_target_min": {
+      "value": 44,
+      "source": "W-E PROPOSAL — basis: brief (tap targets ≥ 44 px); WCAG 2.2 SC 2.5.8 minimum is 24 px; guide button heights 22/26/28 px (p32) are desktop dashboard sizes",
+      "status": "UNVERIFIED"
+    }
+  },
+  "radius": {
+    "none": {
+      "value": 0,
+      "source": "CDF Design Guide(4).pdf p32–p33, p35, p37–p38, p63–p64 (buttons, switcher, KPI card, containers, home card drawn with square corners — visual reading)",
+      "status": "FACT",
+      "note": "V13 default for buttons, cards and e-mail tables"
+    },
+    "pill": {
+      "value": 999,
+      "source": "CDF Design Guide(4).pdf p34 trend chips / p44 status pills (visual reading)",
+      "status": "FACT",
+      "note": "status chips only"
+    },
+    "sm_asset": {
+      "value": 4,
+      "source": "TOK radius.sm",
+      "status": "UNVERIFIED",
+      "note": "asset value not shown in the guide; not used by V13"
+    },
+    "email_max": {
+      "value": 8,
+      "source": "V12 generator/AGENT_GUIDE.md rule 8 ('no border radius above 8 px' in the e-mail renderer)",
+      "status": "FACT",
+      "note": "V13 e-mail uses 0 except chips"
+    }
+  },
+  "border": {
+    "hairline_guide": {
+      "value": "0.5px",
+      "source": "CDF Design Guide(4).pdf p33 (secondary button), p35, p37 (KPI card)",
+      "status": "FACT"
+    },
+    "container_guide": {
+      "value": "0.75px",
+      "source": "CDF Design Guide(4).pdf p34 (trend chip), p38 (container)",
+      "status": "FACT"
+    },
+    "card_home": {
+      "value": "2px",
+      "source": "CDF Design Guide(4).pdf p63 (home card border WG 70)",
+      "status": "FACT"
+    },
+    "tertiary_underline": {
+      "value": "2px",
+      "source": "CDF Design Guide(4).pdf p33 (tertiary button bottom stroke)",
+      "status": "FACT"
+    },
+    "render_min": {
+      "value": "1px",
+      "source": "W-E PROPOSAL — basis: sub-pixel borders (0.5/0.75 px) render inconsistently in e-mail clients and on 1× screens; 1 px is the nearest reliable value",
+      "status": "UNVERIFIED"
+    },
+    "expected_dashed": {
+      "value": "1px dashed #878B8F",
+      "source": "CHARTER §3.6 + CDF Design Guide(4).pdf p13 CB 50",
+      "status": "FACT"
+    }
+  },
+  "elevation": {
+    "none": {
+      "value": "none",
+      "source": "CDF Design Guide(4).pdf p6–p7 Minimal theme; components on p32–p39 are drawn flat (visual reading)",
+      "status": "FACT",
+      "note": "V13 default; no shadows in e-mail"
+    },
+    "overlay_light": {
+      "value": "0 8px 24px rgba(16,24,32,.08)",
+      "source": "TOK elevation.lightElevated",
+      "status": "UNVERIFIED",
+      "note": "asset value; platform menus/dialogs only"
+    },
+    "overlay_dark": {
+      "value": "0 10px 28px rgba(0,0,0,.28)",
+      "source": "TOK elevation.darkElevated",
+      "status": "UNVERIFIED"
+    }
+  },
+  "motion": {
+    "fast": {
+      "value": "120ms",
+      "source": "TOK motion.fast",
+      "status": "UNVERIFIED",
+      "note": "asset value; the guide defines no durations (p82 mentions a glow on clickable prototype elements)"
+    },
+    "standard": {
+      "value": "180ms",
+      "source": "TOK motion.standard",
+      "status": "UNVERIFIED"
+    },
+    "slow": {
+      "value": "240ms",
+      "source": "TOK motion.slow",
+      "status": "UNVERIFIED"
+    },
+    "reduced_motion_rule": {
+      "value": "@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation:none !important; transition:none !important; scroll-behavior:auto !important } }",
+      "source": "W-E PROPOSAL — basis: WCAG 2.3.3; V12 removed every keyframe in V11 (DESIGN_TOKENS.md)",
+      "status": "UNVERIFIED"
+    },
+    "email": {
+      "value": "no animation, no pulse, no blinking dot",
+      "source": "V12 generator/DESIGN_TOKENS.md (V11: 'Removed: black pills, gradients, every keyframe')",
+      "status": "FACT"
+    },
+    "progress": {
+      "value": "progress state is never conveyed by motion (no pulsing 'current' node)",
+      "source": "W-E PROPOSAL — basis: CHARTER §3.6 (distinction survives without colour) and W5 findings",
+      "status": "UNVERIFIED"
+    }
+  },
+  "icon": {
+    "style": {
+      "value": "single-weight outline icons on a fixed grid",
+      "source": "CDF Design Guide(4).pdf p16–p17 (outline icon set, 10 columns)",
+      "status": "FACT"
+    },
+    "kpi_size": {
+      "value": "52x52 px, png, 50% opacity",
+      "source": "CDF Design Guide(4).pdf p19, p37",
+      "status": "FACT"
+    },
+    "card_size": {
+      "value": "48x48 px",
+      "source": "CDF Design Guide(4).pdf p64",
+      "status": "FACT"
+    },
+    "button_icon": {
+      "value": {
+        "sm": 12,
+        "md": 14,
+        "lg": 16
+      },
+      "source": "CDF Design Guide(4).pdf p32",
+      "status": "FACT"
+    },
+    "indicator_icon": {
+      "value": "16x16 px",
+      "source": "CDF Design Guide(4).pdf p34",
+      "status": "FACT"
+    },
+    "v12_set": {
+      "value": "generator/source/assets/icon-*.png (48x48 line icons: clock, doc, info, lock, mail, tag, user, building, arrow, chevron, check)",
+      "source": "V12 assets",
+      "status": "FACT",
+      "note": "W5: follows the guide style; not proven to be the guide's own files (UNVERIFIED)"
+    },
+    "rules": {
+      "value": [
+        "Icons are decorative (alt=\"\" / aria-hidden) and never the only carrier of meaning; every icon sits next to a text label.",
+        "Progress states use text glyphs (✔ ● ○ ⏸ ↩ ✕ ⚠ — ◇) plus words, not icons, so they survive image blocking and plain text.",
+        "The guide's 50 % opacity applies to decorative KPI icons only; meaningful glyphs use full-opacity ink (≥ 3:1).",
+        "Directional icons mirror in RTL (arrow-left in Arabic CTAs, arrow-right in English)."
+      ],
+      "source": "W-E PROPOSAL — basis: WCAG 1.1.1 / 1.4.1 / 1.4.11; DG p15 'pairing with complementary indicators'",
+      "status": "UNVERIFIED"
+    }
+  },
+  "logo": {
+    "variant": {
+      "value": "horizontal logo (Arabic wordmark + CULTURAL DEVELOPMENT FUND + symbol)",
+      "source": "CDF Design Guide(4).pdf p10 (horizontal logo used on dashboards; vertical, Arabic-only, wordmark-only, symbol-only and legal-footer variants excluded)",
+      "status": "FACT"
+    },
+    "size": {
+      "value": "152x26 px",
+      "source": "CDF Design Guide(4).pdf p10, p29",
+      "status": "FACT"
+    },
+    "format": {
+      "value": "png",
+      "source": "CDF Design Guide(4).pdf p10, p29",
+      "status": "FACT"
+    },
+    "placement_header": {
+      "value": "always on the right; dashboard name centred",
+      "source": "CDF Design Guide(4).pdf p29",
+      "status": "FACT",
+      "note": "applies to RTL and LTR alike — the English twin also keeps the logo on the right"
+    },
+    "placement_home": {
+      "value": "middle-aligned in the header",
+      "source": "CDF Design Guide(4).pdf p63 (home page header)",
+      "status": "FACT"
+    },
+    "header_bg": {
+      "value": "#D7D2CB",
+      "source": "CDF Design Guide(4).pdf p29",
+      "status": "FACT"
+    },
+    "asset_ink": {
+      "value": "generator/source/assets/logo-ink.png (617x104, rendered at 152x26 / 304x52 @2x)",
+      "source": "V12 asset",
+      "status": "FACT"
+    },
+    "asset_white": {
+      "value": "generator/source/assets/logo-white.png (617x104)",
+      "source": "V12 asset",
+      "status": "UNVERIFIED",
+      "note": "a white logo variant is not shown in the guide (p10); V13 does not use it"
+    },
+    "clear_space": {
+      "value": "not specified in the pages read",
+      "source": "CDF Design Guide(4).pdf p10 (no clear-space rule printed)",
+      "status": "UNVERIFIED"
+    },
+    "rules": {
+      "value": [
+        "Never redraw, recolour, stretch or place the logo on a photo.",
+        "Alt text: «صندوق التنمية الثقافي» (AR) / «Cultural Development Fund» (EN)."
+      ],
+      "source": "W-E PROPOSAL — basis: brand matrix row 'Logo' (no redraw/recolor)",
+      "status": "UNVERIFIED"
+    }
+  },
+  "imagery": {
+    "hero_photo": {
+      "value": "palm-canopy photograph, used whole at 4:1 (2232x558 source; e-mail 600x150, 1200x300 @2x JPEG)",
+      "source": ".notes/inputs.md rows eeba4296… and 7a447949… (owner's instruction: this exact photo is the e-mail hero); generator/source/assets/hero-source.jpg",
+      "status": "FACT"
+    },
+    "guide_basis": {
+      "value": "full-width background image to establish brand identity",
+      "source": "CDF Design Guide(4).pdf p61–p62 (Home Page)",
+      "status": "FACT"
+    },
+    "rules": {
+      "value": [
+        "Live text never sits on the photo in e-mail (title below the image); images carry alt=\"\" and a solid bgcolor fallback.",
+        "No backdrop images, no angled-panel composites in e-mail (W5 C8, D8 §7)."
+      ],
+      "source": "W-E PROPOSAL — basis: W5 §1.8/C8; D8 §7",
+      "status": "UNVERIFIED"
+    }
+  },
+  "layout": {
+    "header": {
+      "value": {
+        "height": 48,
+        "padding_x": 22,
+        "padding_y": 8,
+        "bg": "#D7D2CB",
+        "title": "H2 Regular #101820, centred"
+      },
+      "source": "CDF Design Guide(4).pdf p29",
+      "status": "FACT"
+    },
+    "footer": {
+      "value": {
+        "height": 18,
+        "padding_x": 22,
+        "padding_y": 3,
+        "bg": "#101820",
+        "text": "Body 3 Regular #FFFFFF"
+      },
+      "source": "CDF Design Guide(4).pdf p30",
+      "status": "FACT",
+      "note": "V13 keeps colours and padding but sets footer text at 12 px (floor) — documented deviation"
+    },
+    "email_width": {
+      "value": 600,
+      "source": "brief (≤ 600 px) and CHARTER §11 (600 px max)",
+      "status": "FACT"
+    },
+    "breakpoints": {
+      "value": {
+        "mobile": 620,
+        "tablet": 1024
+      },
+      "source": "W-E PROPOSAL — basis: V12 e-mail mobile rule 620 px; brand matrix breakpoints 1100/768/520 (asset) not adopted",
+      "status": "UNVERIFIED"
+    },
+    "frames_screenshot": {
+      "value": [1280, 600, 360],
+      "source": "brief deliverable 5",
+      "status": "FACT"
+    },
+    "cta_position": {
+      "value": "primary action within the first 35 % of the message and above the fold at 600 px",
+      "source": "W-E PROPOSAL — basis: W5 C1 / D8 §7",
+      "status": "UNVERIFIED"
+    }
+  },
+  "component": {
+    "smart_next_action": {
+      "bg": {
+        "value": "#F3F2F0",
+        "source": "W-E PROPOSAL — basis: DG p13 WG 30; p63–p64 home-page card (warm-grey card, 2 px border, 32 px padding)",
+        "status": "UNVERIFIED"
+      },
+      "border": {
+        "value": "2px solid #E3E0DB",
+        "source": "CDF Design Guide(4).pdf p63 (card border WG 70, 2 px)",
+        "status": "FACT",
+        "note": "usage on the Smart Next Action card: W-E PROPOSAL"
+      },
+      "padding": {
+        "value": 24,
+        "source": "CDF Design Guide(4).pdf p64 uses 32 px on home cards",
+        "status": "UNVERIFIED",
+        "note": "24 px in e-mail/mobile, 32 px on desktop (PROPOSAL)"
+      },
+      "button_min_height": {
+        "value": 48,
+        "source": "W-E PROPOSAL — basis: WCAG 2.2 SC 2.5.8 (24 px minimum) and the 44 px touch target used for V13; the guide's buttons are 22/26/28 px (p32)",
+        "status": "UNVERIFIED",
+        "note": "documented deviation from DG p32"
+      },
+      "button_bg": {
+        "value": "#101820",
+        "source": "CDF Design Guide(4).pdf p33 (primary button)",
+        "status": "FACT"
+      },
+      "button_text": {
+        "value": "#FFFFFF",
+        "source": "CDF Design Guide(4).pdf p33",
+        "status": "FACT"
+      },
+      "secondary_button": {
+        "value": "#FFFFFF bg, 1px solid #101820 border, #101820 text",
+        "source": "CDF Design Guide(4).pdf p33 (secondary 0.5 px Cinder border; rendered 1 px)",
+        "status": "FACT"
+      }
+    },
+    "journey_card": {
+      "bg": {
+        "value": "#FFFFFF",
+        "source": "CDF Design Guide(4).pdf p38 (container white)",
+        "status": "FACT"
+      },
+      "border": {
+        "value": "1px solid #D7D2CB",
+        "source": "CDF Design Guide(4).pdf p38 (0.75 px #D7D2CB, rendered 1 px)",
+        "status": "FACT"
+      }
+    },
+    "lane_actual_rule": {
+      "value": "2px solid #101820 under the lane title",
+      "source": "W-E PROPOSAL — basis: DG p33 tertiary button 2 px stroke (visual language reused)",
+      "status": "UNVERIFIED"
+    },
+    "lane_expected_rule": {
+      "value": "2px dashed #878B8F under the lane title",
+      "source": "W-E PROPOSAL — basis: CHARTER §3.6 (dashed = expected) + DG p13 CB 50",
+      "status": "UNVERIFIED"
+    },
+    "confidentiality_footer": {
+      "bg": {
+        "value": "#101820",
+        "source": "CDF Design Guide(4).pdf p30 (footer Cinder Black)",
+        "status": "FACT"
+      },
+      "title": {
+        "value": "#FA9370 13/20 bold",
+        "source": "V12 generator/DESIGN_TOKENS.md line 76 (V9.1d footer, owner decision 19:08: confidentiality title salmon)",
+        "status": "FACT"
+      },
+      "body": {
+        "value": "#FFFFFF 13/22",
+        "source": "W-E PROPOSAL — basis: DG p30 footer text white; 13 px instead of Body 3 (10 px) — floor 12 px",
+        "status": "UNVERIFIED"
+      },
+      "meta": {
+        "value": "#BABDC0 12/20",
+        "source": "W-E PROPOSAL — basis: DG p14 C Dark 30; replaces V12 #8B9095 11 px",
+        "status": "UNVERIFIED"
+      }
+    },
+    "synthetic_banner": {
+      "value": {
+        "bg": "#F3F3F4",
+        "border": "1px dashed #878B8F",
+        "text": "#40464D",
+        "size": 12
+      },
+      "source": "W-E PROPOSAL — basis: CLAUDE.md §0/§7 and brief: every prototype is marked synthetic; neutral so it is never read as a status",
+      "status": "UNVERIFIED"
+    },
+    "header_platform": {
+      "value": {
+        "height": 48,
+        "bg": "#D7D2CB",
+        "logo": "right, 152x26",
+        "title": "centred, H2 Regular"
+      },
+      "source": "CDF Design Guide(4).pdf p29",
+      "status": "FACT"
+    },
+    "header_email": {
+      "value": {
+        "height": 56,
+        "bg": "#D7D2CB",
+        "logo": "right, 152x26",
+        "end_cell": "issue date, 13 px #101820"
+      },
+      "source": "W-E PROPOSAL — basis: DG p29 adapted to a 600 px message; no dashboard name in e-mail",
+      "status": "UNVERIFIED"
+    },
+    "density_switcher": {
+      "value": {
+        "height": 24,
+        "selected": "#101820 bg / #FFFFFF text",
+        "unselected": "#FFFFFF bg / 0.5px #D7D2CB border",
+        "type": "Body 1"
+      },
+      "source": "CDF Design Guide(4).pdf p35 (content switcher)",
+      "status": "FACT",
+      "note": "V13 shows density read-only (the policy chooses it); interactive use is PROPOSAL"
+    }
+  },
+  "meta": {
+    "name": "CDF Notifications V13 — unified design tokens (W-E)",
+    "version": "V13-WE-2026-10-27",
+    "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production; tokens are PROPOSED, not brand-approved",
+    "status_legend": {
+      "FACT": "value read verbatim from the cited source (Design Guide page, existing upload asset, V12 file or the V13 charter)",
+      "UNVERIFIED": "no brand source: a W-E PROPOSAL (basis named) or an asset value the guide does not show"
+    },
+    "usage_note": "A FACT colour can carry a PROPOSAL usage (e.g. CB 50 as the Layer-B dashed outline); the usage is stated in 'note'.",
+    "sources": [
+      {
+        "id": "DG",
+        "ref": "/mnt/project-files/CDF Design Guide(4).pdf",
+        "pages_read": "all 87 pages on contact-sheet thumbnails; detailed renders (pdftoppm, 40–150 dpi) of pp. 5–7, 10, 12–15, 17–19, 21–27, 29–39, 42–44, 61, 63–64, 85, 87; pp. 3–4, 16 and 62 read from the contact sheets only (the PDF has no text layer)"
+      },
+      {
+        "id": "TOK",
+        "ref": "/mnt/project-files/uploads/hearth/975d5e3b-1ece-4e43-bf72-ae6c51951d45 (CDF_Design_Tokens.json v1.1)"
+      },
+      {
+        "id": "BCM",
+        "ref": "/mnt/project-files/uploads/hearth/9b651fee-0821-4561-a0e8-1891596ff219 (brand compliance matrix; Arabic font BRAND_SOURCE_REQUIRED)"
+      },
+      {
+        "id": "FIG",
+        "ref": "/mnt/project-files/uploads/hearth/9a364314-4f40-40db-8e4f-63b3889340f4 (Figma spec; no Figma file modified)"
+      },
+      {
+        "id": "V12-DT",
+        "ref": "/mnt/project-files/notifications/generator/DESIGN_TOKENS.md"
+      },
+      {
+        "id": "V12-CSS",
+        "ref": "/mnt/project-files/notifications/generator/source/v12_block.css (read in full; css_v9.css and v11_block.css were only sized, not read, and no token cites them)"
+      },
+      {
+        "id": "V12-ASSETS",
+        "ref": "/mnt/project-files/notifications/generator/source/assets/ (logo-ink.png, hero-source.jpg, icon-*.png)"
+      },
+      {
+        "id": "INPUTS",
+        "ref": "/mnt/project-files/.notes/inputs.md (hero photo = owner's choice; design board and IR-02 mock-ups)"
+      },
+      {
+        "id": "W5",
+        "ref": "/mnt/project-files/notifications/review/v12-forensic/work/W5_ux_review.md"
+      },
+      {
+        "id": "D8",
+        "ref": "/mnt/project-files/notifications/review/v12-forensic/deliverables/D8_future_state_V13_design.md"
+      },
+      {
+        "id": "CHARTER",
+        "ref": "/mnt/project-files/notifications/v13/CHARTER.md §3.4–§3.6, §11"
+      }
+    ],
+    "counts": {
+      "total": 437,
+      "FACT": 290,
+      "UNVERIFIED": 147,
+      "by_source_kind": {
+        "asset": 32,
+        "charter": 50,
+        "guide": 183,
+        "other": 17,
+        "unverified:asset": 6,
+        "unverified:guide": 2,
+        "unverified:proposal": 137,
+        "unverified:v12": 2,
+        "v12": 8
+      },
+      "by_group": {
+        "color": {
+          "FACT": 225,
+          "UNVERIFIED": 109
+        },
+        "type": {
+          "FACT": 15,
+          "UNVERIFIED": 12
+        },
+        "space": {
+          "FACT": 11,
+          "UNVERIFIED": 1
+        },
+        "radius": {
+          "FACT": 3,
+          "UNVERIFIED": 1
+        },
+        "border": {
+          "FACT": 5,
+          "UNVERIFIED": 1
+        },
+        "elevation": {
+          "FACT": 1,
+          "UNVERIFIED": 2
+        },
+        "motion": {
+          "UNVERIFIED": 5,
+          "FACT": 1
+        },
+        "icon": {
+          "FACT": 6,
+          "UNVERIFIED": 1
+        },
+        "logo": {
+          "FACT": 7,
+          "UNVERIFIED": 3
+        },
+        "imagery": {
+          "FACT": 2,
+          "UNVERIFIED": 1
+        },
+        "layout": {
+          "FACT": 4,
+          "UNVERIFIED": 2
+        },
+        "component": {
+          "UNVERIFIED": 9,
+          "FACT": 10
+        }
+      }
+    }
+  }
+}
