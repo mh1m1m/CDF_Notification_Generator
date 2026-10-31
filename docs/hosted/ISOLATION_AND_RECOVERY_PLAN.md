@@ -151,9 +151,13 @@ PASS. Foreign isolation stays in §5.2.
 ### 5.7 The text that arrives is the text that was reviewed
 The hosted SQL is sent as one text through the Supabase connector (`execute_sql`), which runs it as one simple query and
 appends a comment trailer of its own. Every text is generated from the repository, never edited by hand: `node
-scripts/db/hosted-bundle.mjs <version> [--dry-run]` (`buildHostedBundle()`) for a migration, and the same
-`textGuard()` for a seed file sent verbatim in the same transaction frame. Since #47 (V13-DB-014, 31 Oct) the text
-guard is the **first** statement of the text, before `begin;`:
+scripts/db/hosted-bundle.mjs <version> [--dry-run]` (`buildHostedBundle()`) for a migration, and `node
+scripts/db/hosted-bundle.mjs --seed <NNNN> [--dry-run]` (`buildHostedSeedBundle()`, since #56) for a seed file, sent
+verbatim in the same transaction frame under the same `textGuard()`. A seed text also carries a guard that refuses
+unless the recorded migration history equals every repository migration (name and sha256), so a seed runs only on
+the complete schema; since #62 (V13-DB-017) the generator produces no seed text while any seed has a `db:lint` finding
+(transaction control or a role change). Since #47 (V13-DB-014, 31 Oct) the text guard is the **first** statement of
+the text, before `begin;`:
 
 ```sql
 do $v13_text_guard$
