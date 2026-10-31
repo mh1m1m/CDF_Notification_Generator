@@ -68,4 +68,5 @@ export const ar = {
   "layerA.cancelled": "أُلغي",
   "layerA.failed": "تعذّر إتمامه",
   "layerA.notApplicable": "لا ينطبق",
+  "preview.caption": "معاينة معزولة لما سيصل إلى المستلم — بيانات اصطناعية، لم تُرسل",
 } as const;

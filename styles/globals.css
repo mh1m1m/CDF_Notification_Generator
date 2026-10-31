@@ -804,6 +804,24 @@
     border-inline-start: 4px solid var(--cdf-expected-border);
   }
 
+  /* NotificationPreviewFrame: the sandboxed srcdoc frame (V13-UX-006). Fixed height: a frame without scripts cannot
+     size itself; the document scrolls inside it. */
+  .v13-preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cdf-space-2);
+    margin: 0;
+    max-inline-size: 100%;
+  }
+
+  .v13-preview-frame {
+    display: block;
+    inline-size: 100%;
+    block-size: min(75vh, 48rem);
+    border: var(--cdf-border-hairline) solid var(--cdf-border-control);
+    background-color: var(--cdf-surface);
+  }
+
   /* DataTable (DG pp. 42–44) */
   .v13-table-block {
     display: flex;
