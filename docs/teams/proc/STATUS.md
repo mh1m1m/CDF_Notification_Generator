@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 ~20:20 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` f937052
+Updated: 2026-10-31 ~21:00 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` ec8653a
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -16,7 +16,8 @@ Updated: 2026-10-31 ~20:20 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | V13-PROC-006 case task status catalogue (OI-029) | COMPLETE | PR #35 merged into `develop` 6db4cd0 (31 Oct); `lib/domain/task-status.ts`: migration 0003's five `task.status` codes, DONE added to the T5 list; for FE's task badges |
 | V13-PROC-003 disclosure | COMPLETE | PR #40 merged into `develop` 0f46d79 (31 Oct); `lib/disclosure` + `Projected<T>` brand; DIS-02/03/04/06/18, PRJ-01..03, BND-05/06; the other 13 DIS tests land with PROC-005 (ARCH 31 Oct) |
 | V13-PROC-004 authority | COMPLETE | PR #39 merged into `develop` e8bba66 (31 Oct); `lib/authority` (server-only, fail closed) + `tests/unit/authority` (3 files, 88 tests incl. BND-01..04 data boundary and ST-28b) |
-| V13-PROC-005 notifications | IN_REVIEW | `lib/notifications` (lifecycle, consistency PC-00..29, next action, render); renderers take only `Projected<T>`; the 13 deferred DIS tests; NDB-01/02 (diagnostics never reach a recipient); reference skip guards made strict; OI-035 server binding `lib/notifications/binding/server-projection.ts` (context only from the case row's `is_restricted` + the server access-list result, recipient class only from the DB recipient row, fail closed; SPB-01..12) |
+| V13-PROC-005 notifications | COMPLETE | PR #45 merged into `develop` ec8653a (31 Oct; SEC ACCEPT, CI 41239195320); `lib/notifications` (lifecycle, consistency PC-00..29, next action, render); renderers take only `Projected<T>`; the 13 deferred DIS tests; NDB-01/02 (diagnostics never reach a recipient); reference skip guards made strict; OI-035 server binding `lib/notifications/binding/server-projection.ts` (context only from the case row's `is_restricted` + the server access-list result, recipient class only from the DB recipient row, fail closed; SPB-01..12) |
+| V13-PROC-007 renderer wording into `lib/i18n` (OI-036) | IN_REVIEW | new PROC namespace `notificationRender` (`lib/i18n/notificationRender/{ar,en}.ts`, 166 keys), registered in `lib/i18n/index.ts` (ARCH-009 folded in); `lib/notifications/render/i18n.ts` only shapes dictionary entries; the other render files' wording moved too (sender, preview notices, deadline basis, issuer, months, AM/PM, separators); RI-01..03; 516 rendered files equal the reference |
 
 ## Changed files
 - PR #3: `docs/teams/proc/PORT_PLAN.md`, `docs/teams/proc/STATUS.md`
@@ -32,6 +33,9 @@ Updated: 2026-10-31 ~20:20 UTC · Branch: `claude/project-thread-94r9g5` · Base
 - PROC-003: `lib/disclosure/{project,index}.ts`, `lib/disclosure/policy_v13.json`,
   `tests/unit/disclosure/{disclosure,projected-brand}.spec.ts`, `tests/unit/authority/data-boundary.spec.ts` (BND-05/06),
   this file
+- PROC-007: `lib/i18n/notificationRender/{ar,en}.ts` (new), `lib/i18n/index.ts` (ARCH path, agreed),
+  `lib/notifications/render/{i18n,email,platform,model,components,escape}.ts`, `tests/unit/i18n.spec.ts` (namespace list),
+  `tests/unit/notifications/render-i18n.spec.ts` (new), this file
 - PROC-005: `lib/notifications/**` (21 files), `tests/unit/notifications/**` (10 specs, 4 support, 7 fakes, 7 evidence
   copies), `tests/unit/disclosure/disclosure-render.spec.ts`, EVIDENCE_MANIFEST (7 rows), this file;
   OI-035: `lib/notifications/binding/server-projection.ts`, `tests/unit/notifications/server-projection.spec.ts`
@@ -58,6 +62,8 @@ Updated: 2026-10-31 ~20:20 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | PROC-005 + OI-035 binding, after merging `develop` f39af8b (fresh `db:reset`, 10 migrations): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` · `build` | PASS | all exit 0; unit 56 files · 1,406 pass · 0 skipped (SPB 25 new); test:db 20 files · 357 pass; e2e 94 pass; mutation: binding forced to `on_access_list = true` → 3 SPB fail; tags passed as a Set (read by `project()` as no tags) → 5 SPB fail | PROC-005 head |
 | PROC-005 SEC `REVIEW: CHANGES 8384efe` (LOW, fail-open default): the lifecycle's projection port now defaults to `DISCLOSURE_PROJECTION_PORT` (lib/disclosure `isProjected`); `projection: null` falls back to it; the fixture world wires `FIXTURE_PROJECTION_PORT`, which accepts only `projectedModel()` stand-ins. `pnpm format:check` · `lint` · `typecheck` · `test` · `build` | PASS | all exit 0; unit 56 files · 1,411 pass · 0 skipped (LC-03b, 5 new); mutation: default port set to accept-all → 2 LC-03b fail | PROC-005 head |
 | PROC-005 SEC `REVIEW: CHANGES 59d420c`: (2) `projectForRecipient` refuses a caller-supplied `policy` (POLICY_NOT_ACCEPTED) and projects with the committed policy; (3) `security_render` addresses now reserved names only (`victim@external.example`, `someone@example.com`, `a@example.test.evil.example`); (1) was fixed in e01c2f5. `pnpm format:check` · `lint` · `typecheck` · `test` · `build` | PASS | all exit 0; unit 56 files · 1,413 pass · 0 skipped (SPB-13/14 new, SPB now 27); mutation: policy check removed → SPB-13 fails | PROC-005 head |
+| PROC-007 (develop ec8653a + PROC-007, fresh `db:reset`, 10 migrations): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` · `build` | PASS | all exit 0; unit 61 files · 1,568 pass · 0 skipped (RI-01..03 new; i18n spec checks the new namespace's key parity and key format); test:db 22 files · 372 pass; e2e 101 pass; mutation: an Arabic literal added to `render/platform.ts` → RI-01 fails | PROC-007 head |
+| PROC-007 equivalence: reference `renderAll()` vs the port's (scratch spec, not committed), same inline scenarios and W-E tokens; the structures of `render/i18n.ts` dumped before and after are byte-identical JSON | PASS | 516 rendered files: 0 differ, none missing; refusals equal (5); control: two English dictionary texts changed → 126 files differ | scratch spec |
 | PROC-005 equivalence: reference `src/demo/build_demo.js` `renderAll()` (reference `src/` with its W-E `design/tokens.json`, JSON-equal to `lib/notifications/render/email_tokens.json`) vs the port's, same inline scenarios | PASS | 516 rendered files (platform HTML, e-mail HTML, text, EML, card) compared after the `CDF-IC-2026-DEMO-` → `CDF-DEMO-2026-` rename: 0 differ, none missing on either side; refusals equal (5) | scratch spec, not committed |
 | PROC-005: V12 quotes not re-verified here | UNVERIFIED here (by ruling) | 22 `evidenceLine` quotes from V12 sample EMLs (`eml/en/…`) and `generator/samples/WB-08.txt`, and the 77/77 X-Unsent check: ARCH ruled the EMLs are never copied; they pass in the reference package run (726/726). Any other missing evidence file now fails | local |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
@@ -121,5 +127,7 @@ evidence); with the V12 siblings and the demo built, 726 / 726.
   | `GOVERNANCE` | no exact match |
   | — | `SECRETARY`, `CHAIR`, `MEMBER`, `INVESTIGATOR`, `LEGAL_REVIEWER`, `AUTHORITY`, `REFERRING_BODY`, `REPORTER`, |
   | — | `SUBJECT`, `EVIDENCE_HOLDER`, `RECUSED_MEMBER`, `RESTRICTED_CASE_AUTHORITY` (no database code) |
-- ARCH 31 Oct: renderer wording stays in `lib/notifications/render/i18n.ts` for #45; V13-PROC-007 (OI-036) moves it once ARCH
-  adds a `notifications` namespace to `lib/i18n` (ARCH-009; not started until that namespace is on `develop`).
+- ARCH 31 Oct 20:39: V13-PROC-007 (OI-036) moves the renderer wording into a new PROC namespace `notificationRender`
+  (not FE's `notifications`); ARCH-009 folded in, `lib/i18n/index.ts` rides the PR with ARCH's ACCEPT. Not moved (not
+  renderer wording; raised with ARCH): the consistency rule texts (`consistency/rules.ts`, `engine.ts`), the next-action
+  rule texts (`next-action/rules.ts`) and the export banners (`lifecycle/export.ts`).

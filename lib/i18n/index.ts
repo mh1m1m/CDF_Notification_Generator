@@ -16,6 +16,8 @@ import { ar as journeysAr } from "./journeys/ar";
 import { en as journeysEn } from "./journeys/en";
 import { ar as myWorkAr } from "./myWork/ar";
 import { en as myWorkEn } from "./myWork/en";
+import { ar as notificationRenderAr } from "./notificationRender/ar";
+import { en as notificationRenderEn } from "./notificationRender/en";
 import { ar as notificationsAr } from "./notifications/ar";
 import { en as notificationsEn } from "./notifications/en";
 import { ar as personaAr } from "./persona/ar";
@@ -36,8 +38,9 @@ export const DEFAULT_LOCALE: Locale = "ar";
 export const LOCALE_COOKIE = "v13_locale";
 
 /**
- * Every namespace with its Arabic and English dictionary. Owners: UX common, shell; PROC status, journeys; FE auth,
- * portfolio, case, myWork, notifications, workspaces; ARCH persona.
+ * Every namespace with its Arabic and English dictionary. Owners: UX common, shell; PROC status, journeys,
+ * notificationRender (the notification renderers' wording, server-side); FE auth, portfolio, case, myWork, notifications,
+ * workspaces; ARCH persona.
  */
 export const I18N_NAMESPACES = {
   common: { ar: commonAr, en: commonEn },
@@ -51,6 +54,7 @@ export const I18N_NAMESPACES = {
   notifications: { ar: notificationsAr, en: notificationsEn },
   workspaces: { ar: workspacesAr, en: workspacesEn },
   persona: { ar: personaAr, en: personaEn },
+  notificationRender: { ar: notificationRenderAr, en: notificationRenderEn },
 } as const;
 
 export type NamespaceId = keyof typeof I18N_NAMESPACES;

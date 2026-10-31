@@ -1,229 +1,184 @@
 import "server-only";
 import { isNil } from "@/lib/domain/nil";
+import { ar as AR } from "@/lib/i18n/notificationRender/ar";
+import { en as EN } from "@/lib/i18n/notificationRender/en";
 /**
- * CDF Notifications V13 — interface strings for the renderers (W-D2). Arabic and English side by side.
- * SYNTHETIC-DATA REFERENCE IMPLEMENTATION. All wording here is PROPOSED (not approved); the Layer A / Layer B labels are the
+ * CDF Notifications V13 — interface strings for the renderers (W-D2), assembled from the i18n namespace
+ * `notificationRender` (lib/i18n/notificationRender, PROC; V13-PROC-007, OI-036). No wording lives in this file: it only
+ * shapes the dictionary entries into the structures the renderers read, with the same keys and texts as the reference.
+ * SYNTHETIC-DATA REFERENCE IMPLEMENTATION. All wording is PROPOSED (not approved); the Layer A / Layer B labels are the
  * charter §3.6 wording (FACT: CHARTER.md).
  */
-export const MARKING = "عرض تجريبي — بيانات اصطناعية | DESIGN_PREVIEW — SYNTHETIC DATA";
-export const MARKING_SUBJECT_PREFIX = "[DESIGN_PREVIEW]";
-
-/** Layer A (actual progress) — charter §3.6. Symbols carry U+FE0E (text presentation) where an emoji form exists. */
-export const LAYER_A = Object.freeze({
-  COMPLETED: { sym: "✔︎", ar: "اكتمل — تم تسجيل الإجراء", en: "Completed — the action is recorded" },
-  IN_PROGRESS: { sym: "●", ar: "جارٍ", en: "In progress" },
-  PENDING: { sym: "○", ar: "بانتظار إجراء محدد", en: "Awaiting a specific action" },
-  SUSPENDED: { sym: "⏸︎", ar: "موقوف مؤقتاً", en: "Suspended" },
-  RETURNED: { sym: "↩︎", ar: "أُعيد لاستكمال متطلبات", en: "Returned for requirements to be completed" },
-  CANCELLED: { sym: "✕", ar: "أُلغي", en: "Cancelled" },
-  FAILED: { sym: "⚠︎", ar: "تعذر إتمامه", en: "Could not be completed" },
-  NOT_APPLICABLE: { sym: "—", ar: "لا ينطبق", en: "Not applicable" },
-});
-/** Layer B (expected process) — charter §3.6: ◇ + label, never ✔/●, never سُجل / اكتُمل / تم */
-export const LAYER_B = Object.freeze({
-  EXPECTED: { sym: "◇", ar: "خطوة متوقعة", en: "Expected step" },
-  CONDITIONAL: {
-    sym: "◇",
-    ar: "خطوة محتملة — بحسب",
-    en: "Possible step — depending on",
-    defaultCondition: { ar: "تحقق شرطها", en: "whether its condition is met" },
-  },
-  OPTIONAL: { sym: "◇", ar: "خطوة اختيارية", en: "Optional step" },
-  ALTERNATIVE: { sym: "◇", ar: "مسار بديل", en: "Alternative path" },
-  PARALLEL: { sym: "◇", ar: "بالتوازي", en: "In parallel" },
-  SUBJECT_TO_APPROVAL: { sym: "◇", ar: "رهن الاعتماد", en: "Subject to approval" },
-});
-
+type Key = keyof typeof AR;
 export interface BiText {
   readonly ar: string;
   readonly en: string;
 }
-const t = <A extends string, E extends string>(ar: A, en: E): { readonly ar: A; readonly en: E } =>
-  Object.freeze({ ar, en });
+/** one dictionary entry in both languages */
+const tk = (key: Key): BiText => Object.freeze({ ar: AR[key], en: EN[key] });
+
+export const MARKING: string = AR["marking"];
+export const MARKING_SUBJECT_PREFIX: string = AR["markingSubjectPrefix"];
+
+/** Layer A (actual progress) — charter §3.6. Symbols carry U+FE0E (text presentation) where an emoji form exists. */
+export const LAYER_A = Object.freeze({
+  COMPLETED: { sym: AR["layerA.completed.sym"], ar: AR["layerA.completed"], en: EN["layerA.completed"] },
+  IN_PROGRESS: { sym: AR["layerA.inProgress.sym"], ar: AR["layerA.inProgress"], en: EN["layerA.inProgress"] },
+  PENDING: { sym: AR["layerA.pending.sym"], ar: AR["layerA.pending"], en: EN["layerA.pending"] },
+  SUSPENDED: { sym: AR["layerA.suspended.sym"], ar: AR["layerA.suspended"], en: EN["layerA.suspended"] },
+  RETURNED: { sym: AR["layerA.returned.sym"], ar: AR["layerA.returned"], en: EN["layerA.returned"] },
+  CANCELLED: { sym: AR["layerA.cancelled.sym"], ar: AR["layerA.cancelled"], en: EN["layerA.cancelled"] },
+  FAILED: { sym: AR["layerA.failed.sym"], ar: AR["layerA.failed"], en: EN["layerA.failed"] },
+  NOT_APPLICABLE: {
+    sym: AR["layerA.notApplicable.sym"],
+    ar: AR["layerA.notApplicable"],
+    en: EN["layerA.notApplicable"],
+  },
+});
+/** Layer B (expected process) — charter §3.6: ◇ + label, never ✔/●, never سُجل / اكتُمل / تم */
+export const LAYER_B = Object.freeze({
+  EXPECTED: { sym: AR["layerB.expected.sym"], ar: AR["layerB.expected"], en: EN["layerB.expected"] },
+  CONDITIONAL: {
+    sym: AR["layerB.conditional.sym"],
+    ar: AR["layerB.conditional"],
+    en: EN["layerB.conditional"],
+    defaultCondition: {
+      ar: AR["layerB.conditional.defaultCondition"],
+      en: EN["layerB.conditional.defaultCondition"],
+    },
+  },
+  OPTIONAL: { sym: AR["layerB.optional.sym"], ar: AR["layerB.optional"], en: EN["layerB.optional"] },
+  ALTERNATIVE: {
+    sym: AR["layerB.alternative.sym"],
+    ar: AR["layerB.alternative"],
+    en: EN["layerB.alternative"],
+  },
+  PARALLEL: { sym: AR["layerB.parallel.sym"], ar: AR["layerB.parallel"], en: EN["layerB.parallel"] },
+  SUBJECT_TO_APPROVAL: {
+    sym: AR["layerB.subjectToApproval.sym"],
+    ar: AR["layerB.subjectToApproval"],
+    en: EN["layerB.subjectToApproval"],
+  },
+});
+
 export const S = Object.freeze({
-  org: t(
-    "صندوق التنمية الثقافي — منصة إدارة القضايا والتحقيقات (عرض تجريبي)",
-    "Cultural Development Fund — Case Management & Investigation Platform (design preview)",
-  ),
-  to: t("إلى", "To"),
-  from: t("من", "From"),
-  date: t("التاريخ", "Date"),
-  ref: t("المرجع", "Reference"),
-  caseRef: t("مرجع الحالة", "Case reference"),
-  reportId: t("رقم البلاغ", "Report ID"),
-  classification: t("التصنيف", "Classification"),
-  notAvailable: t("غير متاح", "Not available"),
-  noticeRef: t("مرجع الإشعار", "Notice reference"),
-  meetingAt: t("موعد الجلسة", "Session time"),
-  meetingPlace: t("المكان", "Place"),
-  emailRefused: t(
-    "لا يُرسل هذا الإشعار بالبريد لهذه الفئة",
-    "This notice is not sent by e-mail to this class",
-  ),
-  suppressed: t("لا يُنشأ إشعار لهذا المستلم", "No notification is generated for this recipient"),
-  whatHappened: t("ما الذي حدث", "What happened"),
-  recordedFact: t("واقعة مسجّلة", "Recorded fact"),
-  required: t("الإجراء المطلوب منكم", "What you need to do"),
-  how: t("طريقة التنفيذ", "How"),
+  org: tk("ui.org"),
+  to: tk("ui.to"),
+  from: tk("ui.from"),
+  date: tk("ui.date"),
+  ref: tk("ui.ref"),
+  caseRef: tk("ui.caseRef"),
+  reportId: tk("ui.reportId"),
+  classification: tk("ui.classification"),
+  notAvailable: tk("ui.notAvailable"),
+  noticeRef: tk("ui.noticeRef"),
+  meetingAt: tk("ui.meetingAt"),
+  meetingPlace: tk("ui.meetingPlace"),
+  emailRefused: tk("ui.emailRefused"),
+  suppressed: tk("ui.suppressed"),
+  whatHappened: tk("ui.whatHappened"),
+  recordedFact: tk("ui.recordedFact"),
+  required: tk("ui.required"),
+  how: tk("ui.how"),
   channel: {
-    PLATFORM: t("عبر المنصة", "Through the platform"),
-    PORTAL: t("عبر صفحتكم المخصصة", "Through your own page"),
-    SECRETARIAT_MAILBOX: t(
-      "بالرد على صندوق بريد الأمانة المعتمد (دون إرفاق أي معلومات عن الوقائع)",
-      "By replying to the approved secretariat mailbox (without attaching any information about the facts)",
-    ),
+    PLATFORM: tk("ui.channel.platform"),
+    PORTAL: tk("ui.channel.portal"),
+    SECRETARIAT_MAILBOX: tk("ui.channel.secretariatMailbox"),
   },
-  whatNext: t("ما يُتوقع بعد ذلك", "What is expected next"),
-  optionalRights: t("حقوق اختيارية", "Optional rights"),
-  draftBasis: t(
-    "سند هذا الإجراء مسودة غير معتمدة — يُعرض لأغراض التصميم فقط",
-    "The basis of this action is an unapproved draft — shown for design purposes only",
-  ),
-  deadline: t("الموعد النهائي", "Deadline"),
-  deadlineBasis: t("سند الموعد", "Basis of the deadline"),
+  whatNext: tk("ui.whatNext"),
+  optionalRights: tk("ui.optionalRights"),
+  draftBasis: tk("ui.draftBasis"),
+  deadline: tk("ui.deadline"),
+  deadlineBasis: tk("ui.deadlineBasis"),
   deadlineKinds: {
-    GRIEVANCE_DUE: t("آخر موعد لتقديم التظلم (اختياري)", "Last day to file a grievance (optional)"),
-    STATEMENT_DUE: t("موعد تقديم الإفادة", "Statement due"),
-    DEFENCE_DUE: t("موعد تقديم الدفاع", "Defence due"),
-    MINUTES_REVIEW_DUE: t("موعد مراجعة المحضر", "Minutes review due"),
-    INFO_REQUEST_DUE: t("موعد إرسال طلب البيانات", "Information request due"),
-    DECISION_NOTICE_DUE: t("موعد إصدار إشعار القرار", "Decision notice due"),
-    ATTENDANCE_CONFIRMATION_DUE: t("موعد تأكيد الحضور", "Attendance confirmation due"),
-    DECISION_DUE: t("موعد اتخاذ القرار", "Decision due"),
-    VOTE_DUE: t("موعد التصويت", "Vote due"),
-    LEGAL_OPINION_DUE: t("موعد تقديم الرأي القانوني", "Legal opinion due"),
+    GRIEVANCE_DUE: tk("ui.deadlineKinds.grievanceDue"),
+    STATEMENT_DUE: tk("ui.deadlineKinds.statementDue"),
+    DEFENCE_DUE: tk("ui.deadlineKinds.defenceDue"),
+    MINUTES_REVIEW_DUE: tk("ui.deadlineKinds.minutesReviewDue"),
+    INFO_REQUEST_DUE: tk("ui.deadlineKinds.infoRequestDue"),
+    DECISION_NOTICE_DUE: tk("ui.deadlineKinds.decisionNoticeDue"),
+    ATTENDANCE_CONFIRMATION_DUE: tk("ui.deadlineKinds.attendanceConfirmationDue"),
+    DECISION_DUE: tk("ui.deadlineKinds.decisionDue"),
+    VOTE_DUE: tk("ui.deadlineKinds.voteDue"),
+    LEGAL_OPINION_DUE: tk("ui.deadlineKinds.legalOpinionDue"),
   },
-  basisWithheld: t(
-    "سند الموعد مسجّل لدى الأمانة",
-    "The basis of the deadline is on record with the secretariat",
-  ),
-  open: t("فتح الإجراء", "Open the item"),
-  openFollowUp: t("متابعة البلاغ في البوابة", "Follow up your report on the portal"),
-  openDefence: t("فتح صفحة «دفاعي»", 'Open the "My defence" page'),
-  destination: t("الوجهة", "Destination"),
-  linkUnavailable: t("الرابط غير متاح", "The link is not available"),
-  noDeepLink: t(
-    "لا يتوفر رابط مباشر لهذا العنصر؛ سجّلوا الدخول إلى المنصة من عنوانها المعتاد",
-    "No direct link exists for this item; sign in to the platform from its usual address",
-  ),
-  mailboxHow: t(
-    "لا تُرسل روابط في هذا الإشعار؛ يكون الرد على صندوق بريد الأمانة المعتمد",
-    "This notice carries no links; reply to the approved secretariat mailbox",
-  ),
-  status: t("موقف الإجراء", "Procedure status"),
-  level1: t(
-    "المستوى 1 — موقع الحالة في مسارها الرئيسي",
-    "Level 1 — where the case stands on its master journey",
-  ),
-  level2: t("المستوى 2 — مسار", "Level 2 — journey of"),
-  capacity: t("بصفتكم", "Your capacity"),
-  level3: t("المستوى 3 — خطوات الإجراء", "Level 3 — steps of the procedure"),
-  stageOf: t("المرحلة {n} من {of}", "Stage {n} of {of}"),
-  subState: t("الحالة الفرعية", "Sub-state"),
-  noCasePath: t(
-    "لا يوجد مسار حالة — لم تُسجَّل حالة بعد",
-    "No case journey — no case has been registered yet",
-  ),
-  earlierStage: t("مرحلة سابقة", "Earlier stage"),
-  laterStage: t("مرحلة لاحقة", "Later stage"),
-  currentStage: t("المرحلة الحالية", "Current stage"),
-  currentStep: t("الخطوة الحالية", "Current step"),
-  actualProgress: t("ما سُجّل فعلاً", "What has actually been recorded"),
-  expectedProcess: t("المسار المتوقع (لم يقع بعد)", "Expected process (has not happened yet)"),
-  showExpected: t("عرض الخطوات المتوقعة", "Show the expected steps"),
-  closure: t("نطاق الإقفال", "What closes"),
-  evidenceRecorded: t("مسجّل بحدث موثّق", "Recorded with a documented event"),
-  details: t("تفاصيل لأصحاب الاختصاص", "Details for authorised users"),
-  evidence: t("مراجع الأحداث المسجّلة", "References of recorded events"),
-  rights: t("صلاحيتكم في هذا الإجراء", "Your authority for this action"),
+  basisWithheld: tk("ui.basisWithheld"),
+  open: tk("ui.open"),
+  openFollowUp: tk("ui.openFollowUp"),
+  openDefence: tk("ui.openDefence"),
+  destination: tk("ui.destination"),
+  linkUnavailable: tk("ui.linkUnavailable"),
+  noDeepLink: tk("ui.noDeepLink"),
+  mailboxHow: tk("ui.mailboxHow"),
+  status: tk("ui.status"),
+  level1: tk("ui.level1"),
+  level2: tk("ui.level2"),
+  capacity: tk("ui.capacity"),
+  level3: tk("ui.level3"),
+  stageOf: tk("ui.stageOf"),
+  subState: tk("ui.subState"),
+  noCasePath: tk("ui.noCasePath"),
+  earlierStage: tk("ui.earlierStage"),
+  laterStage: tk("ui.laterStage"),
+  currentStage: tk("ui.currentStage"),
+  currentStep: tk("ui.currentStep"),
+  actualProgress: tk("ui.actualProgress"),
+  expectedProcess: tk("ui.expectedProcess"),
+  showExpected: tk("ui.showExpected"),
+  closure: tk("ui.closure"),
+  evidenceRecorded: tk("ui.evidenceRecorded"),
+  details: tk("ui.details"),
+  evidence: tk("ui.evidence"),
+  rights: tk("ui.rights"),
   roles: {
-    executor: t("منفّذ", "Executor"),
-    decision_maker: t("صاحب القرار", "Decision maker"),
-    approver: t("معتمِد", "Approver"),
-    preparer: t("معِدّ", "Preparer"),
+    executor: tk("ui.roles.executor"),
+    decision_maker: tk("ui.roles.decisionMaker"),
+    approver: tk("ui.roles.approver"),
+    preparer: tk("ui.roles.preparer"),
   },
-  administrative: t("إجراء إداري تنسيقي — لا يُعد قراراً", "Administrative coordination — not a decision"),
-  formal: t("إجراء رسمي", "Formal act"),
+  administrative: tk("ui.administrative"),
+  formal: tk("ui.formal"),
   basisStatus: {
-    APPROVED: t("السند: مصدر معتمد", "Basis: approved source"),
-    OWNER_DECISION: t("السند: قرار المالك", "Basis: the owner's decision"),
-    DRAFT: t("السند: مسودة غير معتمدة", "Basis: unapproved draft"),
-    SOURCE_REQUIRED: t(
-      "السند: مطلوب مصدر معتمد — التنفيذ موقوف",
-      "Basis: an approved source is required — execution is blocked",
-    ),
+    APPROVED: tk("ui.basisStatus.approved"),
+    OWNER_DECISION: tk("ui.basisStatus.ownerDecision"),
+    DRAFT: tk("ui.basisStatus.draft"),
+    SOURCE_REQUIRED: tk("ui.basisStatus.sourceRequired"),
   },
-  holders: t("أعضاء اللجنة المعنيون", "Committee members concerned"),
-  delivery: t("حالة الإشعار", "Notification status"),
-  deliveryNote: t(
-    "الإرسال لا يعني التسليم، والتسليم أو الفتح لا يعني الإقرار بالتسلّم؛ الإقرار سجل مستقل",
-    "Sending does not mean delivery, and delivery or opening does not mean acknowledgement; acknowledgement is a separate record",
-  ),
-  audit: t("مرجع سجل التدقيق", "Audit ledger reference"),
-  confidentiality: t("السرية", "Confidentiality"),
-  help: t("المساعدة", "Help"),
-  helpGroup: t("السرية والمساعدة", "Confidentiality and help"),
-  exception: t("تنبيه إجرائي", "Procedural alert"),
-  previewFooter: t(
-    "هذه معاينة تصميمية ببيانات اصطناعية؛ لم يُتحقق من طريقة عرضها في برامج البريد (Outlook / Gmail / Apple Mail).",
-    "This is a design preview with synthetic data; its rendering in mail clients (Outlook / Gmail / Apple Mail) is UNVERIFIED.",
-  ),
-  skip: t("تخطَّ إلى محتوى الإشعار", "Skip to the notification"),
-  simplified: t("ملخص الموقف", "Status at a glance"),
-  levelLine1: t("الحالة", "Case"),
-  levelLine3: t("الخطوة الحالية", "Current step"),
-  notADecision: t(
-    "هذا إشعار إجرائي وليس قراراً، ولا يُغني عن الإجراء الرسمي.",
-    "This is a procedural notice, not a decision, and does not replace the formal act.",
-  ),
+  holders: tk("ui.holders"),
+  delivery: tk("ui.delivery"),
+  deliveryNote: tk("ui.deliveryNote"),
+  audit: tk("ui.audit"),
+  confidentiality: tk("ui.confidentiality"),
+  help: tk("ui.help"),
+  helpGroup: tk("ui.helpGroup"),
+  exception: tk("ui.exception"),
+  previewFooter: tk("ui.previewFooter"),
+  skip: tk("ui.skip"),
+  simplified: tk("ui.simplified"),
+  levelLine1: tk("ui.levelLine1"),
+  levelLine3: tk("ui.levelLine3"),
+  notADecision: tk("ui.notADecision"),
 });
 
 /** confidentiality wording per recipient group (PROPOSED) */
 export const CONFIDENTIALITY = Object.freeze({
-  INTERNAL: t(
-    "هذا الإشعار سري ومخصّص لصفتكم في الإجراء؛ لا تُعيدوا توجيهه ولا تنقلوا محتواه خارج المنصة.",
-    "This notice is confidential and addressed to your capacity in the procedure; do not forward it or move its content outside the platform.",
-  ),
-  RECUSED_MEMBER: t(
-    "أنتم متنحّون عن هذا البند؛ لا يتضمن هذا الإشعار أي مداولات أو أصوات أو أسماء.",
-    "You are recused from this item; this notice contains no deliberations, votes or names.",
-  ),
-  WITNESS: t(
-    "تذكير بواجب السرية: لا تُفصحوا عن موعد الجلسة أو موضوعها أو ما يدور فيها لأي جهة.",
-    "Confidentiality reminder: do not disclose the hearing, its subject or what happens in it to anyone.",
-  ),
-  SUBJECT: t(
-    "هذا الإشعار يخصّكم وحدكم؛ يقتصر على ما تحتاجونه لممارسة حقوقكم الإجرائية.",
-    "This notice concerns you alone; it carries only what you need to exercise your procedural rights.",
-  ),
-  REPORTER: t(
-    "لا يتضمن هذا التحديث أي معلومات عن هويتك أو عن تفاصيل المعالجة الداخلية.",
-    "This update contains no information about your identity or about the internal handling.",
-  ),
-  REFERRING_BODY: t(
-    "يقتصر هذا الإشعار على المعلومات المصرّح بإبلاغها لجهتكم.",
-    "This notice is limited to the information authorised for your organisation.",
-  ),
-  EVIDENCE_HOLDER: t(
-    "يقتصر هذا الإشعار على ما يلزم لتقديم المطلوب منكم.",
-    "This notice is limited to what you need to provide what is requested.",
-  ),
+  INTERNAL: tk("confidentiality.internal"),
+  RECUSED_MEMBER: tk("confidentiality.recusedMember"),
+  WITNESS: tk("confidentiality.witness"),
+  SUBJECT: tk("confidentiality.subject"),
+  REPORTER: tk("confidentiality.reporter"),
+  REFERRING_BODY: tk("confidentiality.referringBody"),
+  EVIDENCE_HOLDER: tk("confidentiality.evidenceHolder"),
 });
 /** static help wording per recipient group (used when the `help` field is withheld or absent) */
 export const HELP_STATIC = Object.freeze({
-  INTERNAL: t(
-    "للاستفسار عن هذا الإشعار: أمانة اللجنة عبر المنصة.",
-    "Questions about this notice: the committee secretariat, through the platform.",
-  ),
-  EXTERNAL: t(
-    "للاستفسار عن هذا الإشعار: الجهة المرسلة عبر القناة المذكورة فيه.",
-    "Questions about this notice: the sender, through the channel it names.",
-  ),
+  INTERNAL: tk("helpStatic.internal"),
+  EXTERNAL: tk("helpStatic.external"),
 });
 export const CLASSIFICATION = Object.freeze({
-  PUBLIC: t("عام", "Public"),
-  INTERNAL: t("داخلي — سري", "Internal — confidential"),
-  RESTRICTED: t("مقيد — سري للغاية", "Restricted — highly confidential"),
+  PUBLIC: tk("classification.public"),
+  INTERNAL: tk("classification.internal"),
+  RESTRICTED: tk("classification.restricted"),
 });
 
 /** a bilingual value's text for `lang` (falls back to ar, then en); a scalar is stringified; null/undefined → '' */
@@ -240,21 +195,15 @@ export const fill = (s: unknown, vars: Readonly<Record<string, unknown>>): strin
 
 /** Notification delivery wording (lead rulings L-07, L-02, L-04 — 27 Oct 2026). PROPOSED wording; the rules are the lead's. */
 export const DELIVERY = Object.freeze({
-  DRAFT: t("مسودة — لم يُرسل", "Draft — not sent"),
-  NOT_SENT: t("لم يُرسل بعد", "Not sent yet"),
-  SENT_EMAIL: t("أُرسل — لم يُؤكَّد التسليم", "Sent — delivery not confirmed"),
-  DELIVERED_EMAIL_REPORT: t(
-    "سُلِّم بحسب تقرير تسليم من مزوّد البريد",
-    "Delivered according to a delivery report from the mail provider",
-  ),
-  IN_APP: t("وصل إلى صندوق الإشعارات في المنصة", "In the platform notification inbox"),
-  FAILED: t("تعذّر الإرسال", "Sending failed"),
-  CANCELLED: t("أُلغي ولم يُرسل", "Cancelled — not sent"),
-  OPENED: t("فُتح — الفتح ليس إقراراً بالتسلّم", "Opened — opening is not an acknowledgement"),
-  CORRECTION_PREPARING: t(
-    "يجري إعداد تصحيح؛ هذا الإشعار ما زال النسخة السارية",
-    "A correction is being prepared; this notice is still the current version",
-  ),
-  SUPERSEDED: t("استُبدل بنسخة مصحَّحة أُرسلت", "Superseded by a corrected version that has been sent"),
-  UNKNOWN: t("حالة غير معروفة", "Unknown status"),
+  DRAFT: tk("delivery.draft"),
+  NOT_SENT: tk("delivery.notSent"),
+  SENT_EMAIL: tk("delivery.sentEmail"),
+  DELIVERED_EMAIL_REPORT: tk("delivery.deliveredEmailReport"),
+  IN_APP: tk("delivery.inApp"),
+  FAILED: tk("delivery.failed"),
+  CANCELLED: tk("delivery.cancelled"),
+  OPENED: tk("delivery.opened"),
+  CORRECTION_PREPARING: tk("delivery.correctionPreparing"),
+  SUPERSEDED: tk("delivery.superseded"),
+  UNKNOWN: tk("delivery.unknown"),
 });
