@@ -62,6 +62,19 @@ The merge brought develop's `lib/domain` badge module. `StatusBadge` now takes i
 | axe-core (WCAG 2.0/2.1/2.2 A and AA) on a temporary preview page with every data component, not committed | 0 violations: Arabic light, English light, Arabic dark |
 | QA's `checkTruth` over the rendered markup (unit test) | no violation, apart from one planted wrong-status badge, which it reports as T4 |
 
+## QA CHANGES on #16 at `cfab726` (31 Oct), fixed
+- `.v13-badge` had `white-space: nowrap`; a long English conditional badge was 424 px wide at 375 px (WCAG 1.4.10).
+  The badge now wraps (`max-inline-size: 100%`, `overflow-wrap: anywhere`, the text span may shrink), the glyph stays
+  whole on the first line, and the corner radius is half the one-line height, so a wrapped badge does not clip its
+  text. Checked with local Chromium at 375 px on the built CSS (temporary page, not committed): badge 343 px, no
+  sideways scroll, ar and en. Unit tests pin the rule.
+
+## Conditions recorded from ARCH (31 Oct)
+- Test ids ruling CONFIRMED: menu `workspace-menu-*`, `/workspaces` page `workspace-option-<CODE>` /
+  `workspace-current`. Whichever PR swaps FE's switcher for the shell menu must, in the same PR and with QA, update
+  Scenario C's `workspace-switcher-open` selector and leave exactly one `data-testid="workspace-switcher"` per page.
+- Run `pnpm db:reset` before every local `pnpm test:e2e` (CI e2e runs on a migrated, seeded database since #36).
+
 ## Unresolved defects
 - None known.
 

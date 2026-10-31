@@ -1,6 +1,7 @@
 // V13-UX-003 data components, rendered to static HTML (ADR-013 D8). StatusBadge's epistemic rule is tested from three
 // sides: the attributes it writes, the four variants being different without colour, and the negatives it must
 // refuse. The rendered markup is also run through QA's Procedural Truth Inspector (tests/truth/inspector.ts).
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CaseWorkspace } from "@/components/shell/CaseWorkspace";
@@ -141,6 +142,29 @@ describe("StatusBadge — attributes (ADR-013)", () => {
       }
     },
   );
+});
+
+describe("StatusBadge — reflow (WCAG 1.4.10, QA #16)", () => {
+  const css = readFileSync("styles/globals.css", "utf8");
+  const rule = (selector: string) => {
+    const at = css.indexOf(`\n  ${selector} {`);
+    expect(at, selector).toBeGreaterThan(-1);
+    return css.slice(at, css.indexOf("}", at));
+  };
+
+  it("lets a badge wrap inside its container instead of scrolling the page sideways", () => {
+    const badge = rule(".v13-badge");
+    expect(badge).not.toMatch(/white-space:\s*nowrap/);
+    expect(badge).toMatch(/max-inline-size:\s*100%/);
+    expect(badge).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(rule(".v13-badge > span:not(.v13-badge-glyph)")).toMatch(/min-inline-size:\s*0/);
+  });
+
+  it("keeps the glyph whole and on the first line when the words wrap", () => {
+    const glyph = rule(".v13-badge-glyph");
+    expect(glyph).toMatch(/flex:\s*none/);
+    expect(glyph).toMatch(/align-self:\s*flex-start/);
+  });
 });
 
 describe("StatusBadge — four variants distinct without colour", () => {

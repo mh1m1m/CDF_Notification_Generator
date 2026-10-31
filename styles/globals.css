@@ -724,14 +724,23 @@
     padding-block: 0.125rem;
     padding-inline: var(--cdf-space-2);
     border: var(--cdf-border-hairline) solid var(--cdf-border-control);
-    border-radius: var(--cdf-radius-pill);
+    /* Half the one-line height: a pill on one line, rounded corners (not clipped text) when it wraps. */
+    border-radius: calc(var(--cdf-text-body1) * 0.75 + 0.125rem);
     font-size: var(--cdf-text-body1);
     font-weight: 600;
     line-height: 1.5;
-    white-space: nowrap;
+    /* Wraps instead of overflowing: a long badge never makes the page scroll sideways (WCAG 1.4.10 Reflow). */
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .v13-badge > span:not(.v13-badge-glyph) {
+    min-inline-size: 0;
   }
 
   .v13-badge-glyph {
+    flex: none;
+    align-self: flex-start;
     font-weight: 700;
   }
 
