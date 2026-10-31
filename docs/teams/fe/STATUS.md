@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 20:50 UTC · Branch: feature/V13-FE-005-my-work (#19, #23, #27 merged into develop) · Head: see PR
+Updated: 2026-10-31 22:05 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-filter-reset (FE-006 parts 1–2 are #51, #61) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -31,6 +31,10 @@ Updated: 2026-10-31 20:50 UTC · Branch: feature/V13-FE-005-my-work (#19, #23, #
   live region. Proposed contract `lib/contracts/my-work.ts` (MyWorkReader, TaskCommandPort,
   UpdateTaskStatusCommandSchema): needs ARCH + SEC ACCEPT. Reads DB-010's columns (migration 0008, on develop
   b5ee5f4). Draft PR stacked on #23 — IN_PROGRESS.
+- V13-FE-007 (QA defects pinned in #58) — OI-042: `app/(platform)/not-found.tsx` renders notFound() inside the
+  AppShell as a section (no second `<main>`, no second `id="main"`), same visible text, `data-testid` and title as the
+  root not-found page; OI-043: the Portfolio filter form is keyed on its filter values (`filterFormKey`), so Clear,
+  Back and other client-side navigations remount it with the URL's values — IN_REVIEW (QA).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -97,6 +101,8 @@ Updated: 2026-10-31 20:50 UTC · Branch: feature/V13-FE-005-my-work (#19, #23, #
 | FE-005 throwaway browser probe (not committed; e2e is QA's): Alpha 7 rows = Open count, Truth Inspector 0 violations, axe 0 violations (wcag2a/aa, 21a/aa), OPEN task unmarked, IN_PROGRESS recorded; update OPEN → IN_PROGRESS shows the updated notice and the badge becomes recorded; a second tab's version-1 form → stale message; forged task id (0009) → generic reference, server logs code NOT_FOUND only; Due-this-week filter link; Gamma's closed-case task has no form | pass | 1/1 | bffeb64 |
 | OI-023 (PR #27, 17f4107 on develop c4b37c3): `pnpm test` / `pnpm test:db` / `pnpm test:e2e`; browser probe: forged target refused with cookie unchanged, real switch → exactly 1 WORKSPACE_SWITCHED row | pass | 725 / 212 / 56 (17 skipped) / 1 | 17f4107 |
 | FE-005 after merging develop 69e03d6 (#23 merged), My Work table in `ScrollRegion` (caption `my-work-table-caption`) + guard test: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` / throwaway narrow axe probe incl. `/my-work` at 375 and 1280 px, ar + en (not committed) | pass | — / 1177 / 389 / 101 / 2/2 | FE-005 head |
+| FE-007 (branch from develop 718b07b): lint, typecheck, format / `pnpm test` (not-found 4 + filter key 3 new) / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 65 files, 1691 / 418 / 126 | FE-007 head |
+| FE-007 throwaway browser probe (not committed; QA's pinned tests are in #58): Gamma on hidden 0009 and unknown 0099 → 404, one `main`, one `id="main"`, axe 0 violations; Alpha `/portfolio?stage=INVESTIGATION&state=ACTIVE` → Clear shows empty selects, Back shows both again. Same probe on the code without the fix: 2/2 fail | pass | 2/2 | FE-007 head |
 
 ## Unresolved defects
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
