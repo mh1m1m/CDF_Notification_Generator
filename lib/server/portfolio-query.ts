@@ -97,6 +97,15 @@ export function toCaseListFilter(query: PortfolioQuery): CaseListFilter {
   };
 }
 
+/**
+ * Identity of the filter form's values (OI-043). The form's controls are uncontrolled (defaultValue), so React keeps
+ * the old values when a client-side navigation (Clear, Back, a paging link) re-renders it with other filters; keying
+ * the form on this value remounts it whenever the filters change, so the controls always show the URL's filters.
+ */
+export function filterFormKey(query: PortfolioQuery): string {
+  return JSON.stringify([query.text ?? "", query.stage ?? "", query.state ?? "", query.mine === true]);
+}
+
 export function hasFilters(query: PortfolioQuery): boolean {
   return (
     query.text !== undefined || query.stage !== undefined || query.state !== undefined || query.mine === true

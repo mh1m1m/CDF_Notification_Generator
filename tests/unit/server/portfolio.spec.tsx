@@ -9,6 +9,7 @@ import { createTranslator } from "@/lib/i18n";
 import { AppError } from "@/lib/server/errors";
 import { loadPortfolio, positionOf, type PortfolioView } from "@/lib/server/portfolio";
 import {
+  filterFormKey,
   MAX_TRAIL,
   nextHref,
   parsePortfolioQuery,
@@ -345,5 +346,40 @@ describe("PortfolioView markup", async () => {
     expect(html).toContain('data-testid="portfolio-next"');
     expect(html).not.toContain('data-testid="portfolio-prev"');
     expect(render("ar", view)).not.toContain('data-testid="portfolio-next"');
+  });
+});
+
+describe("filter form identity (OI-043)", () => {
+  it("changes whenever a filter changes, and only then", () => {
+    const base = ok({});
+    const keys = [
+      base,
+      ok({ q: "0003" }),
+      ok({ stage: "INVESTIGATION" }),
+      ok({ state: "CLOSED" }),
+      ok({ mine: "1" }),
+      ok({ stage: "INVESTIGATION", state: "CLOSED" }),
+    ].map(filterFormKey);
+    expect(new Set(keys).size).toBe(keys.length);
+    // Paging keeps the same filters, so the form keeps its identity.
+    expect(filterFormKey(ok({ stage: "INVESTIGATION", after: CURSOR_A, back: "~" }))).toBe(
+      filterFormKey(ok({ stage: "INVESTIGATION" })),
+    );
+  });
+
+  it("the page view keys the filter form on it, so Clear and Back remount it with the URL's values", async () => {
+    const { PortfolioView: View } = await import("@/app/(platform)/portfolio/_components/PortfolioView");
+    const source = createFakeCaseSource();
+    for (const params of [{}, { stage: "INVESTIGATION", state: "CLOSED" }]) {
+      const view = await loadPortfolio({ ctx: ctxFor(SECRETARY), source }, params);
+      const tree = View({ t: createTranslator("ar"), locale: "ar", view }) as {
+        props: { children: unknown[] };
+      };
+      const form = tree.props.children.find(
+        (c): c is { key: string | null; props: { query: unknown } } =>
+          typeof c === "object" && c !== null && "props" in c && "query" in (c as { props: object }).props,
+      );
+      expect(form?.key).toBe(view.kind === "page" ? filterFormKey(view.query) : null);
+    }
   });
 });
