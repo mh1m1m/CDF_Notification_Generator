@@ -11,9 +11,11 @@ export interface PersonaMenuProps {
   /** Localised role held in the active workspace. */
   roleLabel: string;
   signOutAction: (formData: FormData) => Promise<void>;
+  /** Optional test id on the visible name in the menu button. */
+  nameTestId?: string;
 }
 
-export function PersonaMenu({ t, name, roleLabel, signOutAction }: PersonaMenuProps) {
+export function PersonaMenu({ t, name, roleLabel, signOutAction, nameTestId }: PersonaMenuProps) {
   return (
     <Disclosure
       className="v13-persona-menu"
@@ -24,7 +26,7 @@ export function PersonaMenu({ t, name, roleLabel, signOutAction }: PersonaMenuPr
         <>
           <PersonIcon />
           <span className="v13-sr-only">{t("shell.signedInAs")}</span>
-          <span>{name}</span>
+          <span data-testid={nameTestId}>{name}</span>
         </>
       }
     >
