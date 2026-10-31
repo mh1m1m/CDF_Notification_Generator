@@ -45,6 +45,8 @@ export const COMPLETED_CLASS_STATUSES = Object.freeze([
   "MINUTES_FINAL",
   "ACCEPTED_BY_PROVIDER",
   "SUBSTANTIATED",
+  // OI-029 (ARCH 31 Oct): the case task status DONE (CASE_TASK_COMPLETED_STATUSES, migration 0003).
+  "DONE",
 ] as const);
 export type CompletedClassStatus = (typeof COMPLETED_CLASS_STATUSES)[number];
 /** A status code: upper snake case (e.g. `IN_PROGRESS`). */
