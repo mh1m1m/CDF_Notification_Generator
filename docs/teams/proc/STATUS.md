@@ -32,7 +32,7 @@ Updated: 2026-10-31 ~18:45 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | PROC-001: `pnpm format:check` | FAIL then (expected) | only the two byte-exact evidence JSON copies; fixed by #20 (evidence ignores) | 37a5cfc |
 | PROC-001 after merging `develop` 2ec6ce0: `pnpm format:check` · `pnpm lint` · `pnpm typecheck` · `pnpm test` | PASS | format, lint, typecheck exit 0; unit 30 files · 694 pass, of which `tests/unit/domain` 4 files · 203 pass · 0 skipped; EVIDENCE_MANIFEST sha256 of all 4 domain copies match byte for byte | merge of 2ec6ce0 |
 | PROC-001: copy-time scan `tests/unit/domain/evidence-scan.spec.ts` (EVS-01/02) | PASS | 4 evidence files · 0 hits · 0 allowed | PROC-001 head |
-| PROC-002: `pnpm format:check` · `pnpm lint` · `pnpm typecheck` · `pnpm test` (develop 64aa5c1 + PROC-002) | PASS | all exit 0; unit 33 files · 775 pass, of which `tests/unit/journeys` 3 files · 81 pass · 0 skipped; evidence scan (EVS-01) now covers the journeys evidence and `lib/journeys/**/*.json`: 0 hits | PROC-002 head |
+| PROC-002: `pnpm format:check` · `pnpm lint` · `pnpm typecheck` · `pnpm test` (develop 64aa5c1 + PROC-002) | PASS | all exit 0; unit 33 files · 775 pass, (776 with BADGE-12, below), of which `tests/unit/journeys` 3 files · 81 pass · 0 skipped; evidence scan (EVS-01) now covers the journeys evidence and `lib/journeys/**/*.json`: 0 hits | PROC-002 head |
 | PROC-002 equivalence: reference `src/journeys/{resolve,progress}.js` vs `lib/journeys` on the same inputs (22 reference scenario files, refs `CDF-IC-2026-DEMO-NNNN` normalised to `CDF-DEMO-2026-NNNN`), 32 runs incl. variants × (resolve + 13 recipient classes) | PASS | 448 outputs compared, 0 differ; catalogue identical after the ref rename | PROC-002 working tree on 64aa5c1 (after prettier) |
 | PROC-002 fixture effect (BL-45): `lib/journeys` on reference vs ported fixtures | EXPECTED DIFFERENCES ONLY | 5 scenario files changed (EC-01, SUM-01, WIT-01, CF-35, CF-37); 448 outputs compared, 2 differ, both CF-37 (base and CF-37-V1: the added `AUTHORITY_DECISION_RECORDED` before the notice); ST-34 now lists only the 7 BL-46 scenarios | same |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
@@ -75,4 +75,7 @@ evidence); with the V12 siblings and the demo built, 726 / 726.
   renamed `CDF-IC-2026-0001` → `CDF-DEMO-2026-0001`, scan allowance dropped.
 - Checks moved out of the domain specs because they read other modules' data: ST-29b, ST-32b, ST-34 land with PROC-002;
   ST-28b with PROC-004; ST-07b with PROC-005. Each is strict (a missing file fails).
-- Evidence ignores landed in #20 (develop 2ec6ce0, 31 Oct). Waiting: SEC review of PR #18.
+- Evidence ignores landed in #20 (develop 2ec6ce0, 31 Oct). PR #18 merged (64aa5c1) on SEC ACCEPT c3b71f8.
+- SEC LOW note on #18 (via ARCH, 31 Oct): T5 matched statuses exactly. Fixed on #24: a badge's `shown_status` must be an
+  upper-snake status code or a catalogue step code (`SHOWN_STATUS_NOT_A_CODE` otherwise), and `isCompletedClassStatus`
+  fails closed on any other string; BADGE-12 covers "completed", " COMPLETED", "Completed" and more.
