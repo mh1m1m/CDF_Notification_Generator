@@ -57,13 +57,15 @@ import { MARKING, MARKING_SUBJECT_PREFIX, S, pick } from "./i18n";
 import { loadTokens, type Tokens } from "./tokens";
 import type { RenderModel, Lang, Experience, MeetingInfo } from "./types";
 import { isNil } from "@/lib/domain/nil";
+import { ar as AR } from "@/lib/i18n/notificationRender/ar";
+import { en as EN } from "@/lib/i18n/notificationRender/en";
 
 export const CARD_BUDGET_BYTES = 28000; // project convention (charter §11), not a Microsoft limit
 export const EMAIL_MAX_WIDTH = 600;
 export const SENDER = Object.freeze({
   address: "notifications.demo@example.test",
-  ar: "إشعارات المنصة — عرض تجريبي",
-  en: "Platform notifications — design preview",
+  ar: AR["sender.name"],
+  en: EN["sender.name"],
 });
 const MAX_LINE_OCTETS = 998;
 
@@ -145,7 +147,10 @@ function titleOf(m: RenderModel, lang: string): string | null {
   return t && allowed(m, "event_title") ? (typeof t === "string" ? t : pick(t, lang)) : null;
 }
 export function buildSubject(m: RenderModel, lang: string): string {
-  const parts = [MARKING_SUBJECT_PREFIX, titleOf(m, lang) ?? (lang === "en" ? "Notification" : "إشعار")];
+  const parts = [
+    MARKING_SUBJECT_PREFIX,
+    titleOf(m, lang) ?? (lang === "en" ? EN["email.defaultTitle"] : AR["email.defaultTitle"]),
+  ];
   if (allowed(m, "notice_reference") && typeof m.fields.notice_reference === "string")
     parts.push("— " + m.fields.notice_reference);
   return oneLine(parts.join(" "));
@@ -624,7 +629,7 @@ export function renderEmail(
     const fromAddr = opts.from?.address ?? SENDER.address;
     const issuer = allowed(m, "issuer") && m.fields.issuer ? pick(m.fields.issuer, lang) : null;
     const fromDisplay = issuer
-      ? `${issuer} — ${lang === "ar" ? "عرض تجريبي" : "design preview"}`
+      ? `${issuer} — ${lang === "ar" ? AR["email.previewSuffix"] : EN["email.previewSuffix"]}`
       : pick(SENDER, lang);
     const date = rfc5322Date(m.meta.generated_at ?? "2026-10-27T15:00:00+03:00");
     const nid = String(m.meta.notification_id);

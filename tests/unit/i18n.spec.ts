@@ -29,6 +29,7 @@ describe("namespaces", () => {
       "notifications",
       "workspaces",
       "persona",
+      "notificationRender",
     ]);
   });
 

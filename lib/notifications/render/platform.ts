@@ -20,6 +20,8 @@ import { escHtml, stripControls } from "./escape";
 import { MARKING, S, pick } from "./i18n";
 import { loadTokens, type Tokens } from "./tokens";
 import type { Lang } from "./types";
+import { ar as AR } from "@/lib/i18n/notificationRender/ar";
+import { en as EN } from "@/lib/i18n/notificationRender/en";
 import type { Projected, ProjectedModel } from "@/lib/disclosure/project";
 
 const GROUP_HEADING: Readonly<Record<Exclude<GroupName, "identity">, { ar: string; en: string }>> = {
@@ -30,8 +32,8 @@ const GROUP_HEADING: Readonly<Record<Exclude<GroupName, "identity">, { ar: strin
   help: S.helpGroup,
 };
 const PREVIEW_PLATFORM: Readonly<Record<Lang, string>> = {
-  ar: "هذه الصفحة معاينة تصميمية ببيانات اصطناعية؛ ليست منصة الصندوق الإنتاجية، ولم تُختبر على متصفحات المستخدمين.",
-  en: "This page is a design preview with synthetic data; it is not the CDF production platform and was not tested on user browsers.",
+  ar: AR["platform.previewNotice"],
+  en: EN["platform.previewNotice"],
 };
 
 export function platformCss(tokens: Tokens): string {

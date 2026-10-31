@@ -14,8 +14,10 @@ import "server-only";
  */
 import { createHash } from "node:crypto";
 import { isNil } from "@/lib/domain/nil";
+import { ar as AR } from "@/lib/i18n/notificationRender/ar";
+import { en as EN } from "@/lib/i18n/notificationRender/en";
 
-export const NOT_AVAILABLE = Object.freeze({ ar: "غير متاح", en: "Not available" } as const);
+export const NOT_AVAILABLE = Object.freeze({ ar: AR["ui.notAvailable"], en: EN["ui.notAvailable"] });
 
 /** C0 controls except TAB/LF, DEL, C1 controls, bidi embeddings/overrides/isolates and marks, BOM, ZWSP, line/para separators */
 const CONTROL_RE =
@@ -104,36 +106,24 @@ export function isAllowedUrl(u: unknown): boolean {
 // ---------------------------------------------------------------------------------------------------------------
 // Time: Riyadh wall time (UTC+3, no DST), Western digits, no zone label (V12 owner direction 18 Oct 2026)
 // ---------------------------------------------------------------------------------------------------------------
+const MONTH_KEYS = [
+  "time.month.m1",
+  "time.month.m2",
+  "time.month.m3",
+  "time.month.m4",
+  "time.month.m5",
+  "time.month.m6",
+  "time.month.m7",
+  "time.month.m8",
+  "time.month.m9",
+  "time.month.m10",
+  "time.month.m11",
+  "time.month.m12",
+] as const;
 const MONTHS = Object.freeze({
-  ar: [
-    "يناير",
-    "فبراير",
-    "مارس",
-    "أبريل",
-    "مايو",
-    "يونيو",
-    "يوليو",
-    "أغسطس",
-    "سبتمبر",
-    "أكتوبر",
-    "نوفمبر",
-    "ديسمبر",
-  ],
-  en: [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ],
-} as const);
+  ar: Object.freeze(MONTH_KEYS.map((k) => AR[k])),
+  en: Object.freeze(MONTH_KEYS.map((k) => EN[k])),
+});
 export const ZONED_ISO =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 export function parseZoned(iso: unknown): number | null {
@@ -160,8 +150,8 @@ export function fmtRiyadh(
   const date = `${D} ${MONTHS[L][M] ?? ""} ${Y}`;
   if (dateOnly) return date;
   return L === "ar"
-    ? `${date}، ${h % 12 || 12}:${pad2(m)} ${h < 12 ? "ص" : "م"}`
-    : `${date}, ${h % 12 || 12}:${pad2(m)} ${h < 12 ? "AM" : "PM"}`;
+    ? `${date}${AR["time.dateTimeSeparator"]}${h % 12 || 12}:${pad2(m)} ${h < 12 ? AR["time.am"] : AR["time.pm"]}`
+    : `${date}${EN["time.dateTimeSeparator"]}${h % 12 || 12}:${pad2(m)} ${h < 12 ? EN["time.am"] : EN["time.pm"]}`;
 }
 /** RFC 5322 date in Riyadh time (+0300) */
 export function rfc5322Date(iso: unknown): string {

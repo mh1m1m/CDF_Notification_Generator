@@ -43,7 +43,7 @@ const VISIBLE: Readonly<Record<string, readonly number[]>> = {
 };
 
 /** persona_id → case suffixes with an active case assignment (seed 0002_m1_cases, case_assignment). */
-const ASSIGNED: Readonly<Record<string, readonly number[]>> = {
+export const ASSIGNED: Readonly<Record<string, readonly number[]>> = {
   "0b000000-0000-4000-8000-000000000001": [1, 3, 4, 7, 8, 10],
   "0b000000-0000-4000-8000-000000000002": [1, 3, 5, 6, 9],
   "0b000000-0000-4000-8000-000000000003": [2, 6, 10],
