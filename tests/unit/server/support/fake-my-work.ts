@@ -4,6 +4,7 @@
 // anything else (unknown, other case, not assigned) → NOT_FOUND, stale version → STALE, closed case →
 // CASE_CLOSED, transition outside the table → INVALID_TRANSITION. Synthetic only.
 import {
+  TaskCommandRefusedError,
   UpdateTaskStatusCommandSchema,
   type MyWorkReader,
   type MyWorkTask,
@@ -13,7 +14,6 @@ import {
   type TaskStatusChange,
   type UpdateTaskStatusCommand,
 } from "@/lib/contracts";
-import { TaskCommandRefusedError } from "@/lib/adapters/my-work/v13-my-work";
 import { TASK_TRANSITIONS } from "@/lib/server/my-work";
 import { ASSIGNED, caseIdOf, FAKE_CASES, visibleTo } from "./fake-case-source";
 

@@ -9,7 +9,8 @@
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { RequestIdentitySchema, type RequestIdentity, type TaskStatus } from "@/lib/contracts";
-import { createV13MyWork, TaskCommandRefusedError } from "@/lib/adapters/my-work/v13-my-work";
+import { createV13MyWork } from "@/lib/adapters/my-work/v13-my-work";
+import { TaskCommandRefusedError } from "@/lib/contracts";
 import { databaseClientOptions } from "@/lib/db/client";
 import { withRequestContext, type Tx } from "@/lib/db/security-context";
 import { TEST_CLAIMS_KEY } from "../support/claims";

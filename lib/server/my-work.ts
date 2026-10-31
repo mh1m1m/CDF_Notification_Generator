@@ -9,13 +9,13 @@
 import "server-only";
 import { precheck } from "@/lib/authz";
 import {
+  TaskCommandRefusedError,
   UpdateTaskStatusCommandSchema,
   type MyWorkReader,
   type MyWorkTask,
   type TaskCommandPort,
   type TaskStatus,
 } from "@/lib/contracts";
-import { TaskCommandRefusedError } from "@/lib/adapters/my-work/v13-my-work";
 import { logServerError } from "@/lib/http/errors";
 import type { RequestContext } from "./context";
 import { AppError, toUserError } from "./errors";

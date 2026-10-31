@@ -9,6 +9,7 @@
 import "server-only";
 import {
   MyWorkTaskSchema,
+  TaskCommandRefusedError,
   TaskStatusChangeSchema,
   UpdateTaskStatusCommandSchema,
   type MyWorkReader,
@@ -54,13 +55,6 @@ export function rowToMyWorkTask(r: MyWorkRow): MyWorkTask {
     row_version: r.row_version,
     status_event_id: r.status_event_id,
   });
-}
-
-export class TaskCommandRefusedError extends Error {
-  override readonly name = "TaskCommandRefusedError";
-  constructor(readonly refusal: TaskCommandRefusal) {
-    super(refusal);
-  }
 }
 
 /** The command's SQLSTATEs (migration 0003). Anything else is an unexpected failure and propagates unchanged. */

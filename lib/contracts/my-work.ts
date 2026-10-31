@@ -69,9 +69,18 @@ export const TASK_COMMAND_REFUSALS = [
 ] as const;
 export type TaskCommandRefusal = (typeof TASK_COMMAND_REFUSALS)[number];
 
+/** A TaskCommandPort refusal. Its message is the refusal code only (nothing caller-supplied or from the database). */
+export class TaskCommandRefusedError extends Error {
+  override readonly name = "TaskCommandRefusedError";
+  constructor(readonly refusal: TaskCommandRefusal) {
+    super(refusal);
+  }
+}
+
 /**
  * Task commands. Contract: authorisation, version, case state and transition are checked inside the database command
  * in one transaction that also writes the procedural event and the audit event; a refusal changes nothing.
+ * A refusal throws TaskCommandRefusedError with one of TASK_COMMAND_REFUSALS; any other error is an unexpected failure.
  */
 export interface TaskCommandPort {
   updateStatus(identity: RequestIdentity, command: UpdateTaskStatusCommand): Promise<TaskStatusChange>;

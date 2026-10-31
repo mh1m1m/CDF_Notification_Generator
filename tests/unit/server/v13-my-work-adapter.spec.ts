@@ -3,7 +3,8 @@
 // the contract (one bad row refuses the list); the command's SQLSTATEs map to refusals and an answer that does not
 // match the command is refused.
 import { describe, expect, it } from "vitest";
-import { createV13MyWork, TaskCommandRefusedError } from "@/lib/adapters/my-work/v13-my-work";
+import { createV13MyWork } from "@/lib/adapters/my-work/v13-my-work";
+import { TaskCommandRefusedError } from "@/lib/contracts";
 import type { RequestIdentity } from "@/lib/contracts";
 import type { Tx } from "@/lib/db/security-context";
 import { caseIdOf } from "./support/fake-case-source";
