@@ -101,6 +101,9 @@ function Filters({ t, query }: { t: Translator; query: CenterQuery }) {
       method="get"
       action={CENTER_PATH}
       role="search"
+      // Back to a page loaded as a document (back_forward) would otherwise get the browser's restored form values
+      // instead of the URL's filters (OI-043, QA review of #63).
+      autoComplete="off"
       aria-label={t("notifications.filters.label")}
       className={styles.filters}
       data-testid="notifications-filters"

@@ -285,6 +285,7 @@ describe("NotificationCenterView markup", () => {
     const form = html.match(/<form[^>]*>/)![0];
     expect(form).toContain('method="get"');
     expect(form).toContain('action="/notifications"');
+    expect(form).toMatch(/autocomplete="off"/i);
   });
 
   it("the table sits in a focusable scroll region named by its caption (WCAG 2.1.1)", async () => {
