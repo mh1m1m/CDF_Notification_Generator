@@ -453,6 +453,18 @@
     box-shadow: var(--cdf-elevation);
   }
 
+  /* V13-UX-008 (QA on #76): the workspace switcher is the TopBar's first control. When the controls wrap under the
+     brand it sits at the inline start of the row, so its panel opens from its inline start; the persona menu (last
+     control) keeps the inline-end anchor. Neither panel is ever wider than the viewport's content width. */
+  .v13-workspace-switcher > .v13-disclosure-panel {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+  }
+
+  .v13-disclosure-panel {
+    max-inline-size: calc(100vw - 2 * var(--cdf-space-4));
+  }
+
   /* V13-UX-007 (M1-03): under 768 px an anchored 16rem panel can cross the viewport edge, so the panel joins the flow
      under its button and takes the row's width. */
   @media (max-width: 767.98px) {

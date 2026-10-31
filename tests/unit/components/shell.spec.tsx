@@ -44,7 +44,7 @@ describe("SyntheticBanner", () => {
 
 describe("TopBar", () => {
   it.each(LOCALES)(
-    "is the header landmark with product name, wordmark fallback and the control slots (%s)",
+    "is a labelled region (never a second banner) with product name, wordmark fallback and the control slots (%s)",
     (l) => {
       const html = render(
         <TopBar
@@ -54,7 +54,12 @@ describe("TopBar", () => {
           persona={<span id="pm" />}
         />,
       );
-      expect(html).toMatch(/^<header class="v13-top-bar" data-testid="top-bar">/);
+      expect(html).toMatch(
+        new RegExp(
+          `^<section class="v13-top-bar" aria-label="${esc(msg(l)["shell.sessionLabel"])}" data-testid="top-bar">`,
+        ),
+      );
+      expect(html).not.toContain("<header");
       expect(html).toContain(esc(msg(l)["shell.productName"]));
       expect(html).toContain(msg(l)["shell.orgName"]);
       // Not a heading: the page's only <h1> lives in <main>.
