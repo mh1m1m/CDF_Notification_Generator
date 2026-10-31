@@ -21,18 +21,26 @@ export type LifecycleStage = z.infer<typeof LifecycleStageSchema>;
 
 export const SourceSystemSchema = z.string().regex(CODE, "must be an upper-snake source system code");
 
+/** Reference of the case in its source system; the same pattern the database enforces (case_record.source_ref). */
+export const SOURCE_REF_PATTERN = /^[A-Za-z0-9._:-]{1,80}$/;
+
+const TitleTextSchema = z.string().trim().min(1).max(200).regex(NO_CONTROL_CHARS);
+/** A synthetic free-text title in both languages (case_record.title_ar / title_en); the page picks the language. */
+export const SyntheticTitleSchema = z.strictObject({ ar: TitleTextSchema, en: TitleTextSchema });
+export type SyntheticTitle = z.infer<typeof SyntheticTitleSchema>;
+
 export const CaseSummarySchema = z
   .strictObject({
     case_id: CaseIdSchema,
     case_number: z.string().regex(CASE_NUMBER_PATTERN, "must look like CDF-DEMO-2026-0001"),
-    /** Exactly one of title_key (dictionary key) or synthetic_title (synthetic free text) is set. */
+    /** Exactly one of title_key (dictionary key) or synthetic_title (synthetic free text, ar + en) is set. */
     title_key: z.string().regex(I18N_KEY_PATTERN, "must be an i18n key").nullable(),
-    synthetic_title: z.string().trim().min(1).max(200).regex(NO_CONTROL_CHARS).nullable(),
+    synthetic_title: SyntheticTitleSchema.nullable(),
     lifecycle_stage: LifecycleStageSchema,
     is_restricted: z.boolean(),
     records_state: RecordsStateSchema,
     source_system: SourceSystemSchema,
-    source_ref: z.string().min(1).max(200).regex(NO_CONTROL_CHARS),
+    source_ref: z.string().regex(SOURCE_REF_PATTERN, "must match the database's source_ref pattern"),
     updated_at: z.iso.datetime({ offset: true }),
   })
   .refine((c) => (c.title_key === null) !== (c.synthetic_title === null), {

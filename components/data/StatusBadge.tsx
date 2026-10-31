@@ -8,6 +8,7 @@
 // whose status claims something happened (inspector rule T5) or whose label uses "recorded/completed" words, renders
 // nothing and logs a warning without content.
 import { formatDateTime } from "@/components/format";
+import { COMPLETED_CLASS_STATUSES } from "@/lib/domain";
 import type { Locale, MessageKey, Translator } from "@/lib/i18n";
 
 /** The status domain: procedure, task, meeting, decision, notification, … (PROC's lib/domain). */
@@ -63,18 +64,10 @@ const PROJECTED_GLYPH = "◇";
 const STAMP_GLYPH = "⎘";
 
 /**
- * Statuses that claim something has happened; they are shown only from a recorded event. Kept equal to
- * COMPLETED_CLASS in QA's tests/truth/inspector.ts (rule T5).
+ * Statuses that claim something has happened; they are shown only from a recorded event. The list is the domain's
+ * (lib/domain COMPLETED_CLASS_STATUSES), the same one the Procedural Truth Inspector uses for rule T5.
  */
-export const COMPLETED_CLASS: ReadonlySet<string> = new Set([
-  "COMPLETED",
-  "APPROVED",
-  "SENT",
-  "DELIVERED",
-  "DECIDED",
-  "CLOSED",
-  "ADOPTED",
-]);
+export const COMPLETED_CLASS: ReadonlySet<string> = new Set(COMPLETED_CLASS_STATUSES);
 
 interface BadgeCore {
   statusKind: StatusKind;

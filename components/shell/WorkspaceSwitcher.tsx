@@ -3,6 +3,8 @@
 // never a client-side state change; the server re-checks the membership on the switch (switching never widens
 // access). The active option shows a check glyph, the word "الحالية" and aria-current="true". The control and every
 // option carry data-workspace-code (ADR-013). A link to the full /workspaces page is always in the panel.
+// Menu test ids are prefixed `workspace-menu-` so they never collide with the /workspaces page's own ids (QA #14).
+// The option's accessible name is its content: a visually hidden verb, then the visible name and role (WCAG 2.5.3).
 import { CheckIcon, ChevronDownIcon } from "@/components/icons";
 import type { WorkspaceCode } from "@/lib/contracts";
 import type { Translator } from "@/lib/i18n";
@@ -61,7 +63,7 @@ export function WorkspaceSwitcher({ t, current, options, action, pageHref }: Wor
               key={option.code}
               className="v13-menu-item v13-menu-item-current"
               aria-current="true"
-              data-testid="workspace-current"
+              data-testid="workspace-menu-current"
               data-workspace-code={option.code}
             >
               <CheckIcon />
@@ -78,10 +80,10 @@ export function WorkspaceSwitcher({ t, current, options, action, pageHref }: Wor
                 <button
                   type="submit"
                   className="v13-menu-button"
-                  aria-label={t("shell.workspace.switchTo", { name: option.name })}
-                  data-testid={`workspace-option-${option.code}`}
+                  data-testid={`workspace-menu-option-${option.code}`}
                   data-workspace-code={option.code}
                 >
+                  <span className="v13-sr-only">{t("shell.workspace.switchTo", { name: option.name })}</span>
                   <span className="v13-menu-text">
                     <span>{option.name}</span>
                     <span className="v13-muted">{t("shell.workspace.roleHeld", { role: option.role })}</span>
@@ -92,7 +94,7 @@ export function WorkspaceSwitcher({ t, current, options, action, pageHref }: Wor
           ),
         )}
       </ul>
-      <a href={pageHref} className="v13-menu-link" data-testid="workspace-all">
+      <a href={pageHref} className="v13-menu-link" data-testid="workspace-menu-all">
         {t("shell.workspace.allWorkspaces")}
       </a>
     </Disclosure>

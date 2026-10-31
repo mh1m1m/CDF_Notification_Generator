@@ -23,13 +23,9 @@ import {
 } from "@/components/data/StatusBadge";
 import { Timeline, type TimelineEntry } from "@/components/data/Timeline";
 import { calendarDaysBetween, formatDateTime, formatDays } from "@/components/format";
+import { COMPLETED_CLASS_STATUSES, isCompletedClassStatus } from "@/lib/domain";
 import { createTranslator, messagesFor, type Locale } from "@/lib/i18n";
-import {
-  checkTruth,
-  COMPLETED_CLASS as INSPECTOR_COMPLETED,
-  inMemoryOracle,
-  type EpistemicNode,
-} from "../../truth/inspector";
+import { checkTruth, inMemoryOracle, type EpistemicNode } from "../../truth/inspector";
 
 const LOCALES: readonly Locale[] = ["ar", "en"];
 const tr = (l: Locale) => createTranslator(l);
@@ -261,8 +257,9 @@ describe("StatusBadge — negatives (refuse, render nothing, warn without conten
       expect(claimsCompletion(ok), ok).toBe(false);
   });
 
-  it("keeps its completed class equal to the Procedural Truth Inspector's", () => {
-    expect([...COMPLETED_CLASS].sort()).toEqual([...INSPECTOR_COMPLETED].sort());
+  it("keeps its completed class equal to the domain list the Procedural Truth Inspector uses", () => {
+    expect([...COMPLETED_CLASS].sort()).toEqual([...COMPLETED_CLASS_STATUSES].sort());
+    for (const status of COMPLETED_CLASS) expect(isCompletedClassStatus(status), status).toBe(true);
   });
 });
 

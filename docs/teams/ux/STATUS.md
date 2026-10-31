@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 · Branch: `feature/V13-UX-003-data-components` · Base: `feature/V13-UX-002-shell` (PR #14)
+Updated: 2026-10-31 · Branch: `feature/V13-UX-003-data-components` · Base: `feature/V13-UX-002-shell` `dd00ccc` (PR #14, includes `develop` `a6c224a`)
 
 ## Completed
 - V13-UX-004: information architecture, the five screen specs, design-system spec and strings, in `docs/design/`.
@@ -16,6 +16,16 @@ Updated: 2026-10-28 · Branch: `feature/V13-UX-003-data-components` · Base: `fe
   IN_REVIEW once its PR is open (reviewer: QA). Not built yet: the notification sending family (waits for
   V13-PROC-005).
 
+## QA CHANGES on #14 at `1b0f29c` (28 Oct), fixed 31 Oct
+1. Workspace menu option buttons no longer carry `aria-label`; a visually hidden verb precedes the visible name and
+   role, so the accessible name contains the visible label (WCAG 2.5.3). Tests: no `aria-label`, verb before name.
+2. Menu test ids renamed to `workspace-menu-option-<CODE>`, `workspace-menu-current`, `workspace-menu-all`, so they
+   never collide with FE's `/workspaces` page ids (`workspace-option-<CODE>`, `workspace-current`). Test: the menu
+   renders none of the page ids. SCREENS.md S5 and DESIGN_SYSTEM.md §2 updated. This changes the UX-004 spec ids;
+   ARCH ruling requested.
+3. `case-identity.ts` now uses the contract's `UUID_PATTERN` and `CASE_NUMBER_PATTERN`. Negative tests: upper-case
+   UUID, non-RFC-9562 UUID, `CDF-PROD-…` and `CDF-DEMO-2025-…` refs are refused.
+
 ## Changed files (V13-UX-002)
 - `components/shell/*` (new: `Breadcrumbs`, `CaseHeader`, `CaseTabs`, `CaseWorkspace`, `Disclosure`, `PageHeading`,
   `PersonaMenu`, `SideNav`, `TopBar`, `WorkspaceSwitcher`, `case-identity`; changed: `AppShell`, `SyntheticBanner`)
@@ -25,26 +35,30 @@ Updated: 2026-10-28 · Branch: `feature/V13-UX-003-data-components` · Base: `fe
 - `tests/unit/components/shell.spec.tsx`
 - `docs/design/DESIGN_SYSTEM.md` §2 (as built), `docs/design/STRINGS.md` (as built), this file
 
-## Test evidence (V13-UX-002, local, on the branch head before push)
+## Test evidence (V13-UX-002, local, 31 Oct after the QA fixes and the develop `a6c224a` merge)
 | Command | Result |
 | ------- | ------ |
-| `pnpm lint` | pass (logical-css: 30 files) |
+| `pnpm lint` | pass (logical-css: 34 files) |
 | `pnpm typecheck` | pass |
 | `pnpm format:check` | pass |
-| `pnpm test` | 19 files, 378 tests passed |
+| `pnpm test` | 34 files, 768 tests passed |
 | `pnpm build` | pass |
-| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | 33 passed |
+| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | 81 passed |
 | Keyboard check (local Chromium, temporary preview page, not committed) | Enter opens the switcher; Arrow Down moves through the options and then the page link; Escape closes it and focus returns to the switcher; the breadcrumb chevron is mirrored in Arabic and not in English |
 
-## Test evidence (V13-UX-003, local, on the branch head before push)
+## Test evidence (V13-UX-003, local, 31 Oct after merging UX-002 `dd00ccc`)
+
+The merge brought develop's `lib/domain` badge module. `StatusBadge` now takes its completed class from
+`COMPLETED_CLASS_STATUSES` (11 statuses, ARCH 28 Oct 03:50), the list the Truth Inspector uses, instead of its own copy.
+
 | Command | Result |
 | ------- | ------ |
 | `pnpm lint` | pass (logical-css: 43 files) |
 | `pnpm typecheck` | pass |
 | `pnpm format:check` | pass |
-| `pnpm test` | 20 files, 429 tests passed (`tests/unit/components/data.spec.tsx` new) |
+| `pnpm test` | 35 files, 819 tests passed |
 | `pnpm build` | pass |
-| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | 33 passed |
+| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | 81 passed |
 | axe-core (WCAG 2.0/2.1/2.2 A and AA) on a temporary preview page with every data component, not committed | 0 violations: Arabic light, English light, Arabic dark |
 | QA's `checkTruth` over the rendered markup (unit test) | no violation, apart from one planted wrong-status badge, which it reports as T4 |
 

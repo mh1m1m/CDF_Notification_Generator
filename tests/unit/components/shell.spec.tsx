@@ -180,7 +180,7 @@ describe("WorkspaceSwitcher", () => {
         />,
       );
       const current = html.match(/<li[^>]*aria-current="true"[^>]*>.*?<\/li>/)?.[0] ?? "";
-      expect(current).toContain('data-testid="workspace-current"');
+      expect(current).toContain('data-testid="workspace-menu-current"');
       expect(current).toContain('data-workspace-code="GOVERNANCE"');
       expect(current).toMatch(/<svg[^>]*aria-hidden="true"/);
       expect(current).toContain(msg(l)["shell.workspace.current"]);
@@ -201,14 +201,52 @@ describe("WorkspaceSwitcher", () => {
     );
     expect(html).toContain('<input type="hidden" name="workspace" value="SECRETARIAT"/>');
     expect(html).toMatch(
-      /<button type="submit"[^>]*data-testid="workspace-option-SECRETARIAT" data-workspace-code="SECRETARIAT"/,
+      /<button type="submit"[^>]*data-testid="workspace-menu-option-SECRETARIAT" data-workspace-code="SECRETARIAT"/,
     );
-    expect(html).not.toContain("workspace-option-GOVERNANCE");
+    expect(html).not.toContain("workspace-menu-option-GOVERNANCE");
     expect(html).not.toContain("INVESTIGATIONS");
     expect(html).toContain(
-      '<a href="/workspaces" class="v13-menu-link" data-testid="workspace-all">All workspaces</a>',
+      '<a href="/workspaces" class="v13-menu-link" data-testid="workspace-menu-all">All workspaces</a>',
     );
   });
+
+  it("never reuses the /workspaces page's test ids inside the menu (QA #14)", () => {
+    const html = render(
+      <WorkspaceSwitcher
+        t={tr("en")}
+        current="GOVERNANCE"
+        options={options("en")}
+        action={noop}
+        pageHref="/workspaces"
+      />,
+    );
+    expect(html).not.toMatch(/data-testid="workspace-option-/);
+    expect(html).not.toContain('data-testid="workspace-current"');
+    expect(html).not.toContain('data-testid="workspace-all"');
+  });
+
+  it.each(LOCALES)(
+    "names each option by its visible text plus a hidden verb, with no aria-label override (%s)",
+    (l) => {
+      const html = render(
+        <WorkspaceSwitcher
+          t={tr(l)}
+          current="GOVERNANCE"
+          options={options(l)}
+          action={noop}
+          pageHref="/workspaces"
+        />,
+      );
+      const button = html.match(/<button type="submit"[^>]*>.*?<\/button>/)?.[0] ?? "";
+      const secretariat = options(l).find((o) => o.code === "SECRETARIAT")!;
+      expect(button).not.toContain("aria-label");
+      expect(button).toContain(
+        `<span class="v13-sr-only">${tr(l)("shell.workspace.switchTo", { name: secretariat.name })}</span>`,
+      );
+      // The visible name follows the hidden verb, so the accessible name contains the visible label (WCAG 2.5.3).
+      expect(button.indexOf("v13-sr-only")).toBeLessThan(button.indexOf(`<span>${secretariat.name}</span>`));
+    },
+  );
 
   it("shows plain text, no menu, with one membership", () => {
     const html = render(
@@ -391,6 +429,14 @@ describe("CaseWorkspace and CaseHeader (ADR-013 case evidence)", () => {
     ).toThrow(/display number/);
     expect(() => render(header("en", { caseId: "" }))).toThrow(/UUID/);
     expect(() => render(header("en", { caseRef: "" }))).toThrow(/display number/);
+  });
+
+  it("accepts only the contract's lowercase RFC 9562 UUID and synthetic CDF-DEMO-2026 display number", () => {
+    expect(() => render(header("en", { caseId: CASE_1.id.toUpperCase() }))).toThrow(/UUID/);
+    expect(() => render(header("en", { caseId: "6f1c2a40-0000-0000-0000-000000000001" }))).toThrow(/UUID/);
+    expect(() => render(header("en", { caseRef: "CDF-PROD-2026-0001" }))).toThrow(/display number/);
+    expect(() => render(header("en", { caseRef: "CDF-DEMO-2025-0001" }))).toThrow(/display number/);
+    expect(() => render(header("en", {}))).not.toThrow();
   });
 });
 
