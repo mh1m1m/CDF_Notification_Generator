@@ -8,6 +8,7 @@ import { getTranslator } from "@/lib/i18n/server";
 import { requireRequestContext } from "@/lib/server/context";
 import { isAppError } from "@/lib/server/errors";
 import {
+  assertCenterAccess,
   loadNotificationCenter,
   type NotificationCenterView as View,
 } from "@/lib/server/notification-center";
@@ -17,9 +18,15 @@ import { NotificationCenterView } from "./_components/NotificationCenterView";
 
 export const dynamic = "force-dynamic";
 
+/** For a persona the pre-check refuses, the title is the unknown route's own (D6: nothing tells the route exists). */
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getTranslator();
-  return { title: t("notifications.pageTitle") };
+  try {
+    assertCenterAccess(await requireRequestContext());
+    return { title: t("notifications.pageTitle") };
+  } catch {
+    return { title: t("common.notFound.title") };
+  }
 }
 
 export default async function NotificationsPage({
