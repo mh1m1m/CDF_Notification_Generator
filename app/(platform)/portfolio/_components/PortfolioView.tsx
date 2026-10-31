@@ -346,7 +346,6 @@ function Results({
                         <time
                           dateTime={c.last_event_at}
                           data-testid="portfolio-last-event"
-                          data-epistemic="recorded"
                           data-event-id={c.last_event_id}
                         >
                           {dateFormat(locale).format(new Date(c.last_event_at))}

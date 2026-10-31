@@ -276,12 +276,14 @@ describe("PortfolioView markup", async () => {
     expect(html).toContain('<bdi dir="ltr">CDF-DEMO-2026-0010</bdi>');
   });
 
-  it("last recorded event carries its event id and the recorded marker; own open tasks are counted", async () => {
+  it("last recorded event carries its event id; own open tasks are counted", async () => {
     const html = render("ar", await load(SECRETARY));
     expect(html).toMatch(
-      /<time dateTime="2026-10-11T09:00:00.000Z" data-testid="portfolio-last-event" data-epistemic="recorded" data-event-id="0e000000-0000-4000-8000-000000000001">[^<]*١١[^<]*<\/time>/,
+      /<time dateTime="2026-10-11T09:00:00.000Z" data-testid="portfolio-last-event" data-event-id="0e000000-0000-4000-8000-000000000001">[^<]*١١[^<]*<\/time>/,
     );
     expect(html).toMatch(/data-testid="portfolio-my-open-tasks" data-count="2">٢</);
+    // Not a status: no data-epistemic until the row carries the event's status kind and status (Inspector T2).
+    expect(html).not.toContain("data-epistemic");
     const beta = render("en", await load(INVESTIGATOR_BETA));
     expect(beta).toContain('data-testid="portfolio-no-event"');
     expect(beta).toContain("No recorded events yet");
