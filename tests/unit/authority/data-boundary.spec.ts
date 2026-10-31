@@ -7,7 +7,7 @@
 import { describe, test } from "vitest";
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
@@ -33,6 +33,21 @@ const importsOf = (text: string): string[] =>
       /(?:import|export)[^'"`]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"]([^'"]+)['"]\s*\)|require\(\s*['"]([^'"]+)['"]\s*\)/g,
     ),
   ].map((m) => (m[1] ?? m[2] ?? m[3]) as string);
+
+/** The repository path an import specifier points at (alias `@/` or relative), or null for a package import. */
+const targetOf = (fromRel: string, spec: string): string | null => {
+  if (spec.startsWith("@/")) return spec.slice(2);
+  if (spec.startsWith("./") || spec.startsWith("../"))
+    return rel(resolve(join(ROOT, dirname(fromRel)), spec));
+  return null;
+};
+/** ARCH 31 Oct, condition 1 for PROC-003: until PROC-005 lands with the full DIS suite, only these may import it. */
+const DISCLOSURE_IMPORTERS = /^lib\/(?:disclosure|notifications)\//;
+const disclosureImports = (fromRel: string, text: string): string[] =>
+  importsOf(text).filter((spec) => {
+    const t = targetOf(fromRel, spec);
+    return t !== null && /^lib\/disclosure(?:\/|$)/.test(t);
+  });
 
 /** data file → the one module allowed to import it */
 const OWNERS: Record<string, string> = {
@@ -103,5 +118,40 @@ describe("server-only data boundary (SEC, PR #3 item 2)", () => {
       "./authority_v13.json",
       "policy_v13.json",
     ]);
+  });
+
+  test("BND-05 nothing outside lib/disclosure and lib/notifications imports lib/disclosure (ARCH, until PROC-005)", () => {
+    const hits: string[] = [];
+    for (const p of sources()) {
+      const r = rel(p);
+      if (DISCLOSURE_IMPORTERS.test(r)) continue;
+      for (const spec of disclosureImports(r, readFileSync(p, "utf8"))) hits.push(`${r} → ${spec}`);
+    }
+    assert.deepEqual(hits, []);
+  });
+
+  test("BND-06 negative: the lib/disclosure import check sees the alias, relative paths and the bare directory", () => {
+    const text = [
+      'import { project } from "@/lib/disclosure";',
+      'import type { Projected } from "@/lib/disclosure/project";',
+      'export * from "../disclosure/project";',
+      'const m = await import("../../lib/disclosure");',
+      'import { x } from "@/lib/disclosures-other";',
+      'import { y } from "@/lib/domain";',
+      'import "server-only";',
+    ].join("\n");
+    assert.deepEqual(disclosureImports("lib/authority/check.ts", text), [
+      "@/lib/disclosure",
+      "@/lib/disclosure/project",
+      "../disclosure/project",
+      "../../lib/disclosure",
+    ]);
+    assert.deepEqual(disclosureImports("app/x/page.tsx", 'const m = await import("../../lib/disclosure");'), [
+      "../../lib/disclosure",
+    ]);
+    assert.ok(
+      !DISCLOSURE_IMPORTERS.test("app/x/page.tsx") &&
+        DISCLOSURE_IMPORTERS.test("lib/notifications/render/model.ts"),
+    );
   });
 });
