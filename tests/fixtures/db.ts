@@ -92,9 +92,11 @@ export function scenarioDb(): ScenarioDb {
         workspace_id: workspaceId,
         correlation_id: randomUUID(),
       });
-      // A read-only transaction that is always rolled back: the result leaves through the Rollback "error".
+      // A read-only transaction that is always rolled back: the result leaves through the Rollback "error". Repeatable
+      // read gives every statement inside `fn` the same snapshot, so a check across tables never sees a write that
+      // a parallel test committed between two of its statements.
       try {
-        await sql.begin("read only", async (tx) => {
+        await sql.begin("isolation level repeatable read read only", async (tx) => {
           const [row] = await tx<{ xid: string }[]>`select pg_catalog.pg_current_xact_id()::text as xid`;
           const mac = createHmac("sha256", key).update(`${claims}|${row!.xid}`, "utf8").digest("base64url");
           await tx`
