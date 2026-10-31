@@ -113,8 +113,14 @@ export default tseslint.config(
     rules: { "no-restricted-imports": ["error", { patterns: [NO_SUPABASE, NO_TESTS] }] },
   },
   {
-    // ... and the migration tooling and database test suites outside it.
-    files: ["scripts/db/**/*.mjs", "tests/integration/**/*.ts", "tests/security/db/**/*.ts"],
+    // ... and the migration tooling and database test suites outside it, plus QA's read-only scenario oracle (raw SQL
+    // stays banned there: it is not in the next block).
+    files: [
+      "scripts/db/**/*.mjs",
+      "tests/integration/**/*.ts",
+      "tests/security/db/**/*.ts",
+      "tests/fixtures/db.ts",
+    ],
     rules: { "no-restricted-imports": ["error", { patterns: [NO_SUPABASE] }] },
   },
   {
