@@ -44,7 +44,9 @@ The script was tested on a local copy built like your project, and all 16 checks
 1. Open **vercel.com**, then the project **cdf_notification_generator** → **Settings** → **Environment Variables**.
 2. Add the first variable:
    - **Key:** `V13_DATABASE_URL`
-   - **Value:** the first value from Supabase.
+   - **Value:** the first value from Supabase, exactly as shown. It ends in `?sslmode=require`; add nothing after
+     it. The database driver turns any further `?…` or `&…` part into a connection setting, which could change the
+     database or the login the app uses (SEC review of #36).
    - **Environments:** untick **Production** and **Development**; keep only **Preview**, and set its branch to
      `develop`.
    - Turn on **Sensitive**.

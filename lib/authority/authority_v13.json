@@ -1,0 +1,4822 @@
+{
+  "version": "AM-V13-draft-2026-10-27",
+  "status": "PROPOSED",
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Authored by W-F (V13 charter §6). PROPOSED ≠ APPROVED. No approved CDF governance document is present in the package (W8 §5); every action is OWNER_DECISION or SOURCE_REQUIRED.",
+  "capacities": [
+    "SECRETARY",
+    "ALTERNATE_SECRETARY",
+    "CHAIR",
+    "DEPUTY_CHAIR",
+    "MEMBER",
+    "COMMITTEE",
+    "INVESTIGATOR",
+    "LEGAL_REVIEWER",
+    "AUTHORITY",
+    "RESTRICTED_CASE_AUTHORITY",
+    "CONFLICT_AUTHORITY",
+    "GRIEVANCE_SECRETARY",
+    "GRIEVANCE_COMMITTEE",
+    "SUBJECT",
+    "WITNESS",
+    "EVIDENCE_HOLDER",
+    "REPORTER",
+    "REFERRING_BODY",
+    "COMPLIANCE_OFFICER",
+    "CASE_TEAM",
+    "EXPORT_REQUESTER",
+    "EXPORT_APPROVER",
+    "EXPORT_SECOND_APPROVER",
+    "IDENTITY_REVEAL_HOLDER",
+    "SYSTEM",
+    "AUDIT"
+  ],
+  "admin_capacities_never_case_actors": ["PLATFORM_ADMIN", "DB_ADMIN", "NOTIFICATION_ADMIN"],
+  "check_semantics": {
+    "signature": "check({action_id, actor:{capacity, seat_active, recused, delegation_active, acting_for?}, object:{events?, actor_relations?, approvals?, <object_conditions keys>}, purpose: EXECUTE|DRAFT, manual_operation?}) -> {result: ALLOWED|DENIED|SOURCE_REQUIRED, code, reason}",
+    "order": [
+      "1. unknown action_id -> SOURCE_REQUIRED (UNKNOWN_ACTION; effect DENIED)",
+      "2. no capacity -> DENIED; capacity in admin_capacities_never_case_actors -> DENIED (PROT-§21)",
+      "3. seat capacities (seat_capacities) need seat_active === true; any other capacity except SYSTEM is DENIED when seat_active === false (assignment ended)",
+      "4. actor.recused === true -> DENIED (a recused seat may only be 'informed' by non-content notices)",
+      "5. object.actor_relations intersects excluded_relations -> DENIED (IMPORTER, PREPARER, CONFLICT_RAISER, CONFLICT_SUBJECT, REQUESTER)",
+      "6. role: capacity in executor | decision_maker | approver (purpose DRAFT also accepts preparer); a delegate (delegation.to) counts only when delegation.allowed, actor.delegation_active === true and actor.acting_for is in delegation.acting_for and holds a role; else DENIED (INFORMED_ONLY or NO_ROLE)",
+      "7. governing_source.status SOURCE_REQUIRED (or DRAFT) -> SOURCE_REQUIRED; purpose DRAFT with manual_operation === true -> ALLOWED (code SOURCE_REQUIRED_DRAFT, label MANUAL_OPERATION)",
+      "8. conditional_source_required entry whose 'when' holds -> SOURCE_REQUIRED (same DRAFT exception)",
+      "9. purpose EXECUTE: every preconditions[].event_type recorded in object.events, else DENIED (PRECONDITION_MISSING)",
+      "10. purpose EXECUTE: an event in expires_on_events recorded -> DENIED (EXPIRED)",
+      "11. purpose EXECUTE: object_conditions + capacity_preconditions[capacity] must hold, else DENIED (OBJECT_CONDITION)",
+      "12. purpose EXECUTE: approval_required with approval.applies_to BEFORE_EXECUTION, or a conditional_approvals entry whose 'when' holds -> object.approvals must contain one of the approver capacities, else DENIED (APPROVAL_MISSING, PC-08)",
+      "13. otherwise ALLOWED"
+    ],
+    "seat_capacities": [
+      "SECRETARY",
+      "ALTERNATE_SECRETARY",
+      "CHAIR",
+      "DEPUTY_CHAIR",
+      "MEMBER",
+      "GRIEVANCE_SECRETARY"
+    ],
+    "when_syntax": "{all:[{key:'object.<k>'|'actor.<k>', in:[...]}]}; object_conditions use {key, equals|in|between, applies_when?}",
+    "fail_closed": "an object condition whose key is missing does not hold (DENIED); a conditional 'when' whose key is missing HOLDS unless a known value contradicts it, so the stricter path applies",
+    "outside_platform": "DECIDE has platform.status OUTSIDE_PLATFORM: check() answers whether the capacity holds the right (the next action of the competent authority); the act is performed on the signed artefact and enters the platform only through RECORD_AUTHORITY_DECISION",
+    "w_d2_alignment": "action ids SEND_MEETING_INVITATION, SEND_INFO_REQUEST, ACKNOWLEDGE_REFERRAL, REVIEW_MINUTES, SUBMIT_STATEMENT, FILE_GRIEVANCE, GIVE_WITNESS_STATEMENT, SUBMIT_EVIDENCE, VIEW_PUBLIC_STATUS match the consumer's provisional ids so that no provisional action or status is supplemented; steps 5, 8, 11 and 12 extend the consumer's order and are exercised by the AUT tests marked in 'tests' (reference_result computed by the generator's reference implementation)",
+    "parameters_source_required": "listed per action for review; they never change check() but mark values (periods, recipients, criteria) that have no source and must render as SOURCE_REQUIRED"
+  },
+  "separation": "administrative:true = coordination (scheduling, inviting, issuing, recording, dispatching); administrative:false = formal decision-making (opening/closing votes, adopting, approving, deciding, recusing, conflict decisions). Issuing a decision notice never equals the decision; recording an authority decision never equals deciding.",
+  "documents_missing": {
+    "DOA": "مصفوفة تفويض الصلاحيات (DoA) - absent (W8 §5 'also absent'); W8 #10 AAD.15 (approved IT procedures) only proves an approved authority matrix exists (W8-C39)",
+    "COMMITTEE_CHARTER": "W8 #3 مواثيق اللجان واختصاصاتها incl. ميثاق لجنة التحقيق AAD.22 - NOT PRESENT (chair/deputy/secretary roles, quorum, voting, casting vote, COI, minutes)",
+    "COMMITTEE_RULES": "W8 #3 (quorum, voting, minutes, agenda) and W8 #13 إجراءات قسم الحوكمة (secretariat duties, minutes, registers) - NOT PRESENT",
+    "DISCIPLINARY_REG": "W8 #12 اللائحة الإدارية (sanctions, defence rights and period) - NOT PRESENT",
+    "GRIEVANCE_PROC": "W8 #12 اللائحة الإدارية (grievance period and effect) - NOT PRESENT",
+    "WB_POLICY": "W8 #4 سياسة الإبلاغ عن المخالفات - NOT PRESENT (nearest: D2 requirements report, approval not stated)",
+    "INVESTIGATION_PROC": "W8 #14 إجراءات قسم الامتثال - NOT PRESENT as approved; only D1 draft 0.1 (unapproved)",
+    "REFERRAL_PROC": "W8 #7 سياسة الإفصاح والشفافية والتواصل (who may write to external bodies) and W8 #14 - NOT PRESENT",
+    "WITNESS_PROC": "W8 #14 إجراءات قسم الامتثال and W8 #3 (committee hearings) - NOT PRESENT",
+    "CONFLICT_POLICY": "W8 #5 سياسة تعارض المصالح (who decides a conflict, recusal) - NOT PRESENT",
+    "CORRESPONDENCE_STD": "W8 #7 سياسة الإفصاح والشفافية والتواصل, W8 #8 سياسة حوكمة البيانات, W8 #11 سياسة إدارة الوثائق والمحفوظات - NOT PRESENT",
+    "LEGAL_REFERRAL_PROC": "DoA (absent) and W8 #3 - the role that refers to legal review (CDF-241 option B pending the DoA)"
+  },
+  "sources": {
+    "Q24": "Owner Q24 (rebase REQUIREMENTS_TRACE_100QA.md): the committee secretary seat and alternate secretary handle secretariat work.",
+    "Q35": "Owner Q35: the secretary schedules committee meetings.",
+    "Q36": "Owner Q36: meeting logistics are coordinated by the secretariat.",
+    "Q37": "Owner Q37: the committee may hear the employee (not mandatory).",
+    "Q38": "Owner Q38: the committee may request witnesses.",
+    "Q39": "Owner Q39: the committee may request information/documents.",
+    "Q40": "Owner Q40: the committee may request specialist/legal input.",
+    "Q41": "Owner Q41: conflict declarations at meeting level.",
+    "Q47": "Owner Q47-Q49: conflict declaration and recusal handling.",
+    "Q51": "Owner Q51: voting at committee meetings.",
+    "Q57": "Owner Q57: tie-break / casting vote handling.",
+    "Q58": "Owner Q58: the committee adopts recommendations by vote; the chair votes like any member.",
+    "Q67": "Owner Q67: majority rule for adoption.",
+    "Q71": "Owner Q71: adopted recommendations go to the competent authority.",
+    "Q73": "Owner Q73-Q77: legal review is advisory; the opinion never adopts.",
+    "Q75": "Owner Q75: legal review is requested through the committee secretariat.",
+    "Q78": "Owner Q78-Q80: the competent authority decides; the decision may be taken outside the platform.",
+    "Q81": "Owner Q81-Q83: the authority decision is recorded in the platform from its source artefact.",
+    "Q90": "Owner Q90: the subject is notified of the attributed facts and may respond.",
+    "Q92": "Owner Q92-Q93: grievances are received and checked for admissibility.",
+    "Q94": "Owner Q94: grievance window starts from the effective notification.",
+    "Q97": "Owner Q97-Q98: minutes are approved by the attending members.",
+    "Q99": "Owner Q99: external sending always requires justification + classification check; a second approval can be required by configured rules.",
+    "DEC-F01": "DEC-F01: committee decisions by majority of the members present; formal vote rules.",
+    "DEC-F03": "DEC-F03: the deputy chair acts for the chair only when activated.",
+    "DEC-F04": "DEC-F04 / ADR-040 §4: conflict-concern decider cascade chair -> deputy -> independent conflict authority; never the raiser or the subject.",
+    "DEC-F12": "DEC-F12: legal review requests are purpose-bound packets.",
+    "DEC-F13": "DEC-F13: competent authority by action type; configured in the platform.",
+    "DEC-F14": "DEC-F14: grievance window default 30 days, configurable.",
+    "DEC-F15": "DEC-F15: the grievance clock starts at effective delivery, not issuance.",
+    "DEC-F16": "DEC-F16: grievance window events recorded.",
+    "DEC-F17": "DEC-F17: grievance admissibility decided by the grievance committee by default.",
+    "DEC-F18": "DEC-F18: defence response period configurable; duration SOURCE_REQUIRED.",
+    "DEC-F19": "DEC-F19: restricted case referred only after Restricted Case Authority approval; cleared seats snapshot.",
+    "DEC-F20": "DEC-F20: legal review on a restricted case needs RCA approval per request.",
+    "DEC-F21": "DEC-F21-F24: export controls (justification, second approver, RCA for restricted external exports; domains SOURCE_REQUIRED).",
+    "DEC-F23": "DEC-F23: restricted-case external export needs RCA approval; fail closed.",
+    "DEC-F36": "DEC-F36: notification dispatch by the platform service; delivery evidence recorded.",
+    "DEC-F38": "DEC-F38: an upheld conflict suspends case-content access for the affected purpose.",
+    "DEC-F39": "DEC-F39: closure prerequisites recorded.",
+    "DEC-F40": "DEC-F40: case closure per the closure rule.",
+    "DEC-AMB-005": "DEC-AMB-005 -> option B (restricted-case handling).",
+    "DEC-AMB-006": "DEC-AMB-006 (subject statement request handling).",
+    "DEC-AMB-012": "DEC-AMB-012 -> option C (restricted-case request routing).",
+    "DEC-24": "DEC-24 OPEN (D11-015): reporter channel = portal only (status quo).",
+    "DEC-06": "DEC-06 / ADR-016 D4: reporter public statuses on the portal.",
+    "AMB-201": "AMB-201 (owner, 2026-10-17; ADR-061 §4): the Chair approves the committee record; each member attests; the secretary never approves or attests.",
+    "OWNER-2026-10-18": "Owner decision 2026-10-18 (ADR-061 §5, migration 2115): the secretary (importer) activates the acting chair with basis, reason and period; the chair may end it before approval (veto).",
+    "CDF-241": "CDF-241 / AMB-113 option B: the Committee Secretary is the sole legal-referral caller - SOURCE_REQUIRED until the DoA names the role.",
+    "CDF-246": "CDF-246 / AMB-146 option A: closure finality = no open or pending reconsideration, grievance or proceeding.",
+    "PROT-§21": "Protocol §21: PLATFORM_ADMIN / DB_ADMIN never imply case-content access.",
+    "PROT-§22": "Protocol §22: reporter identity only via api.resolve_reporter_identity (permission + case access + justification + audit).",
+    "PROT-§39": "Protocol §39: notifications carry no investigation content.",
+    "ADR-004": "ADR-004: protected identity model.",
+    "ADR-020": "ADR-020: meetings, invitations, attendance, conflict per meeting, vote secrecy; authz.can_manage_meeting = secretary.",
+    "ADR-025": "ADR-025 (Proposed) + migration 1920: notification engine; outbox immutable; case gate; claim/record granted to cdf_bff.",
+    "ADR-026": "ADR-026 / ADR-032: export controls.",
+    "ADR-031": "ADR-031: authority submission packets.",
+    "ADR-037": "ADR-037: decision notice issuance (api.issue_decision_notice).",
+    "ADR-038": "ADR-038 (engineering): SECRETARY as a conflict-decider option.",
+    "ADR-040": "ADR-040 §4: conflict concern cascade.",
+    "ADR-048": "ADR-048: paper ballots recorded by the secretary.",
+    "ADR-061": "ADR-061 (origin/main, migration 2115): committee workbook official record; chair approval; member attestation; R9/E6.",
+    "AMB-061": "AMB-061: minimum meeting notice period - open.",
+    "AMB-079": "AMB-079: procedural (non-formal) votes - open.",
+    "D11-012": "D11-012 OPEN: referral bodies, acknowledgement channel, address source.",
+    "D11-013": "D11-013 OPEN: chair direction recording.",
+    "D11-014": "D11-014 OPEN: information requests to external parties.",
+    "D11-022": "D11-022 OPEN: four-eyes for manual notices (proposal, not adopted).",
+    "D11-024": "D11-024 OPEN: notification provenance / correction standard.",
+    "D11-033": "D11-033 OPEN: rescheduling/cancellation notice rules.",
+    "D11-034": "D11-034 OPEN: adoption-notice recipients.",
+    "D11-036": "D11-036 OPEN: DoA content for the competent authority.",
+    "D11-037": "D11-037 OPEN: restricted-case request handling.",
+    "D11-039": "D11-039 OPEN: grievance regulation absent.",
+    "D11-047": "D11-047 GAP-02 restricted-case requests.",
+    "D11-049": "D11-049 GAP-05 grievance receipt.",
+    "D11-050": "D11-050 GAP-07 authority decision recording evidence.",
+    "D11-061": "D11-061: committee record approval rule.",
+    "D11-062": "D11-062 OPEN: witness notice handling.",
+    "D11-067": "D11-067: grievance admissibility conditional rule.",
+    "D11-068": "D11-068 OPEN: meeting notice period.",
+    "D11-069": "D11-069 OPEN: minutes review reminder.",
+    "D11-072": "D11-072 OPEN: witness summons channel and wording.",
+    "W8-C04": "W8-C04: meeting scheduling by the secretariat.",
+    "W8-C10": "W8-C10: referring body acknowledgement - NO SOURCE.",
+    "W8-C12": "W8-C12: reporter portal status updates (D2 requirements report).",
+    "W8-C18": "W8-C18: chair direction / chair approval of vote opening - NO SOURCE.",
+    "W8-C19": "W8-C19: procedural votes - NO SOURCE.",
+    "W8-C24": "W8-C24/C25: subject statement request wording - DRAFT-ONLY (D1 draft 0.1).",
+    "W8-C33": "W8-C33: chair-first minutes review - NO SOURCE.",
+    "W8-C35": "W8-C35: meeting rescheduling rules - NO SOURCE.",
+    "W8-C37": "W8-C37: adoption notice recipients - NO SOURCE.",
+    "W8-C50": "W8-C50: witness summons / confidentiality reminder / acknowledgement - NO SOURCE.",
+    "W8-C52": "W8-C52: information requests to external parties - NO SOURCE.",
+    "W8-C51": "W8-C51: evidence request to the holder with receipt confirmation - NO SOURCE.",
+    "F-W2-12": "W2 finding F-W2-12: deemed minutes approval only if enabled.",
+    "F-W2-13": "W2 finding F-W2-13: rescheduling not modelled.",
+    "MF-002": "D6 MF-002: chair direction shown as completed without a record.",
+    "N6": "AUTHORIZATION_IMPACT N6: the secretary records only ABSENT/UNABLE_TO_VOTE/RECUSED for another member.",
+    "N15": "AUTHORIZATION_IMPACT N15: authority decisions recorded from the source artefact.",
+    "PC-11": "Charter PC-11: a notification never establishes closure.",
+    "PC-12": "Charter PC-12: a legal opinion is never adoption.",
+    "PC-16": "Charter PC-16: delivery is never acknowledgement.",
+    "SOURCE_REQUIRED": "No approved source; fails closed until the named document or owner decision exists."
+  },
+  "tests": [
+    {
+      "id": "AUT-01",
+      "action": "OPEN_FORMAL_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_SCHEDULED"
+          },
+          {
+            "type": "MEETING_OPENED"
+          }
+        ]
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-02",
+      "action": "OPEN_FORMAL_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_OPENED"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "the chair is not the executor; no source requires chair approval to open a vote",
+      "reference_result": "DENIED",
+      "reference_code": "INFORMED_ONLY"
+    },
+    {
+      "id": "AUT-03",
+      "action": "OPEN_FORMAL_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": true,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_OPENED"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "recused",
+      "reference_result": "DENIED",
+      "reference_code": "RECUSED"
+    },
+    {
+      "id": "AUT-04",
+      "action": "OPEN_FORMAL_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": false,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_OPENED"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "seat inactive",
+      "reference_result": "DENIED",
+      "reference_code": "SEAT_INACTIVE"
+    },
+    {
+      "id": "AUT-05",
+      "action": "OPEN_FORMAL_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_SCHEDULED"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "meeting not opened (PC-02 source event missing)",
+      "reference_result": "DENIED",
+      "reference_code": "PRECONDITION_MISSING"
+    },
+    {
+      "id": "AUT-06",
+      "action": "OPEN_FORMAL_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_OPENED"
+          },
+          {
+            "type": "MEETING_CLOSED"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "expired: meeting closed",
+      "reference_result": "DENIED",
+      "reference_code": "EXPIRED"
+    },
+    {
+      "id": "AUT-07",
+      "action": "APPROVE_COMMITTEE_RECORD",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "DENIED",
+      "why": "the secretary never approves (AMB-201)",
+      "reference_result": "DENIED",
+      "reference_code": "INFORMED_ONLY"
+    },
+    {
+      "id": "AUT-08",
+      "action": "APPROVE_COMMITTEE_RECORD",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-09",
+      "action": "APPROVE_COMMITTEE_RECORD",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "DEPUTY_CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": true,
+        "acting_for": "CHAIR"
+      },
+      "object": {},
+      "expect": "ALLOWED",
+      "why": "activated acting chair",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-10",
+      "action": "APPROVE_COMMITTEE_RECORD",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "DEPUTY_CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "DENIED",
+      "why": "deputy not activated",
+      "reference_result": "DENIED",
+      "reference_code": "NO_ROLE"
+    },
+    {
+      "id": "AUT-11",
+      "action": "APPROVE_COMMITTEE_RECORD",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "actor_relations": ["IMPORTER"]
+      },
+      "expect": "DENIED",
+      "why": "the importer never approves",
+      "reference_result": "DENIED",
+      "reference_code": "EXCLUDED_RELATION"
+    },
+    {
+      "id": "AUT-12",
+      "action": "ATTEST_COMMITTEE_RECORD",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "DENIED",
+      "why": "secretary seat NOT_REQUIRED; never attests",
+      "reference_result": "DENIED",
+      "reference_code": "INFORMED_ONLY"
+    },
+    {
+      "id": "AUT-13",
+      "action": "ATTEST_COMMITTEE_RECORD",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "MEMBER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-14",
+      "action": "ACTIVATE_ACTING_CHAIR",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-15",
+      "action": "END_ACTING_CHAIR_ACTIVATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-16",
+      "action": "END_ACTING_CHAIR_ACTIVATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "actor_relations": ["CONFLICT_SUBJECT"]
+      },
+      "expect": "DENIED",
+      "why": "R9",
+      "reference_result": "DENIED",
+      "reference_code": "EXCLUDED_RELATION"
+    },
+    {
+      "id": "AUT-17",
+      "action": "DECIDE_CONFLICT_CONCERN",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "actor_relations": ["CONFLICT_RAISER"]
+      },
+      "expect": "DENIED",
+      "why": "never the raiser",
+      "reference_result": "DENIED",
+      "reference_code": "EXCLUDED_RELATION"
+    },
+    {
+      "id": "AUT-18",
+      "action": "DECIDE_CONFLICT_CONCERN",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "actor_relations": ["CONFLICT_SUBJECT"]
+      },
+      "expect": "DENIED",
+      "why": "never the subject",
+      "reference_result": "DENIED",
+      "reference_code": "EXCLUDED_RELATION"
+    },
+    {
+      "id": "AUT-19",
+      "action": "DECIDE_CONFLICT_CONCERN",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-20",
+      "action": "DECIDE_CONFLICT_CONCERN",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "DEPUTY_CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "chair_excluded": true
+      },
+      "expect": "ALLOWED",
+      "why": "cascade reached the deputy",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-21",
+      "action": "DECIDE_CONFLICT_CONCERN",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "DEPUTY_CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "chair_excluded": false
+      },
+      "expect": "DENIED",
+      "why": "chair not excluded",
+      "reference_result": "DENIED",
+      "reference_code": "OBJECT_CONDITION"
+    },
+    {
+      "id": "AUT-22",
+      "action": "DECIDE_CONFLICT_CONCERN",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CONFLICT_AUTHORITY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "chair_excluded": true,
+        "deputy_excluded": true
+      },
+      "expect": "SOURCE_REQUIRED",
+      "why": "conflict authority not named by an APPROVED source",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "CONDITIONAL_SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-23",
+      "action": "DECIDE_CONFLICT_CONCERN",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "DENIED",
+      "why": "ADR-038 secretary option not adopted",
+      "reference_result": "DENIED",
+      "reference_code": "INFORMED_ONLY"
+    },
+    {
+      "id": "AUT-24",
+      "action": "REQUEST_LEGAL_REVIEW",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_classification": "INTERNAL"
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-25",
+      "action": "REQUEST_LEGAL_REVIEW",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CHAIR",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_classification": "INTERNAL"
+      },
+      "expect": "DENIED",
+      "why": "CDF-241: the secretary is the sole caller",
+      "reference_result": "DENIED",
+      "reference_code": "INFORMED_ONLY"
+    },
+    {
+      "id": "AUT-26",
+      "action": "REQUEST_LEGAL_REVIEW",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_classification": "RESTRICTED",
+        "approvals": []
+      },
+      "expect": "DENIED",
+      "why": "RCA approval missing (DEC-F20, PC-08)",
+      "reference_result": "DENIED",
+      "reference_code": "APPROVAL_MISSING"
+    },
+    {
+      "id": "AUT-27",
+      "action": "REQUEST_LEGAL_REVIEW",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_classification": "RESTRICTED",
+        "approvals": ["RESTRICTED_CASE_AUTHORITY"]
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-28",
+      "action": "GIVE_LEGAL_OPINION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "LEGAL_REVIEWER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "LEGAL_REVIEW_REQUESTED"
+          }
+        ]
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-29",
+      "action": "DECIDE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "PACKAGE_SUBMITTED_TO_AUTHORITY"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "only the competent authority decides",
+      "reference_result": "DENIED",
+      "reference_code": "INFORMED_ONLY"
+    },
+    {
+      "id": "AUT-30",
+      "action": "DECIDE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "AUTHORITY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "PACKAGE_SUBMITTED_TO_AUTHORITY"
+          }
+        ]
+      },
+      "expect": "ALLOWED",
+      "why": "the authority holds the right; the act is performed outside the platform",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-31",
+      "action": "ISSUE_DECISION_NOTICE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "PACKAGE_SUBMITTED_TO_AUTHORITY"
+          }
+        ],
+        "decision_final": true
+      },
+      "expect": "DENIED",
+      "why": "no recorded decision; a notice is not a decision",
+      "reference_result": "DENIED",
+      "reference_code": "PRECONDITION_MISSING"
+    },
+    {
+      "id": "AUT-32",
+      "action": "ISSUE_DECISION_NOTICE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "AUTHORITY_DECISION_RECORDED"
+          }
+        ],
+        "decision_final": false
+      },
+      "expect": "DENIED",
+      "why": "RETURN_TO_COMMITTEE is not final",
+      "reference_result": "DENIED",
+      "reference_code": "OBJECT_CONDITION"
+    },
+    {
+      "id": "AUT-33",
+      "action": "ISSUE_DECISION_NOTICE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "AUTHORITY_DECISION_RECORDED"
+          },
+          {
+            "type": "DECISION_NOTICE_ISSUED"
+          }
+        ],
+        "decision_final": true
+      },
+      "expect": "DENIED",
+      "why": "ALREADY_NOTIFIED",
+      "reference_result": "DENIED",
+      "reference_code": "EXPIRED"
+    },
+    {
+      "id": "AUT-34",
+      "action": "ISSUE_DECISION_NOTICE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "AUTHORITY_DECISION_RECORDED"
+          }
+        ],
+        "decision_final": true
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-35",
+      "action": "SEND_WITNESS_NOTICE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_SCHEDULED"
+          }
+        ]
+      },
+      "expect": "SOURCE_REQUIRED",
+      "why": "execution blocked",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-36",
+      "action": "SEND_WITNESS_NOTICE",
+      "purpose": "DRAFT",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_SCHEDULED"
+          }
+        ]
+      },
+      "expect": "ALLOWED",
+      "manual_operation": true,
+      "why": "drafting only under manual_operation",
+      "reference_result": "ALLOWED",
+      "reference_code": "SOURCE_REQUIRED_DRAFT"
+    },
+    {
+      "id": "AUT-37",
+      "action": "SEND_WITNESS_NOTICE",
+      "purpose": "DRAFT",
+      "actor": {
+        "capacity": "WITNESS",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "DENIED",
+      "manual_operation": true,
+      "why": "informed only",
+      "reference_result": "DENIED",
+      "reference_code": "INFORMED_ONLY"
+    },
+    {
+      "id": "AUT-38",
+      "action": "ACKNOWLEDGE_REFERRAL",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "REFERRAL_RECEIVED"
+          }
+        ]
+      },
+      "expect": "SOURCE_REQUIRED",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-39",
+      "action": "RECORD_CHAIR_DIRECTION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "SOURCE_REQUIRED",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-40",
+      "action": "RESCHEDULE_MEETING",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_SCHEDULED"
+          }
+        ]
+      },
+      "expect": "SOURCE_REQUIRED",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-41",
+      "action": "CORRECT_NOTIFICATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "NOTIFICATION_SENT"
+          }
+        ]
+      },
+      "expect": "SOURCE_REQUIRED",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-42",
+      "action": "RESOLVE_REPORTER_IDENTITY",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "PLATFORM_ADMIN",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_access": true,
+        "justification_length": 40
+      },
+      "expect": "DENIED",
+      "why": "§21",
+      "reference_result": "DENIED",
+      "reference_code": "ADMIN_NEVER_CASE_ACTOR"
+    },
+    {
+      "id": "AUT-43",
+      "action": "RESOLVE_REPORTER_IDENTITY",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "IDENTITY_REVEAL_HOLDER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_access": true,
+        "justification_length": 40
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-44",
+      "action": "RESOLVE_REPORTER_IDENTITY",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "IDENTITY_REVEAL_HOLDER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_access": true,
+        "justification_length": 10
+      },
+      "expect": "DENIED",
+      "why": "justification shorter than 20 characters",
+      "reference_result": "DENIED",
+      "reference_code": "OBJECT_CONDITION"
+    },
+    {
+      "id": "AUT-45",
+      "action": "UNKNOWN_ACTION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "SOURCE_REQUIRED",
+      "why": "unknown action: no source, fail closed",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "UNKNOWN_ACTION"
+    },
+    {
+      "id": "AUT-46",
+      "action": "SEND_REPORTER_PORTAL_UPDATE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "COMPLIANCE_OFFICER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "channel": "EMAIL"
+      },
+      "expect": "SOURCE_REQUIRED",
+      "why": "DEC-24: no e-mail to the reporter",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "CONDITIONAL_SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-47",
+      "action": "SEND_REPORTER_PORTAL_UPDATE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "COMPLIANCE_OFFICER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "channel": "PORTAL"
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-48",
+      "action": "CAST_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "MEMBER",
+        "seat_active": true,
+        "recused": true,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "BALLOT_OPENED"
+          }
+        ],
+        "own_vote": true
+      },
+      "expect": "DENIED",
+      "why": "recused",
+      "reference_result": "DENIED",
+      "reference_code": "RECUSED"
+    },
+    {
+      "id": "AUT-49",
+      "action": "CAST_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "MEMBER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "BALLOT_OPENED"
+          }
+        ],
+        "own_vote": true
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-50",
+      "action": "CAST_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "MEMBER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "BALLOT_OPENED"
+          },
+          {
+            "type": "BALLOT_CLOSED"
+          }
+        ],
+        "own_vote": true
+      },
+      "expect": "DENIED",
+      "why": "vote closed",
+      "reference_result": "DENIED",
+      "reference_code": "EXPIRED"
+    },
+    {
+      "id": "AUT-51",
+      "action": "CAST_CASTING_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "BALLOT_OPENED"
+          }
+        ],
+        "vote_result": "TIE"
+      },
+      "expect": "DENIED",
+      "why": "never the secretary",
+      "reference_result": "DENIED",
+      "reference_code": "INFORMED_ONLY"
+    },
+    {
+      "id": "AUT-52",
+      "action": "CLOSE_VOTE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "BALLOT_OPENED"
+          }
+        ],
+        "quorum": "NOT_MET"
+      },
+      "expect": "DENIED",
+      "why": "quorum",
+      "reference_result": "DENIED",
+      "reference_code": "OBJECT_CONDITION"
+    },
+    {
+      "id": "AUT-53",
+      "action": "CLOSE_CASE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "CASE_TEAM",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "open_or_pending_reconsideration_grievance_or_proceeding": true
+      },
+      "expect": "DENIED",
+      "why": "CDF-246",
+      "reference_result": "DENIED",
+      "reference_code": "OBJECT_CONDITION"
+    },
+    {
+      "id": "AUT-54",
+      "action": "EXPORT_CASE_MATERIAL",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "EXPORT_REQUESTER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_classification": "INTERNAL",
+        "delivery_context": "INTERNAL",
+        "approvals": []
+      },
+      "expect": "DENIED",
+      "why": "approval missing (PC-08)",
+      "reference_result": "DENIED",
+      "reference_code": "APPROVAL_MISSING"
+    },
+    {
+      "id": "AUT-55",
+      "action": "EXPORT_CASE_MATERIAL",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "EXPORT_REQUESTER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_classification": "RESTRICTED",
+        "delivery_context": "INTERNAL",
+        "approvals": ["EXPORT_APPROVER"]
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-56",
+      "action": "EXPORT_CASE_MATERIAL",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "EXPORT_REQUESTER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "case_classification": "RESTRICTED",
+        "delivery_context": "EXTERNAL",
+        "approvals": ["EXPORT_APPROVER", "RESTRICTED_CASE_AUTHORITY"]
+      },
+      "expect": "SOURCE_REQUIRED",
+      "why": "approved external domains SOURCE_REQUIRED",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "CONDITIONAL_SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-57",
+      "action": "AUTHORIZE_NOTIFICATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "NOTIFICATION_VALIDATED"
+          }
+        ],
+        "origin": "MANUAL",
+        "delivery_context": "INTERNAL"
+      },
+      "expect": "SOURCE_REQUIRED",
+      "why": "manual composer notice (D11-022)",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "CONDITIONAL_SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-58",
+      "action": "AUTHORIZE_NOTIFICATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SYSTEM",
+        "seat_active": null,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "NOTIFICATION_VALIDATED"
+          }
+        ],
+        "origin": "DOMAIN_COMMAND",
+        "delivery_context": "INTERNAL"
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-59",
+      "action": "SEND_MEETING_INVITATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_SCHEDULED"
+          }
+        ],
+        "case_gate": "PASSED",
+        "invitee_capacity": "WITNESS",
+        "delivery_context": "EXTERNAL"
+      },
+      "expect": "SOURCE_REQUIRED",
+      "why": "external witness summons has no source",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "CONDITIONAL_SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-60",
+      "action": "SEND_MEETING_INVITATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_SCHEDULED"
+          }
+        ],
+        "case_gate": "PASSED",
+        "invitee_capacity": "MEMBER",
+        "delivery_context": "INTERNAL"
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-61",
+      "action": "SEND_MEETING_INVITATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_SCHEDULED"
+          }
+        ],
+        "case_gate": "FAILED",
+        "invitee_capacity": "MEMBER",
+        "delivery_context": "INTERNAL"
+      },
+      "expect": "DENIED",
+      "why": "restricted case gate (DEC-F19)",
+      "reference_result": "DENIED",
+      "reference_code": "OBJECT_CONDITION"
+    },
+    {
+      "id": "AUT-62",
+      "action": "DISPATCH_NOTIFICATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "DB_ADMIN",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "NOTIFICATION_QUEUED"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "§21",
+      "reference_result": "DENIED",
+      "reference_code": "ADMIN_NEVER_CASE_ACTOR"
+    },
+    {
+      "id": "AUT-63",
+      "action": "SUBMIT_STATEMENT",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SUBJECT",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "STATEMENT_REQUESTED"
+          }
+        ]
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-64",
+      "action": "SUBMIT_STATEMENT",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SUBJECT",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "STATEMENT_REQUESTED"
+          },
+          {
+            "type": "STATEMENT_RECEIVED"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "already received",
+      "reference_result": "DENIED",
+      "reference_code": "EXPIRED"
+    },
+    {
+      "id": "AUT-65",
+      "action": "FILE_GRIEVANCE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SUBJECT",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "DECISION_NOTICE_ISSUED"
+          }
+        ]
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-66",
+      "action": "GIVE_WITNESS_STATEMENT",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "WITNESS",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MEETING_SCHEDULED"
+          }
+        ]
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-67",
+      "action": "SUBMIT_EVIDENCE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "EVIDENCE_HOLDER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "INFO_REQUEST_SENT"
+          }
+        ],
+        "delivery_context": "INTERNAL"
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-68",
+      "action": "SUBMIT_EVIDENCE",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "EVIDENCE_HOLDER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "INFO_REQUEST_SENT"
+          }
+        ],
+        "delivery_context": "EXTERNAL"
+      },
+      "expect": "SOURCE_REQUIRED",
+      "why": "external information requests have no source",
+      "reference_result": "SOURCE_REQUIRED",
+      "reference_code": "CONDITIONAL_SOURCE_REQUIRED"
+    },
+    {
+      "id": "AUT-69",
+      "action": "VIEW_PUBLIC_STATUS",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "REPORTER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {},
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-70",
+      "action": "REVIEW_MINUTES",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MINUTES_UNDER_REVIEW"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "the preparer does not approve minutes",
+      "reference_result": "DENIED",
+      "reference_code": "INFORMED_ONLY"
+    },
+    {
+      "id": "AUT-71",
+      "action": "REVIEW_MINUTES",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "MEMBER",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "MINUTES_UNDER_REVIEW"
+          }
+        ]
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-72",
+      "action": "ADOPT_RECOMMENDATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "BALLOT_OPENED"
+          },
+          {
+            "type": "BALLOT_CLOSED"
+          }
+        ],
+        "vote_result": "ADOPTED"
+      },
+      "expect": "ALLOWED",
+      "reference_result": "ALLOWED",
+      "reference_code": "ALLOWED"
+    },
+    {
+      "id": "AUT-73",
+      "action": "ADOPT_RECOMMENDATION",
+      "purpose": "EXECUTE",
+      "actor": {
+        "capacity": "SECRETARY",
+        "seat_active": true,
+        "recused": false,
+        "delegation_active": false
+      },
+      "object": {
+        "events": [
+          {
+            "type": "BALLOT_OPENED"
+          }
+        ]
+      },
+      "expect": "DENIED",
+      "why": "ballot not closed (PC-04)",
+      "reference_result": "DENIED",
+      "reference_code": "PRECONDITION_MISSING"
+    }
+  ],
+  "counts": {
+    "actions": 45,
+    "by_governing_source_status": {
+      "OWNER_DECISION": 39,
+      "SOURCE_REQUIRED": 6
+    },
+    "administrative": 18,
+    "formal": 27,
+    "approval_existing": [
+      "REVIEW_MINUTES",
+      "APPROVE_COMMITTEE_RECORD",
+      "EXPORT_CASE_MATERIAL",
+      "APPROVE_RESTRICTED_CASE_REQUEST"
+    ],
+    "approval_new": []
+  },
+  "actions": [
+    {
+      "action_id": "SCHEDULE_MEETING",
+      "ar": "جدولة اجتماع اللجنة",
+      "en": "Schedule a committee meeting",
+      "administrative": true,
+      "category": "MEETING",
+      "governing_source": {
+        "ref": "Owner answers Q35/Q36/Q24 (rebase REQUIREMENTS_TRACE_100QA.md); W8-C04",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q35", "Q36", "Q24", "W8-C04", "ADR-020"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "MEETING_SCHEDULED audit event by the executor (api.schedule_meeting)",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "until the meeting is held or cancelled",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [
+        {
+          "parameter": "minimum notice period before the meeting",
+          "reason": "no source for a notice period",
+          "decision_ids": ["AMB-061", "D11-068"]
+        }
+      ],
+      "platform": {
+        "command": "api.schedule_meeting",
+        "status": "BUILT",
+        "ref": "ADR-020; authz.can_manage_meeting"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["COMMITTEE_RULES"],
+      "label": "INFERENCE",
+      "note": ""
+    },
+    {
+      "action_id": "SEND_MEETING_INVITATION",
+      "ar": "إصدار دعوة الاجتماع",
+      "en": "Issue a meeting invitation",
+      "administrative": true,
+      "category": "MEETING",
+      "governing_source": {
+        "ref": "Owner answers Q35/Q37/Q38/Q41; ADR-020 invitees; ADR-025 case gate",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q35", "Q37", "Q38", "Q41", "ADR-020", "ADR-025", "DEC-F19"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER", "SUBJECT", "WITNESS", "EVIDENCE_HOLDER", "LEGAL_REVIEWER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [
+        {
+          "condition": "invitation to a WITNESS delivered outside CDF",
+          "when": {
+            "all": [
+              {
+                "key": "object.invitee_capacity",
+                "in": ["WITNESS"]
+              },
+              {
+                "key": "object.delivery_context",
+                "in": ["EXTERNAL"]
+              }
+            ]
+          },
+          "reason": "witness summons wording/channel has no source (SEND_WITNESS_NOTICE)",
+          "decision_ids": ["W8-C50", "D11-072"]
+        }
+      ],
+      "evidence_required": "MEETING_INVITATION outbox row + invitation audit event (api.invite_to_meeting)",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed; an excluded witness receives no logistics (DEC-F07)",
+      "excluded_relations": [],
+      "expiry": "meeting held or cancelled",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MEETING_SCHEDULED"
+        }
+      ],
+      "expires_on_events": ["MEETING_CANCELLED", "MEETING_CLOSED"],
+      "object_conditions": [
+        {
+          "key": "case_gate",
+          "equals": "PASSED",
+          "why": "restricted case: invitee on the approved access list (DEC-F19)"
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.invite_to_meeting",
+        "status": "BUILT",
+        "ref": "ADR-020"
+      },
+      "notification_templates": ["MEETING_INVITATION"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": "Sending an invitation is administrative coordination; it never establishes that the meeting took place (PC-13)."
+    },
+    {
+      "action_id": "RESCHEDULE_MEETING",
+      "ar": "إعادة جدولة الاجتماع",
+      "en": "Reschedule a meeting",
+      "administrative": true,
+      "category": "MEETING",
+      "governing_source": {
+        "ref": "No source for rescheduling rules (W8-C35); D11-033 OPEN",
+        "status": "SOURCE_REQUIRED",
+        "decision_ids": ["W8-C35", "D11-033", "F-W2-13", "SOURCE_REQUIRED"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "would be: MEETING_RESCHEDULED event (no platform command)",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MEETING_SCHEDULED"
+        }
+      ],
+      "expires_on_events": ["MEETING_OPENED", "MEETING_CANCELLED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": null,
+        "status": "NOT_BUILT",
+        "ref": "no reschedule command; cancel + schedule is the platform path"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": "Draft only: the secretary may draft a cancellation + new schedule; label MANUAL_OPERATION - SOURCE_REQUIRED (W8-C35)",
+      "documents_missing": ["COMMITTEE_RULES"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "CANCEL_MEETING",
+      "ar": "إلغاء الاجتماع",
+      "en": "Cancel a meeting",
+      "administrative": true,
+      "category": "MEETING",
+      "governing_source": {
+        "ref": "Owner answers Q35/Q36 (secretariat runs meetings); ADR-020; ADR-025 N2",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q35", "Q36", "ADR-020", "ADR-025", "D11-033"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER", "SUBJECT", "WITNESS"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "MEETING_CANCELLED outbox rows to non-conflicted participants only (ADR-025 N2) + audit",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MEETING_SCHEDULED"
+        }
+      ],
+      "expires_on_events": ["MEETING_OPENED", "MEETING_CANCELLED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [
+        {
+          "parameter": "notice wording/recipients beyond N2",
+          "reason": "rescheduling/cancellation rules have no source",
+          "decision_ids": ["D11-033"]
+        }
+      ],
+      "platform": {
+        "command": "api.cancel_meeting (UNVERIFIED name)",
+        "status": "BUILT",
+        "ref": "ADR-025 N2; template MEETING_CANCELLED"
+      },
+      "notification_templates": ["MEETING_CANCELLED"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "INFERENCE",
+      "note": ""
+    },
+    {
+      "action_id": "OPEN_MEETING",
+      "ar": "افتتاح الاجتماع",
+      "en": "Open a meeting",
+      "administrative": true,
+      "category": "MEETING",
+      "governing_source": {
+        "ref": "Owner answers Q35/Q51; ADR-020 meeting states",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q35", "Q51", "ADR-020"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "MEETING_OPENED audit event; attendance recorded (api.record_attendance)",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "meeting closed",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MEETING_SCHEDULED"
+        }
+      ],
+      "expires_on_events": ["MEETING_OPENED", "MEETING_CANCELLED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [
+        {
+          "parameter": "quorum threshold",
+          "reason": "committee rules absent; the platform's configured quorum applies",
+          "decision_ids": ["DEC-F01"]
+        }
+      ],
+      "platform": {
+        "command": "api.record_attendance / meeting state (UNVERIFIED command name)",
+        "status": "BUILT",
+        "ref": "ADR-020"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["COMMITTEE_RULES"],
+      "label": "INFERENCE",
+      "note": ""
+    },
+    {
+      "action_id": "CLOSE_MEETING",
+      "ar": "اختتام الاجتماع",
+      "en": "Close a meeting",
+      "administrative": true,
+      "category": "MEETING",
+      "governing_source": {
+        "ref": "Owner answers Q35/Q97; ADR-020",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q35", "Q97", "ADR-020"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "MEETING_CLOSED audit event (PC-03 relies on it)",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MEETING_OPENED"
+        }
+      ],
+      "expires_on_events": ["MEETING_CLOSED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "meeting state transition (UNVERIFIED command name)",
+        "status": "BUILT",
+        "ref": "ADR-020"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "INFERENCE",
+      "note": ""
+    },
+    {
+      "action_id": "RECORD_CHAIR_DIRECTION",
+      "ar": "تسجيل توجيه الرئيس",
+      "en": "Record a chair direction",
+      "administrative": false,
+      "category": "COMMITTEE",
+      "governing_source": {
+        "ref": "No source for a chair-direction power (W8-C18); D11-013 OPEN",
+        "status": "SOURCE_REQUIRED",
+        "decision_ids": ["W8-C18", "D11-013", "MF-002", "SOURCE_REQUIRED"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["CHAIR"],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "would be: CHAIR_DIRECTION_RECORDED event by the executor citing the chair's record",
+      "delegation": {
+        "allowed": true,
+        "from": "CHAIR",
+        "to": "DEPUTY_CHAIR",
+        "acting_for": ["CHAIR"],
+        "conditions": "activated acting chair only (ADR-061 §5, DEC-F03): actor.delegation_active === true for this object"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "DECIDE",
+      "parameters_source_required": [],
+      "platform": {
+        "command": null,
+        "status": "NOT_BUILT",
+        "ref": "V12 generator only (CF-18)"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": "Draft only: the secretary may draft the direction for the minutes; label MANUAL_OPERATION - SOURCE_REQUIRED (W8-C18); never shown as completed (MF-002)",
+      "documents_missing": ["COMMITTEE_CHARTER", "COMMITTEE_RULES"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "SEND_INFO_REQUEST",
+      "ar": "طلب معلومات أو مستندات",
+      "en": "Request information or documents",
+      "administrative": false,
+      "category": "COMMITTEE",
+      "governing_source": {
+        "ref": "Owner answers Q38/Q39/Q40",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q38", "Q39", "Q40"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["COMMITTEE"],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER", "EVIDENCE_HOLDER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [
+        {
+          "condition": "request addressed to a party outside CDF (external evidence holder)",
+          "when": {
+            "all": [
+              {
+                "key": "object.delivery_context",
+                "in": ["EXTERNAL"]
+              }
+            ]
+          },
+          "reason": "no source for external information requests",
+          "decision_ids": ["W8-C52", "D11-014"]
+        }
+      ],
+      "evidence_required": "committee record of the request + request audit event",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "until answered or withdrawn",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": null,
+        "status": "NOT_BUILT",
+        "ref": "no information-request command found; V12 INV-03/04"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "INFERENCE",
+      "note": "A request notice is administrative execution of a committee decision; the decision is the committee's."
+    },
+    {
+      "action_id": "OPEN_FORMAL_VOTE",
+      "ar": "فتح التصويت الرسمي",
+      "en": "Open a formal vote",
+      "administrative": false,
+      "category": "VOTE",
+      "governing_source": {
+        "ref": "Owner answers Q58/Q67/Q51 + DEC-F01; platform api.open_vote_item (committee.lock_managed_meeting)",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q58", "Q67", "Q51", "DEC-F01", "ADR-020"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["COMMITTEE"],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "VOTE_OPENED audit event by the executor (BALLOT_OPENED in the V13 event vocabulary) while the meeting is OPEN",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "meeting closed",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MEETING_OPENED"
+        }
+      ],
+      "expires_on_events": ["MEETING_CLOSED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "APPROVE_ACTION",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.open_vote_item",
+        "status": "BUILT",
+        "ref": "committee.lock_managed_meeting (secretary); meeting must be OPEN"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": "The charter §6 example's CHAIR approver is NOT adopted: no source requires the chair's approval to open a vote (W8-C18 NO SOURCE; owner Q58: the chair votes like any member); the platform has the secretary open votes."
+    },
+    {
+      "action_id": "OPEN_PROCEDURAL_VOTE",
+      "ar": "فتح تصويت إجرائي",
+      "en": "Open a procedural vote",
+      "administrative": false,
+      "category": "VOTE",
+      "governing_source": {
+        "ref": "No source for procedural (non-formal) votes (W8-C19); AMB-079 open",
+        "status": "SOURCE_REQUIRED",
+        "decision_ids": ["W8-C19", "AMB-079", "SOURCE_REQUIRED"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["COMMITTEE"],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "would be: VOTE_OPENED for a procedural item",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "meeting closed",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MEETING_OPENED"
+        }
+      ],
+      "expires_on_events": ["MEETING_CLOSED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "APPROVE_ACTION",
+      "parameters_source_required": [],
+      "platform": {
+        "command": null,
+        "status": "NOT_BUILT",
+        "ref": "no procedural vote type"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": "Draft only; label MANUAL_OPERATION - SOURCE_REQUIRED (W8-C19)",
+      "documents_missing": ["COMMITTEE_RULES"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "CAST_VOTE",
+      "ar": "الإدلاء بالصوت",
+      "en": "Cast a vote",
+      "administrative": false,
+      "category": "VOTE",
+      "governing_source": {
+        "ref": "Owner answers Q58/Q67/Q51; ADR-020 vote secrecy",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q58", "Q67", "Q51", "ADR-020", "N6"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["MEMBER", "CHAIR"],
+        "executor": ["MEMBER", "CHAIR"],
+        "informed": [],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "VOTE_CAST audit event (choice never in the ledger or a notification)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed; only the actor's own vote (N6)",
+      "excluded_relations": [],
+      "expiry": "vote closed",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "BALLOT_OPENED"
+        }
+      ],
+      "expires_on_events": ["BALLOT_CLOSED"],
+      "object_conditions": [
+        {
+          "key": "own_vote",
+          "equals": true,
+          "why": "only the actor's own vote (N6)"
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "DECIDE",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.cast_vote",
+        "status": "BUILT",
+        "ref": "ADR-020"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "CAST_CASTING_VOTE",
+      "ar": "الصوت المرجّح",
+      "en": "Cast the casting vote",
+      "administrative": false,
+      "category": "VOTE",
+      "governing_source": {
+        "ref": "DEC-F01/DEC-F03 + owner Q57",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["DEC-F01", "DEC-F03", "Q57"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["CHAIR"],
+        "executor": ["CHAIR"],
+        "informed": ["MEMBER", "SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "casting vote recorded with the tie result",
+      "delegation": {
+        "allowed": true,
+        "from": "CHAIR",
+        "to": "DEPUTY_CHAIR",
+        "acting_for": ["CHAIR"],
+        "conditions": "activated acting chair only (ADR-061 §5, DEC-F03): actor.delegation_active === true for this object"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed; never the SECRETARY",
+      "excluded_relations": ["CONFLICT_SUBJECT"],
+      "expiry": "vote closed",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "BALLOT_OPENED"
+        }
+      ],
+      "expires_on_events": [],
+      "object_conditions": [
+        {
+          "key": "vote_result",
+          "equals": "TIE"
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "DECIDE",
+      "parameters_source_required": [
+        {
+          "parameter": "vote types to which the casting vote applies",
+          "reason": "committee rules absent; only the owner answer Q57 exists",
+          "decision_ids": ["Q57"]
+        }
+      ],
+      "platform": {
+        "command": null,
+        "status": "UNVERIFIED",
+        "ref": "tie handling in close_vote_item not verified"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "INFERENCE",
+      "note": ""
+    },
+    {
+      "action_id": "CLOSE_VOTE",
+      "ar": "إغلاق التصويت",
+      "en": "Close a vote",
+      "administrative": false,
+      "category": "VOTE",
+      "governing_source": {
+        "ref": "Owner answers Q58/Q67 + DEC-F01; api.close_vote_item",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q58", "Q67", "DEC-F01", "ADR-020"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["COMMITTEE"],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "VOTE_CLOSED audit event with the computed result; quorum check",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "BALLOT_OPENED"
+        }
+      ],
+      "expires_on_events": ["BALLOT_CLOSED"],
+      "object_conditions": [
+        {
+          "key": "quorum",
+          "equals": "MET"
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "APPROVE_ACTION",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.close_vote_item",
+        "status": "BUILT",
+        "ref": "caller predicate UNVERIFIED"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "INFERENCE",
+      "note": ""
+    },
+    {
+      "action_id": "RECORD_VOTE_FOR_ABSENT_MEMBER",
+      "ar": "تسجيل حالة العضو الغائب",
+      "en": "Record a vote status for another member",
+      "administrative": true,
+      "category": "VOTE",
+      "governing_source": {
+        "ref": "AUTHORIZATION_IMPACT N6; ADR-048 paper ballots",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["N6", "ADR-048", "ADR-020"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "VOTE_RECORDED_FOR_MEMBER audit event; only ABSENT / UNABLE_TO_VOTE / RECUSED (or a paper ballot per ADR-048)",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "vote closed",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "BALLOT_OPENED"
+        }
+      ],
+      "expires_on_events": ["BALLOT_CLOSED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.record_vote_for_member",
+        "status": "BUILT",
+        "ref": "N6"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "REVIEW_MINUTES",
+      "ar": "اعتماد المحضر",
+      "en": "Approve the minutes",
+      "administrative": false,
+      "category": "MINUTES",
+      "governing_source": {
+        "ref": "Owner answers Q97/Q98",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q97", "F-W2-12", "W8-C33", "D11-069"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": ["MEMBER", "CHAIR"],
+        "decision_maker": ["COMMITTEE"],
+        "executor": ["MEMBER", "CHAIR"],
+        "informed": ["SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "EXISTING",
+        "by": ["MEMBER", "CHAIR"],
+        "source": "Q97/Q98: attending members approve",
+        "applies_to": "THIS_ACTION_IS_THE_APPROVAL",
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "approval of each attending non-conflicted member recorded; SYSTEM deemed approval only if enabled (F-W2-12)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed; only members who attended",
+      "excluded_relations": ["PREPARER"],
+      "expiry": "approval period (SOURCE_REQUIRED)",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MINUTES_UNDER_REVIEW"
+        }
+      ],
+      "expires_on_events": ["MINUTES_FINAL"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "REVIEW_MINUTES",
+      "parameters_source_required": [
+        {
+          "parameter": "chair-first review (not applied: NO SOURCE)",
+          "reason": "NO SOURCE",
+          "decision_ids": ["W8-C33"]
+        },
+        {
+          "parameter": "approval period and reminder cadence",
+          "reason": "no source",
+          "decision_ids": ["D11-069"]
+        }
+      ],
+      "platform": {
+        "command": "minutes review (ADR-020)",
+        "status": "BUILT",
+        "ref": "ADR-020"
+      },
+      "notification_templates": ["MINUTES_REVIEW_REQUESTED", "MINUTES_REVIEW_REMINDER"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "INFERENCE",
+      "note": "The secretary drafts the minutes (preparer; administrative) and requests review; members who attended approve. Drafting is not approval."
+    },
+    {
+      "action_id": "APPROVE_COMMITTEE_RECORD",
+      "ar": "اعتماد السجل الرسمي للجنة",
+      "en": "Approve the committee official record",
+      "administrative": false,
+      "category": "RECORD",
+      "governing_source": {
+        "ref": "AMB-201 owner decision (2026-10-17); ADR-061 §4 (origin/main, migration 2115)",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["AMB-201", "ADR-061", "D11-061", "DEC-F03"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": ["CHAIR"],
+        "decision_maker": ["CHAIR"],
+        "executor": ["CHAIR"],
+        "informed": ["SECRETARY", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "EXISTING",
+        "by": ["CHAIR"],
+        "source": "AMB-201; ADR-061 §4",
+        "applies_to": "THIS_ACTION_IS_THE_APPROVAL",
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "chair approval recorded on the record version (COMMITTEE_RECORD approval event)",
+      "delegation": {
+        "allowed": true,
+        "from": "CHAIR",
+        "to": "DEPUTY_CHAIR",
+        "acting_for": ["CHAIR"],
+        "conditions": "activated acting chair only (ADR-061 §5, DEC-F03): actor.delegation_active === true for this object"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed; never the SECRETARY, ALTERNATE_SECRETARY or the importer; the deputy only as an activated acting chair; fail closed",
+      "excluded_relations": ["IMPORTER", "PREPARER", "CONFLICT_SUBJECT"],
+      "expiry": "record superseded",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "APPROVE_ACTION",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "committee record approval (migration 2115)",
+        "status": "BRANCH_ONLY",
+        "ref": "origin/main ADR-061; not on the working branch"
+      },
+      "notification_templates": ["COMMITTEE_RECORD_APPROVAL_REQUESTED"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "ATTEST_COMMITTEE_RECORD",
+      "ar": "مصادقة العضو على السجل",
+      "en": "Attest the committee record (own line)",
+      "administrative": false,
+      "category": "RECORD",
+      "governing_source": {
+        "ref": "AMB-201; ADR-061 §6",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["AMB-201", "ADR-061"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["MEMBER", "CHAIR"],
+        "informed": ["SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "member attestation of the actor's own line; no DEEMED_ATTESTED; the secretary seat is NOT_REQUIRED",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed; only the actor's own line",
+      "excluded_relations": ["IMPORTER"],
+      "expiry": "record superseded",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "APPROVE_ACTION",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "committee record attestation (migration 2115)",
+        "status": "BRANCH_ONLY",
+        "ref": "origin/main ADR-061"
+      },
+      "notification_templates": ["COMMITTEE_RECORD_ATTESTATION_REQUESTED"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "ACTIVATE_ACTING_CHAIR",
+      "ar": "تفعيل الرئيس بالإنابة",
+      "en": "Activate the acting chair",
+      "administrative": false,
+      "category": "RECORD",
+      "governing_source": {
+        "ref": "Owner decision 2026-10-18 (ADR-061 §5, migration 2115); DEC-F03",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["OWNER-2026-10-18", "ADR-061", "DEC-F03"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "DEPUTY_CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "RECORD_ACTING_CHAIR_ACTIVATED with basis, reason (not in the ledger) and period; chair notified (veto)",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed; never activates a conflict subject",
+      "excluded_relations": ["CONFLICT_SUBJECT"],
+      "expiry": "the stated period or the record's approval",
+      "override": "the replaced CHAIR may end it before approval (END_ACTING_CHAIR_ACTIVATION)",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [
+        {
+          "parameter": "maximum activation period",
+          "reason": "no source",
+          "decision_ids": ["SOURCE_REQUIRED"]
+        }
+      ],
+      "platform": {
+        "command": "acting chair activation (migration 2115)",
+        "status": "BRANCH_ONLY",
+        "ref": "origin/main ADR-061 §5"
+      },
+      "notification_templates": ["COMMITTEE_RECORD_ACTING_CHAIR_ACTIVATED"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "END_ACTING_CHAIR_ACTIVATION",
+      "ar": "إنهاء الإنابة",
+      "en": "End the acting-chair activation",
+      "administrative": false,
+      "category": "RECORD",
+      "governing_source": {
+        "ref": "Owner decision 2026-10-18 (chair veto); ADR-061 §5 R9",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["OWNER-2026-10-18", "ADR-061"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["CHAIR", "SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["DEPUTY_CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "RECORD_ACTING_CHAIR_ENDED before approval",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed; never the conflict subject (R9)",
+      "excluded_relations": ["CONFLICT_SUBJECT"],
+      "expiry": "record approved",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "APPROVE_ACTION",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "acting chair end (migration 2115)",
+        "status": "BRANCH_ONLY",
+        "ref": "origin/main ADR-061"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "DECLARE_CONFLICT",
+      "ar": "الإفصاح عن تعارض المصالح والتنحي",
+      "en": "Declare a conflict of interest (recuse)",
+      "administrative": false,
+      "category": "CONFLICT",
+      "governing_source": {
+        "ref": "Owner answers Q41/Q47-Q49; DEC-F38; ADR-020 conflict per meeting",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q41", "Q47", "DEC-F38", "ADR-020"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["MEMBER", "CHAIR", "SECRETARY", "ALTERNATE_SECRETARY", "INVESTIGATOR", "LEGAL_REVIEWER"],
+        "informed": ["SECRETARY", "CHAIR"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "CONFLICT_DECLARED audit event; a declaration cannot be withdrawn; the declarant is RECUSED for the object and case-content access for the purpose is suspended (DEC-F38)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "the declarant becomes RECUSED for the object (also recorded as attendance RECUSED)",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "NONE",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.declare_meeting_conflict; record_attendance RECUSED",
+        "status": "BUILT",
+        "ref": "ADR-020"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": "Covers recusal: a recusal is a conflict declaration's effect (Q41-Q49, DEC-F38); RECUSE is not a separate action."
+    },
+    {
+      "action_id": "DECIDE_CONFLICT_CONCERN",
+      "ar": "البت في شبهة التعارض",
+      "en": "Decide a conflict concern",
+      "administrative": false,
+      "category": "CONFLICT",
+      "governing_source": {
+        "ref": "DEC-F04 / ADR-040 §4 cascade",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["DEC-F04", "ADR-040", "ADR-038"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["CHAIR", "DEPUTY_CHAIR", "CONFLICT_AUTHORITY"],
+        "executor": ["CHAIR", "DEPUTY_CHAIR", "CONFLICT_AUTHORITY"],
+        "informed": ["SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [
+        {
+          "condition": "decider is the independent CONFLICT_AUTHORITY",
+          "when": {
+            "all": [
+              {
+                "key": "actor.capacity",
+                "in": ["CONFLICT_AUTHORITY"]
+              }
+            ]
+          },
+          "reason": "independent conflict authority not named in an APPROVED source",
+          "decision_ids": ["DEC-F04"]
+        }
+      ],
+      "evidence_required": "conflict decision recorded; reasons never in the ledger or a notification (E6/R9)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "never the raiser or the subject of the concern; cascade chair -> deputy -> independent conflict authority",
+      "excluded_relations": ["CONFLICT_RAISER", "CONFLICT_SUBJECT"],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {
+        "DEPUTY_CHAIR": [
+          {
+            "key": "chair_excluded",
+            "equals": true
+          }
+        ],
+        "CONFLICT_AUTHORITY": [
+          {
+            "key": "chair_excluded",
+            "equals": true
+          },
+          {
+            "key": "deputy_excluded",
+            "equals": true
+          }
+        ]
+      },
+      "next_action_kind": "DECIDE",
+      "parameters_source_required": [
+        {
+          "parameter": "SECRETARY as decider (ADR-038 engineering option)",
+          "reason": "not adopted: no owner/governance source; SECRETARY is not a decider here",
+          "decision_ids": ["ADR-038"]
+        }
+      ],
+      "platform": {
+        "command": "api.decide_meeting_conflict",
+        "status": "BUILT",
+        "ref": "ADR-020; ADR-040 §4"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["CONFLICT_POLICY"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "REQUEST_LEGAL_REVIEW",
+      "ar": "طلب المراجعة القانونية",
+      "en": "Request a legal review",
+      "administrative": false,
+      "category": "LEGAL",
+      "governing_source": {
+        "ref": "CDF-241 / AMB-113 option B; DEC-F12; owner Q75/Q40/Q73",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["CDF-241", "DEC-F12", "Q75", "Q40", "Q73", "DEC-F20"],
+        "pending": "the DoA must name the referring role (CDF-241); until then the owner's option B applies as given"
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY"],
+        "informed": ["LEGAL_REVIEWER", "CHAIR"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [
+        {
+          "condition": "restricted or SECRET case",
+          "when": {
+            "all": [
+              {
+                "key": "object.case_classification",
+                "in": ["RESTRICTED", "SECRET"]
+              }
+            ]
+          },
+          "approver": ["RESTRICTED_CASE_AUTHORITY"],
+          "kind": "EXISTING",
+          "source": "DEC-F20 (per request, single-use, purpose-bound)"
+        }
+      ],
+      "conditional_source_required": [],
+      "evidence_required": "legal review request + LEGAL_REVIEW_ASSIGNED outbox row",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "until the opinion is given or the request withdrawn",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [
+        {
+          "parameter": "any caller other than the Committee Secretary",
+          "reason": "CDF-241 option B names the secretary as sole caller; widening is SOURCE_REQUIRED until the DoA names the role",
+          "decision_ids": ["CDF-241"]
+        }
+      ],
+      "platform": {
+        "command": "api.request_legal_review",
+        "status": "BUILT",
+        "ref": "migration 1910/1990 (packet)"
+      },
+      "notification_templates": ["LEGAL_REVIEW_ASSIGNED"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["LEGAL_REFERRAL_PROC", "DOA"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "GIVE_LEGAL_OPINION",
+      "ar": "إبداء الرأي القانوني",
+      "en": "Give the legal opinion",
+      "administrative": false,
+      "category": "LEGAL",
+      "governing_source": {
+        "ref": "Owner answers Q73-Q77",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q73", "PC-12"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["LEGAL_REVIEWER"],
+        "informed": ["SECRETARY", "CHAIR"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "LEGAL_OPINION_GIVEN audit event; an opinion is never adoption (PC-12); CONFLICTS returns the matter to the committee",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "LEGAL_REVIEW_REQUESTED"
+        }
+      ],
+      "expires_on_events": ["LEGAL_OPINION_SUBMITTED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "GIVE_OPINION",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.give_legal_opinion",
+        "status": "BUILT",
+        "ref": "LEGAL_OPINION_GIVE permission"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "ADOPT_RECOMMENDATION",
+      "ar": "اعتماد التوصية",
+      "en": "Adopt a recommendation",
+      "administrative": false,
+      "category": "DECISION",
+      "governing_source": {
+        "ref": "Owner answers Q58/Q67/Q71 + DEC-F01",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q58", "Q67", "Q71", "DEC-F01", "W8-C37", "D11-034"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["COMMITTEE"],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["CHAIR", "MEMBER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "RECOMMENDATION_PACKAGE_ADOPTED after a closed formal vote with the required majority (PC-04)",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "BALLOT_CLOSED"
+        }
+      ],
+      "expires_on_events": ["RECOMMENDATION_ADOPTED", "RECOMMENDATION_RETURNED"],
+      "object_conditions": [
+        {
+          "key": "vote_result",
+          "equals": "ADOPTED",
+          "why": "required majority reached (DEC-F01)"
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "APPROVE_ACTION",
+      "parameters_source_required": [
+        {
+          "parameter": "adoption notice recipients",
+          "reason": "NO SOURCE",
+          "decision_ids": ["W8-C37", "D11-034"]
+        }
+      ],
+      "platform": {
+        "command": "record_package_adoption (UNVERIFIED caller predicate)",
+        "status": "BUILT",
+        "ref": "migration 2030/2099"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "SUBMIT_TO_AUTHORITY",
+      "ar": "رفع التوصية لصاحب الصلاحية",
+      "en": "Submit to the competent authority",
+      "administrative": true,
+      "category": "DECISION",
+      "governing_source": {
+        "ref": "Owner answers Q71/Q78-Q80; DEC-F13; ADR-031",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q71", "Q78", "DEC-F13", "ADR-031"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["AUTHORITY", "CHAIR"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "RECOMMENDATION_PACKAGE_SUBMITTED_TO_AUTHORITY with the purpose-bound packet",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "authority decision recorded",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "RECOMMENDATION_ADOPTED"
+        }
+      ],
+      "expires_on_events": ["PACKAGE_SUBMITTED_TO_AUTHORITY"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "package submission (ADR-031)",
+        "status": "BUILT",
+        "ref": "ADR-031"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "RECORD_AUTHORITY_DECISION",
+      "ar": "تسجيل قرار صاحب الصلاحية",
+      "en": "Record the authority decision",
+      "administrative": true,
+      "category": "DECISION",
+      "governing_source": {
+        "ref": "Owner answers Q81-Q83; AUTHORIZATION_IMPACT N15",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q81", "N15", "D11-050"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY", "AUTHORITY"],
+        "informed": ["CHAIR", "SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "AUTHORITY_DECISION_RECORDED with the source artefact reference (the signed decision); recording is not deciding",
+      "delegation": {
+        "allowed": true,
+        "from": "SECRETARY",
+        "to": "ALTERNATE_SECRETARY",
+        "acting_for": ["SECRETARY"],
+        "conditions": "alternate secretary / active delegate of the secretary seat (Q24; authz.is_committee_secretary)"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "PACKAGE_SUBMITTED_TO_AUTHORITY"
+        }
+      ],
+      "expires_on_events": ["AUTHORITY_DECISION_RECORDED"],
+      "object_conditions": [
+        {
+          "key": "source_artefact",
+          "equals": "PRESENT"
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.record_authority_decision",
+        "status": "BUILT",
+        "ref": "GAP-07 evidence handling D11-050"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "DECIDE",
+      "ar": "إصدار القرار",
+      "en": "Take the decision (competent authority)",
+      "administrative": false,
+      "category": "DECISION",
+      "governing_source": {
+        "ref": "Owner answers Q71/Q78/Q80; DEC-F13 (decision outside the platform)",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q71", "Q78", "DEC-F13", "D11-036"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["AUTHORITY"],
+        "executor": ["AUTHORITY"],
+        "informed": ["SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "the signed decision artefact outside the platform; the platform records it (RECORD_AUTHORITY_DECISION)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "PACKAGE_SUBMITTED_TO_AUTHORITY"
+        }
+      ],
+      "expires_on_events": ["AUTHORITY_DECISION_RECORDED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "DECIDE",
+      "parameters_source_required": [
+        {
+          "parameter": "competent authority per action type",
+          "reason": "DoA content absent (AUTHORITY_RULE_MISSING when not configured)",
+          "decision_ids": ["D11-036"]
+        }
+      ],
+      "platform": {
+        "command": null,
+        "status": "OUTSIDE_PLATFORM",
+        "ref": "decision taken outside the platform (Q80)"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["DOA"],
+      "label": "FACT",
+      "note": "check() returns DENIED for every platform actor: the decision is never taken in the platform."
+    },
+    {
+      "action_id": "ISSUE_DECISION_NOTICE",
+      "ar": "إصدار إشعار القرار",
+      "en": "Issue the decision notice",
+      "administrative": true,
+      "category": "DECISION",
+      "governing_source": {
+        "ref": "DEC-F15; ADR-037 (api.issue_decision_notice)",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["DEC-F15", "ADR-037"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["CASE_TEAM", "SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["CASE_TEAM", "SECRETARY"],
+        "informed": ["SUBJECT"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "DECISION_NOTICE_ISSUED; requires a recorded authority decision; RETURN_TO_COMMITTEE refused (DECISION_NOT_FINAL); ALREADY_NOTIFIED refused",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "AUTHORITY_DECISION_RECORDED"
+        }
+      ],
+      "expires_on_events": ["DECISION_NOTICE_ISSUED"],
+      "object_conditions": [
+        {
+          "key": "decision_final",
+          "equals": true,
+          "why": "RETURN_TO_COMMITTEE is refused (DECISION_NOT_FINAL)"
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.issue_decision_notice",
+        "status": "BUILT",
+        "ref": "authz.can_manage_defence"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": "Issuing a decision notice never equals making the decision (charter §6). The grievance window is a SYSTEM effect of DECISION_NOTICE_DELIVERED (GRIEVANCE_WINDOW_STARTED at effective delivery, never at issuance; DEC-F14/F15/F16, Q94, D11-039)."
+    },
+    {
+      "action_id": "DECIDE_GRIEVANCE_ADMISSIBILITY",
+      "ar": "البت في قبول التظلم",
+      "en": "Decide grievance admissibility",
+      "administrative": false,
+      "category": "GRIEVANCE",
+      "governing_source": {
+        "ref": "DEC-F17; owner Q93",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["DEC-F17", "Q92", "D11-067"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["GRIEVANCE_COMMITTEE"],
+        "executor": ["GRIEVANCE_SECRETARY"],
+        "informed": ["SUBJECT"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "GRIEVANCE_ADMISSIBILITY_DECIDED",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed; firewall: no member of the original committee for the affected case",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "GRIEVANCE_RECEIVED"
+        }
+      ],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "DECIDE",
+      "parameters_source_required": [
+        {
+          "parameter": "admissibility criteria beyond the window",
+          "reason": "grievance procedure absent",
+          "decision_ids": ["D11-067"]
+        }
+      ],
+      "platform": {
+        "command": "grievance admissibility",
+        "status": "BUILT",
+        "ref": "DEC-F17"
+      },
+      "notification_templates": ["GRIEVANCE_ADMISSIBILITY_DECIDED"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["GRIEVANCE_PROC"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "RESOLVE_REPORTER_IDENTITY",
+      "ar": "كشف هوية المبلّغ",
+      "en": "Resolve the reporter identity",
+      "administrative": false,
+      "category": "IDENTITY",
+      "governing_source": {
+        "ref": "Protocol §22; ADR-004; api.resolve_reporter_identity",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["PROT-§22", "ADR-004", "PROT-§21"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["IDENTITY_REVEAL_HOLDER"],
+        "informed": [],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "REPORTER_IDENTITY_REVEALED audit event with justification (20-2000 characters); never in a notification",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "per request",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [
+        {
+          "key": "case_access",
+          "equals": true
+        },
+        {
+          "key": "justification_length",
+          "between": [20, 2000]
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "NONE",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "api.resolve_reporter_identity",
+        "status": "BUILT",
+        "ref": "can_view_case + REPORTER_IDENTITY_REVEAL"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": "PLATFORM_ADMIN / DB_ADMIN never qualify (§21)."
+    },
+    {
+      "action_id": "EXPORT_CASE_MATERIAL",
+      "ar": "تصدير مواد القضية",
+      "en": "Export case material",
+      "administrative": false,
+      "category": "EXPORT",
+      "governing_source": {
+        "ref": "Owner Q99; DEC-F21-F24; ADR-026/032",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q99", "DEC-F21", "DEC-F23", "ADR-026"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["EXPORT_REQUESTER"],
+        "reviewer": [],
+        "approver": ["EXPORT_APPROVER", "EXPORT_SECOND_APPROVER"],
+        "decision_maker": [],
+        "executor": ["EXPORT_REQUESTER"],
+        "informed": [],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": true,
+      "approval": {
+        "kind": "EXISTING",
+        "by": ["EXPORT_APPROVER"],
+        "source": "Q99 + DEC-F21 (configured second approval)",
+        "applies_to": "BEFORE_EXECUTION",
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [
+        {
+          "condition": "restricted case exported externally",
+          "when": {
+            "all": [
+              {
+                "key": "object.case_classification",
+                "in": ["RESTRICTED", "SECRET"]
+              },
+              {
+                "key": "object.delivery_context",
+                "in": ["EXTERNAL"]
+              }
+            ]
+          },
+          "approver": ["RESTRICTED_CASE_AUTHORITY"],
+          "kind": "EXISTING",
+          "source": "DEC-F23"
+        }
+      ],
+      "conditional_source_required": [
+        {
+          "condition": "external destination outside an approved domain list",
+          "when": {
+            "all": [
+              {
+                "key": "object.delivery_context",
+                "in": ["EXTERNAL"]
+              }
+            ]
+          },
+          "reason": "APPROVED_EXTERNAL_DOMAINS = SOURCE_REQUIRED (DEC-F22)",
+          "decision_ids": ["DEC-F21"]
+        }
+      ],
+      "evidence_required": "export request, approvals and export audit events; justification + classification check",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": ["REQUESTER"],
+      "expiry": "approval expiry per export rule",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "NONE",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "export workflow",
+        "status": "BUILT",
+        "ref": "ADR-026/032"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["CORRESPONDENCE_STD"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "APPROVE_RESTRICTED_CASE_REQUEST",
+      "ar": "اعتماد طلب على قضية مقيّدة",
+      "en": "Approve a restricted-case request",
+      "administrative": false,
+      "category": "RESTRICTED",
+      "governing_source": {
+        "ref": "DEC-F19/F20/F23; DEC-AMB-005 -> B; DEC-AMB-012 -> C",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["DEC-F19", "DEC-F20", "DEC-F23", "DEC-AMB-005", "DEC-AMB-012", "D11-037", "D11-047"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": ["RESTRICTED_CASE_AUTHORITY"],
+        "decision_maker": ["RESTRICTED_CASE_AUTHORITY"],
+        "executor": ["RESTRICTED_CASE_AUTHORITY"],
+        "informed": ["SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "EXISTING",
+        "by": ["RESTRICTED_CASE_AUTHORITY"],
+        "source": "DEC-F19/F20/F23",
+        "applies_to": "THIS_ACTION_IS_THE_APPROVAL",
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "RCA approval record (request-specific, single-use, purpose-bound, audited)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "single use",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "APPROVE_ACTION",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "restricted-case approvals",
+        "status": "BUILT",
+        "ref": "GAP-02 D11-047"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "ACKNOWLEDGE_REFERRAL",
+      "ar": "إرسال إقرار استلام الإحالة",
+      "en": "Send the referral acknowledgement",
+      "administrative": true,
+      "category": "EXTERNAL_NOTICE",
+      "governing_source": {
+        "ref": "No source for referring-body notices (W8-C10/C11); D11-012 OPEN",
+        "status": "SOURCE_REQUIRED",
+        "decision_ids": ["W8-C10", "D11-012", "SOURCE_REQUIRED", "Q99"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["REFERRING_BODY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "would be: external notice with Q99 justification + classification check",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "REFERRAL_RECEIVED"
+        }
+      ],
+      "expires_on_events": ["REFERRAL_ACKNOWLEDGED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": null,
+        "status": "NOT_BUILT",
+        "ref": "no referral acknowledgement in the platform"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": "Draft only: the secretariat may draft an acknowledgement letter outside the platform; label MANUAL_OPERATION - SOURCE_REQUIRED (D11-012); Q99 controls apply if ever sent",
+      "documents_missing": ["REFERRAL_PROC", "CORRESPONDENCE_STD"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "SEND_REPORTER_PORTAL_UPDATE",
+      "ar": "تحديث حالة البلاغ في البوابة",
+      "en": "Post a reporter portal update",
+      "administrative": true,
+      "category": "EXTERNAL_NOTICE",
+      "governing_source": {
+        "ref": "DEC-24 status quo (portal only); DEC-06 / ADR-016 D4; W8-C12 (D2)",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["DEC-24", "DEC-06", "W8-C12"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["COMPLIANCE_OFFICER"],
+        "informed": ["REPORTER"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [
+        {
+          "condition": "any e-mail or SMS to the reporter",
+          "when": {
+            "all": [
+              {
+                "key": "object.channel",
+                "in": ["EMAIL", "SMS"]
+              }
+            ]
+          },
+          "reason": "DEC-24 OPEN (D11-015)",
+          "decision_ids": ["DEC-24"]
+        }
+      ],
+      "evidence_required": "public status change on the portal; never e-mail/SMS",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "portal follow-up status",
+        "status": "BUILT",
+        "ref": "apps/whistleblowing-web follow-up"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["WB_POLICY"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "SEND_WITNESS_NOTICE",
+      "ar": "إرسال إشعار الشاهد",
+      "en": "Send a witness notice",
+      "administrative": true,
+      "category": "EXTERNAL_NOTICE",
+      "governing_source": {
+        "ref": "No source for witness summons wording/channel (W8-C50); D11-072/D11-062 OPEN",
+        "status": "SOURCE_REQUIRED",
+        "decision_ids": ["W8-C50", "D11-072", "D11-062", "Q38", "SOURCE_REQUIRED"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": ["WITNESS"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "would be: witness notice record",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MEETING_SCHEDULED"
+        }
+      ],
+      "expires_on_events": ["MEETING_CANCELLED", "MEETING_CLOSED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "MEETING_INVITATION to a WITNESS invitee",
+        "status": "BUILT",
+        "ref": "ADR-020 invitees; summons wording not built"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": "Draft only: the secretariat may draft the summons; label MANUAL_OPERATION - SOURCE_REQUIRED (W8-C50). Calling witnesses itself is Q38 (owner).",
+      "documents_missing": ["WITNESS_PROC"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "SEND_SUBJECT_STATEMENT_REQUEST",
+      "ar": "طلب إفادة الموظف المعني",
+      "en": "Send the subject statement request",
+      "administrative": true,
+      "category": "PARTY_NOTICE",
+      "governing_source": {
+        "ref": "Owner Q37/Q90; DEC-F18; DEC-AMB-006; wording DRAFT (D1 draft 0.1, W8-C24/C25)",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q37", "Q90", "DEC-F18", "DEC-AMB-006", "W8-C24"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["CASE_TEAM", "SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["CASE_TEAM", "SECRETARY"],
+        "informed": ["SUBJECT"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "DEFENCE_NOTICE_ISSUED to the subject's active portal link (ADR-025); RIGHTS_NOTICE_ISSUED",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "response period (configurable; duration SOURCE_REQUIRED)",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [
+        {
+          "parameter": "response period duration (deadline null + SOURCE_REQUIRED until configured)",
+          "reason": "regulation absent",
+          "decision_ids": ["DEC-F18"]
+        }
+      ],
+      "platform": {
+        "command": "defence notice (authz.can_manage_defence)",
+        "status": "BUILT",
+        "ref": "ADR-025; migration 1920"
+      },
+      "notification_templates": ["DEFENCE_NOTICE_ISSUED", "DEFENCE_DUE_REMINDER"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["DISCIPLINARY_REG", "INVESTIGATION_PROC"],
+      "label": "FACT",
+      "note": "Notice wording comes from a DRAFT document (D1 0.1) and is never binding."
+    },
+    {
+      "action_id": "SUBMIT_STATEMENT",
+      "ar": "تقديم الإفادة أو الرد",
+      "en": "Submit a statement / response",
+      "administrative": false,
+      "category": "PARTY_ACTION",
+      "governing_source": {
+        "ref": "Owner Q90/Q37; DEC-F18; ADR-025 (subject portal link)",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q90", "Q37", "DEC-F18", "ADR-025"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SUBJECT"],
+        "informed": ["SECRETARY", "CASE_TEAM"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "STATEMENT_RECEIVED recorded from the subject's portal-link submission",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "n/a",
+      "excluded_relations": [],
+      "expiry": "response period (configurable; duration SOURCE_REQUIRED)",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "STATEMENT_REQUESTED"
+        }
+      ],
+      "expires_on_events": ["STATEMENT_RECEIVED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "SUBMIT_STATEMENT",
+      "parameters_source_required": [
+        {
+          "parameter": "response period duration (deadline null + SOURCE_REQUIRED until configured)",
+          "reason": "regulation absent",
+          "decision_ids": ["DEC-F18"]
+        }
+      ],
+      "platform": {
+        "command": "subject portal link response",
+        "status": "BUILT",
+        "ref": "ADR-025 defence notice; migration 1920"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["DISCIPLINARY_REG"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "FILE_GRIEVANCE",
+      "ar": "تقديم التظلم",
+      "en": "File a grievance",
+      "administrative": false,
+      "category": "GRIEVANCE",
+      "governing_source": {
+        "ref": "Owner Q92/Q93/Q94; DEC-F14/F15/F16",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q92", "Q94", "DEC-F14", "DEC-F15", "DEC-F16", "D11-039", "D11-049", "ADR-025"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SUBJECT"],
+        "informed": ["GRIEVANCE_SECRETARY", "GRIEVANCE_COMMITTEE"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "GRIEVANCE_RECEIVED recorded by the grievance secretariat + outbox row (ADR-025 N1)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "n/a",
+      "excluded_relations": [],
+      "expiry": "grievance window: default 30 days from effective delivery, configurable (DEC-F14/F15)",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "DECISION_NOTICE_ISSUED"
+        }
+      ],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "SUBMIT_STATEMENT",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "grievance intake",
+        "status": "BUILT",
+        "ref": "GAP-05 D11-049"
+      },
+      "notification_templates": ["GRIEVANCE_RECEIVED"],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["GRIEVANCE_PROC"],
+      "label": "FACT",
+      "note": "Receipt is recorded by the GRIEVANCE_SECRETARY (administrative); filing is the subject's right and is never blocked by missing delivery evidence."
+    },
+    {
+      "action_id": "GIVE_WITNESS_STATEMENT",
+      "ar": "الإدلاء بالشهادة",
+      "en": "Give a witness statement (attend the hearing)",
+      "administrative": false,
+      "category": "PARTY_ACTION",
+      "governing_source": {
+        "ref": "Owner Q38 (the committee may request witnesses); ADR-020 WITNESS invitee",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q38", "ADR-020", "W8-C50", "D11-072"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["WITNESS"],
+        "informed": ["SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "attendance recorded at the hearing (record_attendance); statement content stays in the minutes",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "n/a",
+      "excluded_relations": [],
+      "expiry": "hearing held or cancelled",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "MEETING_SCHEDULED"
+        }
+      ],
+      "expires_on_events": ["MEETING_CANCELLED", "MEETING_CLOSED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "SUBMIT_STATEMENT",
+      "parameters_source_required": [
+        {
+          "parameter": "summons wording, confidentiality reminder, acknowledgement",
+          "reason": "NO SOURCE (W8-C50); see SEND_WITNESS_NOTICE",
+          "decision_ids": ["W8-C50", "D11-072"]
+        }
+      ],
+      "platform": {
+        "command": "meeting attendance of a WITNESS invitee",
+        "status": "BUILT",
+        "ref": "ADR-020"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["WITNESS_PROC"],
+      "label": "INFERENCE",
+      "note": ""
+    },
+    {
+      "action_id": "SUBMIT_EVIDENCE",
+      "ar": "تقديم المستندات المطلوبة",
+      "en": "Submit the requested documents",
+      "administrative": false,
+      "category": "PARTY_ACTION",
+      "governing_source": {
+        "ref": "Owner Q39 (the committee may request information/documents)",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["Q39", "W8-C51", "W8-C52", "D11-014"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["EVIDENCE_HOLDER"],
+        "informed": ["SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [
+        {
+          "condition": "holder outside CDF",
+          "when": {
+            "all": [
+              {
+                "key": "object.delivery_context",
+                "in": ["EXTERNAL"]
+              }
+            ]
+          },
+          "reason": "no source for external information requests",
+          "decision_ids": ["W8-C52", "D11-014"]
+        }
+      ],
+      "evidence_required": "INFO_RECEIVED recorded by the secretariat; evidence enters private storage only (protocol §24-§27)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "n/a",
+      "excluded_relations": [],
+      "expiry": "until answered or withdrawn",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "INFO_REQUEST_SENT"
+        }
+      ],
+      "expires_on_events": ["INFO_RECEIVED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [
+        {
+          "parameter": "receipt confirmation to the holder",
+          "reason": "NO SOURCE (W8-C51)",
+          "decision_ids": ["W8-C51"]
+        }
+      ],
+      "platform": {
+        "command": null,
+        "status": "NOT_BUILT",
+        "ref": "no information-request intake found"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "INFERENCE",
+      "note": ""
+    },
+    {
+      "action_id": "VIEW_PUBLIC_STATUS",
+      "ar": "الاطلاع على حالة البلاغ",
+      "en": "View the report's public status (portal)",
+      "administrative": true,
+      "category": "PARTY_ACTION",
+      "governing_source": {
+        "ref": "DEC-24 status quo (portal only); DEC-06 / ADR-016 D4; protocol §23",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["DEC-24", "DEC-06", "W8-C12"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["REPORTER"],
+        "informed": [],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "portal session with Report ID + secret (no audit of content)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "n/a",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "NONE",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "whistleblowing-web follow-up",
+        "status": "BUILT",
+        "ref": "apps/whistleblowing-web/src/app/follow-up"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": "Reading the public status is the reporter's only action; no APPROVED source exists for it (W8 §5) - the status quo is an owner position (DEC-24 OPEN)."
+    },
+    {
+      "action_id": "AUTHORIZE_NOTIFICATION",
+      "ar": "اعتماد الإشعار",
+      "en": "Authorize a notification",
+      "administrative": true,
+      "category": "NOTIFICATION",
+      "governing_source": {
+        "ref": "Protocol §39 + owner three-level rule + owner Q99",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["PROT-§39", "Q99", "D11-022"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SYSTEM", "SECRETARY"],
+        "informed": [],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [
+        {
+          "condition": "external sending with a configured second-approval rule",
+          "when": {
+            "all": [
+              {
+                "key": "object.delivery_context",
+                "in": ["EXTERNAL"]
+              },
+              {
+                "key": "object.second_approval_configured",
+                "in": [true]
+              }
+            ]
+          },
+          "approver": ["EXPORT_SECOND_APPROVER"],
+          "kind": "EXISTING",
+          "source": "Q99: justification + classification check always; second approval when configured"
+        }
+      ],
+      "conditional_source_required": [
+        {
+          "condition": "manual notice from the secretariat composer",
+          "when": {
+            "all": [
+              {
+                "key": "object.origin",
+                "in": ["MANUAL"]
+              }
+            ]
+          },
+          "reason": "no source for manual notices (four-eyes proposal D11-022 not adopted)",
+          "decision_ids": ["D11-022"]
+        }
+      ],
+      "evidence_required": "authorization record on the notification version (lifecycle AUTHORIZED)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "until SENT",
+      "override": "withholding is the fail-safe direction: SYSTEM or the issuing secretary may cancel before SENT (NOTIFICATION_CANCELLED; DEC-F19, AMB-182, §39)",
+      "preconditions": [
+        {
+          "event_type": "NOTIFICATION_VALIDATED"
+        }
+      ],
+      "expires_on_events": ["NOTIFICATION_AUTHORIZED", "NOTIFICATION_CANCELLED"],
+      "object_conditions": [
+        {
+          "key": "external_justification_present",
+          "equals": true,
+          "applies_when": {
+            "all": [
+              {
+                "key": "object.delivery_context",
+                "in": ["EXTERNAL"]
+              }
+            ]
+          }
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "APPROVE_ACTION",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "outbox enqueue (ADR-025)",
+        "status": "BUILT",
+        "ref": "domain command enqueues"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": "Composer drafts only; label MANUAL_OPERATION - SOURCE_REQUIRED (D11-022)",
+      "documents_missing": [],
+      "label": "INFERENCE",
+      "note": "A system notice is authorised by the domain command that produced it."
+    },
+    {
+      "action_id": "DISPATCH_NOTIFICATION",
+      "ar": "إرسال الإشعار",
+      "en": "Dispatch a notification",
+      "administrative": true,
+      "category": "NOTIFICATION",
+      "governing_source": {
+        "ref": "DEC-F36; ADR-025 (claim/record granted to cdf_bff)",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["DEC-F36", "ADR-025", "PC-16"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SYSTEM"],
+        "informed": [],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "claim + delivery record (SENT / DELIVERY_*); delivery is never acknowledgement (PC-16)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "n/a",
+      "excluded_relations": [],
+      "expiry": "retry policy exhaustion",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "NOTIFICATION_QUEUED"
+        }
+      ],
+      "expires_on_events": ["NOTIFICATION_SENT", "NOTIFICATION_CANCELLED"],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "NONE",
+      "parameters_source_required": [],
+      "platform": {
+        "command": "notify claim/record (cdf_bff)",
+        "status": "BUILT",
+        "ref": "PRODUCTION_SUBSTITUTION_REQUIRED (e-mail stub)"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": [],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "CORRECT_NOTIFICATION",
+      "ar": "تصحيح الإشعار",
+      "en": "Correct a sent notification",
+      "administrative": true,
+      "category": "NOTIFICATION",
+      "governing_source": {
+        "ref": "Outbox immutable (ADR-025); no correction standard (D11-024)",
+        "status": "SOURCE_REQUIRED",
+        "decision_ids": ["ADR-025", "D11-024", "SOURCE_REQUIRED"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": [],
+        "executor": ["SECRETARY", "ALTERNATE_SECRETARY"],
+        "informed": [],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "would be: new version, old SUPERSEDED",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [
+        {
+          "event_type": "NOTIFICATION_SENT"
+        }
+      ],
+      "expires_on_events": [],
+      "object_conditions": [],
+      "capacity_preconditions": {},
+      "next_action_kind": "COMPLETE_DOCUMENTS",
+      "parameters_source_required": [],
+      "platform": {
+        "command": null,
+        "status": "NOT_BUILT",
+        "ref": "outbox immutable"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": "Draft only: a corrected version may be drafted (lifecycle CORRECTED/SUPERSEDED); label MANUAL_OPERATION - SOURCE_REQUIRED (D11-024)",
+      "documents_missing": ["CORRESPONDENCE_STD"],
+      "label": "FACT",
+      "note": ""
+    },
+    {
+      "action_id": "CLOSE_CASE",
+      "ar": "إغلاق القضية",
+      "en": "Close the case",
+      "administrative": false,
+      "category": "CASE",
+      "governing_source": {
+        "ref": "DEC-F40; CDF-246 / AMB-146 option A; DEC-F39",
+        "status": "OWNER_DECISION",
+        "decision_ids": ["DEC-F40", "CDF-246", "DEC-F39", "PC-11"],
+        "pending": null
+      },
+      "roles": {
+        "preparer": [],
+        "reviewer": [],
+        "approver": [],
+        "decision_maker": ["CASE_TEAM"],
+        "executor": ["CASE_TEAM"],
+        "informed": ["SECRETARY"],
+        "auditor": ["AUDIT"]
+      },
+      "approval_required": false,
+      "approval": {
+        "kind": "NONE",
+        "by": [],
+        "source": null,
+        "applies_to": null,
+        "reason": null,
+        "granting_authority": null
+      },
+      "conditional_approvals": [],
+      "conditional_source_required": [],
+      "evidence_required": "closure recorded only when no reconsideration, grievance or proceeding is open or pending (CDF-246); a notification never establishes closure (PC-11)",
+      "delegation": {
+        "allowed": false,
+        "acting_for": [],
+        "conditions": "no delegation"
+      },
+      "coi_restriction": "a recused, conflict-declared or excluded seat holder never prepares, approves, decides or executes for the affected object; may only be informed",
+      "excluded_relations": [],
+      "expiry": "n/a",
+      "override": "none",
+      "preconditions": [],
+      "expires_on_events": ["CASE_CLOSED"],
+      "object_conditions": [
+        {
+          "key": "open_or_pending_reconsideration_grievance_or_proceeding",
+          "equals": false
+        }
+      ],
+      "capacity_preconditions": {},
+      "next_action_kind": "NONE",
+      "parameters_source_required": [
+        {
+          "parameter": "closure approver per the DoA",
+          "reason": "DoA content absent; the platform's closure command governs",
+          "decision_ids": ["DEC-F40"]
+        }
+      ],
+      "platform": {
+        "command": "case closure",
+        "status": "BUILT",
+        "ref": "DEC-F40"
+      },
+      "notification_templates": [],
+      "manual_operation_when_source_required": null,
+      "documents_missing": ["DOA"],
+      "label": "INFERENCE",
+      "note": ""
+    }
+  ]
+}

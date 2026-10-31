@@ -1,0 +1,432 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "CF-23b",
+  "title": {
+    "ar": "تذكير بقرب موعد الدفاع: التذكير لا يُثبت نفسه، والدفاع نفسه بانتظار تقديمه",
+    "en": "Defence due reminder: the reminder is not its own evidence; the defence itself still awaits submission"
+  },
+  "journey": "J-DEFENCE",
+  "assignment_id": "CF-23b",
+  "recipient_class": "SUBJECT",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-79d31ccbede2",
+    "internal_ref": "CDF-DEMO-2026-0023",
+    "track": "IR",
+    "classification": "RESTRICTED",
+    "status": {
+      "code": "S3.05",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0023"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-05b179feb9d4",
+    "type": "PROCEDURE",
+    "case_id": "ca5e0000-0000-4000-8000-79d31ccbede2",
+    "journey_id": "J-DEFENCE",
+    "status": "IN_PROGRESS",
+    "status_source_event_id": "evt-CF-23b-02",
+    "steps": [],
+    "deadlines": [
+      {
+        "kind": "DEFENCE_DUE",
+        "at": "2026-11-05T13:00:00Z",
+        "basis_event_id": "evt-CF-23b-03",
+        "basis_rule": "DEFENCE_PERIOD"
+      }
+    ]
+  },
+  "events": [
+    {
+      "event_id": "evt-CF-23b-01",
+      "type": "RIGHTS_NOTICE_ISSUED",
+      "occurred_at": "2026-10-22T09:00:00Z",
+      "recorded_at": "2026-10-22T09:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-79d31ccbede2",
+      "object": {
+        "type": "PROCEDURE",
+        "id": "0b1ec700-0000-4000-8000-05b179feb9d4"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-23b.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-23b",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-23b-02",
+      "type": "DEFENCE_NOTICE_ISSUED",
+      "occurred_at": "2026-10-22T10:00:00Z",
+      "recorded_at": "2026-10-22T10:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-79d31ccbede2",
+      "object": {
+        "type": "PROCEDURE",
+        "id": "0b1ec700-0000-4000-8000-05b179feb9d4"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-23b.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-23b",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-CF-23b-03",
+      "type": "DEFENCE_PERIOD_STARTED",
+      "occurred_at": "2026-10-22T11:00:00Z",
+      "recorded_at": "2026-10-22T11:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-79d31ccbede2",
+      "object": {
+        "type": "PROCEDURE",
+        "id": "0b1ec700-0000-4000-8000-05b179feb9d4"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-23b.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-23b",
+      "payload": {
+        "due_at": "2026-11-05T13:00:00Z"
+      }
+    },
+    {
+      "event_id": "evt-CF-23b-04",
+      "type": "DEFENCE_PACKET_RELEASED",
+      "occurred_at": "2026-10-22T12:00:00Z",
+      "recorded_at": "2026-10-22T12:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-79d31ccbede2",
+      "object": {
+        "type": "PROCEDURE",
+        "id": "0b1ec700-0000-4000-8000-05b179feb9d4"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-23b.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-23b",
+      "payload": {}
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S3",
+      "substate": "S3.05",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        },
+        {
+          "code": "S4",
+          "layer": "B",
+          "kind": "EXPECTED"
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-DEFENCE/1/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DEFENCE/2/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DEFENCE/2/2",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-23b-03"
+      },
+      {
+        "step_id": "J-DEFENCE/3/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DEFENCE/4/2",
+        "state": "PENDING"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-DEFENCE/1/2",
+        "kind": "OPTIONAL"
+      },
+      {
+        "step_id": "J-DEFENCE/3/2",
+        "kind": "OPTIONAL"
+      },
+      {
+        "step_id": "J-DEFENCE/4/1",
+        "kind": "OPTIONAL"
+      },
+      {
+        "step_id": "J-DEFENCE/5/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-DEFENCE/5/2",
+        "kind": "CONDITIONAL"
+      }
+    ],
+    "stage_n": 4,
+    "notice_location": "expected",
+    "deadlines": [
+      {
+        "kind": "DEFENCE_DUE",
+        "rule_id": "DEFENCE_PERIOD",
+        "at": "2026-11-05T13:00:00.000Z",
+        "status": "RECORDED",
+        "basis_event_id": "evt-CF-23b-03"
+      }
+    ],
+    "anomalies_exclude": ["DEADLINE_CLAIM_REJECTED", "REPORTED_EVENT_NOT_FOUND"],
+    "must_not": [
+      "✔ on J-DEFENCE/4/1",
+      "● on J-DEFENCE/4/1",
+      "✔ on J-DEFENCE/4/2",
+      "✔ on J-DEFENCE/1/2",
+      "✔ on J-DEFENCE/3/2",
+      "✔ on J-DEFENCE/5/1",
+      "✔ on J-DEFENCE/5/2"
+    ]
+  },
+  "register_meaning": {
+    "label": "FACT",
+    "text": "Register CF-23b DEFENCE_DUE_REMINDER (BUILT): trigger \"Scheduled sweep, 2 days before due\"; recipient \"The subject employee\"; text \"Reminder: your response is due soon.\" The reminder exists only relative to a due date, so the due date shown must be the recorded one. Lead ruling L-05: the reminder is a NOTIFICATION_SENT; this notice reports its recorded basis DEFENCE_PERIOD_STARTED and its own sending is not yet on record when it is rendered.",
+    "evidence": [
+      "notifications/COMMITTEE_FLOW_NOTIFICATION_REGISTER.csv row CF-23b",
+      "notifications/v13/work/LEAD_notes.md L-05"
+    ]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "L2 «✔ 1 … ✔ 2 … ✔ 3 … ● 4. تقديم الدفاع قبل انتهاء المهلة»; L3 «● التذكير بالاستحقاق / ○ تقديم الدفاع»; marker «↳ هذا الإشعار: مهلة الدفاع سارية»; L1 «S3.05». The reminder step is shown in progress with no record of a reminder being sent (W3 F5).",
+    "evidence": [
+      "notifications/eml/ar/CF-23b_DEFENCE_DUE_REMINDER.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-23b ar",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md F5"
+    ]
+  },
+  "variants": [
+    {
+      "id": "CF-23b-V1",
+      "title": {
+        "ar": "دون موعد مسجل للدفاع",
+        "en": "Without a recorded due date"
+      },
+      "events_replace": [
+        {
+          "event_id": "evt-CF-23b-03",
+          "payload": {}
+        }
+      ],
+      "procedural_object_patch": {
+        "deadlines": []
+      },
+      "expected": {
+        "actual": [
+          {
+            "step_id": "J-DEFENCE/1/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-DEFENCE/2/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-DEFENCE/2/2",
+            "state": "COMPLETED",
+            "evidence_event_id": "evt-CF-23b-03"
+          },
+          {
+            "step_id": "J-DEFENCE/3/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-DEFENCE/4/2",
+            "state": "PENDING"
+          }
+        ],
+        "expected_steps": [
+          {
+            "step_id": "J-DEFENCE/1/2",
+            "kind": "OPTIONAL"
+          },
+          {
+            "step_id": "J-DEFENCE/3/2",
+            "kind": "OPTIONAL"
+          },
+          {
+            "step_id": "J-DEFENCE/4/1",
+            "kind": "OPTIONAL"
+          },
+          {
+            "step_id": "J-DEFENCE/5/1",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-DEFENCE/5/2",
+            "kind": "CONDITIONAL"
+          }
+        ],
+        "deadlines": [
+          {
+            "kind": "DEFENCE_DUE",
+            "rule_id": "DEFENCE_PERIOD",
+            "at": null,
+            "status": "SOURCE_REQUIRED",
+            "basis_event_id": "evt-CF-23b-03"
+          }
+        ],
+        "must_not": ["deadline.at", "✔ on J-DEFENCE/4/1"]
+      }
+    },
+    {
+      "id": "CF-23b-V2",
+      "title": {
+        "ar": "بعد تسجيل إرسال تذكير سابق: يكتمل التذكير وحده لا الدفاع",
+        "en": "After an earlier reminder is recorded as sent: only the reminder step completes, never the defence"
+      },
+      "events_add": [
+        {
+          "event_id": "evt-CF-23b-05",
+          "type": "NOTIFICATION_SENT",
+          "occurred_at": "2026-11-03T13:00:00Z",
+          "recorded_at": "2026-11-03T13:00:30Z",
+          "case_id": "ca5e0000-0000-4000-8000-79d31ccbede2",
+          "object": {
+            "type": "NOTIFICATION",
+            "id": "ntf-CF-23b-earlier"
+          },
+          "actor": {
+            "capacity": "SYSTEM",
+            "id": "usr-demo-system"
+          },
+          "provenance": {
+            "source": "SYNTHETIC_DEMO",
+            "ref": "notifications/v13/src/journeys/scenarios/CF-23b.json"
+          },
+          "version": 1,
+          "causation_id": null,
+          "correlation_id": "corr-CF-23b",
+          "payload": {
+            "template_code": "DEFENCE_DUE_REMINDER",
+            "purpose": "DEFENCE_DUE_REMINDER",
+            "subject_object_id": "0b1ec700-0000-4000-8000-05b179feb9d4"
+          }
+        }
+      ],
+      "expected": {
+        "actual": [
+          {
+            "step_id": "J-DEFENCE/1/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-DEFENCE/2/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-DEFENCE/2/2",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-DEFENCE/3/1",
+            "state": "COMPLETED"
+          },
+          {
+            "step_id": "J-DEFENCE/4/1",
+            "state": "COMPLETED",
+            "evidence_event_id": "evt-CF-23b-05"
+          },
+          {
+            "step_id": "J-DEFENCE/4/2",
+            "state": "PENDING"
+          }
+        ],
+        "expected_steps": [
+          {
+            "step_id": "J-DEFENCE/1/2",
+            "kind": "OPTIONAL"
+          },
+          {
+            "step_id": "J-DEFENCE/3/2",
+            "kind": "OPTIONAL"
+          },
+          {
+            "step_id": "J-DEFENCE/5/1",
+            "kind": "EXPECTED"
+          },
+          {
+            "step_id": "J-DEFENCE/5/2",
+            "kind": "CONDITIONAL"
+          }
+        ],
+        "notice_location": "actual",
+        "must_not": ["✔ on J-DEFENCE/4/2", "● on J-DEFENCE/4/2", "✔ on J-DEFENCE/5/1"]
+      }
+    }
+  ]
+}

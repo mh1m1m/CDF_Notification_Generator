@@ -1,0 +1,203 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "CF-15",
+  "title": {
+    "ar": "موضوع بانتظار توجيه رئيس اللجنة: التوجيهات البديلة خيارات لا خطوات قادمة",
+    "en": "A matter awaits the chair's direction: the alternative directions are options, not upcoming steps"
+  },
+  "journey": "J-CHAIR-DIRECTION",
+  "assignment_id": "CF-15",
+  "recipient_class": "CHAIR",
+  "case": {
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e5f3",
+    "internal_ref": "CDF-DEMO-2026-0015",
+    "track": "IR",
+    "classification": "INTERNAL",
+    "status": {
+      "code": "S3.01",
+      "recorded_at": "2026-10-19T09:00:00Z",
+      "source_event_id": "evt-case-0015"
+    },
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": true
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-949002e2ace1",
+    "type": "PROCEDURE",
+    "case_id": "ca5e0000-0000-4000-8000-4747f672e5f3",
+    "journey_id": "J-CHAIR-DIRECTION",
+    "status": "IN_PROGRESS",
+    "status_source_event_id": "evt-CF-15-01",
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-CF-15-01",
+      "type": "MATTER_PRESENTED_TO_CHAIR",
+      "occurred_at": "2026-10-20T08:00:00Z",
+      "recorded_at": "2026-10-20T08:00:30Z",
+      "case_id": "ca5e0000-0000-4000-8000-4747f672e5f3",
+      "object": {
+        "type": "PROCEDURE",
+        "id": "0b1ec700-0000-4000-8000-949002e2ace1"
+      },
+      "actor": {
+        "capacity": "SECRETARY",
+        "id": "usr-demo-secretary"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/CF-15.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-CF-15",
+      "payload": {
+        "purpose": "DIRECTION"
+      }
+    }
+  ],
+  "expected": {
+    "l1": {
+      "stage": "S3",
+      "substate": "S3.01",
+      "current_state": "IN_PROGRESS",
+      "derivation": "DOMINATORS",
+      "stages": [
+        {
+          "code": "S1",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S2",
+          "layer": "A",
+          "state": "COMPLETED"
+        },
+        {
+          "code": "S3",
+          "layer": "A",
+          "state": "IN_PROGRESS",
+          "current": true
+        },
+        {
+          "code": "S4",
+          "layer": "B",
+          "kind": "EXPECTED"
+        },
+        {
+          "code": "S5",
+          "layer": "B",
+          "kind": "EXPECTED"
+        }
+      ]
+    },
+    "actual": [
+      {
+        "step_id": "J-CHAIR-DIRECTION/1/1",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-15-01"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/1/2",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-CF-15-01"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/2",
+        "state": "PENDING",
+        "stage_level": true
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-CHAIR-DIRECTION/2/1",
+        "kind": "ALTERNATIVE"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/2/2",
+        "kind": "ALTERNATIVE"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/2/3",
+        "kind": "ALTERNATIVE"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/2/4",
+        "kind": "ALTERNATIVE"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/2/5",
+        "kind": "ALTERNATIVE"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/3/1",
+        "kind": "ALTERNATIVE",
+        "note": "BRANCH_NOT_DECIDED"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/3/2",
+        "kind": "ALTERNATIVE",
+        "note": "BRANCH_NOT_DECIDED"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/3/3",
+        "kind": "ALTERNATIVE",
+        "note": "BRANCH_NOT_DECIDED"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/4/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/4/2",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/5/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-CHAIR-DIRECTION/5/2",
+        "kind": "EXPECTED"
+      }
+    ],
+    "stage_n": 2,
+    "notice_location": "actual",
+    "must_not": [
+      "○ on J-CHAIR-DIRECTION/2/1",
+      "○ on J-CHAIR-DIRECTION/2/2",
+      "○ on J-CHAIR-DIRECTION/2/3",
+      "○ on J-CHAIR-DIRECTION/2/4",
+      "✔ on J-CHAIR-DIRECTION/2/1",
+      "✔ on J-CHAIR-DIRECTION/3/1"
+    ]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "L3 «○ اجتماع / ○ جلسة استماع / ○ طلب بيانات / ○ ترك الأمر لتصويت اللجنة» — the four alternative directions rendered as upcoming steps (○); W3 4.2: \"the four are alternatives, so even here «○» (upcoming) is the wrong semantic\".",
+    "evidence": [
+      "notifications/eml/ar/CF-15_CHAIR_DIRECTION_REQUESTED.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-15 ar",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md section 4.2 (CF-15 row), F1"
+    ]
+  },
+  "variants": []
+}
