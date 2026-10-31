@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type APIResponse, type Page } from "@playwright/test";
+import { DEFAULT_LOCAL_APP_PASSWORD } from "../../../scripts/db/reset-local.mjs";
 
 const SESSION_COOKIE = "__Host-v13_session";
 const LOCAL_BUILD = !process.env.V13_E2E_BASE_URL?.trim();
@@ -42,6 +43,30 @@ const FORBIDDEN_IN_CLIENT = [
   "set_config",
   "SET LOCAL ROLE",
 ];
+
+/**
+ * This local run's own secret values (V13-ARCH-008: the started app holds a real database URL): the session secret
+ * playwright.config.ts generated or was given, and the app login's password. Failure messages name the label only,
+ * never the value. Empty against an external deployment, whose values this runner does not know.
+ */
+function localSecretValues(): ReadonlyArray<readonly [label: string, value: string]> {
+  if (!LOCAL_BUILD) return [];
+  const out: Array<readonly [string, string]> = [];
+  const secret = process.env.V13_E2E_SESSION_SECRET?.trim();
+  if (secret && secret.length >= 16) out.push(["the session secret value", secret]);
+  let password = process.env.V13_LOCAL_APP_PASSWORD || DEFAULT_LOCAL_APP_PASSWORD;
+  const url = process.env.V13_E2E_DATABASE_URL?.trim();
+  if (url) {
+    try {
+      password = decodeURIComponent(new URL(url).password) || password;
+    } catch {
+      // playwright.config.ts refuses an unparsable URL before any test runs
+    }
+  }
+  if (password.length >= 8) out.push(["the app database password", password]);
+  return out;
+}
+const SECRET_VALUES = localSecretValues();
 
 const STACK_OR_INTERNALS =
   /\bat\s+[\w.<>]+\s+\(|\.next\/server|node_modules|SQLSTATE|syntax error at|relation "|ECONNREFUSED/i;
@@ -193,7 +218,9 @@ test.describe("SEC-APP-10 generic errors (TM-I10)", () => {
 
   test("the health body holds only the documented fields, with no error text", async ({ request }) => {
     const response = await request.get("/api/health", { failOnStatusCode: false });
-    const body = (await response.json()) as Record<string, unknown>;
+    const text = await response.text();
+    for (const [label, value] of SECRET_VALUES) expect(text.includes(value), label).toBe(false);
+    const body = JSON.parse(text) as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual(["app", "commit", "correlation_id", "db", "status"]);
     expect(JSON.stringify(body)).not.toMatch(STACK_OR_INTERNALS);
     expect(JSON.stringify(body)).not.toMatch(/password|postgres:|@[a-z0-9.-]+:\d+/i);
@@ -201,6 +228,14 @@ test.describe("SEC-APP-10 generic errors (TM-I10)", () => {
 });
 
 test.describe("SEC-APP-13 nothing secret reaches the client (TM-I8)", () => {
+  test("a local run knows its own session secret and app password, so the value checks below are not empty", () => {
+    test.skip(!LOCAL_BUILD, "an external deployment's values are not known to this runner");
+    expect(SECRET_VALUES.map(([label]) => label)).toEqual([
+      "the session secret value",
+      "the app database password",
+    ]);
+  });
+
   test("no secret name, connection string, role or claims setting in the client bundle", () => {
     test.skip(!LOCAL_BUILD, "scans the local build's .next/static");
     const root = join(process.cwd(), ".next", "static");
@@ -217,6 +252,8 @@ test.describe("SEC-APP-13 nothing secret reaches the client (TM-I8)", () => {
       const text = readFileSync(file, "utf8");
       for (const needle of FORBIDDEN_IN_CLIENT)
         if (text.includes(needle)) offenders.push(`${needle} in ${file}`);
+      for (const [label, value] of SECRET_VALUES)
+        if (text.includes(value)) offenders.push(`${label} in ${file}`);
     }
     expect(offenders).toEqual([]);
     // No source maps are shipped to the browser.
@@ -239,7 +276,10 @@ test.describe("SEC-APP-13 nothing secret reaches the client (TM-I8)", () => {
     await page.goto("/my-work");
     await page.goto("/does-not-exist");
     bodies.push(await page.content());
-    for (const needle of FORBIDDEN_IN_CLIENT) expect(bodies.join("\n"), needle).not.toContain(needle);
+    const all = bodies.join("\n");
+    for (const needle of FORBIDDEN_IN_CLIENT) expect(all, needle).not.toContain(needle);
+    // A value needle is checked with a boolean so a failure prints the label, never the secret.
+    for (const [label, value] of SECRET_VALUES) expect(all.includes(value), label).toBe(false);
   });
 });
 

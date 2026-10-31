@@ -15,6 +15,7 @@
 //   S7 every count-* element carries an integer data-count
 //   S8 every child frame of the page could be read (evaluated, or parsed from its srcdoc); none passes silently
 //   P1 a payload (HTML, RSC flight, JSON) contains no case id or reference outside the allowed set
+//   P2 every recorded payload could be read (from the browser, or by fetching the same GET again); none passes silently
 import type { Page, Response } from "@playwright/test";
 import { readChildFrames, type FramePage, type UnreadableFrame } from "./frames";
 
@@ -316,38 +317,92 @@ export function recoverUtf8(text: string): string {
 }
 
 const SCANNED_TYPES = /text\/html|text\/x-component|application\/json|text\/plain/;
+/** How long to wait for the browser to hand over a body before fetching it again. */
+const BODY_TIMEOUT_MS = 5_000;
+/** Request headers that shape the answer (RSC flight, prefetch, router state); cookies come from the context. */
+const REPLAY_HEADERS =
+  /^(accept|rsc|next-router-prefetch|next-router-state-tree|next-router-segment-prefetch|next-url)$/i;
+
+type PayloadRead =
+  { where: string; text: string; via: "browser" | "refetch" } | { where: string; error: string };
+
+const timeout = <T>(p: Promise<T>, ms: number) =>
+  Promise.race([
+    p,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`no body after ${ms} ms`)), ms)),
+  ]);
+const firstLine = (e: unknown) =>
+  String(e instanceof Error ? e.message : e)
+    .split("\n")[0]!
+    .slice(0, 160);
+const decode = (body: Buffer, type: string) =>
+  /charset=/i.test(type) ? body.toString("utf8") : recoverUtf8(body.toString("utf8"));
 
 /**
  * Records every same-origin document, RSC flight and JSON response the page receives, for P1 scanning. Attach before
  * the first navigation; call `violations()` after the step under test.
+ *
+ * Chromium does not always hand over a body: prefetches that Next.js abandons stay pending for ever, and evicted
+ * bodies answer "No data found". Such a GET is fetched again through the page's request context (same cookies, same
+ * RSC headers) and that body is scanned. A body that still cannot be read is P2, never a silent pass.
  */
-export function recordPayloads(page: Page, origin: string) {
-  const bodies: Promise<{ where: string; text: string } | null>[] = [];
-  const onResponse = (response: Response) => {
+export function recordPayloads(page: Page, origin: string, options: { bodyTimeoutMs?: number } = {}) {
+  const wait = options.bodyTimeoutMs ?? BODY_TIMEOUT_MS;
+  const reads: Promise<PayloadRead | null>[] = [];
+  const read = async (response: Response): Promise<PayloadRead | null> => {
+    const request = response.request();
+    const method = request.method();
     const url = response.url();
-    if (!url.startsWith(origin)) return;
+    const where = `${method} ${url}`;
     const type = response.headers()["content-type"] ?? "";
-    if (!SCANNED_TYPES.test(type)) return;
-    bodies.push(
-      response
-        .body()
-        .then((body) => ({
-          where: `${response.request().method()} ${url}`,
-          text: /charset=/i.test(type) ? body.toString("utf8") : recoverUtf8(body.toString("utf8")),
-        }))
-        .catch(() => null),
-    );
+    if (response.status() >= 300 && response.status() < 400) return null; // a redirect has no body
+    try {
+      return { where, text: decode(await timeout(response.body(), wait), type), via: "browser" };
+    } catch (first) {
+      if (method !== "GET") return { where, error: `body not readable (${firstLine(first)})` };
+      try {
+        const headers = Object.fromEntries(
+          Object.entries(await request.allHeaders()).filter(([name]) => REPLAY_HEADERS.test(name)),
+        );
+        const again = await page.request.get(url, { headers, maxRedirects: 0, timeout: wait * 2 });
+        const againType = again.headers()["content-type"] ?? type;
+        return {
+          where: `${where} (fetched again)`,
+          text: decode(await again.body(), againType),
+          via: "refetch",
+        };
+      } catch (second) {
+        return { where, error: `body not readable (${firstLine(first)}; again: ${firstLine(second)})` };
+      }
+    }
+  };
+  const onResponse = (response: Response) => {
+    if (!response.url().startsWith(origin)) return;
+    if (!SCANNED_TYPES.test(response.headers()["content-type"] ?? "")) return;
+    reads.push(read(response));
   };
   page.on("response", onResponse);
+  const settled = async () => (await Promise.all(reads)).filter((r): r is PayloadRead => r !== null);
   return {
     async violations(allow: PayloadAllowance): Promise<Violation[]> {
-      const done = (await Promise.all(bodies)).filter(
-        (b): b is { where: string; text: string } => b !== null,
+      return (await settled()).flatMap((r) =>
+        "error" in r
+          ? [{ rule: "P2", where: r.where, detail: `payload could not be inspected: ${r.error}` }]
+          : scanPayload(r.where, r.text, allow),
       );
-      return done.flatMap((b) => scanPayload(b.where, b.text, allow));
     },
+    /** Number of payloads read (from the browser or fetched again). */
     async count(): Promise<number> {
-      return (await Promise.all(bodies)).filter(Boolean).length;
+      return (await settled()).filter((r) => !("error" in r)).length;
+    },
+    /** How each payload was read, for evidence. */
+    async summary(): Promise<{ browser: number; refetch: number; unreadable: number }> {
+      const all = await settled();
+      return {
+        browser: all.filter((r) => "via" in r && r.via === "browser").length,
+        refetch: all.filter((r) => "via" in r && r.via === "refetch").length,
+        unreadable: all.filter((r) => "error" in r).length,
+      };
     },
     stop() {
       page.off("response", onResponse);

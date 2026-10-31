@@ -4,7 +4,7 @@
 through the connected integrations at the time given. Nothing here is a plan presented as a fact. Production is blocked
 by the hosting gate (ADR-005); staging holds synthetic data only.
 
-Last checked: **28 Oct 2026 02:02 UTC** by the Chief Architect.
+Last checked: **31 Oct 2026 19:08 UTC** by the Chief Architect (§2 Supabase: see its own times).
 
 ## 1. GitHub
 
@@ -12,10 +12,10 @@ Last checked: **28 Oct 2026 02:02 UTC** by the Chief Architect.
 | ---- | ----- | ------- |
 | Repository | [`mh1m1m/CDF_Notification_Generator`](https://github.com/mh1m1m/CDF_Notification_Generator) (existing; no other repository created) | 01:29 |
 | Visibility | public (OPEN_ISSUES OI-006) | E01 §1.2 |
-| Default branch | `main` at `9f1edaf` (README and .gitignore only) | 01:29 |
-| Integration branch | `develop` | 01:29 |
-| Branch protection | **none on `main` or `develop`** (`protected: false`); the GitHub connector cannot set protection rules (OI-016) | 01:29 |
-| CI | none yet (V13-ARCH-001 adds `.github/workflows/ci.yml`) | — |
+| Default branch | `main` at `9f1edaf` (README and .gitignore only); unchanged: only the owner merges `develop` → `main` | 31 Oct 19:56 |
+| Integration branch | `develop` at `0f46d79` (merge of #40, V13-PROC-003); 29 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1 | 31 Oct 19:58 |
+| Branch protection | **none on `main` or `develop`** (`protected: false`); the GitHub connector cannot set protection rules (OI-016) | 31 Oct 19:08 |
+| CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Latest `develop` push run [41235883655](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41235883655) on `e8bba66`: success | 31 Oct 19:56 |
 
 ## 2. Supabase (database)
 
@@ -25,11 +25,11 @@ Last checked: **28 Oct 2026 02:02 UTC** by the Chief Architect.
 | Project | **CDF GC Review**, ref `jeseeznffxlxmcljpmiu`, region `eu-central-1`, PostgreSQL 17.11, shared with the GC Review application (ADR-012) | 01:24 |
 | V13 schema | `cdf_notifications_v13`, owned by `cdf_v13_owner`; ACL `{cdf_v13_owner=UC/cdf_v13_owner,cdf_v13_user=U/cdf_v13_owner}` | 01:28 |
 | V13 roles | `cdf_v13_owner` (NOLOGIN), `cdf_v13_app` (LOGIN, connection limit 8, **no password**: nobody can log in; the owner sets it with `database/hosted/owner_set_app_login.sql`), `cdf_v13_user` (NOLOGIN) | 01:42 |
-| V13 migrations applied | 1: `0000 bootstrap` (sha256 `0f80be82…5c01`) at 01:03:21, runner `hosted` | 01:24 |
-| Isolation | PASS, 27 checks, 0 breaches (`docs/TEST_EVIDENCE.md` §2) | 01:28 |
-| GC Review objects | fingerprint of all 648 non-V13 objects identical to the baseline, TOTAL `40c9efe5697d19552d15f5ef85c2f85f` | 01:18 |
+| V13 migrations applied | 6: `0000 bootstrap` (28 Oct 01:03:21) and `0001`–`0005` (31 Oct 19:01–19:36), runner `hosted`, applied by `postgres`, each history sha256 equal to the migration file's (`docs/TEST_EVIDENCE.md` §2.1). `0006`–`0008` and the two seed files wait for the owner to answer the connector's confirmation (OI-034) | 31 Oct 19:45 |
+| Isolation | PASS, 27 checks, 0 breaches, after `0000` and after each of `0001`–`0005` (`docs/TEST_EVIDENCE.md` §2, §2.1) | 31 Oct 19:37 |
+| GC Review objects | fingerprint of all 648 non-V13 objects identical to the baseline after every V13 step, TOTAL `40c9efe5697d19552d15f5ef85c2f85f`; GC Review's table statistics unchanged; its production deployment READY with `/` and `/api/health` 200 after each step | 31 Oct 19:40 |
 | Supabase Auth / Storage / Realtime / Edge Functions / Data API | not used by V13; no V13 user, bucket, function or exposed schema | — |
-| Advisors | security: one pre-existing WARN (GC Review) + one INFO on V13 (OI-009); performance: 4 pre-existing INFO | 01:07 |
+| Advisors | security: GC Review's pre-existing WARN only (the V13 INFO of OI-009 cleared with `0001`); performance: GC Review's 4 pre-existing INFO plus 23 INFO on V13 tables (OI-032) | 31 Oct 19:39 |
 
 ## 3. Vercel (hosting)
 
@@ -41,14 +41,24 @@ Last checked: **28 Oct 2026 02:02 UTC** by the Chief Architect.
 | Deployment protection | Vercel Authentication on all deployments except custom domains (no custom domain exists); password protection off; trusted IPs off | 01:10 |
 | Production domain | `cdfnotificationgenerator-malsalehs-projects.vercel.app` — serves nothing (no successful deployment) | 01:10 |
 | Staging (develop) alias | `cdfnotificationgenerator-git-develop-malsalehs-projects.vercel.app` | 01:10 |
-| Environment variables | `V13_PERSONA_SIGNIN`, `V13_ISOLATION_PROBE` (plain, Preview, branch `develop`); the two sensitive values wait for the owner step | 02:00 |
+| Environment variables | `V13_PERSONA_SIGNIN`, `V13_ISOLATION_PROBE` (plain, Preview, branch `develop`); the two sensitive values still wait for the owner step (names listed, values not read) | 31 Oct 19:05 |
 
-Deployments so far:
+Deployments:
 
-| Deployment | Commit | Target | State | Cause |
-| ---------- | ------ | ------ | ----- | ----- |
-| `dpl_CAY2ZqUCvHquz5yMfTqvE4YG16kv` | `develop` `47ce691` | production (Vercel's choice for the first build, OI-011) | ERROR | `NEXT_NO_VERSION`: no Next.js app yet |
-| `dpl_3bZoHdySGtoh9JLqxYpwU1FBF4er` | `develop` `3512507` | preview | ERROR | `NEXT_NO_VERSION`: no Next.js app yet |
+| Deployment | Commit | Target | State | Note |
+| ---------- | ------ | ------ | ----- | ---- |
+| `dpl_CAY2ZqUCvHquz5yMfTqvE4YG16kv` | `develop` `47ce691` | production (Vercel's choice for the first build, OI-011) | ERROR | `NEXT_NO_VERSION`: no Next.js app yet (28 Oct) |
+| `dpl_3bZoHdySGtoh9JLqxYpwU1FBF4er` | `develop` `3512507` | preview | ERROR | `NEXT_NO_VERSION`: no Next.js app yet (28 Oct) |
+| every `develop` merge since #6 (V13-ARCH-001) | — | preview | READY | the five most recent, read 31 Oct 19:05: `b193a1c`, `f431b98`, `558d4ae`, `50850a4`, `b5ee5f4` |
+| `dpl_cZWKWPdPL9suLcPBtJCnnKMMRBpG` | `develop` `b5ee5f4` | preview, behind the staging alias | READY | the alias pointed here at 19:05; the push of `a6c224a` builds the next one |
+
+Staging alias check, 31 Oct 2026 19:05:36 UTC (through the Vercel connector's authenticated fetch; Vercel
+Authentication stays on): `GET /api/health` → **HTTP 503**
+`{"status":"degraded","app":"v13-enterprise","commit":"b5ee5f4…","db":{"status":"DB_NOT_CONFIGURED"}}`. That is the
+expected answer while `V13_DATABASE_URL` is unset (owner step), and the app serves no case data without it. The response
+carried the resource Content-Security-Policy (`default-src 'none'`), `Cache-Control: no-store`, HSTS, `X-Frame-Options:
+DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, COOP/CORP `same-origin`, the
+Permissions-Policy and an `X-Correlation-Id`.
 
 ## 4. Environment variables (names only; values never in Git)
 
@@ -68,8 +78,9 @@ There is no Supabase URL, anon key or service-role key: V13 does not use the Sup
 | Check | Status | Evidence |
 | ----- | ------ | -------- |
 | GitHub ↔ Vercel connected | DONE | deployments built from `develop` pushes |
-| Database reachable from the deployed app | NOT_STARTED | V13-ARCH-003 |
-| Successful build | NOT_STARTED | waits for V13-ARCH-001 |
-| Authentication test (persona sign-in) on the deployment | NOT_STARTED | waits for V13-ARCH-001 and -003 |
+| Successful build | DONE | every `develop` merge since #6 deploys READY (§3) |
+| Health endpoint on the deployment | DONE (degraded, as expected) | 503 `DB_NOT_CONFIGURED` with the security headers (§3) |
+| Database reachable from the deployed app | BLOCKED | owner step: `V13_DATABASE_URL` and `V13_SESSION_SECRET` (`docs/hosted/OWNER_STEP_APP_LOGIN.md`); V13-ARCH-003 |
+| Authentication test (persona sign-in) on the deployment | BLOCKED | same owner step |
 | Playwright smoke against the deployment | NOT_STARTED | OI-008 |
-| Isolation probe from the app login | NOT_STARTED | plan §5.3, V13-ARCH-003 |
+| Isolation probe from the app login | BLOCKED | same owner step; plan §5.3, V13-ARCH-003 |

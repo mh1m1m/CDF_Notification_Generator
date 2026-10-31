@@ -11,4 +11,6 @@ export const ar = {
   "notFound.heading": "الصفحة غير موجودة",
   "notFound.body": "لا توجد صفحة بهذا العنوان، أو لا تملك صلاحية الوصول إليها.",
   "notFound.backToStart": "العودة إلى البداية",
+  "records.active": "نشطة",
+  "records.closed": "مغلقة",
 } as const;

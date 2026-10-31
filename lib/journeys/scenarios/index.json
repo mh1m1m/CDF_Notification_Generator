@@ -1,0 +1,188 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "scenarios": [
+    {
+      "id": "CF-15",
+      "journey": "J-CHAIR-DIRECTION",
+      "assignment_id": "CF-15",
+      "recipient_class": "CHAIR",
+      "variants": [],
+      "file": "CF-15.json"
+    },
+    {
+      "id": "CF-16",
+      "journey": "J-CHAIR-DIRECTION",
+      "assignment_id": "CF-16",
+      "recipient_class": "SECRETARY",
+      "variants": [],
+      "file": "CF-16.json"
+    },
+    {
+      "id": "CF-17",
+      "journey": "J-CHAIR-DIRECTION",
+      "assignment_id": "CF-17",
+      "recipient_class": "SECRETARY",
+      "variants": [],
+      "file": "CF-17.json"
+    },
+    {
+      "id": "CF-18",
+      "journey": "J-CHAIR-DIRECTION",
+      "assignment_id": "CF-18",
+      "recipient_class": "SECRETARY",
+      "variants": [],
+      "file": "CF-18.json"
+    },
+    {
+      "id": "CF-19",
+      "journey": "J-CHAIR-DIRECTION",
+      "assignment_id": "CF-19",
+      "recipient_class": "SECRETARY",
+      "variants": ["CF-19-V1"],
+      "file": "CF-19.json"
+    },
+    {
+      "id": "CF-23b",
+      "journey": "J-DEFENCE",
+      "assignment_id": "CF-23b",
+      "recipient_class": "SUBJECT",
+      "variants": ["CF-23b-V1", "CF-23b-V2"],
+      "file": "CF-23b.json"
+    },
+    {
+      "id": "CF-25",
+      "journey": "J-MEETING",
+      "assignment_id": "CF-25",
+      "recipient_class": "MEMBER",
+      "variants": [],
+      "file": "CF-25.json"
+    },
+    {
+      "id": "CF-27",
+      "journey": "J-MEETING",
+      "assignment_id": "CF-27",
+      "recipient_class": "MEMBER",
+      "variants": [],
+      "file": "CF-27.json"
+    },
+    {
+      "id": "CF-28",
+      "journey": "J-MEETING",
+      "assignment_id": "CF-28",
+      "recipient_class": "MEMBER",
+      "variants": ["CF-28-V1"],
+      "file": "CF-28.json"
+    },
+    {
+      "id": "CF-31",
+      "journey": "J-RECOMMENDATION-COMMITTEE",
+      "assignment_id": "CF-31",
+      "recipient_class": "MEMBER",
+      "variants": ["CF-31-V1"],
+      "file": "CF-31.json"
+    },
+    {
+      "id": "CF-34",
+      "journey": "J-RECOMMENDATION-COMMITTEE",
+      "assignment_id": "CF-34",
+      "recipient_class": "SECRETARY",
+      "variants": ["CF-34-V1", "CF-34-V2"],
+      "file": "CF-34.json"
+    },
+    {
+      "id": "CF-35",
+      "journey": "J-RECOMMENDATION-COMMITTEE",
+      "assignment_id": "CF-35",
+      "recipient_class": "CHAIR",
+      "variants": ["CF-35-V1"],
+      "file": "CF-35.json"
+    },
+    {
+      "id": "CF-33",
+      "journey": "J-LEGAL-REVIEW",
+      "assignment_id": "CF-33",
+      "recipient_class": "LEGAL_REVIEWER",
+      "variants": [],
+      "file": "CF-33.json"
+    },
+    {
+      "id": "CF-36",
+      "journey": "J-SANCTION-EXTRACT",
+      "assignment_id": "CF-36",
+      "recipient_class": "RESTRICTED_CASE_AUTHORITY",
+      "variants": [],
+      "file": "CF-36.json"
+    },
+    {
+      "id": "CF-37",
+      "journey": "J-DECISION-SUBJECT",
+      "assignment_id": "CF-37",
+      "recipient_class": "SUBJECT",
+      "variants": ["CF-37-V1"],
+      "file": "CF-37.json"
+    },
+    {
+      "id": "EC-01",
+      "journey": "J-WB-REPORTER",
+      "assignment_id": "WB-07",
+      "recipient_class": "REPORTER",
+      "variants": ["EC-01-V1"],
+      "file": "EC-01.json"
+    },
+    {
+      "id": "RET-01",
+      "journey": "J-DR-PREPARER",
+      "assignment_id": "CF-02",
+      "recipient_class": "PREPARER",
+      "variants": [],
+      "file": "RET-01.json"
+    },
+    {
+      "id": "NOCASE-01",
+      "journey": "J-DR-PREPARER",
+      "assignment_id": "CF-01",
+      "recipient_class": "SECTOR_HEAD",
+      "variants": [],
+      "file": "NOCASE-01.json"
+    },
+    {
+      "id": "SUS-01",
+      "journey": "J-INVESTIGATION",
+      "assignment_id": "INV-07",
+      "recipient_class": "INVESTIGATOR",
+      "variants": [],
+      "file": "SUS-01.json"
+    },
+    {
+      "id": "REO-01",
+      "journey": "J-INVESTIGATION",
+      "assignment_id": "CF-20",
+      "recipient_class": "INVESTIGATOR",
+      "variants": [],
+      "file": "REO-01.json"
+    },
+    {
+      "id": "WIT-01",
+      "journey": "J-WITNESS",
+      "assignment_id": "INV-10",
+      "recipient_class": "WITNESS",
+      "variants": [],
+      "file": "WIT-01.json"
+    },
+    {
+      "id": "SUM-01",
+      "journey": "J-DR-AUTHORITY",
+      "assignment_id": "DR-06",
+      "recipient_class": "AUTHORITY",
+      "variants": [],
+      "file": "SUM-01.json"
+    }
+  ]
+}
