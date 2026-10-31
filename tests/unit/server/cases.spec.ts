@@ -70,7 +70,7 @@ describe("getCaseForRoute", () => {
     const wrong: CaseSourceAdapter = {
       sourceSystem: "V13_SYNTHETIC",
       listCases: async () => ({ items: [], next_cursor: null, total: 0 }),
-      getCase: async () => FAKE_CASES[1] as CaseSummary,
+      getCase: async () => ({ ...(FAKE_CASES[1] as CaseSummary), my_capacity: null }),
     };
     await notFound(getCaseForRoute({ ctx: ctxFor(SECRETARY), source: wrong }, caseIdOf(1)));
   });

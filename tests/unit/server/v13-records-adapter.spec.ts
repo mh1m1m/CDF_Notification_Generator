@@ -188,13 +188,30 @@ describe("listCases", () => {
 });
 
 describe("getCase", () => {
-  it("calls case_header with the id bound and maps the row", async () => {
-    const { calls, adapter } = recorder([row(4)]);
+  const header = (i: number, my_capacity: unknown) => ({ ...row(i), my_capacity }) as unknown as CaseRow;
+
+  it("calls case_header with the id bound and an explicit column list, and maps the header", async () => {
+    const { calls, adapter } = recorder([header(4, "SECRETARY")]);
     const c = await adapter.getCase(SECRETARY, row(4).id as CaseId);
     expect(calls[0]?.text).toMatch(/cdf_notifications_v13\.case_header\(/);
-    expect(calls[0]?.text).not.toContain("*"); // explicit column list: my_capacity is not read here (SEC, #19)
+    expect(calls[0]?.text).not.toContain("*"); // explicit column list (SEC, #19)
+    expect(calls[0]?.text).toContain("h.my_capacity");
     expect(calls[0]?.values).toEqual([row(4).id]);
     expect(c?.case_number).toBe("CDF-DEMO-2026-0004");
+    expect(c?.my_capacity).toBe("SECRETARY");
+  });
+
+  it("keeps a null capacity (no active assignment)", async () => {
+    const { adapter } = recorder([header(4, null)]);
+    expect((await adapter.getCase(SECRETARY, row(4).id as CaseId))?.my_capacity).toBeNull();
+  });
+
+  it.each([
+    ["an unknown capacity", "CHAIR"],
+    ["a missing capacity column", undefined],
+  ])("refuses a header with %s (fail closed)", async (_n, capacity) => {
+    const { adapter } = recorder([header(4, capacity)]);
+    await expect(adapter.getCase(SECRETARY, row(4).id as CaseId)).rejects.toThrow();
   });
 
   it("returns null when the database returns no row (unknown and unauthorised alike)", async () => {

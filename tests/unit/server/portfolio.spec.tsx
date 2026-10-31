@@ -27,6 +27,7 @@ import {
   INVESTIGATOR_GAMMA,
   SECRETARY,
 } from "./support/identities";
+import { scrollRegionProblems } from "./support/scroll-regions";
 
 vi.mock("@/lib/http/errors", () => ({ logServerError: vi.fn() }));
 
@@ -245,6 +246,12 @@ describe("PortfolioView markup", async () => {
   const { PortfolioView: View } = await import("@/app/(platform)/portfolio/_components/PortfolioView");
   const render = (locale: "ar" | "en", view: PortfolioView) =>
     renderToStaticMarkup(<View t={createTranslator(locale)} locale={locale} view={view} />);
+
+  it("the table sits in a focusable scroll region named by its caption (WCAG 2.1.1)", async () => {
+    for (const locale of ["ar", "en"] as const) {
+      expect(scrollRegionProblems(render(locale, await load(SECRETARY)))).toEqual([]);
+    }
+  });
 
   it("rows carry ADR-013 attributes and link by UUID; the count equals the visible rows", async () => {
     const view = await load(SECRETARY);
