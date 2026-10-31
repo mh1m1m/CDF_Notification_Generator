@@ -162,6 +162,10 @@ Library `tests/truth/inspector.ts`.
   `data-status`. Fails if a "completed"-class status is shown with any epistemic other than `recorded`.
 - For `expected`/`conditional`/`awaiting_approval`: fails if the element's accessible text is the same as a recorded
   element of the same status (they must be distinguishable without colour).
+- **Notification preview frames** (ARCH ruling, 31 Oct): inside a preview frame T1 and T8 do not apply; **T9** every
+  `data-epistemic` there is one of the renderer's values, `DATA_EPISTEMIC_VALUES` imported from
+  `lib/notifications/data-epistemic.ts` (V13-PROC-011), never copied. A status badge planted in a frame still gets
+  T2–T6; an unreadable frame stays T7; outside a frame nothing changes.
 - **Planted-badge self-test** (acceptance). `planted-badge.spec.ts` injects (via `page.route`) a StatusBadge marked
   `data-epistemic="recorded"` `data-status="COMPLETED"` with (a) no `data-event-id`, (b) a random UUID, (c) the id of a
   real event of another case. Each must make the Inspector fail.
