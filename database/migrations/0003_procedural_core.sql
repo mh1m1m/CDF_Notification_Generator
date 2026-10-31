@@ -117,12 +117,21 @@ begin
     raise exception 'not found' using errcode = 'V1404';
   end if;
 
-  select t.* into v_task from cdf_notifications_v13.task t where t.id = p_task_id for update;
+  -- Access first, without a lock: a caller without access never waits on, or locks, a task row (no timing signal).
   -- Unknown and unauthorised are the same answer.
+  select t.* into v_task from cdf_notifications_v13.task t where t.id = p_task_id;
   if not found or not cdf_notifications_v13.can_access_case(v_task.case_id) then
     raise exception 'not found' using errcode = 'V1404';
   end if;
   if not (v_task.assignee_persona_id = v_persona or cdf_notifications_v13.is_assigned_to_case(v_task.case_id)) then
+    raise exception 'not found' using errcode = 'V1404';
+  end if;
+
+  -- Then lock and re-read; the version, state and transition checks below use the locked row, and the assignee rule
+  -- is checked again on it.
+  select t.* into v_task from cdf_notifications_v13.task t where t.id = p_task_id for update;
+  if not found
+     or not (v_task.assignee_persona_id = v_persona or cdf_notifications_v13.is_assigned_to_case(v_task.case_id)) then
     raise exception 'not found' using errcode = 'V1404';
   end if;
 

@@ -610,6 +610,44 @@ describe.skipIf(!seeded)("case access, tasks and notifications (migrations 0002â
     });
   });
 
+  describe("api_update_task_status takes the task lock only after the access check (SEC LOW)", () => {
+    /** Holds FOR UPDATE on a task in another session while `fn` runs, then releases it. */
+    async function whileLocked<T>(task: string, fn: () => Promise<T>): Promise<T> {
+      let release!: () => void;
+      let locked!: () => void;
+      const held = new Promise<void>((r) => (release = r));
+      const isLocked = new Promise<void>((r) => (locked = r));
+      const holder = admin.begin(async (tx) => {
+        await tx`select 1 from cdf_notifications_v13.task where id = ${task} for update`;
+        locked();
+        await held;
+      });
+      await isLocked;
+      try {
+        return await fn();
+      } finally {
+        release();
+        await holder;
+      }
+    }
+
+    const tryUpdate = (persona: string, task: string) =>
+      codeOf(
+        rolledBack(persona, "INVESTIGATIONS", async (tx) => {
+          await tx.unsafe("set local lock_timeout = '500ms'");
+          return tx`select * from cdf_notifications_v13.api_update_task_status(${task}, 'BLOCKED', 1)`;
+        }),
+      );
+
+    it("a caller without access gets V1404 at once while another session holds the row (no wait, no lock)", async () => {
+      // Control: the assigned investigator does wait for the lock (55P03 after lock_timeout), so the row is held.
+      expect(await whileLocked(TASK(18), () => tryUpdate(PERSONA.beta, TASK(18)))).toBe("55P03");
+      // Gamma cannot see restricted case 0009: same answer as an unknown task, without touching the lock.
+      expect(await whileLocked(TASK(18), () => tryUpdate(PERSONA.gamma, TASK(18)))).toBe("V1404");
+      expect(await whileLocked(TASK(18), () => tryUpdate(PERSONA.gamma, UNKNOWN))).toBe("V1404");
+    });
+  });
+
   describe("api_create_notification_draft and notification reads", () => {
     const draft =
       (caseId: string | null, tv: string | null, recipient: string | null, idem: string | null) => (tx: Tx) =>
@@ -674,7 +712,9 @@ describe.skipIf(!seeded)("case access, tasks and notifications (migrations 0002â
       ).toBe("OK");
     });
 
-    it("an idempotency key is used once: a replay in the same transaction or a seed key is V1409", async () => {
+    const seedKey = (n: string) => createHash("sha256").update(`seed-m1:${n}`).digest("hex");
+
+    it("an idempotency key is used once per author: a replay, or the caller's own seed key, is V1409", async () => {
       const code = await codeOf(
         rolledBack(PERSONA.alpha, "SECRETARIAT", async (tx) => {
           await draft(CASE(1), TEMPLATE_VERSION(2), "CASE_TEAM", key("dup"))(tx);
@@ -682,12 +722,72 @@ describe.skipIf(!seeded)("case access, tasks and notifications (migrations 0002â
         }),
       );
       expect(code).toBe("V1409");
-      const seedKey = createHash("sha256").update("seed-m1:01").digest("hex");
+      // Seed notification 01 was drafted by Secretary Alpha.
       expect(
         await codeOf(
-          rolledBack(PERSONA.alpha, "SECRETARIAT", draft(CASE(1), TEMPLATE_VERSION(2), "CASE_TEAM", seedKey)),
+          rolledBack(
+            PERSONA.alpha,
+            "SECRETARIAT",
+            draft(CASE(1), TEMPLATE_VERSION(2), "CASE_TEAM", seedKey("01")),
+          ),
         ),
       ).toBe("V1409");
+    });
+
+    it("another persona's key gives no signal on a case the caller can access (no V1409)", async () => {
+      // Alpha's seed key 01, used by Investigator Beta on case 0001, which Beta can access.
+      expect(
+        await codeOf(
+          rolledBack(
+            PERSONA.beta,
+            "INVESTIGATIONS",
+            draft(CASE(1), TEMPLATE_VERSION(1), "CASE_TEAM", seedKey("01")),
+          ),
+        ),
+      ).toBe("OK");
+    });
+
+    it("another persona's key on a hidden case is V1404, exactly like an unknown case", async () => {
+      // Beta's seed key 04 belongs to restricted case 0009, which Alpha cannot see.
+      const hidden = await codeOf(
+        rolledBack(
+          PERSONA.alpha,
+          "SECRETARIAT",
+          draft(CASE(9), TEMPLATE_VERSION(2), "CASE_TEAM", seedKey("04")),
+        ),
+      );
+      const unknown = await codeOf(
+        rolledBack(
+          PERSONA.alpha,
+          "SECRETARIAT",
+          draft(UNKNOWN, TEMPLATE_VERSION(2), "CASE_TEAM", seedKey("04")),
+        ),
+      );
+      expect(hidden).toBe("V1404");
+      expect(unknown).toBe("V1404");
+      // And on a case Alpha can access, Beta's key is simply free for Alpha.
+      expect(
+        await codeOf(
+          rolledBack(
+            PERSONA.alpha,
+            "SECRETARIAT",
+            draft(CASE(1), TEMPLATE_VERSION(2), "CASE_TEAM", seedKey("04")),
+          ),
+        ),
+      ).toBe("OK");
+    });
+
+    it("the key is unique per author in the table (not globally)", async () => {
+      const [row] = await admin<{ def: string }[]>`
+        select pg_catalog.pg_get_constraintdef(c.oid) as def from pg_catalog.pg_constraint c
+         where c.conrelid = 'cdf_notifications_v13.notification'::regclass
+           and c.conname = 'notification_author_idempotency_unique'`;
+      expect(row?.def).toBe("UNIQUE (created_by_persona_id, idempotency_key)");
+      const globals = await admin<{ conname: string }[]>`
+        select c.conname from pg_catalog.pg_constraint c
+         where c.conrelid = 'cdf_notifications_v13.notification'::regclass and c.contype = 'u'
+           and pg_catalog.pg_get_constraintdef(c.oid) = 'UNIQUE (idempotency_key)'`;
+      expect(globals).toHaveLength(0);
     });
 
     const refusals: [string, string, WorkspaceCode, ReturnType<typeof draft>, string][] = [
