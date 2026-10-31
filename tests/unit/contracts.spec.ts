@@ -8,6 +8,8 @@ import {
   CaseListFilterSchema,
   CaseSummarySchema,
   I18N_KEY_PATTERN,
+  PORTFOLIO_DB_ROW_BOUND,
+  PORTFOLIO_PAGE_MAX,
   RequestIdentitySchema,
   SOURCE_REF_PATTERN,
   UUID_PATTERN,
@@ -125,6 +127,10 @@ describe("CaseListFilterSchema", () => {
     expect(CaseListFilterSchema.parse({}).limit).toBe(25);
     expect(CaseListFilterSchema.safeParse({ limit: 0 }).success).toBe(false);
     expect(CaseListFilterSchema.safeParse({ limit: 101 }).success).toBe(false);
+    // One look-ahead row must still fit inside the database bound.
+    expect(PORTFOLIO_PAGE_MAX).toBe(PORTFOLIO_DB_ROW_BOUND - 1);
+    expect(CaseListFilterSchema.safeParse({ limit: PORTFOLIO_PAGE_MAX }).success).toBe(true);
+    expect(CaseListFilterSchema.safeParse({ limit: PORTFOLIO_DB_ROW_BOUND }).success).toBe(false);
   });
 
   it("rejects unknown filters and over-long text", () => {

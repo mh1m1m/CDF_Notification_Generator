@@ -49,13 +49,18 @@ export const CaseSummarySchema = z
   });
 export type CaseSummary = z.infer<typeof CaseSummarySchema>;
 
+/** Rows the database returns per portfolio_page call at most (migration 0003, E02). */
+export const PORTFOLIO_DB_ROW_BOUND = 100;
+/** Largest page a caller may ask for: the adapter reads one look-ahead row to know whether a next page exists. */
+export const PORTFOLIO_PAGE_MAX = PORTFOLIO_DB_ROW_BOUND - 1;
+
 /** Filter for listing cases. Authorisation is applied by the adapter before filtering, counting or paging. */
 export const CaseListFilterSchema = z.strictObject({
   records_state: RecordsStateSchema.optional(),
   lifecycle_stage: LifecycleStageSchema.optional(),
   /** Free-text match on case number or title; applied only to cases the identity may already see. */
   text: z.string().trim().min(1).max(100).regex(NO_CONTROL_CHARS).optional(),
-  limit: z.number().int().min(1).max(100).default(25),
+  limit: z.number().int().min(1).max(PORTFOLIO_PAGE_MAX).default(25),
   /** Opaque cursor returned by the previous page. */
   cursor: z.string().min(1).max(512).optional(),
   /** Only cases where the identity holds an active case assignment (any capacity); task-only assignees do not count. */

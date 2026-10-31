@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 04:25 UTC · Branch: feature/V13-FE-003-case-portfolio · Head: see PR
+Updated: 2026-10-31 18:15 UTC · Branch: feature/V13-FE-003-case-portfolio · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -11,7 +11,8 @@ Updated: 2026-10-28 04:25 UTC · Branch: feature/V13-FE-003-case-portfolio · He
 - V13-FE-003 Case Portfolio (SCREENS S2) — `/portfolio`: GET filter form (search, stage, records state, assigned to
   me), keyset paging with previous/next, authorised total, last recorded event, own open tasks — PR (stacked on #10)
   — IN_REVIEW. Contract change proposed in the PR (`CaseListPage.total`, `CaseListFilter.assigned_to_me`,
-  `CaseListItem` = CaseSummary + `CaseListExtrasSchema`): needs ARCH + SEC ACCEPT. Needs DB PR #15 on `develop`
+  `CaseListItem` = CaseSummary + `CaseListExtrasSchema`, `PORTFOLIO_DB_ROW_BOUND` = 100 and `PORTFOLIO_PAGE_MAX` = 99 as
+  the filter's limit max): needs ARCH + SEC ACCEPT. Needs DB PR #15 on `develop`
   first (6-argument read functions and the row summaries; the adapter refuses rows without them).
 
 ## Changed files
@@ -42,6 +43,7 @@ Updated: 2026-10-28 04:25 UTC · Branch: feature/V13-FE-003-case-portfolio · He
 | Same probe with the three columns filled locally by a throwaway patch (reverted, not committed) | pass: seed visibility for 8 persona/workspace pairs, 0009 only for Beta, unknown = unauthorised = null, closed readable, keyset paging, filters inside the authorised set | 12/12 | local |
 | FE-003: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm build` | pass | — | FE-003 head |
 | FE-003: `pnpm test` (unit) | pass | 25 files, 472 tests (portfolio 38, adapter +14, contracts +3) | FE-003 head |
+| FE-003 after merging develop a5bbb10 + FE-002 35e1e65, with `PORTFOLIO_DB_ROW_BOUND`/`PORTFOLIO_PAGE_MAX` (ARCH ruling (b) on SEC's limit+1 item): `pnpm test` | pass | 542 | FE-003 head |
 | FE-003 integration probe (`tests/integration/fe-case-source.spec.ts`, not committed yet) on a local merge of FE-003 + DB PR #15 head 4eccf57, after `pnpm db:reset` | pass: seed visibility ×8 with total, 0009 only for Beta, unknown = unauthorised = null, keyset paging with constant total, filters and total agree, assigned-to-me ×6, row summaries | 15/15 | local |
 | FE-003 throwaway browser probe (not committed; e2e is QA's) on the same merge, `pnpm build && pnpm start`: Alpha 7 rows = count, links by UUID, closed 0010 glyph + word, filters in URL survive back navigation, clear; Gamma search 0009 → no results, count 0, no 0009 UUID in the page; Beta sees 0009 with named-access flag; edited stage and forged cursor → generic state with correlation id, no SQL text; English LTR counts; assigned-to-me 6 rows, last event id 0e…0110 on 0010, own open tasks 2 on 0004; axe 0 serious/critical; no CSP console errors; no horizontal page scroll at 360 and 1280 px | pass | 5/5 | local |
 

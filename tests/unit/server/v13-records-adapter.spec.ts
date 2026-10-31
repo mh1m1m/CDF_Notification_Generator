@@ -7,7 +7,12 @@ import {
   type CaseRow,
 } from "@/lib/adapters/case-source/v13-records";
 import { decodeCursor, encodeCursor, InvalidCursorError } from "@/lib/adapters/case-source/cursor";
-import type { CaseId, RequestIdentity } from "@/lib/contracts";
+import {
+  PORTFOLIO_DB_ROW_BOUND,
+  PORTFOLIO_PAGE_MAX,
+  type CaseId,
+  type RequestIdentity,
+} from "@/lib/contracts";
 import type { Tx } from "@/lib/db/security-context";
 import { SECRETARY } from "./support/identities";
 
@@ -155,6 +160,16 @@ describe("listCases", () => {
     expect(decodeCursor(page.next_cursor ?? undefined)).toBe("CDF-DEMO-2026-0002");
     await adapter.listCases(SECRETARY, { limit: 2, cursor: page.next_cursor ?? undefined });
     expect(calls[1]?.values[4]).toBe("CDF-DEMO-2026-0002");
+  });
+
+  it("at the largest page size the look-ahead row stays inside the database bound and still offers a next page", async () => {
+    const rows = Array.from({ length: PORTFOLIO_DB_ROW_BOUND }, (_, k) => row(k + 1));
+    const { calls, adapter } = recorder(counted(150, rows));
+    const page = await adapter.listCases(SECRETARY, { limit: PORTFOLIO_PAGE_MAX });
+    expect(calls[0]?.values[5]).toBe(PORTFOLIO_DB_ROW_BOUND);
+    expect(page.items).toHaveLength(PORTFOLIO_PAGE_MAX);
+    expect(decodeCursor(page.next_cursor ?? undefined)).toBe("CDF-DEMO-2026-0099");
+    await expect(adapter.listCases(SECRETARY, { limit: PORTFOLIO_DB_ROW_BOUND })).rejects.toThrow();
   });
 
   it("refuses the whole page when any row breaks the contract", async () => {
