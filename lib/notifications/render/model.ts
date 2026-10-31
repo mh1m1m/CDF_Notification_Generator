@@ -894,6 +894,28 @@ export interface BuildModelOptions {
 }
 
 /**
+ * The help and confidentiality texts a recipient class gets (the same rule for fixture scenarios and server records):
+ * an external class gets its own help text from the content, if any, and its own confidentiality text; an internal
+ * class gets the content's INTERNAL help or the default internal help, and the INTERNAL (or RECUSED_MEMBER) notice.
+ */
+export function recipientNotices(
+  cls: string,
+  help?: Readonly<Record<string, unknown>> | null,
+): { help: unknown; confidentiality_notice: { ar: string; en: string } } {
+  const external = (EXTERNAL_CLASSES as readonly string[]).includes(cls);
+  const helpKey = external ? cls : "INTERNAL";
+  const confKey = external ? cls : cls === "RECUSED_MEMBER" ? "RECUSED_MEMBER" : "INTERNAL";
+  return {
+    help:
+      (help && Object.hasOwn(help, helpKey) ? help[helpKey] : undefined) ?? (external ? null : INTERNAL_HELP),
+    confidentiality_notice:
+      (Object.hasOwn(CONFIDENTIALITY, confKey)
+        ? CONFIDENTIALITY[confKey as keyof typeof CONFIDENTIALITY]
+        : undefined) ?? CONFIDENTIALITY.INTERNAL,
+  };
+}
+
+/**
  * buildNotificationModel(scenario, recipient, {lang, catalogue, authority, generated_at}) → unprojected model
  * `recipient` = {class, ref, label:{ar,en}, email, actor:{capacity, seat_active, recused, delegation_active}, on_access_list}
  */
@@ -1070,17 +1092,10 @@ export function buildNotificationModel(
       reason: r.reason,
     };
   }
-  const external = (EXTERNAL_CLASSES as readonly string[]).includes(cls);
-  const helpKey = external ? cls : "INTERNAL";
-  fields.help =
-    (c.help && Object.hasOwn(c.help, helpKey) ? c.help[helpKey] : undefined) ??
-    (external ? null : INTERNAL_HELP);
+  const notices = recipientNotices(cls, c.help);
+  fields.help = notices.help;
   if (isNil(fields.help)) delete fields.help;
-  const confKey = external ? cls : cls === "RECUSED_MEMBER" ? "RECUSED_MEMBER" : "INTERNAL";
-  fields.confidentiality_notice =
-    (Object.hasOwn(CONFIDENTIALITY, confKey)
-      ? CONFIDENTIALITY[confKey as keyof typeof CONFIDENTIALITY]
-      : undefined) ?? CONFIDENTIALITY.INTERNAL;
+  fields.confidentiality_notice = notices.confidentiality_notice;
   for (const k of Object.keys(fields)) if (isNil(fields[k])) delete fields[k];
 
   const tags = new Set(scenario.context_tags ?? []);
