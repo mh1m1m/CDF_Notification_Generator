@@ -39,23 +39,33 @@ right and the case is not closed. Enforcement: **A** application pre-check (`lib
 | ------------------ | ------ | ------ | ------ | ------ | ------ | -- | -- | -- | -- | -- | -- | -------- | ----- |
 | `workspace` (0001) | own memberships | = | = | own | own | own | — | — | — | — | — | P, G | SEC-DB-05, -06, -26 |
 | `role` (0001) | R | R | R | R | R | R | — | — | — | — | — | P, G | SEC-DB-05 |
-| `persona` (0001) | self + co-assigned display name | = | = | self | self | self | — | — | — | — | — | P, G | SEC-DB-05, -27 |
+| `persona` (0001) | self + active personas with an active membership in the current workspace (`_is_colleague`); e-mail only for oneself, through `current_persona()` | = | = | = | = | = | — | — | — | — | — | P, G | SEC-DB-05, -27 |
 | `persona_workspace_membership` (0001) | own rows | = | = | own | own | own | — | — | — | — | — | P, G | SEC-DB-06 |
 | `audit_event` (0001) | none in M1 (read through a verifier function only) | — | — | — | — | — | — | — | — | — | — | P, G | SEC-DB-12, -13 |
 | `schema_migrations` (0000) | — | — | — | — | — | — | — | — | — | — | — | P (restrictive deny), G | SEC-DB-07 |
 | `case_record` (0002) | R | R | R | R | **—** | — | — | — | — | — | — | A, P | SEC-DB-18, -19, -21, SEC-APP-01, -02 |
 | `case_assignment` (0002) | case's assignments | = | = | case's assignments | — | — | — | — | — | — | — | A, P | SEC-DB-18, -21 |
 | `procedural_event` (0003) | R | R | R | R | — | — | — | — | — | — | — | A, P | SEC-DB-18, -21 |
-| `task` (0003) | R | R | R | R (own tasks at least) | — | — | — | — | — | — | — | A, P | SEC-DB-18, -20, -21 |
+| `task` (0003) | R | R | R | R | — | — | — | — | — | — | — | A, P | SEC-DB-18, -20, -21 |
 | `notification_template`, `_version` (0004) | R | R | R | R | R | R | — | — | — | — | — | P, G | SEC-DB-22 |
-| `notification` (0004) | R* | R* | R* | R* | — | — | — | — | — | — | — | A, P | SEC-DB-18, -21, -22 |
+| `notification` (0004) | R ¹ | R ¹ | R ¹ | R ¹ | — | — | — | — | — | — | — | A, P | SEC-DB-18, -21, -22 |
 | `notification_event` (0004) | R | R | R | R | — | — | — | — | — | — | — | A, P | SEC-DB-18, -21 |
+| `case_workspace_visibility` (0002) | R with the case | = | = | = | — | — | — | — | — | — | — | P | SEC-DB-18, -21 |
+| `notification_recipient_class` (0004) | R (signed in) | = | = | = | = | = | — | — | — | — | — | P, G | SEC-DB-05 |
+| `claims_key` (0001) | — (owner only) | — | — | — | — | — | — | — | — | — | — | P (restrictive deny), G | P06 |
 | `dispatch_outbox` (0004, content-free) | — | — | — | — | — | — | — | — | — | — | — | P, G | SEC-DB-07, -22 |
 | Portfolio read function (counts, filters, pages) | in list + counted | in list + counted | in list + counted | in list + counted | **absent and not counted** | absent | — | — | — | — | — | A, P | SEC-DB-20, SEC-APP-07 |
 | Case header read function | R | R | R | R | — (same as U) | — (same as U) | — | — | — | — | — | A, P | SEC-DB-19, SEC-APP-01 |
+| `case_tasks`, `case_events` (0006), `case_notifications` (0004) | R | R | R | R | — | — | — | — | — | — | — | A, P | SEC-DB-18, -21 |
+| `my_work_tasks` (0003, columns 0008) | own work on accessible cases | = | = | = | — | — | — | — | — | — | — | A, P | SEC-DB-20 |
+| `claims_key_state` (0007) | request role only, health use; key state, no key material | = | = | = | = | = | — | — | — | — | — | G | P03 |
 | Foreign (GC Review) relations and functions | — | — | — | — | — | — | — | — | — | — | n/a | G | SEC-DB-23, isolation C04–C09 |
 
 `=` same as the AS (N) cell. "WS (R) = —" is the need-to-know rule (THREAT_MODEL §6 assumption 2).
+
+¹ The database does no column projection: access to `notification` is row-level only, through RLS on the case
+(ADR-015 rules out column grants). Projection per recipient class is PROC's server-side disclosure step (TM-I6,
+`lib/disclosure`, `projectForRecipient`).
 
 ## 4. Commands
 
@@ -64,8 +74,9 @@ right and the case is not closed. Enforcement: **A** application pre-check (`lib
 | Direct INSERT/UPDATE/DELETE/TRUNCATE on any V13 table | — | — | — | — | — | — | — | — | — | — | — | G | SEC-DB-07 |
 | UPDATE/DELETE/TRUNCATE `audit_event` (any role incl. owner via commands) | — | — | — | — | — | — | — | — | — | — | — | G, T | SEC-DB-12 |
 | `api_update_task_status` (0003) | X? (own task or role right; current `row_version`) | X? | **—** (closed) | X? only own task | — | — | — | — | — | — | — | A, F | SEC-DB-08, -09, -10, -11, -17 |
-| `api_create_notification_draft` (0004) | X? (`case_id` server-derived; recipient class allowed) | X? | **—** | X? per role | — | — | — | — | — | — | — | A, F | SEC-DB-08, -10, -15, -22, -17 |
-| Workspace switch (session, re-checked per request) | to own memberships | = | = | = | = | = | — | — | — | — | — | A, P | SEC-DB-06, SEC-APP-05 |
+| `api_create_notification_draft` (0004) | X? (Committee Secretary or Investigator role on an ACTIVE accessible case; `case_id` server-derived; recipient class allowed) | X? | **—** | X? same rule (a Governance Officer never drafts) | — | — | — | — | — | — | — | A, F | SEC-DB-08, -10, -15, -22, -17 |
+| `api_switch_workspace` (0005) | to own member workspaces; V1404 otherwise; audit `WORKSPACE_SWITCHED` | = | = | = | = | = | — | — | — | — | — | A, F | SEC-DB-06, SEC-APP-05 |
+| `api_install_claims_key` (0001, deploy only) | first writer wins; another key refused V1409; audit `CLAIMS_KEY_INSTALLED` without key material | | | | | | | | | | | F, G | SEC-DB-29, P06 |
 | Persona sign-in (`V13_PERSONA_SIGNIN=enabled`) | active personas only | | | | | | | refused | refused | | | A (+ DB re-check) | SEC-APP-03..06, -09 |
 | Any future `api_*` command | must appear in the coverage guard before merge | | | | | | | | | | | F | SEC-DB-17 |
 
@@ -120,19 +131,19 @@ changed (row counts, `row_version`, audit tail).
 | SEC-DB-12 | UPDATE/DELETE/TRUNCATE on `audit_event` refused for `cdf_v13_user`, `cdf_v13_app` and through every command | TM-T3 |
 | SEC-DB-13 | Chain verifier detects a planted break (done as the administrator in a rolled-back transaction) | TM-T3 |
 | SEC-DB-14 | Catalog lint: every `SECURITY DEFINER` V13 function has `search_path=''`, no `EXECUTE` of a built string, owner `cdf_v13_owner`; injection strings in every text argument are stored as data | TM-T4, TM-T5 |
-| SEC-DB-15 | Duplicate idempotency key refused; same key text under another case does not collide into it | TM-T7 |
+| SEC-DB-15 | Duplicate idempotency key refused; keys are unique per author, and the same author's key under another case is refused with V1409, never merged | TM-T7 |
 | SEC-DB-16 | No V13 function executable by PUBLIC or a non-V13 role | TM-E2, TM-T8 |
 | SEC-DB-17 | Coverage guard: every state-changing `api_*` function is exercised; success writes exactly one audit event with the claims' actor; refusal writes none | TM-R1, TM-R2 |
 | SEC-DB-18 | Cross-case read: for every case-keyed table, AS of case A sees no row of case B | TM-I1 |
 | SEC-DB-19 | Unknown UUID, unauthorised UUID and display-number lookups give identical results (rows, error code, message) | TM-I2, TM-I3 |
 | SEC-DB-20 | Portfolio and My Work counts equal the number of visible rows; restricted and other-workspace cases never counted | TM-I4 |
 | SEC-DB-21 | Restricted case 0009 invisible on every table and read function to every non-assigned persona, Governance included | TM-I5 |
-| SEC-DB-22 | Notification rows readable only with the case; recipient fields projected per class; outbox holds no content and is unreadable | TM-I6 |
+| SEC-DB-22 | Notification rows readable only with the case; outbox holds no content and is unreadable (field projection is PROC's, not the database's) | TM-I6 |
 | SEC-DB-23 | Local Supabase-like cluster with a planted foreign schema: V13 roles cannot read, call or create anything there (mirrors hosted C04–C09) | TM-I9 |
 | SEC-DB-24 | Planted `anon`/`authenticated`/`service_role` roles cannot reach any V13 object | TM-I10 |
 | SEC-DB-25 | Login settings hold (statement, idle, lock timeouts; connection limit); a held chain lock times out instead of hanging | TM-D1, TM-D2 |
 | SEC-DB-26 | Memberships of the V13 roles are exactly those of `0000_bootstrap` | TM-E1 |
-| SEC-DB-27 | Persona reads never expose other personas' e-mail or attributes beyond the matrix | TM-I1 |
+| SEC-DB-27 | Persona reads show only oneself and workspace colleagues (`_is_colleague`); never another persona's e-mail | TM-I1 |
 | SEC-DB-28 | Claims MAC: missing, empty, malformed, copied from another transaction, computed for other claims → NULL; the key table is unreadable by `cdf_v13_user`/`cdf_v13_app`; the install command refuses a second different key, is idempotent for the same key, and audits without key material | TM-S4 |
 | SEC-DB-29 | No V13 function returns, raises or logs a MAC or key material; `_claims_hmac` and `_verified_claims` are not executable by `cdf_v13_user` or `cdf_v13_app` (otherwise a signing oracle) | TM-S4 |
 | SEC-DB-30 | Catalog test: every V13 view has `security_invoker = true`; every read function is `SECURITY INVOKER`; `SECURITY DEFINER` only in the four groups of E02 §5.1 — `api_*` commands (each case-keyed one calls `can_access_case()`), claims and access-rule helpers (`_claims_hmac`, `_verified_claims`, `_claim_uuid`, `current_*`, `has_role`, `_is_colleague`, `is_assigned_to_case`, `can_access_case`, trigger `_case_owning_visibility`), `current_persona()`, audit internals (`_append_audit`, `verify_audit_chain`, not granted to `cdf_v13_user`) | TM-T10 |

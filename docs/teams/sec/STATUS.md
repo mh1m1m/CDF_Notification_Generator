@@ -1,13 +1,13 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 31 Oct 2026 20:25 UTC · Branch: `docs/V13-SEC-001-threat-model` · `develop` now at `3b43530`
+Updated: 31 Oct 2026 20:50 UTC · Branch: `docs/V13-SEC-001-threat-model` · `develop` now at `3b43530`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
 - V13-SEC-001 — threat model (`docs/security/THREAT_MODEL.md`) and authorisation matrix with the planned test
   catalogue (`docs/security/AUTHORIZATION_MATRIX.md`): 8 subjects × 4 case variants, 17 read objects, 7 command rows,
   16 application surfaces; 30 planned database tests (SEC-DB-01..30), 18 planned application tests (SEC-APP-01..18);
-  4 recommendations SEC-REC-01..04 (all ACCEPTED, ADR-014); ruling D6 — IN_REVIEW (reviewer: DB)
+  4 recommendations SEC-REC-01..04 (all ACCEPTED, ADR-014); ruling D6 — IN_REVIEW (reviewer: DB); DB CHANGES b1786c0 (11 doc points) addressed against develop 0000–0009
 - V13-SEC-003 — application adversarial tests (sessions, static boundaries, Server Actions, surface) — COMPLETE,
   merged #11 (`0f22e04`)
 - V13-SEC-002 — database adversarial suites (`tests/security/db/`: context forgery with a coverage guard over every
