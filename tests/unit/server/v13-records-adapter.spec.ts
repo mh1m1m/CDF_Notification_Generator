@@ -67,6 +67,7 @@ describe("listCases", () => {
     expect(call.text).toMatch(/cdf_notifications_v13\.portfolio_count\(/);
     expect(call.text).toMatch(/cdf_notifications_v13\.portfolio_page\(/);
     expect(call.text).not.toContain("drop table");
+    expect(call.text).not.toContain("*"); // explicit column list (SEC, #19)
     const text = "x'); drop table t; --";
     expect(call.values).toEqual([null, null, text, false, null, 26, null, null, text, false]);
     expect(page.items.map((c) => c.case_number)).toEqual(["CDF-DEMO-2026-0001", "CDF-DEMO-2026-0003"]);
@@ -191,6 +192,7 @@ describe("getCase", () => {
     const { calls, adapter } = recorder([row(4)]);
     const c = await adapter.getCase(SECRETARY, row(4).id as CaseId);
     expect(calls[0]?.text).toMatch(/cdf_notifications_v13\.case_header\(/);
+    expect(calls[0]?.text).not.toContain("*"); // explicit column list: my_capacity is not read here (SEC, #19)
     expect(calls[0]?.values).toEqual([row(4).id]);
     expect(c?.case_number).toBe("CDF-DEMO-2026-0004");
   });

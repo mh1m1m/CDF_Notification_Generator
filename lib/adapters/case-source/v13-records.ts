@@ -97,14 +97,15 @@ export function createV13RecordsCaseSource(run: RequestContextRunner): CaseSourc
     async listCases(identity: RequestIdentity, filter: CaseListFilter): Promise<CaseListPage> {
       const f = CaseListFilterSchema.parse(filter);
       const after = decodeCursor(f.cursor);
-      // One extra row tells whether another page exists; never more than 101 rows per call. The authorised total
+      // One extra row tells whether another page exists; never more than PORTFOLIO_DB_ROW_BOUND (100) rows per call. The authorised total
       // comes from the same statement (one snapshot, same filters, RLS before the count), so page and total agree.
       // The count row is always present; when the page is empty its case columns are null.
       const joined = await run(
         identity,
         (tx) =>
           tx<(PortfolioRow & { total: string | number | bigint })[]>`
-          select t.total, p.*
+          select t.total, p.id, p.display_number, p.title_ar, p.title_en, p.stage, p.is_restricted, p.records_state, p.updated_at,
+                 p.source_system, p.source_ref, p.last_event_id, p.last_event_at, p.my_open_task_count
             from (select cdf_notifications_v13.portfolio_count(
                     ${f.lifecycle_stage ?? null}, ${f.records_state ?? null}, ${f.text ?? null},
                     ${f.assigned_to_me}) as total) t
@@ -128,7 +129,11 @@ export function createV13RecordsCaseSource(run: RequestContextRunner): CaseSourc
     async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null> {
       const rows = await run(
         identity,
-        (tx) => tx<CaseRow[]>`select * from cdf_notifications_v13.case_header(${caseId}::uuid)`,
+        (tx) =>
+          tx<CaseRow[]>`
+          select h.id, h.display_number, h.title_ar, h.title_en, h.stage, h.is_restricted, h.records_state,
+                 h.updated_at, h.source_system, h.source_ref
+            from cdf_notifications_v13.case_header(${caseId}::uuid) h`,
       );
       const row = rows[0];
       return row ? rowToCaseSummary(row) : null;

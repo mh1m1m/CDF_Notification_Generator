@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 18:15 UTC · Branch: feature/V13-FE-003-case-portfolio · Head: see PR
+Updated: 2026-10-31 18:30 UTC · Branch: feature/V13-FE-003-case-portfolio · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -47,6 +47,10 @@ Updated: 2026-10-31 18:15 UTC · Branch: feature/V13-FE-003-case-portfolio · He
 | FE-003 integration probe (`tests/integration/fe-case-source.spec.ts`, not committed yet) on a local merge of FE-003 + DB PR #15 head 4eccf57, after `pnpm db:reset` | pass: seed visibility ×8 with total, 0009 only for Beta, unknown = unauthorised = null, keyset paging with constant total, filters and total agree, assigned-to-me ×6, row summaries | 15/15 | local |
 | FE-003 throwaway browser probe (not committed; e2e is QA's) on the same merge, `pnpm build && pnpm start`: Alpha 7 rows = count, links by UUID, closed 0010 glyph + word, filters in URL survive back navigation, clear; Gamma search 0009 → no results, count 0, no 0009 UUID in the page; Beta sees 0009 with named-access flag; edited stage and forged cursor → generic state with correlation id, no SQL text; English LTR counts; assigned-to-me 6 rows, last event id 0e…0110 on 0010, own open tasks 2 on 0004; axe 0 serious/critical; no CSP console errors; no horizontal page scroll at 360 and 1280 px | pass | 5/5 | local |
 
+| FE-003 after merging develop c4b37c3 (DB #15, #17, #21, PROC #18), ARCH's two nits, explicit column lists for `portfolio_page` and `case_header` (SEC LOW): `pnpm lint`, `pnpm typecheck`, `pnpm format:check` | pass | — | FE-003 head |
+| Same: `pnpm test` (unit) | pass | 771 | FE-003 head |
+| Same: `pnpm db:reset` then `pnpm test:db` (includes the committed FE suite `tests/integration/fe/case-source.spec.ts`, 15) | pass | 11 files, 223 | FE-003 head |
+
 ## Unresolved defects
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
   pattern `^[A-Za-z0-9._:-]{1,80}$` (both in `lib/contracts`, this PR, needs ARCH + SEC ACCEPT); DB returns
@@ -62,8 +66,7 @@ Updated: 2026-10-31 18:15 UTC · Branch: feature/V13-FE-003-case-portfolio · He
   (asked of ARCH, 31 Oct).
 
 ## Dependencies and requests
-- FE owns `tests/integration/fe/**` (ARCH, 03:48). The suite lands once DB's PR with the claims-key test support and
-  the three columns is on `develop`.
+- FE owns `tests/integration/fe/**` (ARCH, 03:48). `tests/integration/fe/case-source.spec.ts` is committed with FE-003.
 - DB: merge of DB-001..005; the read-function columns per the ruling.
 - UX-002/003: FE-002 ships minimal nav/switcher markup; swapped for UX's SideNav/WorkspaceSwitcher when they land.
 - QA: Scenario C end-to-end (Delta GOVERNANCE ↔ SECRETARIAT) in QA-002; FE did not add e2e (tests/e2e is QA's).
