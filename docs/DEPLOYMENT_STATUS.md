@@ -4,7 +4,7 @@
 through the connected integrations at the time given. Nothing here is a plan presented as a fact. Production is blocked
 by the hosting gate (ADR-005); staging holds synthetic data only.
 
-Last checked: **31 Oct 2026 19:08 UTC** by the Chief Architect (§2 Supabase: see its own times).
+Last checked: **31 Oct 2026 21:30 UTC** by the Chief Architect (§1 GitHub and §3 Vercel deployments; §2 Supabase: see its own times).
 
 ## 1. GitHub
 
@@ -13,9 +13,9 @@ Last checked: **31 Oct 2026 19:08 UTC** by the Chief Architect (§2 Supabase: se
 | Repository | [`mh1m1m/CDF_Notification_Generator`](https://github.com/mh1m1m/CDF_Notification_Generator) (existing; no other repository created) | 01:29 |
 | Visibility | public (OPEN_ISSUES OI-006) | E01 §1.2 |
 | Default branch | `main` at `9f1edaf` (README and .gitignore only); unchanged: only the owner merges `develop` → `main` | 31 Oct 19:56 |
-| Integration branch | `develop` at `2115622` (merge of #46, V13-DB-013); 40 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1; migrations `0000`–`0009` in Git | 31 Oct 20:30 |
+| Integration branch | `develop` at `b24db04` (merge of #55, V13-PROC-008); 51 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1; migrations `0000`–`0010` in Git | 31 Oct 21:30 |
 | Branch protection | **none on `main` or `develop`** (`protected: false`); the GitHub connector cannot set protection rules (OI-016) | 31 Oct 19:08 |
-| CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Since #36 (V13-ARCH-008) the Playwright job runs the app against a PostgreSQL 17 service built by `pnpm db:reset`. Latest `develop` push run [41238696857](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41238696857) on `2115622`: success | 31 Oct 20:30 |
+| CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Since #36 (V13-ARCH-008) the Playwright job runs the app against a PostgreSQL 17 service built by `pnpm db:reset`. Latest `develop` push run [41242426038](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41242426038) on `b24db04`: success | 31 Oct 21:30 |
 
 ## 2. Supabase (database)
 
@@ -25,7 +25,7 @@ Last checked: **31 Oct 2026 19:08 UTC** by the Chief Architect (§2 Supabase: se
 | Project | **CDF GC Review**, ref `jeseeznffxlxmcljpmiu`, region `eu-central-1`, PostgreSQL 17.11, shared with the GC Review application (ADR-012) | 01:24 |
 | V13 schema | `cdf_notifications_v13`, owned by `cdf_v13_owner`; ACL `{cdf_v13_owner=UC/cdf_v13_owner,cdf_v13_user=U/cdf_v13_owner}` | 01:28 |
 | V13 roles | `cdf_v13_owner` (NOLOGIN), `cdf_v13_app` (LOGIN, connection limit 8, **no password**: nobody can log in; the owner sets it with `database/hosted/owner_set_app_login.sql`), `cdf_v13_user` (NOLOGIN) | 01:42 |
-| V13 migrations applied | 6: `0000 bootstrap` (28 Oct 01:03:21) and `0001`–`0005` (31 Oct 19:01–19:36), runner `hosted`, applied by `postgres`, each history sha256 equal to the migration file's (`docs/TEST_EVIDENCE.md` §2.1). `0006`–`0009` and the two seed files wait for the owner to answer the connector's confirmation (OI-034; `0009` from #42 joined the queue) | 31 Oct 20:30 |
+| V13 migrations applied | 6: `0000 bootstrap` (28 Oct 01:03:21) and `0001`–`0005` (31 Oct 19:01–19:36), runner `hosted`, applied by `postgres`, each history sha256 equal to the migration file's (`docs/TEST_EVIDENCE.md` §2.1). `0006`–`0010` and the two seed files wait for the owner to answer the connector's confirmation (OI-034; `0009` from #42 and `0010` from #52 joined the queue; V13-DB-016, #56, rehearses the whole resume sequence on the Supabase-like cluster) | 31 Oct 20:30 |
 | Isolation | PASS, 27 checks, 0 breaches, after `0000` and after each of `0001`–`0005` (`docs/TEST_EVIDENCE.md` §2, §2.1) | 31 Oct 19:37 |
 | GC Review objects | fingerprint of all 648 non-V13 objects identical to the baseline after every V13 step, TOTAL `40c9efe5697d19552d15f5ef85c2f85f`; GC Review's table statistics unchanged; its production deployment READY with `/` and `/api/health` 200 after each step | 31 Oct 19:40 |
 | Supabase Auth / Storage / Realtime / Edge Functions / Data API | not used by V13; no V13 user, bucket, function or exposed schema | — |
@@ -51,6 +51,7 @@ Deployments:
 | `dpl_3bZoHdySGtoh9JLqxYpwU1FBF4er` | `develop` `3512507` | preview | ERROR | `NEXT_NO_VERSION`: no Next.js app yet (28 Oct) |
 | every `develop` merge since #6 (V13-ARCH-001) | — | preview | READY | the five most recent, read 31 Oct 19:05: `b193a1c`, `f431b98`, `558d4ae`, `50850a4`, `b5ee5f4` |
 | `dpl_cZWKWPdPL9suLcPBtJCnnKMMRBpG` | `develop` `b5ee5f4` | preview, behind the staging alias | READY | the alias pointed here at 19:05; the push of `a6c224a` builds the next one |
+| `dpl_5exSSyLjcmg7fMPDiBUEjM7A78gN` | `develop` `d694ff8` (#32) | preview | READY | the newest `develop` deployment at 21:30 (created 20:47 UTC). No deployment exists for the seven later merges (`267944a` … `b24db04`): the account's daily deployment limit refuses them (OI-038), so the staging alias lags `develop` until the limit resets |
 
 Staging alias check, 31 Oct 2026 19:05:36 UTC (through the Vercel connector's authenticated fetch; Vercel
 Authentication stays on): `GET /api/health` → **HTTP 503**
