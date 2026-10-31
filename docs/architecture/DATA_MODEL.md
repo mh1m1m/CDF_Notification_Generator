@@ -1,7 +1,7 @@
 # E03 — Enterprise data model (Milestone M1)
 
 **SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Owner: team DB. Schema `cdf_notifications_v13` in the
-shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0005`; seed in two parts:
+shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0006`; seed in two parts:
 `database/seed/0001_m1_synthetic.sql` (identity: workspaces, personas, memberships; needs migration 0001 only; audit row
 `SEED_M1_LOADED`) and `database/seed/0002_m1_cases.sql` (cases and their history; needs 0001–0004; audit row
 `SEED_M1_CASES_LOADED`).
@@ -11,7 +11,7 @@ ledger), seed part 1, the app-side claims MAC (`lib/db/security-context.ts`) and
 (`instrumentation.ts` → `lib/db/claims-key-startup.ts`). PR (b) brings 0002–0004 and seed part 2; until it merges, the
 sections on cases, tasks and notifications below describe that PR, not `develop`. Tested on a local PostgreSQL 16
 cluster (`pnpm test:db`); not yet reviewed, not applied to the hosted schema (the Chief Architect applies merged
-migrations). PR `[V13-DB-007]`, stacked on PR (b), adds migration 0005 (`api_switch_workspace`).
+migrations). PR `[V13-DB-007]`, stacked on PR (b), adds migration 0005 (`api_switch_workspace`); PR `[V13-DB-008]`, stacked on it, adds migration 0006 (Case Workspace reads).
 
 ## 1. Principles
 
@@ -100,7 +100,10 @@ erDiagram
 | `is_assigned_to_case(uuid)` | definer, stable | yes | active assignment on the case |
 | `can_access_case(uuid)` | definer, stable | yes | **the single case-access rule** (§5) |
 | `portfolio_page(...)`, `portfolio_count(...)` (migration 0003) | invoker | yes | keyset page (limit 1..100) and count with one filter set (stage, records state, search, assigned-to-me = active case assignment); RLS filters before filters, order, limit, count and row summaries; rows carry `updated_at`, `source_system`, `source_ref`, the case's last recorded event (`last_event_id`, `last_event_at`) and the caller's own open-task count (`my_open_task_count`) (FE contract ruling and FE-003, 28 Oct) |
-| `case_header(uuid)` | invoker | yes | one case by UUID, same columns as a portfolio row; no row for unknown or unauthorised |
+| `case_header(uuid)` | invoker | yes | one case by UUID, same columns as a portfolio row plus `my_capacity` (the caller's active capacity on the case, or NULL; migration 0006); no row for unknown or unauthorised |
+| `case_events(uuid)` (migration 0006) | invoker | yes | the case's procedural events, newest first (`occurred_at`, `recorded_at`, `id`); the actor only as `actor_capacity` (the recorder's capacity on the case at `occurred_at`, or NULL) |
+| `case_tasks(uuid)` (migration 0006) | invoker | yes | the case's tasks; the assignee only as `assignee_capacity` (now) and `is_mine`; `status_event_id` = latest procedural event about the task |
+| `_capacity_rank(text)` (migration 0006) | immutable, no table access | yes | display order when a persona holds several capacities: LEAD_INVESTIGATOR, INVESTIGATOR, SECRETARY, GOVERNANCE_REVIEWER |
 | `my_work_tasks(boolean)` | invoker | yes | the persona's tasks in accessible cases |
 | `case_notifications(uuid)` | invoker | yes | notification history of one case |
 | `api_update_task_status(uuid, text, int)` | definer command | yes | §6 |
