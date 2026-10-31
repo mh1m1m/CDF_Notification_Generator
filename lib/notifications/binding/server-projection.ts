@@ -15,6 +15,9 @@ import "server-only";
  *      differs is refused (RECIPIENT_MISMATCH, from `project()`); a class the policy does not know is refused
  *      (UNKNOWN_RECIPIENT).
  *
+ * 3. The disclosure policy is the server's committed policy (`loadPolicy()`); a caller-supplied `policy` option is
+ *    refused (POLICY_NOT_ACCEPTED, SEC review of #45 at 59d420c).
+ *
  * Fail closed: a missing or malformed record, a record of another case, or a restricted case without an access-list
  * result is refused (NotificationBindingError). Nothing falls back to `*`.
  *
@@ -28,6 +31,7 @@ import "server-only";
 import { isNil } from "@/lib/domain/nil";
 import {
   RECIPIENT_CLASSES,
+  loadPolicy,
   project,
   type Projected,
   type ProjectedModel,
@@ -40,7 +44,8 @@ export type NotificationBindingErrorCode =
   | "NO_ACCESS_LIST_RESULT"
   | "CASE_MISMATCH"
   | "UNKNOWN_RECIPIENT"
-  | "CONTEXT_NOT_ACCEPTED";
+  | "CONTEXT_NOT_ACCEPTED"
+  | "POLICY_NOT_ACCEPTED";
 
 export class NotificationBindingError extends Error {
   readonly code: NotificationBindingErrorCode;
@@ -80,7 +85,6 @@ export interface ServerProjectionRecords {
 
 export interface ServerProjectionOptions {
   readonly channel?: string;
-  readonly policy?: unknown;
 }
 
 export interface ServerProjectionContext {
@@ -88,6 +92,10 @@ export interface ServerProjectionContext {
   /** the `{tags, on_access_list}` form `project()` reads; tags as an array (a Set would be read as no tags) */
   readonly context: { readonly tags: readonly string[]; readonly on_access_list: boolean };
 }
+
+/** The server's policy: the committed `lib/disclosure/policy_v13.json`, loaded once. Never the caller's. */
+let serverPolicy: ReturnType<typeof loadPolicy> | null = null;
+const SERVER_POLICY = (): ReturnType<typeof loadPolicy> => (serverPolicy ??= loadPolicy());
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
   !isNil(v) && typeof v === "object" && !Array.isArray(v);
@@ -138,9 +146,9 @@ export function serverProjectionContext(records: ServerProjectionRecords): Serve
 }
 
 /**
- * projectForRecipient(model, records, {channel, policy}) → the projected model, with the context and the recipient
+ * projectForRecipient(model, records, {channel}) → the projected model, with the context and the recipient
  * class taken only from the server records. `model.meta.context` is never read; a `context` or `recipient` option is
- * refused (CONTEXT_NOT_ACCEPTED). A model that names another recipient class, or another case in `meta.case_id`, is
+ * refused (CONTEXT_NOT_ACCEPTED), a `policy` option too (POLICY_NOT_ACCEPTED). A model that names another recipient class, or another case in `meta.case_id`, is
  * refused.
  */
 export function projectForRecipient(
@@ -153,6 +161,11 @@ export function projectForRecipient(
       "CONTEXT_NOT_ACCEPTED",
       "the context and the recipient come from server records only",
     );
+  if (isObj(opts) && Object.hasOwn(opts, "policy"))
+    throw new NotificationBindingError(
+      "POLICY_NOT_ACCEPTED",
+      "the disclosure policy comes from the server's committed policy only",
+    );
   const { recipient, context } = serverProjectionContext(records);
   const meta = isObj(model) && isObj(model.meta) ? model.meta : null;
   if (meta && !isNil(meta.case_id) && meta.case_id !== records.case_record.id)
@@ -161,6 +174,6 @@ export function projectForRecipient(
     recipient,
     context,
     channel: opts.channel ?? "EMAIL",
-    ...(isNil(opts.policy) ? {} : { policy: opts.policy }),
+    policy: SERVER_POLICY(),
   });
 }

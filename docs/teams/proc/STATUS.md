@@ -57,6 +57,7 @@ Updated: 2026-10-31 ~20:20 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | PROC-005 (develop f937052 + PROC-005, fresh `db:reset`): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` · `build` | PASS | all exit 0; unit 55 files · 1,381 pass · 0 skipped, of which `tests/unit/notifications` + `tests/unit/disclosure` 13 files · 379 pass; test:db 19 files · 352 pass; e2e 94 pass | PROC-005 head |
 | PROC-005 + OI-035 binding, after merging `develop` f39af8b (fresh `db:reset`, 10 migrations): `pnpm format:check` · `lint` · `typecheck` · `db:lint` · `test` · `test:db` · `test:e2e` · `build` | PASS | all exit 0; unit 56 files · 1,406 pass · 0 skipped (SPB 25 new); test:db 20 files · 357 pass; e2e 94 pass; mutation: binding forced to `on_access_list = true` → 3 SPB fail; tags passed as a Set (read by `project()` as no tags) → 5 SPB fail | PROC-005 head |
 | PROC-005 SEC `REVIEW: CHANGES 8384efe` (LOW, fail-open default): the lifecycle's projection port now defaults to `DISCLOSURE_PROJECTION_PORT` (lib/disclosure `isProjected`); `projection: null` falls back to it; the fixture world wires `FIXTURE_PROJECTION_PORT`, which accepts only `projectedModel()` stand-ins. `pnpm format:check` · `lint` · `typecheck` · `test` · `build` | PASS | all exit 0; unit 56 files · 1,411 pass · 0 skipped (LC-03b, 5 new); mutation: default port set to accept-all → 2 LC-03b fail | PROC-005 head |
+| PROC-005 SEC `REVIEW: CHANGES 59d420c`: (2) `projectForRecipient` refuses a caller-supplied `policy` (POLICY_NOT_ACCEPTED) and projects with the committed policy; (3) `security_render` addresses now reserved names only (`victim@external.example`, `someone@example.com`, `a@example.test.evil.example`); (1) was fixed in e01c2f5. `pnpm format:check` · `lint` · `typecheck` · `test` · `build` | PASS | all exit 0; unit 56 files · 1,413 pass · 0 skipped (SPB-13/14 new, SPB now 27); mutation: policy check removed → SPB-13 fails | PROC-005 head |
 | PROC-005 equivalence: reference `src/demo/build_demo.js` `renderAll()` (reference `src/` with its W-E `design/tokens.json`, JSON-equal to `lib/notifications/render/email_tokens.json`) vs the port's, same inline scenarios | PASS | 516 rendered files (platform HTML, e-mail HTML, text, EML, card) compared after the `CDF-IC-2026-DEMO-` → `CDF-DEMO-2026-` rename: 0 differ, none missing on either side; refusals equal (5) | scratch spec, not committed |
 | PROC-005: V12 quotes not re-verified here | UNVERIFIED here (by ruling) | 22 `evidenceLine` quotes from V12 sample EMLs (`eml/en/…`) and `generator/samples/WB-08.txt`, and the 77/77 X-Unsent check: ARCH ruled the EMLs are never copied; they pass in the reference package run (726/726). Any other missing evidence file now fails | local |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
@@ -105,8 +106,20 @@ evidence); with the V12 siblings and the demo built, 726 / 726.
   fails closed on any other string; BADGE-12 covers "completed", " COMPLETED", "Completed" and more.
 - ARCH 31 Oct (OI-035, SEC's two LOWs on #40): built into PROC-005 as `projectForRecipient(model, records, opts)`.
   SEC (on 8384efe): condition (2) is met; condition (1) stays OPEN until the DB-backed binding reads the records.
-  Open for DB/ARCH: migration 0004's recipient codes (`CASE_TEAM`, `COMMITTEE_MEMBERS`, `SUBJECT_EMPLOYEE`, `WITNESS`,
-  `GOVERNANCE`) are not the policy's 13 classes (only `WITNESS` matches), and `case_record` has no access-list check
-  yet. Until a mapping is decided, every row class but `WITNESS` is refused (UNKNOWN_RECIPIENT); PROC never guesses it.
-- ARCH 31 Oct: renderer wording stays in `lib/notifications/render/i18n.ts` for #45; V13-PROC-007 moves it once ARCH
-  adds a `notifications` namespace to `lib/i18n` (not started until that namespace is on `develop`).
+  SEC (59d420c): the server-records binding is correct and clears OI-035 (1) as code; nothing calls it yet, and the
+  server-side access-list check stays open under OI-035 (1). The policy is now the server's too (POLICY_NOT_ACCEPTED).
+- OI-037 (owner decision, REQ-GOV-014): migration 0004's recipient codes are not the policy's recipient classes. Any
+  mapping decides who receives what, so PROC maps nothing; the binding refuses every row class but `WITNESS`
+  (UNKNOWN_RECIPIENT). Side by side:
+
+  | Migration 0004 code (`notification_recipient_class`) | Policy class (`lib/disclosure` `RECIPIENT_CLASSES`) |
+  | --- | --- |
+  | `WITNESS` | `WITNESS` (the one exact match) |
+  | `CASE_TEAM` | no exact match |
+  | `COMMITTEE_MEMBERS` | no exact match |
+  | `SUBJECT_EMPLOYEE` | no exact match |
+  | `GOVERNANCE` | no exact match |
+  | — | `SECRETARY`, `CHAIR`, `MEMBER`, `INVESTIGATOR`, `LEGAL_REVIEWER`, `AUTHORITY`, `REFERRING_BODY`, `REPORTER`, |
+  | — | `SUBJECT`, `EVIDENCE_HOLDER`, `RECUSED_MEMBER`, `RESTRICTED_CASE_AUTHORITY` (no database code) |
+- ARCH 31 Oct: renderer wording stays in `lib/notifications/render/i18n.ts` for #45; V13-PROC-007 (OI-036) moves it once ARCH
+  adds a `notifications` namespace to `lib/i18n` (ARCH-009; not started until that namespace is on `develop`).

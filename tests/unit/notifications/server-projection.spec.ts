@@ -60,9 +60,7 @@ describe("SPB the projection context comes from server records only", () => {
     const model = buildNotificationModel(RESTRICTED, MEMBER);
     // the model claims the least restrictive context: no tags and on the access list
     const forged = { ...model, meta: { ...model.meta, context: { tags: [], on_access_list: true } } };
-    const viaServer = projectForRecipient(forged, records("MEMBER", { restricted: true, onList: false }), {
-      policy,
-    });
+    const viaServer = projectForRecipient(forged, records("MEMBER", { restricted: true, onList: false }));
     const restricted = D.project(model, {
       recipient: "MEMBER",
       context: { tags: ["CASE_RESTRICTED"], on_access_list: false },
@@ -83,14 +81,10 @@ describe("SPB the projection context comes from server records only", () => {
   test("SPB-02 the access-list result decides on_access_list; the model's own value is never read", () => {
     const model = buildNotificationModel(RESTRICTED, { ...MEMBER, on_access_list: true });
     assert.equal(model.meta.context.on_access_list, true, "fixture: the model claims the list");
-    const notListed = projectForRecipient(model, records("MEMBER", { restricted: true, onList: false }), {
-      policy,
-    });
+    const notListed = projectForRecipient(model, records("MEMBER", { restricted: true, onList: false }));
     assert.deepEqual(notListed._disclosure_summary.effective_context, ["CASE_RESTRICTED"]);
     assert.equal(notListed._disclosure_summary.on_access_list, false);
-    const listed = projectForRecipient(model, records("MEMBER", { restricted: true, onList: true }), {
-      policy,
-    });
+    const listed = projectForRecipient(model, records("MEMBER", { restricted: true, onList: true }));
     assert.equal(listed._disclosure_summary.on_access_list, true);
     assert.deepEqual(
       outcomes(listed),
@@ -112,7 +106,7 @@ describe("SPB the projection context comes from server records only", () => {
       ...model,
       meta: { ...model.meta, context: { tags: ["CASE_RESTRICTED"], on_access_list: false } },
     };
-    const p = projectForRecipient(forged, records("MEMBER", { restricted: false }), { policy });
+    const p = projectForRecipient(forged, records("MEMBER", { restricted: false }));
     assert.deepEqual(outcomes(p), outcomes(D.project(model, { recipient: "MEMBER", context: "*", policy })));
     const ctx = serverProjectionContext(records("MEMBER", { restricted: false }));
     assert.deepEqual(ctx.context, { tags: [], on_access_list: false });
@@ -144,14 +138,38 @@ describe("SPB the projection context comes from server records only", () => {
     const refused = codeIs("CONTEXT_NOT_ACCEPTED");
     // the options type has no context or recipient: they come from server records only
     // @ts-expect-error context is not an option
-    assert.throws(() => projectForRecipient(model, rec, { policy, context: "*" }), refused);
+    assert.throws(() => projectForRecipient(model, rec, { context: "*" }), refused);
     assert.throws(
       // @ts-expect-error context is not an option
-      () => projectForRecipient(model, rec, { policy, context: { tags: [], on_access_list: true } }),
+      () => projectForRecipient(model, rec, { context: { tags: [], on_access_list: true } }),
       refused,
     );
     // @ts-expect-error recipient is not an option
-    assert.throws(() => projectForRecipient(model, rec, { policy, recipient: "MEMBER" }), refused);
+    assert.throws(() => projectForRecipient(model, rec, { recipient: "MEMBER" }), refused);
+  });
+});
+
+describe("SPB the disclosure policy is the server's", () => {
+  test("SPB-13 a caller-supplied policy is refused (POLICY_NOT_ACCEPTED), even the committed one", () => {
+    const model = buildNotificationModel(RESTRICTED, MEMBER);
+    const rec = records("MEMBER", { restricted: true, onList: false });
+    const permissive = {
+      version: "X",
+      rows: [{ recipient: "*", field: "*", channel: "*", outcome: "ALLOWED" }],
+    };
+    for (const p of [permissive, policy, null, undefined])
+      assert.throws(
+        // @ts-expect-error policy is not an option: the server's committed policy is used
+        () => projectForRecipient(model, rec, { policy: p }),
+        (e: unknown) => e instanceof NotificationBindingError && codeIs("POLICY_NOT_ACCEPTED")(e),
+      );
+  });
+
+  test("SPB-14 the projection uses the committed policy", () => {
+    const model = buildNotificationModel(RESTRICTED, MEMBER);
+    const p = projectForRecipient(model, records("MEMBER", { restricted: true, onList: false }));
+    assert.equal(p._disclosure_summary.policy_version, policy.version);
+    assert.equal(p._disclosure_summary.policy_source, policy.source);
   });
 });
 
@@ -197,16 +215,16 @@ describe("SPB fail closed on missing, malformed or other-case records", () => {
   for (const [name, rec, code] of cases)
     test(`SPB-06 ${name} → ${code}`, () => {
       assert.throws(
-        () => projectForRecipient(model, rec as ServerProjectionRecords, { policy }),
+        () => projectForRecipient(model, rec as ServerProjectionRecords),
         (e: unknown) => e instanceof NotificationBindingError && codeIs(code)(e),
       );
     });
 
   test("SPB-07 a model of another case (meta.case_id) is refused", () => {
     const other = { ...model, meta: { ...model.meta, case_id: CASE_B } };
-    assert.throws(() => projectForRecipient(other, good, { policy }), codeIs("CASE_MISMATCH"));
+    assert.throws(() => projectForRecipient(other, good), codeIs("CASE_MISMATCH"));
     const same = { ...model, meta: { ...model.meta, case_id: CASE_A } };
-    assert.ok(D.isProjected(projectForRecipient(same, good, { policy })));
+    assert.ok(D.isProjected(projectForRecipient(same, good)));
   });
 });
 
@@ -214,7 +232,7 @@ describe("SPB the recipient class comes from the database recipient row", () => 
   test("SPB-08 a model built for another class than the row is refused (RECIPIENT_MISMATCH)", () => {
     const model = buildNotificationModel(RESTRICTED, MEMBER);
     assert.throws(
-      () => projectForRecipient(model, records("SECRETARY", { restricted: true, onList: true }), { policy }),
+      () => projectForRecipient(model, records("SECRETARY", { restricted: true, onList: true })),
       codeIs("RECIPIENT_MISMATCH"),
     );
   });
@@ -224,7 +242,7 @@ describe("SPB the recipient class comes from the database recipient row", () => 
     // CASE_TEAM, COMMITTEE_MEMBERS, SUBJECT_EMPLOYEE, GOVERNANCE: migration 0004's codes, not policy classes (mapping raised with ARCH, never guessed)
     for (const cls of ["CASE_TEAM", "COMMITTEE_MEMBERS", "SUBJECT_EMPLOYEE", "GOVERNANCE", "member", "", "*"])
       assert.throws(
-        () => projectForRecipient(model, records(cls, { restricted: true, onList: false }), { policy }),
+        () => projectForRecipient(model, records(cls, { restricted: true, onList: false })),
         codeIs("UNKNOWN_RECIPIENT"),
         cls,
       );
@@ -234,13 +252,7 @@ describe("SPB the recipient class comes from the database recipient row", () => 
     const model = buildNotificationModel(RESTRICTED, MEMBER);
     const { recipient_class: _dropped, ...meta } = model.meta;
     void _dropped;
-    const p = projectForRecipient(
-      { ...model, meta },
-      records("MEMBER", { restricted: true, onList: false }),
-      {
-        policy,
-      },
-    );
+    const p = projectForRecipient({ ...model, meta }, records("MEMBER", { restricted: true, onList: false }));
     assert.equal(p.meta.recipient_class, "MEMBER");
   });
 });
@@ -261,7 +273,7 @@ describe("SPB parity with the reference fixtures and the renderers", () => {
               ...(restricted ? { onList: r.on_access_list === true } : {}),
               ...(typeof r.delivery_context === "string" ? { delivery: r.delivery_context } : {}),
             }),
-            { channel: experience, policy },
+            { channel: experience },
           );
           assert.deepEqual(outcomes(viaServer), outcomes(ref.projected), `${s.id}/${r.class}/${experience}`);
           assert.deepEqual(viaServer.fields, ref.projected.fields, `${s.id}/${r.class}/${experience}`);
@@ -273,7 +285,7 @@ describe("SPB parity with the reference fixtures and the renderers", () => {
   test("SPB-12 the server projection carries the Projected brand the renderers require", () => {
     const s = scenario("CF-31");
     const model = buildNotificationModel(s, recipientOf(s, "SECRETARY"));
-    const p = projectForRecipient(model, records("SECRETARY", { restricted: false }), { policy });
+    const p = projectForRecipient(model, records("SECRETARY", { restricted: false }));
     assert.ok(D.isProjected(p) && Object.isFrozen(p));
     const out = renderEmail(p);
     assert.equal(typeof out.html, "string");

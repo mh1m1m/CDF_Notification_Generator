@@ -316,7 +316,12 @@ test("SEC-03 unsafe URLs: only https links to the two allowlisted application or
 });
 
 test("SEC-04 recipient manipulation: synthetic addresses only, no header smuggling in addresses, a projection never serves another recipient, and a forged capacity never widens what a restricted recipient gets", () => {
-  for (const a of ["victim@gmail.com", "a@example.test.evil.com", "a@evil-example.test", "a@notexample.test"])
+  for (const a of [
+    "victim@external.example",
+    "a@example.test.evil.example",
+    "a@evil-example.test",
+    "a@notexample.test",
+  ])
     assert.throws(() => X.validateAddress(a), codeIs("ADDRESS_NOT_ALLOWED"), a);
   for (const a of [
     `a@example.test${CRLF}Bcc: b@evil.test`,
@@ -338,7 +343,7 @@ test("SEC-04 recipient manipulation: synthetic addresses only, no header smuggli
   const m = Mo.buildNotificationModel(s, r, { authority });
   const p = D.project(m, { recipient: "SECRETARY", channel: "EMAIL", context: m.meta.context, policy });
   assert.throws(
-    () => E.renderEmail(p, { lang: "en", tokens, to: { address: "someone@gmail.com" } }),
+    () => E.renderEmail(p, { lang: "en", tokens, to: { address: "someone@example.com" } }),
     codeIs("ADDRESS_NOT_ALLOWED"),
   );
   // a model built for a witness cannot be projected as another class
