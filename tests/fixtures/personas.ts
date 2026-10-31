@@ -3,9 +3,10 @@
 // are never listed, so their sessions are minted with createSessionToken and the run's session secret (ARCH, review
 // of PR #1). SYNTHETIC identities only.
 import { expect, type BrowserContext, type Page } from "@playwright/test";
+import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { PERSONAS, type Persona } from "@/lib/contracts";
 
-export const SESSION_COOKIE = "__Host-v13_session";
+export const SESSION_COOKIE = SESSION_COOKIE_NAME;
 
 export function persona(slug: string): Persona {
   const found = PERSONAS.find((p) => p.slug === slug);

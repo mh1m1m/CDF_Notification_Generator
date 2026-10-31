@@ -1,10 +1,14 @@
-// Per-transaction security context: exact claims JSON, order of the two settings, bound parameters only, and refusal
-// of invalid identities before any SQL runs. The database side is covered by tests/integration/security-context.spec.ts.
+// Per-transaction security context: exact claims JSON, the claims MAC, the key install, the order of the statements,
+// bound parameters only, and refusal of invalid identities before any SQL runs. The database side (MAC verification,
+// forged and replayed claims) is covered by tests/integration/security-context.spec.ts.
+import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { RequestIdentitySchema, type RequestIdentity } from "@/lib/contracts";
 import type { Sql } from "@/lib/db/client";
 import {
-  CLAIMS_SETTING,
+  ClaimsKeyError,
+  claimsMac,
+  ensureClaimsKey,
   REQUEST_ROLE,
   requestClaims,
   withRequestContext,
@@ -14,6 +18,10 @@ import {
 const ALPHA = "0b000000-0000-4000-8000-000000000001";
 const DELTA = "0b000000-0000-4000-8000-000000000004";
 const CORRELATION = "6f1c2a9e-3b7d-4c1e-9a2f-0d8e7b6a5c41";
+/** Synthetic test key; never a deployed value. */
+const KEY = new Uint8Array(32).fill(0x5a);
+const OTHER_KEY = new Uint8Array(32).fill(0x33);
+const XID = "7421";
 
 const alpha: RequestIdentity = RequestIdentitySchema.parse({
   persona_id: ALPHA,
@@ -26,15 +34,35 @@ interface Call {
   values: unknown[];
 }
 
-/** A stand-in for postgres.js: records each tagged-template call of the transaction. No `unsafe` member exists. */
-function fakeSql(result: unknown[] = []) {
-  const calls: Call[] = [];
-  const tx = ((strings: TemplateStringsArray, ...values: unknown[]) => {
-    calls.push({ text: strings.join("$?").replace(/\s+/g, " ").trim(), values });
-    return Promise.resolve(result);
-  }) as unknown as Tx;
-  const begin = vi.fn(async (fn: (t: Tx) => Promise<unknown>) => fn(tx));
-  return { sql: { begin } as unknown as Sql, begin, calls, tx };
+interface FakeOptions {
+  /** Result of api_install_claims_key (default INSTALLED). */
+  install?: string;
+  /** Error raised by api_install_claims_key, if any. */
+  installError?: unknown;
+}
+
+/**
+ * A stand-in for postgres.js: records each tagged-template call, grouped by transaction. Answers the transaction-id
+ * query and the key install; everything else returns no rows. No `unsafe` member exists.
+ */
+function fakeSql(options: FakeOptions = {}) {
+  const transactions: Call[][] = [];
+  const begin = vi.fn(async (fn: (t: Tx) => Promise<unknown>) => {
+    const calls: Call[] = [];
+    transactions.push(calls);
+    const tx = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+      const text = strings.join("$?").replace(/\s+/g, " ").trim();
+      calls.push({ text, values });
+      if (text.includes("pg_current_xact_id")) return Promise.resolve([{ xid: XID }]);
+      if (text.includes("api_install_claims_key")) {
+        if (options.installError) return Promise.reject(options.installError);
+        return Promise.resolve([{ result: options.install ?? "INSTALLED" }]);
+      }
+      return Promise.resolve([]);
+    }) as unknown as Tx;
+    return fn(tx);
+  });
+  return { sql: { begin } as unknown as Sql, begin, transactions };
 }
 
 describe("requestClaims", () => {
@@ -79,42 +107,118 @@ describe("requestClaims", () => {
   });
 });
 
-describe("withRequestContext", () => {
-  it("sets the claims, then SET LOCAL ROLE cdf_v13_user, then runs the work in the same transaction", async () => {
-    const { sql, begin, calls, tx } = fakeSql();
-    const work = vi.fn(async (t: Tx) => {
-      expect(t).toBe(tx);
-      return "result";
-    });
-    await expect(withRequestContext(alpha, work, { sql, correlationId: CORRELATION })).resolves.toBe(
-      "result",
-    );
+describe("claimsMac", () => {
+  it("is base64url HMAC-SHA256 over claims|xid with no padding", () => {
+    const claims = requestClaims(alpha, CORRELATION);
+    const expected = createHmac("sha256", KEY).update(`${claims}|${XID}`).digest("base64url");
+    expect(claimsMac(KEY, claims, XID)).toBe(expected);
+    expect(claimsMac(KEY, claims, XID)).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  });
+
+  it("changes with the key, the claims and the transaction id", () => {
+    const claims = requestClaims(alpha, CORRELATION);
+    const mac = claimsMac(KEY, claims, XID);
+    expect(claimsMac(OTHER_KEY, claims, XID)).not.toBe(mac);
+    expect(claimsMac(KEY, claims.replace(ALPHA, DELTA), XID)).not.toBe(mac);
+    expect(claimsMac(KEY, claims, "7422")).not.toBe(mac);
+  });
+
+  it("refuses a transaction id that is not a decimal number", () => {
+    const claims = requestClaims(alpha, CORRELATION);
+    for (const xid of ["", "-1", "1|2", "12a", "1".repeat(21)])
+      expect(() => claimsMac(KEY, claims, xid)).toThrow();
+  });
+});
+
+describe("ensureClaimsKey", () => {
+  it("installs the key once per client and key, as cdf_v13_user, with the key as a bound parameter", async () => {
+    const { sql, begin, transactions } = fakeSql();
+    await ensureClaimsKey(sql, KEY);
+    await ensureClaimsKey(sql, KEY);
     expect(begin).toHaveBeenCalledTimes(1);
-    expect(work).toHaveBeenCalledTimes(1);
-    expect(calls).toEqual([
+    expect(transactions[0]).toEqual([
+      { text: "select pg_catalog.set_config('role', $?, true)", values: [REQUEST_ROLE] },
       {
-        text: `select pg_catalog.set_config('${CLAIMS_SETTING}', $?, true)`,
-        values: [requestClaims(alpha, CORRELATION)],
+        text: "select cdf_notifications_v13.api_install_claims_key($?) as result",
+        values: [Buffer.from(KEY)],
       },
-      { text: `set local role ${REQUEST_ROLE}`, values: [] },
     ]);
   });
 
-  it("passes the claims as one bound parameter, never as SQL text", async () => {
-    const { sql, calls } = fakeSql();
-    await withRequestContext(alpha, async () => undefined, { sql, correlationId: CORRELATION });
-    for (const call of calls) {
+  it("accepts ALREADY_INSTALLED for the same key", async () => {
+    const { sql } = fakeSql({ install: "ALREADY_INSTALLED" });
+    await expect(ensureClaimsKey(sql, KEY)).resolves.toBeUndefined();
+  });
+
+  it("turns V1409 (a different key is installed) into ClaimsKeyError and retries next time", async () => {
+    const { sql, begin } = fakeSql({ installError: Object.assign(new Error("db"), { code: "V1409" }) });
+    await expect(ensureClaimsKey(sql, KEY)).rejects.toBeInstanceOf(ClaimsKeyError);
+    await expect(ensureClaimsKey(sql, KEY)).rejects.toBeInstanceOf(ClaimsKeyError);
+    expect(begin).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses an unexpected install result", async () => {
+    const { sql } = fakeSql({ install: "SOMETHING_ELSE" });
+    await expect(ensureClaimsKey(sql, KEY)).rejects.toBeInstanceOf(ClaimsKeyError);
+  });
+
+  it("passes other database errors through unchanged", async () => {
+    const failure = Object.assign(new Error("db down"), { code: "08006" });
+    const { sql } = fakeSql({ installError: failure });
+    await expect(ensureClaimsKey(sql, KEY)).rejects.toBe(failure);
+  });
+});
+
+describe("withRequestContext", () => {
+  it("installs the key, then reads the xid, then sets claims, MAC and role in one statement, then runs the work", async () => {
+    const { sql, begin, transactions } = fakeSql();
+    const work = vi.fn(async () => "result");
+    await expect(
+      withRequestContext(alpha, work, { sql, correlationId: CORRELATION, claimsKey: KEY }),
+    ).resolves.toBe("result");
+    expect(begin).toHaveBeenCalledTimes(2);
+    expect(work).toHaveBeenCalledTimes(1);
+    const claims = requestClaims(alpha, CORRELATION);
+    expect(transactions[1]).toEqual([
+      { text: "select pg_catalog.pg_current_xact_id()::text as xid", values: [] },
+      {
+        text:
+          "select pg_catalog.set_config('request.v13.claims', $?, true), " +
+          "pg_catalog.set_config('request.v13.claims_mac', $?, true), " +
+          "pg_catalog.set_config('role', $?, true)",
+        values: [claims, claimsMac(KEY, claims, XID), REQUEST_ROLE],
+      },
+    ]);
+  });
+
+  it("installs the key only once across requests on the same client", async () => {
+    const { sql, begin } = fakeSql();
+    await withRequestContext(alpha, async () => undefined, { sql, claimsKey: KEY });
+    await withRequestContext(alpha, async () => undefined, { sql, claimsKey: KEY });
+    expect(begin).toHaveBeenCalledTimes(3);
+  });
+
+  it("passes claims and MAC as bound parameters, never as SQL text", async () => {
+    const { sql, transactions } = fakeSql();
+    await withRequestContext(alpha, async () => undefined, {
+      sql,
+      correlationId: CORRELATION,
+      claimsKey: KEY,
+    });
+    for (const call of transactions.flat()) {
       expect(call.text).not.toContain(ALPHA);
       expect(call.text).not.toContain(CORRELATION);
+      expect(call.text).not.toContain(XID);
     }
-    expect(calls[0]?.values).toHaveLength(1);
   });
 
   it("generates a random correlation id when none is given", async () => {
-    const { sql, calls } = fakeSql();
-    await withRequestContext(alpha, async () => undefined, { sql });
-    await withRequestContext(alpha, async () => undefined, { sql });
-    const ids = [calls[0], calls[2]].map((c) => JSON.parse(String(c?.values[0])).correlation_id as string);
+    const { sql, transactions } = fakeSql();
+    await withRequestContext(alpha, async () => undefined, { sql, claimsKey: KEY });
+    await withRequestContext(alpha, async () => undefined, { sql, claimsKey: KEY });
+    const ids = [transactions[1], transactions[2]].map(
+      (t) => JSON.parse(String(t?.[1]?.values[0])).correlation_id as string,
+    );
     for (const id of ids)
       expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(ids[0]).not.toBe(ids[1]);
@@ -124,10 +228,24 @@ describe("withRequestContext", () => {
     const { sql, begin } = fakeSql();
     const work = vi.fn(async () => "never");
     await expect(
-      withRequestContext({ ...alpha, roles: [] } as unknown as RequestIdentity, work, { sql }),
+      withRequestContext({ ...alpha, roles: [] } as unknown as RequestIdentity, work, {
+        sql,
+        claimsKey: KEY,
+      }),
     ).rejects.toThrow();
-    await expect(withRequestContext(alpha, work, { sql, correlationId: "x" })).rejects.toThrow();
+    await expect(
+      withRequestContext(alpha, work, { sql, correlationId: "x", claimsKey: KEY }),
+    ).rejects.toThrow();
     expect(begin).not.toHaveBeenCalled();
+    expect(work).not.toHaveBeenCalled();
+  });
+
+  it("does not run the work when the key install is refused", async () => {
+    const { sql } = fakeSql({ installError: Object.assign(new Error("db"), { code: "V1409" }) });
+    const work = vi.fn(async () => "never");
+    await expect(withRequestContext(alpha, work, { sql, claimsKey: KEY })).rejects.toBeInstanceOf(
+      ClaimsKeyError,
+    );
     expect(work).not.toHaveBeenCalled();
   });
 
@@ -140,7 +258,7 @@ describe("withRequestContext", () => {
         async () => {
           throw failure;
         },
-        { sql, correlationId: CORRELATION },
+        { sql, correlationId: CORRELATION, claimsKey: KEY },
       ),
     ).rejects.toBe(failure);
   });
