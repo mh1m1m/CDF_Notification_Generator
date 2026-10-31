@@ -120,6 +120,11 @@ describe("statement rules", () => {
     ["rls-enabled", `${OWNER}alter table cdf_notifications_v13.t disable row level security;\n`],
     ["transaction-control", `${OWNER}commit;\n`],
     ["transaction-control", `${OWNER}savepoint s1;\n`],
+    ["transaction-control", `${OWNER}do $$ begin commit; end $$;\n`],
+    [
+      "transaction-control",
+      `${OWNER}create procedure cdf_notifications_v13.p() language plpgsql as $$ begin perform 1; rollback; end $$;\n`,
+    ],
     ["statement-terminator", `${OWNER}comment on table cdf_notifications_v13.t is 'x'`],
     ["statement-terminator", "-- nothing but comments\n/* here either */\n"],
     ["search-path", `${OWNER}set local search_path = public;\n`],
