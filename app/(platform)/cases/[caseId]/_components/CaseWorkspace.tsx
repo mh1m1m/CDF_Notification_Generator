@@ -8,6 +8,7 @@ import type { CaseEvent, CaseNotification, CaseSummary, CaseTask } from "@/lib/c
 import { toBadgeEpistemic } from "@/lib/domain";
 import { translateKey, type Locale, type MessageKey, type Translator } from "@/lib/i18n";
 import { CASE_TABS, type CaseTab, type CaseWorkspaceView } from "@/lib/server/case-workspace";
+import { ScrollRegion } from "../../../_components/ScrollRegion";
 import styles from "./case.module.css";
 import {
   CAPACITY_KEYS,
@@ -264,9 +265,9 @@ export function TaskTable({
   }
   const day = dateFormat(locale);
   return (
-    <div className={styles.scroll}>
+    <ScrollRegion className={styles.scroll} labelledBy={`${testId}-caption`}>
       <table className={styles.table} data-testid={testId} data-count={tasks.length}>
-        <caption>{caption}</caption>
+        <caption id={`${testId}-caption`}>{caption}</caption>
         <thead>
           <tr>
             <th scope="col">{t("case.tasks.column.task")}</th>
@@ -312,7 +313,7 @@ export function TaskTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 
@@ -335,9 +336,9 @@ export function NotificationTable({
   const when = dateTimeFormat(locale);
   const num = numberFormat(locale);
   return (
-    <div className={styles.scroll}>
+    <ScrollRegion className={styles.scroll} labelledBy="case-notifications-caption">
       <table className={styles.table} data-testid="case-notifications" data-count={notifications.length}>
-        <caption>{t("case.notifications.caption")}</caption>
+        <caption id="case-notifications-caption">{t("case.notifications.caption")}</caption>
         <thead>
           <tr>
             <th scope="col">{t("case.notifications.column.template")}</th>
@@ -378,7 +379,7 @@ export function NotificationTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </ScrollRegion>
   );
 }
 

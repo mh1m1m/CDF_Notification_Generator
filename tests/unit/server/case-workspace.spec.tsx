@@ -20,6 +20,7 @@ import {
   tabHref,
 } from "@/app/(platform)/cases/[caseId]/_components/CaseWorkspace";
 import { caseIdOf, createFakeCaseSource } from "./support/fake-case-source";
+import { scrollRegionProblems } from "./support/scroll-regions";
 import {
   caseEventId,
   caseTaskId,
@@ -296,6 +297,20 @@ describe("Case Workspace markup", () => {
       expect(html(v)).toContain(`data-testid="${testId}"`);
     }
   });
+
+  it.each([
+    ["overview", "ar"],
+    ["tasks", "ar"],
+    ["tasks", "en"],
+    ["notifications", "ar"],
+    ["notifications", "en"],
+  ] as const)(
+    "%s (%s): every table sits in a focusable scroll region named by its caption (WCAG 2.1.1)",
+    async (tab, locale) => {
+      const markup = html(await view(tab), locale);
+      expect(scrollRegionProblems(markup)).toEqual([]);
+    },
+  );
 
   it("an unknown event code is shown as the code itself", async () => {
     const base = createFakeProceduralRecords();
