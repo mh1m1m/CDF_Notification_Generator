@@ -7,7 +7,7 @@ import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { buildHostedBundle, TEXT_GUARD_MARKER } from "@/scripts/db/hosted-bundle.mjs";
+import { buildHostedBundle, GUARD_TAG } from "@/scripts/db/hosted-bundle.mjs";
 import { MIGRATIONS_DIR, readMigrations } from "@/scripts/db/lib/migrations.mjs";
 import { migrate } from "@/scripts/db/migrate.mjs";
 import { clusterAvailable, errorCodeOf, HOSTED_SIM_SUPERUSER_URL } from "./support/clusters";
@@ -186,35 +186,59 @@ describe.skipIf(!available)("hosted simulation: bundle", () => {
     ]);
   });
 
-  it("text guard: PostgreSQL refuses a changed, padded, shortened or lengthened text and applies nothing", async () => {
+  it("text guard: runs first, so PostgreSQL refuses any changed text before a statement of it has run", async () => {
     const sim = await resetHostedSim();
     const bundle = buildHostedBundle({ version: "0000" });
-    const cut = bundle.indexOf(TEXT_GUARD_MARKER);
-    const before = bundle.slice(0, cut);
-    const guard = bundle.slice(cut);
-    const lines = before.split("\n");
+    const dry = buildHostedBundle({ version: "0000", dryRun: true });
+    const closing = `${GUARD_TAG};`;
+    const lines = bundle.split("\n");
     const comment = lines.findIndex((line) => line.startsWith("-- Classification"));
-    const tampered: [string, string][] = [
-      ["a changed byte", before.replace("SYNTHETIC-DATA", "SYNTHETIC-DATB")],
-      ["a changed string literal", before.replace("lock_timeout = '5s'", "lock_timeout = '6s'")],
-      ["a trailing space", before.replace("begin;\n", "begin; \n")],
-      ["a dropped line", [...lines.slice(0, comment), ...lines.slice(comment + 1)].join("\n")],
-      ["an added blank line", before.replace("begin;\n", "begin;\n\n")],
+    const DIFFERS = "V13 text guard: the text received differs from the repository text";
+    const NOT_FIRST = "V13 text guard: the text received does not start with the guard";
+    const TAIL = "V13 text guard: the text after the repository text is not the expected final statement";
+    const tampered: [string, string, string][] = [
+      ["a changed byte", bundle.replace("SYNTHETIC-DATA", "SYNTHETIC-DATB"), DIFFERS],
+      ["a changed string literal", bundle.replace("lock_timeout = '5s'", "lock_timeout = '6s'"), DIFFERS],
+      ["a trailing space", bundle.replace("begin;\n", "begin; \n"), DIFFERS],
+      ["a dropped line", [...lines.slice(0, comment), ...lines.slice(comment + 1)].join("\n"), DIFFERS],
+      ["an added blank line", bundle.replace("begin;\n", "begin;\n\n"), DIFFERS],
+      // SEC's probe on #47: commit; inserted after the guard, and before the dry run's rollback;.
+      [
+        "a dry run with commit; right after the guard",
+        dry.replace(`${closing}\n`, `${closing}\ncommit;\n`),
+        DIFFERS,
+      ],
+      [
+        "a dry run with commit; before its rollback;",
+        dry.replace(/\nrollback;\n$/, "commit;\n\nrollback;\n"),
+        DIFFERS,
+      ],
+      ["a statement put in front of the guard", `commit;\n${dry}`, NOT_FIRST],
+      ["a second closing tag in a trailer comment", `${dry}-- ${closing}\n`, NOT_FIRST],
+      ["a dry run whose rollback; was edited to commit;", dry.replace(/rollback;\n$/, "commit;\n"), TAIL],
+      ["a statement appended after the final line", `${dry}select 1;\n`, TAIL],
+      ["a statement appended on the final line", dry.replace(/rollback;\n$/, "rollback; select 1;\n"), TAIL],
+      ["a statement after a comment trailer", `${dry}-- trailer\nselect 1;\n`, TAIL],
+      ["a block comment appended", `${dry}/* trailer */\n`, TAIL],
+      ["the final newline missing", dry.replace(/rollback;\n$/, "rollback;"), TAIL],
     ];
-    for (const [label, changed] of tampered) {
-      expect(changed, label).not.toBe(before);
-      const refused = await applyBundle(sim.adminUrl, `${changed}${guard}`);
+    for (const [label, changed, message] of tampered) {
+      expect(changed, label).not.toBe(bundle);
+      const refused = await applyBundle(sim.adminUrl, changed);
       expect(refused?.code, label).toBe("P0001");
-      expect(refused?.message, label).toBe(
-        "V13 text guard: the text received differs from the repository text",
-      );
+      expect(refused?.message, label).toBe(message);
       expect(await v13Objects(sim.superuserUrl), label).toEqual({ roles: 0, schemas: 0 });
     }
 
-    // The unchanged text passes, also with a trailer after the final statement (the connector appends one).
-    expect(
-      await applyBundle(sim.adminUrl, `${buildHostedBundle({ version: "0000", dryRun: true })}-- trailer\n`),
-    ).toBeNull();
+    // A second closing tag followed by a statement opens an unterminated dollar quote: the whole text fails to parse
+    // (42601), so not one statement runs.
+    const unparsable = await applyBundle(sim.adminUrl, `${dry}${closing}\nselect 1;\n`);
+    expect(unparsable?.code).toBe("42601");
+    expect(await v13Objects(sim.superuserUrl)).toEqual({ roles: 0, schemas: 0 });
+
+    // The unchanged texts pass, also with a trailer after the final statement (the connector appends one).
+    expect(await applyBundle(sim.adminUrl, `${dry}-- trailer\n`)).toBeNull();
+    expect(await applyBundle(sim.adminUrl, `${dry}  \n-- trailer one\n\t-- trailer two`)).toBeNull();
     expect(await v13Objects(sim.superuserUrl)).toEqual({ roles: 0, schemas: 0 });
     expect(await applyBundle(sim.adminUrl, `${bundle}-- trailer\n`)).toBeNull();
     expect(await v13Objects(sim.superuserUrl)).toEqual({ roles: 3, schemas: 1 });

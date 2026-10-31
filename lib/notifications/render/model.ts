@@ -24,7 +24,9 @@ import { buildProgressView, VIEW_VERSION } from "@/lib/journeys/progress";
 import WC_CATALOGUE from "@/lib/journeys/catalogue_v13.json";
 import SUBSET_CATALOGUE from "./catalogue_subset.json";
 import { demoUuid, sha256Hex } from "./escape";
-import { MARKING, CONFIDENTIALITY } from "./i18n";
+import { MARKING, CONFIDENTIALITY, CLASSIFICATION, fill } from "./i18n";
+import { ar as AR } from "@/lib/i18n/notificationRender/ar";
+import { en as EN } from "@/lib/i18n/notificationRender/en";
 import type {
   Bi,
   DemoEvent,
@@ -847,19 +849,14 @@ function levels23(
 // that has no source.
 // ---------------------------------------------------------------------------------------------------------------
 const BASIS_TEXT: Readonly<Record<string, { ar: string; en: string }>> = Object.freeze({
-  "DEC-F15": {
-    ar: "يبدأ احتساب المهلة من تاريخ التبليغ الفعلي (DEC-F15)؛ مدتها الافتراضية قابلة للتغيير (Q94) إلى حين اعتماد اللائحة (D11-039)",
-    en: "The period starts at effective delivery (DEC-F15); its default length is configurable (Q94) until the regulation is approved (D11-039)",
-  },
+  "DEC-F15": { ar: AR["deadlineBasis.decF15"], en: EN["deadlineBasis.decF15"] },
 });
-const INTERNAL_HELP = {
-  ar: "للاستفسار عن هذا الإشعار: أمانة اللجنة عبر المنصة (secretariat.demo@example.test).",
-  en: "Questions about this notice: the committee secretariat, through the platform (secretariat.demo@example.test).",
-};
+const INTERNAL_HELP = { ar: AR["model.internalHelp"], en: EN["model.internalHelp"] };
+// the classification marking texts are the renderer's CLASSIFICATION wording (one source)
 const CLASS_TEXT: Readonly<Record<string, { ar: string; en: string }>> = {
-  PUBLIC: { ar: "عام", en: "Public" },
-  INTERNAL: { ar: "داخلي — سري", en: "Internal — confidential" },
-  RESTRICTED: { ar: "مقيد — سري للغاية", en: "Restricted — highly confidential" },
+  PUBLIC: { ar: CLASSIFICATION.PUBLIC.ar, en: CLASSIFICATION.PUBLIC.en },
+  INTERNAL: { ar: CLASSIFICATION.INTERNAL.ar, en: CLASSIFICATION.INTERNAL.en },
+  RESTRICTED: { ar: CLASSIFICATION.RESTRICTED.ar, en: CLASSIFICATION.RESTRICTED.en },
 };
 /** the notice version's own opaque correspondence reference (W-F field notice_reference: derived from the notification id;
  *  never from the case number, an address or a name). Also the {notice_ref} of every SAFE_REFERENCE replacement. */
@@ -894,6 +891,28 @@ export interface BuildModelOptions {
   catalogue?: Catalogue | null;
   authority?: AuthorityModel | null;
   generated_at?: string;
+}
+
+/**
+ * The help and confidentiality texts a recipient class gets (the same rule for fixture scenarios and server records):
+ * an external class gets its own help text from the content, if any, and its own confidentiality text; an internal
+ * class gets the content's INTERNAL help or the default internal help, and the INTERNAL (or RECUSED_MEMBER) notice.
+ */
+export function recipientNotices(
+  cls: string,
+  help?: Readonly<Record<string, unknown>> | null,
+): { help: unknown; confidentiality_notice: { ar: string; en: string } } {
+  const external = (EXTERNAL_CLASSES as readonly string[]).includes(cls);
+  const helpKey = external ? cls : "INTERNAL";
+  const confKey = external ? cls : cls === "RECUSED_MEMBER" ? "RECUSED_MEMBER" : "INTERNAL";
+  return {
+    help:
+      (help && Object.hasOwn(help, helpKey) ? help[helpKey] : undefined) ?? (external ? null : INTERNAL_HELP),
+    confidentiality_notice:
+      (Object.hasOwn(CONFIDENTIALITY, confKey)
+        ? CONFIDENTIALITY[confKey as keyof typeof CONFIDENTIALITY]
+        : undefined) ?? CONFIDENTIALITY.INTERNAL,
+  };
 }
 
 /**
@@ -944,7 +963,7 @@ export function buildNotificationModel(
   fields.event_summary = over.event_summary ?? c.event_summary ?? null;
   fields.event_at = trigger?.occurred_at ?? null;
   fields.recipient_capacity_label = recipient.label ?? null;
-  fields.issuer = c.issuer ?? { ar: "أمانة اللجنة", en: "The committee secretariat" };
+  fields.issuer = c.issuer ?? { ar: AR["model.defaultIssuer"], en: EN["model.defaultIssuer"] };
   const noticeRef = noticeReference(nid);
   fields.notice_reference = noticeRef;
   fields.template_code = scenario.type_code ?? null;
@@ -1009,8 +1028,14 @@ export function buildNotificationModel(
         basis_rule: dl.basis_rule,
         event_type: dl.basis_event_type ?? null,
         ...((Object.hasOwn(BASIS_TEXT, rule) ? BASIS_TEXT[rule] : undefined) ?? {
-          ar: `قاعدة ${String(dl.basis_rule)} من حدث ${dl.basis_event_type ?? ""} المسجّل`,
-          en: `Rule ${String(dl.basis_rule)} from the recorded ${dl.basis_event_type ?? ""} event`,
+          ar: fill(AR["deadlineBasis.rule"], {
+            rule: String(dl.basis_rule),
+            eventType: dl.basis_event_type ?? "",
+          }),
+          en: fill(EN["deadlineBasis.rule"], {
+            rule: String(dl.basis_rule),
+            eventType: dl.basis_event_type ?? "",
+          }),
         }),
       };
     }
@@ -1033,7 +1058,10 @@ export function buildNotificationModel(
   fields.subject_detail = { enabled: true };
   if (scenario.exception) fields.exception_indicator = scenario.exception;
   // every demo output is an unsent design preview (X-Unsent: 1): DRAFT. Wording rules: components.ts deliveryWording (L-07, L-04)
-  fields.delivery_status = { notification_status: "DRAFT", note: { ar: "عرض تصميمي", en: "design preview" } };
+  fields.delivery_status = {
+    notification_status: "DRAFT",
+    note: { ar: AR["model.designPreviewNote"], en: EN["model.designPreviewNote"] },
+  };
   fields.next_action = next;
   if (next.authority?.action_id) {
     const extra = ruleFor(scenario.type_code, cls)?.object_extra ?? {};
@@ -1064,17 +1092,10 @@ export function buildNotificationModel(
       reason: r.reason,
     };
   }
-  const external = (EXTERNAL_CLASSES as readonly string[]).includes(cls);
-  const helpKey = external ? cls : "INTERNAL";
-  fields.help =
-    (c.help && Object.hasOwn(c.help, helpKey) ? c.help[helpKey] : undefined) ??
-    (external ? null : INTERNAL_HELP);
+  const notices = recipientNotices(cls, c.help);
+  fields.help = notices.help;
   if (isNil(fields.help)) delete fields.help;
-  const confKey = external ? cls : cls === "RECUSED_MEMBER" ? "RECUSED_MEMBER" : "INTERNAL";
-  fields.confidentiality_notice =
-    (Object.hasOwn(CONFIDENTIALITY, confKey)
-      ? CONFIDENTIALITY[confKey as keyof typeof CONFIDENTIALITY]
-      : undefined) ?? CONFIDENTIALITY.INTERNAL;
+  fields.confidentiality_notice = notices.confidentiality_notice;
   for (const k of Object.keys(fields)) if (isNil(fields[k])) delete fields[k];
 
   const tags = new Set(scenario.context_tags ?? []);

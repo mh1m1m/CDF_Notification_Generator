@@ -45,7 +45,8 @@ export type NotificationBindingErrorCode =
   | "CASE_MISMATCH"
   | "UNKNOWN_RECIPIENT"
   | "CONTEXT_NOT_ACCEPTED"
-  | "POLICY_NOT_ACCEPTED";
+  | "POLICY_NOT_ACCEPTED"
+  | "UNSUPPORTED_LIFECYCLE_STATUS";
 
 export class NotificationBindingError extends Error {
   readonly code: NotificationBindingErrorCode;

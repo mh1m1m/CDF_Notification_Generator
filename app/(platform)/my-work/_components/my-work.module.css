@@ -1,0 +1,76 @@
+/* My Work (FE-005). Logical properties only (RTL first); tokens from styles/tokens.css. */
+.subtitle {
+  color: var(--cdf-text-secondary);
+  margin-block: 0 var(--cdf-space-3);
+}
+
+.counts ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cdf-space-3);
+  list-style: none;
+  padding: 0;
+  margin-block: var(--cdf-space-3);
+}
+
+.counts a {
+  display: inline-flex;
+  flex-direction: column;
+  min-inline-size: 9rem;
+  padding-block: var(--cdf-space-2);
+  padding-inline: var(--cdf-space-3);
+  border: 1px solid var(--cdf-border);
+  text-decoration: none;
+}
+
+.counts a[aria-current="page"] {
+  border-color: currentColor;
+  border-block-end-width: 3px;
+}
+
+.countValue {
+  font-size: var(--cdf-text-h2, 1.5rem);
+  font-weight: 700;
+}
+
+.scroll {
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+
+.table {
+  border-collapse: collapse;
+  inline-size: 100%;
+}
+
+.table caption {
+  text-align: start;
+  padding-block-end: var(--cdf-space-2);
+}
+
+.table th,
+.table td {
+  text-align: start;
+  padding-block: var(--cdf-space-2);
+  padding-inline: var(--cdf-space-3);
+  border-block-end: 1px solid var(--cdf-border);
+  vertical-align: top;
+}
+
+.secondLine {
+  display: block;
+  font-weight: 400;
+  color: var(--cdf-text-secondary);
+}
+
+.overdue {
+  font-weight: 700;
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cdf-space-2);
+  align-items: end;
+  margin-block-start: var(--cdf-space-2);
+}
