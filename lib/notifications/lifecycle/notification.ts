@@ -97,6 +97,16 @@ import type {
   RecipientResolutionPort,
   ResolvedRecipient,
 } from "./ports";
+import { isProjected as disclosureIsProjected } from "@/lib/disclosure";
+
+/**
+ * The default projection port is W-D2's own brand check (SEC review of #45, LOW: fail closed). Without it the VALIDATED
+ * gate would accept any object that only claims `_disclosure_applied: true`. Passing `projection: null` does not turn the
+ * check off; a caller can only replace it with another port.
+ */
+export const DISCLOSURE_PROJECTION_PORT: ProjectionPort = Object.freeze({
+  isProjected: (m: unknown) => disclosureIsProjected(m),
+});
 
 export const NOTIFICATION_STATUSES = Object.freeze([
   "DRAFT",
@@ -523,7 +533,8 @@ export interface LineageView {
  *   ledger, evidence, outbox, recipients, cases, procedural  (required: the ports in ./ports)
  *   sender                     NotificationSender (required for dispatchEmailBatch only)
  *   authority                  { check({action_id, actor, object, case_id}) → {result, reason} } — W-D2 check() wrapper
- *   projection                 { isProjected(model) } — W-D2 brand check, applied in addition to isProjectedModel
+ *   projection                 { isProjected(model) } — W-D2 brand check, applied in addition to isProjectedModel;
+ *                              defaults to DISCLOSURE_PROJECTION_PORT (lib/disclosure isProjected), never to "accept"
  *   types                      { [type_code]: {template_code, template_version?, channels?, approval?, allowed_trigger_types?,
  *                                journey_capacities?, key_occurrence?} } — synthetic configuration (catalogue in production)
  *   rules, validate, deadlineRules, retryPolicy, clock, ids
@@ -597,7 +608,7 @@ export function createNotificationLifecycle(deps: LifecycleDeps = {}): Notificat
   const {
     sender = null,
     authority = null,
-    projection = null,
+    projection: projectionIn = null,
     types: rawTypes = {},
     rules = RULES,
     validate = engineValidate,
@@ -649,8 +660,9 @@ export function createNotificationLifecycle(deps: LifecycleDeps = {}): Notificat
       ? { capacity: x.capacity as string, id: x.id }
       : null;
   };
+  const projection = projectionIn ?? DISCLOSURE_PROJECTION_PORT;
   const isProjected = (m: unknown): m is ProjectedModel =>
-    isProjectedModel(m) && (projection ? projection.isProjected(m) === true : true);
+    isProjectedModel(m) && projection.isProjected(m) === true;
 
   function requireActor(actor: unknown, field = "actor"): Actor {
     const a = pickActor(actor);

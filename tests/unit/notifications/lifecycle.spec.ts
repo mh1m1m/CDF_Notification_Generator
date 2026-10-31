@@ -20,6 +20,7 @@ import {
   canCorrect,
   isTerminal,
   createNotificationLifecycle,
+  DISCLOSURE_PROJECTION_PORT,
 } from "@/lib/notifications/lifecycle/notification";
 import {
   idempotencyKey,
@@ -36,6 +37,7 @@ import {
 import { createEvidenceStore, EVIDENCE_KINDS } from "@/lib/notifications/lifecycle/evidence";
 import { verifyEntries } from "./fakes/auditLedger";
 import { RULES } from "@/lib/notifications/consistency/engine";
+import * as D from "@/lib/disclosure";
 import * as domainStatus from "@/lib/domain/status";
 import * as domainConcepts from "@/lib/domain/concepts";
 import type {
@@ -358,6 +360,70 @@ describe("LC-03 VALIDATED requires the disclosure projection", () => {
         w.lifecycle.transition(r, "VALIDATED", {
           actor: SEC,
           model: modelFor(r),
+          statement: F.INVITATION_STATEMENT,
+        }),
+      code("DISCLOSURE_NOT_APPLIED"),
+    );
+  });
+});
+
+describe("LC-03b with no projection port, the VALIDATED gate is W-D2's own brand check (SEC review of #45)", () => {
+  // `projection: null` replaces the fixture world's port: the lifecycle falls back to its default, never to "accept"
+  const bare = () => F.createWorld({ lifecycle: { projection: null } });
+  const refusedAtValidated = (w: ReturnType<typeof bare>, model: unknown) => {
+    const r = w.lifecycle.draft(F.invitationDraft()).record;
+    assert.throws(
+      () => w.lifecycle.transition(r, "VALIDATED", { actor: SEC, model, statement: F.INVITATION_STATEMENT }),
+      code("DISCLOSURE_NOT_APPLIED"),
+    );
+    assert.equal(w.lifecycle.get(r.notification_id)!.status, "DRAFT");
+  };
+  test("LC-03b a hand-made model that only claims the projection is refused", () => {
+    refusedAtValidated(bare(), { _disclosure_applied: true, _disclosure_log: {} });
+    refusedAtValidated(
+      bare(),
+      Object.freeze({
+        _disclosure_applied: true,
+        _disclosure_log: Object.freeze({}),
+        fields: Object.freeze({}),
+      }),
+    );
+  });
+  test("LC-03b the fixture stand-in is refused without the fixture port", () => {
+    refusedAtValidated(bare(), F.projectedModel({ recipient_id: F.IDS.MEMBER, recipient_class: "MEMBER" }));
+  });
+  test("LC-03b the default port is lib/disclosure's isProjected", () => {
+    const real = D.project({ meta: { recipient_class: "MEMBER" }, fields: {} }, { recipient: "MEMBER" });
+    assert.equal(DISCLOSURE_PROJECTION_PORT.isProjected(real), true);
+    assert.equal(DISCLOSURE_PROJECTION_PORT.isProjected(F.projectedModel()), false);
+    assert.equal(
+      DISCLOSURE_PROJECTION_PORT.isProjected({ _disclosure_applied: true, _disclosure_log: {} }),
+      false,
+    );
+  });
+  test("LC-03b a model from the real projection passes the gate with no port given", () => {
+    const policy = D.loadPolicy();
+    const w = bare();
+    const r = w.lifecycle.draft(F.invitationDraft({ policy_version: policy.version })).record;
+    const model = D.project(
+      { meta: { recipient_class: "MEMBER" }, fields: { meeting_info: "Committee meeting (synthetic)" } },
+      { recipient: "MEMBER", policy },
+    );
+    const out = w.lifecycle.transition(r, "VALIDATED", {
+      actor: SEC,
+      model,
+      statement: F.INVITATION_STATEMENT,
+    });
+    assert.equal(out.record.status, "VALIDATED");
+  });
+  test("LC-03b the fixture world's port refuses a hand-made model too", () => {
+    const w = F.createWorld();
+    const r = w.lifecycle.draft(F.invitationDraft()).record;
+    assert.throws(
+      () =>
+        w.lifecycle.transition(r, "VALIDATED", {
+          actor: SEC,
+          model: { _disclosure_applied: true, _disclosure_log: {} },
           statement: F.INVITATION_STATEMENT,
         }),
       code("DISCLOSURE_NOT_APPLIED"),

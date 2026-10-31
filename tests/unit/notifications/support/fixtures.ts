@@ -276,9 +276,23 @@ export interface ProjectedModelOptions {
   fields?: Record<string, unknown>;
 }
 
+/** Stand-ins made by projectedModel() below; only these pass FIXTURE_PROJECTION_PORT. */
+const FIXTURE_MODELS = new WeakSet<object>();
+
+/**
+ * The fixture world's projection port (SEC review of #45). The lifecycle's default port is W-D2's isProjected, which
+ * refuses these stand-ins; the lifecycle unit tests need hand-set disclosure logs, so createWorld() wires this port
+ * explicitly. It accepts only objects that projectedModel() made: a hand-made `{_disclosure_applied: true, …}` is still
+ * refused. Tests that need the real projection use buildProjected()/projectForRecipient() and a world without this port.
+ */
+export const FIXTURE_PROJECTION_PORT = Object.freeze({
+  isProjected: (m: unknown): boolean => typeof m === "object" && m !== null && FIXTURE_MODELS.has(m),
+});
+
 /**
  * Stand-in for a model returned by W-D2's project() (charter §5): `_disclosure_applied: true` and `_disclosure_log`
- * (field → {outcome, basis}). Display values are placeholders; no names, no addresses.
+ * (field → {outcome, basis}). Display values are placeholders; no names, no addresses. It passes only the fixture
+ * world's FIXTURE_PROJECTION_PORT, never the lifecycle's default port.
  */
 export function projectedModel({
   recipient_class = "MEMBER",
@@ -287,7 +301,7 @@ export function projectedModel({
   log,
   fields,
 }: ProjectedModelOptions = {}) {
-  return deepFreeze({
+  const m = deepFreeze({
     _disclosure_applied: true as const,
     _disclosure_log: log ?? {
       meeting_info: { outcome: "ALLOWED", basis: ["SYNTHETIC"] },
@@ -299,6 +313,8 @@ export function projectedModel({
     recipient_id,
     fields: fields ?? { meeting_info: "Committee meeting (synthetic)", deadline: null },
   });
+  FIXTURE_MODELS.add(m);
+  return m;
 }
 
 /** What a renderer would hand to the export: subject, text twin, HTML (synthetic placeholders). */
@@ -408,6 +424,7 @@ export function createWorld(opts: WorldOptions = {}) {
     cases,
     procedural,
     authority,
+    projection: FIXTURE_PROJECTION_PORT,
     types: opts.types ?? NOTIFICATION_TYPES,
     clock,
     ids,
