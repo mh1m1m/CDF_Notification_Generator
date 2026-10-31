@@ -134,6 +134,46 @@ locally and in CI against a Supabase-like role layout (`tests/integration`).
 ### 5.5 Advisors
 `get_advisors` (security, performance) before and after; any new finding on V13 objects is fixed before the next step.
 
+Clarification, Chief Architect, 31 Oct 2026, decided before the run of 0001–0008: a new **security** finding is a stop
+(§6). A new **performance** finding is recorded in §11 and the run continues; it is fixed in a later migration if it is
+real. An `unused_index` notice on an index the same run just created is expected (a new index has no scans yet) and is
+not a defect. A finding on a GC Review object is never V13's to fix: it is recorded and the owner is told.
+
+### 5.6 V13 hardening after each migration — `database/hosted/post_apply_checks.sql`
+One READ ONLY transaction ending in ROLLBACK, run as the administrator, who becomes `cdf_v13_owner` for the run
+(V13-SEC-004, PR #30). P00 preconditions · P01 RLS on every V13 table · P02 no table write privilege for
+`cdf_v13_app`, `cdf_v13_user` or PUBLIC · P03 SECURITY DEFINER functions equal the allow-list · P04 `search_path`
+pinned on every function · P05 no V13 privilege for PUBLIC or the API roles · P06 `claims_key` unreadable, deny-all
+policy, at most one row · P07 audit chain valid · P08 memberships exactly the bootstrap's (plus PostgreSQL's
+ADMIN-only creator grant on a non-superuser administrator) · P09 every ACL grantee is a V13 role. VERDICT must be
+PASS. Foreign isolation stays in §5.2.
+
+### 5.7 The text that arrives is the text that was reviewed
+The hosted SQL is sent as one text through the Supabase connector (`execute_sql`), which runs it as one simple query and
+appends a comment trailer of its own. Before anything is sent, every text is generated from the repository (`node
+scripts/db/hosted-bundle.mjs <version> [--dry-run]`, the seed files verbatim inside the same transaction frame) and a
+guard block is inserted before its final COMMIT or ROLLBACK:
+
+```sql
+-- V13-TEXT-END
+do $v13_text_guard$
+begin
+  if pg_catalog.md5(pg_catalog.split_part(pg_catalog.current_query(), '-- V13-TEXT-END', 1))
+     is distinct from '<md5 of every byte before the marker>' then
+    raise exception 'V13 text guard: the text received differs from the repository text' using errcode = 'P0001';
+  end if;
+end
+$v13_text_guard$;
+```
+
+The server hashes the query text it actually received, up to the marker, so one changed, added or dropped byte anywhere
+before the marker aborts the transaction and nothing is applied. It was tested on the Supabase-like local cluster, 31
+Oct: on the real seed text, a changed comment byte, a trailing space and a changed string literal each raised the guard
+and the unchanged text passed; on a short text with the same guard, a dropped line and an added blank line each raised
+it and the unchanged text passed. After the run, a catalogue fingerprint of the V13 schema (functions with their bodies
+and settings, columns, constraints, indexes, policies, ACLs, default ACLs, memberships) is compared with the same query
+on a local database built from the same commit; equal hashes show that what was applied is what was reviewed.
+
 ## 6. Procedure (go / no-go)
 
 | Step | Action | Pass condition | If it fails |
@@ -146,7 +186,7 @@ locally and in CI against a Supabase-like role layout (`tests/integration`).
 | 5 | Advisors + GC Review deployment check + `cdf` counters | no new finding; READY + HTTP 200 | stop and report |
 | 6 | Set the `cdf_v13_app` SCRAM verifier; store the URL in Vercel (sensitive) | login works through the pooler (health endpoint) | report; the app shows "database not configured" and nothing else changes |
 | 7 | Deploy; run §5.3 from the deployed app | all probes refused; health 200 | stop; remove the Vercel variable (cuts the V13 login) and report |
-| 8+ | Each later V13 migration: lint → local + CI green → independent review ACCEPT → dry run → apply → §5.1, §5.2, §5.4 | as above | as above |
+| 8+ | Each later V13 migration: lint → local + CI green → independent review ACCEPT → dry run → apply → §5.1, §5.2, §5.4, §5.5, §5.6 (from #30 on), each text guarded as in §5.7 | as above; §5.6 VERDICT PASS | as above |
 
 ## 7. Recovery
 

@@ -2,7 +2,8 @@
 #
 # Jobs: quality (lint, typecheck, format, db:lint) · unit · rehearsal (scripts/db/rehearse-shared.mjs on a local
 # PostgreSQL 16 cluster) · integration (two throw-away PostgreSQL 17 containers: the db:reset target, and a hosted
-# simulation whose bootstrap superuser is supabase_admin) · build · e2e (Playwright smoke and accessibility). No
+# simulation whose bootstrap superuser is supabase_admin) · build · e2e (Playwright end-to-end, accessibility and
+# browser security suites against the app started on a migrated, seeded throw-away PostgreSQL 17 container). No
 # repository secrets are used; the database passwords below exist only inside the job's containers and are
 # deliberately not secret.
 #
@@ -167,6 +168,26 @@ jobs:
     name: End-to-end smoke (Playwright)
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    # V13-ARCH-008: the app under test reads and writes a real database, as on staging. The container is rebuilt from
+    # Git by db:reset (migrations + synthetic seed) and nothing else touches it before the app starts, so the app is
+    # the first and only process to install its claims key (ADR-014): no test:db run, no test key, no mismatch.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      V13_ADMIN_DATABASE_URL: postgres://postgres:ci-only-not-a-secret@127.0.0.1:5432/v13_local
+      V13_MIGRATION_RUNNER: ci
+      # The app login with the local-only password db:reset gives it (scripts/db/reset-local.mjs); loopback only.
+      V13_E2E_DATABASE_URL: postgres://cdf_v13_app:local-only-not-a-secret@127.0.0.1:5432/v13_local
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -177,8 +198,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:reset
       - run: pnpm exec playwright install --with-deps chromium
-      # Builds and starts the app on port 3100 with a session secret generated for this run (playwright.config.ts).
+      # Builds and starts the app on port 3100 with a session secret generated for this run and V13_DATABASE_URL set to
+      # V13_E2E_DATABASE_URL (playwright.config.ts); the app installs its claims key at start (instrumentation.ts).
       - run: pnpm test:e2e
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
