@@ -1,6 +1,8 @@
 // Acceptance self-test of the Case Context Sentinel (V13-QA-003): a clean page passes, and every planted cross-case
 // leak makes it fail with the right rule. Fixture pages only (tests/fixtures/synthetic-case-page.ts); no application
 // code or database is involved, so a Sentinel that cannot see a leak fails here before it is trusted on real pages.
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 import { expect, test } from "@playwright/test";
 import {
   ALL_CASE_IDS,
@@ -224,6 +226,44 @@ test.describe("sandboxed preview frames (SEC form for FE-006: sandbox + srcdoc, 
     );
     const v = await inspectCaseContext(page, { contextCaseId: c1.id }, refuseFrameEvaluation(page));
     expect(rulesOf(v)).toEqual(["S8"]);
+  });
+});
+
+test.describe("payloads the browser does not hand over", () => {
+  test("(n) a body that cannot be read, nor fetched again → P2, never a silent pass", async ({ page }) => {
+    // A zero wait forces the fallback; the fixture origin exists only in page routing, so fetching again fails.
+    const payloads = recordPayloads(page, FIXTURE_ORIGIN, { bodyTimeoutMs: 0 });
+    await openFixture(page, casePath, caseWorkspaceHtml());
+    const p = await payloads.violations(allowOn0001);
+    expect(rulesOf(p)).toEqual(["P2"]);
+    expect(await payloads.count()).toBe(0);
+  });
+
+  test("(o) a leak in a body read by fetching the same GET again → P1", async ({ page }) => {
+    // A real local server: the second fetch (page.request, same cookies and RSC headers) reaches it.
+    const html = caseWorkspaceHtml();
+    const server: Server = createServer((req, res) => {
+      if (req.url === "/rsc-payload") {
+        res.writeHead(200, { "content-type": "text/x-component" });
+        res.end(`1:{"caseId":"${CASES.c0009.id}","rsc":"${req.headers["rsc"] ?? ""}"}\n`);
+        return;
+      }
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end(html.replace('fetch("/rsc-payload")', 'fetch("/rsc-payload", { headers: { RSC: "1" } })'));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    try {
+      const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+      const payloads = recordPayloads(page, origin, { bodyTimeoutMs: 0 });
+      await page.goto(`${origin}${casePath}`);
+      await page.waitForFunction(() => document.body.dataset.rsc !== undefined);
+      const p = await payloads.violations(allowOn0001);
+      expect(rulesOf(p)).toEqual(["P1"]);
+      expect(formatViolations(p)).toContain("(fetched again)");
+      expect(await payloads.summary()).toEqual({ browser: 0, refetch: 2, unreadable: 0 });
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
   });
 });
 
