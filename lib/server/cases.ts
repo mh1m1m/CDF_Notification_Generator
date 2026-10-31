@@ -7,7 +7,7 @@ import {
   type CaseListFilter,
   type CaseListPage,
   type CaseSourceAdapter,
-  type CaseSummary,
+  type CaseHeader,
 } from "@/lib/contracts";
 import { parseCaseId, precheck } from "@/lib/authz";
 import { InvalidCursorError } from "@/lib/adapters/case-source/cursor";
@@ -23,7 +23,7 @@ export interface CaseServiceDeps {
 export async function getCaseForRoute(
   { ctx, source }: CaseServiceDeps,
   rawCaseId: unknown,
-): Promise<CaseSummary> {
+): Promise<CaseHeader> {
   const caseId = parseCaseId(rawCaseId);
   if (!caseId || !precheck(ctx.identity, "case.read", { caseId }).allow) throw new AppError("NOT_FOUND");
   const found = await source.getCase(ctx.identity, caseId);

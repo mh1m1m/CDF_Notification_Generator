@@ -12,6 +12,7 @@ import {
   PORTFOLIO_STAGES,
   type PortfolioQuery,
 } from "@/lib/server/portfolio-query";
+import { ScrollRegion } from "../../_components/ScrollRegion";
 import styles from "./portfolio.module.css";
 
 const STAGE_KEYS: Readonly<Record<(typeof PORTFOLIO_STAGES)[number], MessageKey>> = {
@@ -294,9 +295,9 @@ function Results({
         )
       ) : (
         <>
-          <div className={styles.scroll}>
+          <ScrollRegion className={styles.scroll} labelledBy="portfolio-table-caption">
             <table className={styles.table} data-testid="portfolio-table">
-              <caption>{captionOf(t, locale, query)}</caption>
+              <caption id="portfolio-table-caption">{captionOf(t, locale, query)}</caption>
               <thead>
                 <tr>
                   <th scope="col">{t("portfolio.column.number")}</th>
@@ -361,7 +362,7 @@ function Results({
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
           <nav aria-label={t("portfolio.pagination.label")} className={styles.pagination}>
             {view.from > 0 ? (
               <p data-testid="count-portfolio-total" data-count={page.total}>
