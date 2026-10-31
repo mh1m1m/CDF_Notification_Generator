@@ -92,3 +92,19 @@ test.describe("planted faults are detected", () => {
     expect(rulesOf(dbSentinelViolations(s2))).toEqual(["D3"]);
   });
 });
+// Negative-test personas (ARCH follow-up on #68): Secretary Epsilon (membership expired) and Persona Zeta (inactive)
+// read nothing at all, in every workspace: no case, no row of any case-keyed table. The same pin as the browser one
+// (tests/e2e/negative-personas-pinning.spec.ts), one layer down.
+for (const slug of ["secretary-epsilon", "persona-zeta"]) {
+  for (const workspace of ["SECRETARIAT", "INVESTIGATIONS", "GOVERNANCE"] as const) {
+    test(`DB Sentinel — ${slug} @ ${workspace} reads nothing`, async () => {
+      const s = await personaSnapshot(db, slug, workspace);
+      expect(s.cases, "cases").toEqual([]);
+      expect(Object.keys(s.caseKeyed), "every known case-keyed table is discovered").toEqual(
+        expect.arrayContaining([...KNOWN_CASE_KEYED]),
+      );
+      for (const [table, rows] of Object.entries(s.caseKeyed)) expect(rows, table).toEqual([]);
+      expect([s.tasks, s.events, s.notifications, s.notificationEvents]).toEqual([[], [], [], []]);
+    });
+  }
+}
