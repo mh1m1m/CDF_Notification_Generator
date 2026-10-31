@@ -13,6 +13,7 @@ catalogue in `docs/security/AUTHORIZATION_MATRIX.md` §6 and the threats in `doc
 | `tests/security/e2e/server-actions.spec.ts`   | Playwright       | SEC-APP-07, -10 (actions), -18         | TM-E5, TM-S3, TM-I10       |
 | `tests/security/e2e/surface.spec.ts`          | Playwright       | SEC-APP-08, -10, -13, -14, -15         | TM-I8, TM-I10, TM-I11, TM-I13 |
 | `tests/security/public-actions.ts`            | shared allow-list | SEC-APP-18                            | TM-E5                      |
+| `tests/security/e2e/case-pages.spec.ts` (V13-SEC-006) | Playwright | SEC-APP-01, -02, -09 (GET), -11 | TM-I1, TM-I2, TM-I3, TM-S7, TM-T6 |
 
 What each suite proves:
 
@@ -38,6 +39,18 @@ What each suite proves:
   secret name, connection string, V13 role, schema or claims setting appears in `.next/static`, the HTML or the
   flight data, and no source map is shipped; after sign-in and a language switch, web storage, IndexedDB, Cache
   Storage and service workers are empty and the session cookie is invisible to scripts.
+
+- **Case pages (V13-SEC-006)**: for Secretary Alpha, Investigators Beta and Gamma and Governance Officer Delta, every
+  seeded case the persona may not see (DATA_MODEL §5: other workspace, restricted 0009 without assignment) answers on
+  every Case Workspace tab exactly like an unknown id: 404, the same visible text, no `data-case-id`, no other case's
+  id or number in the HTML, and the Case Context Sentinel finds nothing. A control proves every visible case opens.
+  A display number in the case URL is an unknown id. Malformed ids (zero UUID, suffixes, NUL, quotes, traversal,
+  2 000 characters, emoji) never give a 5xx or internals; an upper-case spelling of a hidden id stays hidden.
+  Portfolio search by a hidden case's number (full, `2026-00NN`, `00NN`) gives the same rows, counts and text as a
+  number that does not exist. GETs with forged workspace parameters never change the session. The workspace switch
+  ignores forged `persona_id`, `role`, `workspace_id`, `active_workspace` and `claims` fields and a repeated
+  `workspace` field: the session never belongs to another persona or reaches a non-member workspace.
+  Mutation-checked: listing a visible case as hidden fails both the 404 and the search assertions.
 
 The browser suites that read `.next` (action manifest, bundle scan) skip themselves against `V13_E2E_BASE_URL`.
 
@@ -68,10 +81,21 @@ Node 22.22.0, pnpm 10.28.0, Next.js 16.4.2, Chromium from `PW_CHROMIUM_PATH=/opt
 
 CI on the PR is the run of record.
 
+## Findings (V13-SEC-006)
+
+| Id | Severity | Finding | Status |
+| -- | -------- | ------- | ------ |
+| SEC-F-006-1 | LOW | A case id that is not valid UTF-8 after percent-decoding (`%C0%AF`, `%FF`, `%E0%A4%A`) makes the signed-in case routes answer a bare `500 Internal Server Error` (no internals, no case data; anonymous requests are redirected to sign-in first). Other routes answer 404. Expected: the unknown-id 404. | OPEN, reported to ARCH (`proxy.ts` or the route); pinned with `test.fail()` so the fix flips the test |
+
 ## Not covered yet
 
-- SEC-APP-01/02/05/09/11/16/17 need case pages and the BFF (FE-002..006); they follow when those land, using the
-  same allow-list and probes. With no session-bound action in the build yet, the "no session-bound action runs
+- SEC-APP-05 (deactivated after sign-in) is covered by QA's `tests/e2e/negative-personas-pinning.spec.ts` (valid
+  session, expired membership or inactive persona → nothing) and `scenario-c-workspace-switch.spec.ts` (switch
+  re-checked by the database); SEC adds nothing there. SEC-APP-09's POST part (foreign `Origin`) is in
+  `server-actions.spec.ts`. SEC-APP-11 covers the workspace switch, the only session-bound command in the build; each
+  new command action gets the same probe when it lands. SEC-APP-16 is a review checklist, applied by SEC on every
+  `.github/**` change: pinned action SHAs, least `permissions`, no `pull_request_target` with checkout of the head, no
+  secret in a step that runs PR code, no new third-party action without a reason. SEC-APP-17 follows FE-006. With no session-bound action in the build yet, the "no session-bound action runs
   without a session" probe has nothing to post; it covers every new action automatically.
 - Database adversarial tests are V13-SEC-002 (`tests/security/db`): see `docs/security/DB_ADVERSARIAL_TESTS.md`.
   `static-boundaries.spec.ts` also walks `instrumentation.ts` since V13-SEC-002.

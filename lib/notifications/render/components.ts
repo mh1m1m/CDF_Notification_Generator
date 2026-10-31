@@ -41,6 +41,8 @@ import {
   type DeliveryInput,
 } from "./types";
 import { isNil } from "@/lib/domain/nil";
+import { ar as AR } from "@/lib/i18n/notificationRender/ar";
+import { en as EN } from "@/lib/i18n/notificationRender/en";
 
 const DEFAULT_TOKENS = loadTokens();
 
@@ -1120,7 +1122,7 @@ export function renderDecisionRightsIndicator(model0: unknown, ctx: RenderCtx): 
   const names = F(model, "member_names");
   if (Array.isArray(names) && names.length)
     lines.push({
-      text: `${L(ctx, S.holders)}: ${names.join(lang === "ar" ? "، " : ", ")}`,
+      text: `${L(ctx, S.holders)}: ${names.join(lang === "ar" ? AR["separator.list"] : EN["separator.list"])}`,
       field: "member_names",
       key: "meta",
     });
@@ -1192,7 +1194,13 @@ export function deliveryWording(
     parts.push(DELIVERY.CORRECTION_PREPARING);
   if (d?.read === true && !["DRAFT", "NOT_SENT", "CANCELLED", "UNKNOWN"].includes(key))
     parts.push(DELIVERY.OPENED);
-  return { key, wording: { ar: parts.map((x) => x.ar).join("؛ "), en: parts.map((x) => x.en).join("; ") } };
+  return {
+    key,
+    wording: {
+      ar: parts.map((x) => x.ar).join(AR["separator.clause"]),
+      en: parts.map((x) => x.en).join(EN["separator.clause"]),
+    },
+  };
 }
 
 // 15 DeliveryStatus — the notification's own status; never claims delivery or reading (L-07, L-02, L-04)

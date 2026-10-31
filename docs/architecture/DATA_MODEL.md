@@ -1,7 +1,7 @@
 # E03 — Enterprise data model (Milestone M1)
 
 **SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Owner: team DB. Schema `cdf_notifications_v13` in the
-shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0009`; seed in two parts:
+shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0010`; seed in two parts:
 `database/seed/0001_m1_synthetic.sql` (identity: workspaces, personas, memberships; needs migration 0001 only; audit row
 `SEED_M1_LOADED`) and `database/seed/0002_m1_cases.sql` (cases and their history; needs 0001–0004; audit row
 `SEED_M1_CASES_LOADED`).
@@ -9,8 +9,8 @@ shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations
 Status: **COMPLETE** for M1 on `develop` (b5ee5f46): migrations 0001–0008 and both seed parts, merged through #12
 (0001, identity seed, claims MAC, key install at start), #15 (0002–0004, cases seed), #17 (0005 workspace switch),
 #21 (0006 Case Workspace reads), #28 (0007 claims-key state for health) and #31 (0008 My Work case columns), each on
-SEC ACCEPT and green CI. Migration 0009 (foreign-key index review, V13-DB-011) is IN_PROGRESS in its PR. Tested on a
-local PostgreSQL 16 cluster (`pnpm test:db`, 357 tests with 0009 and SEC's suites). Applied to the hosted schema only by the Chief Architect, with the plan procedure.
+SEC ACCEPT and green CI; 0009 (foreign-key index review, V13-DB-011) merged through #42. Migration 0010 (Notification
+Operations Center reads, V13-DB-015) is IN_PROGRESS in its PR. Tested on a local PostgreSQL 16 cluster (`pnpm test:db`). Applied to the hosted schema only by the Chief Architect, with the plan procedure.
 
 ## 1. Principles
 
@@ -106,6 +106,7 @@ erDiagram
 | `_capacity_rank(text)` (migration 0006) | immutable, no table access | yes | display order when a persona holds several capacities: LEAD_INVESTIGATOR, INVESTIGATOR, SECRETARY, GOVERNANCE_REVIEWER |
 | `my_work_tasks(boolean)` | invoker | yes | the persona's own tasks in cases accessible in the current workspace (open only unless `true`); order due date nulls last, display number, task code. Migration 0008 appends `case_title_ar`, `case_title_en`, `case_records_state` (UI hint only; V1423 stays the authority) and `status_event_id` (as `case_tasks`) |
 | `case_notifications(uuid)` | invoker | yes | notification history of one case |
+| `notifications_page(...)`, `notifications_count(...)` (migration 0010, V13-DB-015) | invoker | yes | Notification Operations Center (UX S4, FE-006): notifications across every case the caller may see, with exactly the access of `case_notifications` (RLS before filters, order, limit, count and summaries). Rows: case id, number and titles, template code, names, version and language, recipient class, lifecycle status, `created_at`, `created_at_cursor`, `last_event_at`, `row_version`; no person. Filters (identical for page and count): lifecycle status, template code, case display number (after authorisation, never a key), created range `[from, before)`. Keyset on (`created_at` desc, id desc): pass `created_at_cursor` (text, `YYYY-MM-DDTHH:MI:SS.ffffffZ`) and the id of the last row, or neither; half a cursor or another text form matches nothing. Limit 1..100 |
 | `api_update_task_status(uuid, text, int)` | definer command | yes | §6 |
 | `api_create_notification_draft(uuid, uuid, text, text)` | definer command | yes | §6 |
 | `api_switch_workspace(uuid)` (migration 0005) | definer command | yes | §6; returns the target workspace id, code and the persona's role codes there |
