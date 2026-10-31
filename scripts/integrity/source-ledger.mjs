@@ -11,22 +11,14 @@
 //
 // Safety rules (they hold for the command line and for the exported functions):
 //   - it only reads, and only under the allowed base; a root outside it (after resolving symbolic links) is refused;
-//   - it never writes under the allowed base: the ledger must live elsewhere;
+//   - it never writes under the allowed base: the ledger goes in an existing folder elsewhere (nothing is created);
 //   - it never reads the excluded upload (real personal data): a root that is, is inside or contains it is refused;
 //   - it never follows a symbolic link: a link is recorded as a link (target not read) so a change still shows.
 // The command line prints counts, bytes and the ledger's own sha256. File names appear only in verify's difference
 // report, on the local terminal; they never belong in Git (the folders hold mailbox exports).
 import { createHash } from "node:crypto";
-import {
-  createReadStream,
-  lstatSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  realpathSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { createReadStream, lstatSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** The only tree the command line may read. */
@@ -128,6 +120,8 @@ function sha256File(file) {
  */
 async function walk(realBase, rel, out) {
   const abs = rel === "" ? realBase : `${realBase}/${rel}`;
+  // The entry is lstat-checked here and then opened by path below, so a swap between the two is possible in theory;
+  // on a frozen folder that nothing writes to it is not a practical risk (SEC INFO on #64).
   const st = lstatSync(abs);
   if (st.isSymbolicLink()) {
     out.push({ path: rel, kind: "symlink", size: 0, sha256: null });
@@ -207,16 +201,19 @@ export function checkOut(out, base) {
     throw new LedgerError("BAD_OUT", "the ledger path must be absolute");
   const realBase = realOrNull(base) ?? resolve(base);
   const abs = resolve(out);
-  let realDir = dirname(abs);
-  try {
-    realDir = realpathSync(realDir);
-  } catch {
-    // the folder does not exist yet: it is created below, and checked by its resolved parent
-  }
-  const under = (/** @type {string} */ b) => isInside(abs, b) || isInside(realDir, b);
-  if (under(realBase) || under(resolve(base)) || isExcluded(abs, EXCLUDED_PATHS))
+  const under = (/** @type {string} */ p) =>
+    isInside(p, realBase) || isInside(p, resolve(base)) || isExcluded(p, EXCLUDED_PATHS);
+  if (under(abs))
     throw new LedgerError("OUT_UNDER_BASE", "the ledger is never written under the read-only base");
-  return abs;
+  // The folder must already exist (SEC-F-064-1): nothing is created, so no link on the way can lead a new folder into
+  // the base. The check is on the folder's real path; the file itself is opened with O_EXCL ("wx"), which also refuses
+  // an existing link in its place.
+  const realDir = realOrNull(dirname(abs));
+  if (realDir === null) throw new LedgerError("OUT_DIR_MISSING", "the ledger's folder must already exist");
+  const real = `${realDir}/${basename(abs)}`;
+  if (under(real))
+    throw new LedgerError("OUT_UNDER_BASE", "the ledger is never written under the read-only base");
+  return real;
 }
 
 /** @param {string[]} argv @param {{ base?: string, log?: (s: string) => void }} [env] */
@@ -235,7 +232,6 @@ export async function main(argv, env = {}) {
     const out = checkOut(take("--out"), base);
     const ledger = await capture({ base, roots: rest });
     const text = serialise(ledger);
-    mkdirSync(dirname(out), { recursive: true });
     writeFileSync(out, text, { flag: "wx" });
     log(`captured roots=${ledger.roots.length} files=${ledger.file_count} bytes=${ledger.total_bytes}`);
     log(`ledger sha256=${sha256Of(text)}`);

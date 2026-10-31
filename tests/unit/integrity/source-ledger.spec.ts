@@ -64,6 +64,7 @@ beforeEach(() => {
   mkdirSync(join(base, "generator", "sub"), { recursive: true });
   mkdirSync(join(base, "review"), { recursive: true });
   mkdirSync(outside);
+  mkdirSync(ledgerDir);
   writeFileSync(join(base, "generator", "b.txt"), "Witness Gamma");
   writeFileSync(join(base, "generator", "a.txt"), "Employee Alpha");
   writeFileSync(join(base, "generator", "sub", "c.json"), '{"case":"CDF-DEMO-2026-0001"}');
@@ -190,6 +191,30 @@ describe("refusals (fail closed)", () => {
     expect(checkOut(join(ledgerDir, "ledger.json"), base)).toBe(join(ledgerDir, "ledger.json"));
   });
 
+  test("SL-19 a missing ledger folder is refused and never created, even behind a link into the base (SEC-F-064-1)", async () => {
+    // SEC's fixture: out/link -> base. Row 1 was already refused; rows 2 and 3 used to create folders under base.
+    const outDir = join(tmp, "out");
+    mkdirSync(outDir);
+    symlinkSync(base, join(outDir, "link"));
+    const before = snapshot(base);
+    const run = (out: string) => main(["capture", "--out", out, "review"], { base, log: () => {} });
+    await expect(run(join(outDir, "link", "ledger.json"))).rejects.toSatisfy(code("OUT_UNDER_BASE"));
+    await expect(run(join(outDir, "link", "new", "ledger.json"))).rejects.toSatisfy(code("OUT_DIR_MISSING"));
+    await expect(run(join(outDir, "link", "a", "b", "ledger.json"))).rejects.toSatisfy(
+      code("OUT_DIR_MISSING"),
+    );
+    expect(snapshot(base)).toEqual(before);
+    expect(existsSync(join(base, "new"))).toBe(false);
+    expect(existsSync(join(base, "a"))).toBe(false);
+    // a missing folder outside the base is refused too: nothing is ever created
+    await expect(run(join(ledgerDir, "missing", "ledger.json"))).rejects.toSatisfy(code("OUT_DIR_MISSING"));
+    expect(existsSync(join(ledgerDir, "missing"))).toBe(false);
+    // a link put in place of the ledger file is not written through ("wx" refuses an existing path)
+    symlinkSync(join(base, "REGISTER.csv"), join(ledgerDir, "planted.json"));
+    await expect(run(join(ledgerDir, "planted.json"))).rejects.toThrow(/EEXIST/);
+    expect(snapshot(base)).toEqual(before);
+  });
+
   test("SL-11 the command line reads only the fixed notifications base", async () => {
     expect(ALLOWED_BASE).toBe("/mnt/project-files/notifications");
     const logs: string[] = [];
@@ -242,6 +267,7 @@ describe("verify", () => {
 
 describe("command line", () => {
   test("SL-16 capture writes one ledger, prints totals and its sha256 but no file name, and never overwrites", async () => {
+    mkdirSync(join(ledgerDir, "nested"));
     const out = join(ledgerDir, "nested", "ledger.json");
     const logs: string[] = [];
     const run = (argv: string[]) => main(argv, { base, log: (s) => logs.push(s) });
