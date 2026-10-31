@@ -107,6 +107,17 @@ test.describe('planted unrecorded "completed" badges are detected', () => {
     );
     expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T5"]);
   });
+
+  test("(e′) DELIVERY_CONFIRMED (lib/domain completed class) dressed as expected → T5", async ({ page }) => {
+    await openFixture(
+      page,
+      casePath,
+      caseWorkspaceHtml({
+        insideWorkspace: `<span data-epistemic="expected" data-status-kind="notification" data-status="DELIVERY_CONFIRMED">تأكد التسليم (متوقع)</span>`,
+      }),
+    );
+    expect(rulesOf(await inspectTruth(page, oracle, NOW))).toEqual(["T5"]);
+  });
 });
 
 test.describe("other truth rules", () => {

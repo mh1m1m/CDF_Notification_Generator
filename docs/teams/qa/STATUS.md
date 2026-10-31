@@ -15,6 +15,9 @@ Updated: 2026-10-31 · Branch: test/V13-QA-004-unmarked-status (base develop 2ec
   2ec6ce0 renders status attributes yet, so no page fails T8 today. Mutation checks: completed-class-only logic fails
   the 5 new T8 tests; ignoring `data-event-id` fails the OPEN-with-event test; allow-all fails all 6 T8 tests.
 
+- Follow-up 2 (this branch): the Inspector takes `BADGE_EPISTEMIC_VALUES` and `isCompletedClassStatus` from
+  `lib/domain` (PROC-001, #18); the local copies are gone. New self-test (e′): DELIVERY_CONFIRMED shown as expected → T5.
+
 ## Changed files (this branch)
 - tests/truth/inspector.ts
 - tests/truth/planted-badge.spec.ts
@@ -28,14 +31,13 @@ Updated: 2026-10-31 · Branch: test/V13-QA-004-unmarked-status (base develop 2ec
 | Command | Result | Counts | Commit |
 | ------- | ------ | ------ | ------ |
 | `pnpm typecheck`, `pnpm lint`, `pnpm format:check` | pass | 0 warnings | this branch |
-| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | pass | 80 passed, 0 failed | this branch |
+| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | pass | 81 passed, 0 failed | this branch |
 
 ## Waiting
 - Scenario C e2e (11 tests) on `test/V13-QA-002-scenario-c` (5bdfc4b, stacked on #10 35e1e65): PR opens after #10
   merges; it also exports the run's session secret to workers in `playwright.config.ts`.
 - Epsilon pinning e2e (ARCH, DEPENDENCIES decision 10): minted Epsilon session, portfolio shows zero cases and
   count 0 from the database — after FE-003 (#19) and DB-002 (#15).
-- Follow-up 2: local `COMPLETED_CLASS` → `lib/domain` once PROC-001 (#18) merges.
 - Timeline and date entries become inspectable once PROC #18's status-kind vocabulary and DB-008's per-event status
   are on develop (ARCH ruling on FE-004).
 - DB half of the Sentinel and the DB event oracle (after DB-002/003; local/CI database only).

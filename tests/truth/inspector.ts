@@ -17,20 +17,12 @@
 //   T8 an element with data-status or data-status-kind but no data-epistemic is allowed only as an OPEN task with no
 //      data-event-id (ARCH ruling on FE-004, allow-list); every other unmarked status element is a violation
 import type { Page } from "@playwright/test";
+import { BADGE_EPISTEMIC_VALUES, isCompletedClassStatus } from "@/lib/domain";
 import { readChildFrames, type FramePage, type UnreadableFrame } from "../sentinel/frames";
 
-export const EPISTEMIC_VALUES = ["recorded", "expected", "conditional", "awaiting_approval"] as const;
+// One source for both lists: lib/domain (PROC-001), the same ones the components use.
+export const EPISTEMIC_VALUES = BADGE_EPISTEMIC_VALUES;
 const UUID_EXACT = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-/** Statuses that claim something has happened; they may only be shown from a recorded event. */
-export const COMPLETED_CLASS = new Set([
-  "COMPLETED",
-  "APPROVED",
-  "SENT",
-  "DELIVERED",
-  "DECIDED",
-  "CLOSED",
-  "ADOPTED",
-]);
 
 export interface EpistemicNode {
   path: string;
@@ -159,7 +151,7 @@ export async function checkTruth(
     if (!recorded && n.eventId !== null)
       v.push({ rule: "T3", where, detail: `${n.epistemic} element carries data-event-id ${n.eventId}` });
 
-    if (!recorded && n.status && COMPLETED_CLASS.has(n.status))
+    if (!recorded && isCompletedClassStatus(n.status))
       v.push({ rule: "T5", where, detail: `${n.status} shown as ${n.epistemic}` });
 
     if (recorded && n.eventId) {
