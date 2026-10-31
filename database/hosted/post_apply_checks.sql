@@ -197,7 +197,8 @@ checks (check_id, detail, breaches) as (
          coalesce('unexpected: ' || string_agg(m.member || ' in ' || m.grp
                                                || case when m.admin_option then ' (admin)' else '' end
                                                || case when m.inherit_option then ' (inherit)' else '' end
-                                               || case when not m.set_option then ' (no set)' else '' end, ', ')
+                                               || case when not m.set_option then ' (no set)' else '' end, ', '
+                                               order by m.grp, m.member)
                     filter (where not m.expected),
                   'cdf_v13_app in cdf_v13_user (SET only), administrator SET-only on the V13 roles (plus the creator ADMIN grant when not a superuser), nothing else'),
          count(*) filter (where not m.expected)
