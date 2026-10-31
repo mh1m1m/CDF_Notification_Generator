@@ -14,4 +14,6 @@ export const en: Record<keyof typeof ar, string> = {
   "notFound.heading": "Page not found",
   "notFound.body": "There is no page at this address, or you may not access it.",
   "notFound.backToStart": "Back to the start",
+  "records.active": "Active",
+  "records.closed": "Closed",
 };

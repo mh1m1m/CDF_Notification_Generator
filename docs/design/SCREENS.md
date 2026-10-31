@@ -145,8 +145,10 @@ Full interaction spec in WORKSPACES.md §3. Page `/workspaces`: `h1` "مساحا
 memberships, each a card with workspace name, role held, and a "الانتقال إلى هذه المساحة" button (secondary); the
 active one shows "الحالية" with a check glyph instead of the button.
 
-**Test ids.** `workspace-switcher` (TopBar control, with `data-workspace-code`), `workspace-option-<CODE>`, `workspace-current`,
-`workspaces-page`.
+**Test ids.** TopBar control: `workspace-switcher` (with `data-workspace-code`); inside its menu
+`workspace-menu-option-<CODE>`, `workspace-menu-current`, `workspace-menu-all`. Page `/workspaces`: `workspaces-page`,
+`workspace-option-<CODE>`, `workspace-current`. The menu and the page never share an id, so a test that finds one of
+them finds exactly one element (QA review of #14, 28 Oct; pending ARCH ruling as a spec change).
 
 **Acceptance.** WORKSPACES.md §5.
 
