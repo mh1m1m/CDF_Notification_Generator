@@ -1,6 +1,6 @@
 # DB status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 04:30 UTC · Team DB · Reviewer of DB PRs: SEC
+Updated: 2026-10-31 18:40 UTC · Team DB · Reviewer of DB PRs: SEC
 
 ## Delivery plan (ruled by the Chief Architect)
 
@@ -9,6 +9,7 @@ Updated: 2026-10-28 04:30 UTC · Team DB · Reviewer of DB PRs: SEC
 | (a) `[V13-DB-001]` | `feature/V13-DB-001-identity-claims-audit` | migration 0001 (identity, claims MAC, audit ledger, deny-all on `schema_migrations`), seed part 1 (identity), app-side claims MAC in `lib/db/security-context.ts`, key install at server start (`instrumentation.ts` → `lib/db/claims-key-startup.ts`), `database/hosted/reset_claims_key.sql` (ARCH path, proposed by DB), suites | IN_PROGRESS (PR open, SEC review) |
 | (b) `[V13-DB-002]` | `feature/V13-DB-002-case-registry-notifications`, stacked on (a) | migrations 0002–0004, seed part 2 (cases), `scripts/db/rehearse-shared.mjs`, case-access suite, FE contract ruling on 0002, persona-registry tests un-skipped | IN_PROGRESS (branch `feature/V13-DB-002-case-registry-notifications`, PR open, SEC review) |
 | (c) `[V13-DB-007]` | `feature/V13-DB-007-workspace-switch`, stacked on (b) | migration 0005 `api_switch_workspace` (ids-only WORKSPACE_SWITCHED audit), workspace-switch suite (14), definer allow-list entry | IN_PROGRESS (PR open, SEC review) |
+| (d) `[V13-DB-008]` | `feature/V13-DB-008-case-workspace-reads`, stacked on (c) | migration 0006: `case_events`, `case_tasks`, `case_header.my_capacity` (FE-004, ARCH ruling 28 Oct), case-workspace suite (22) | IN_PROGRESS (PR open, SEC review) |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -40,6 +41,10 @@ Updated: 2026-10-28 04:30 UTC · Team DB · Reviewer of DB PRs: SEC
 
 ## Completed in PR (c)
 - V13-DB-007 — migration 0005: `api_switch_workspace(uuid)` for the FE workspace switcher (ARCH request, 28 Oct).
+
+## Completed in PR (d)
+- V13-DB-008 — migration 0006: SECURITY INVOKER Case Workspace reads; persons appear only as capacity codes or an
+  is-mine flag.
 
 ## Changed files (PR (a))
 - database/migrations/0001_identity_access_audit.sql, database/seed/0001_m1_synthetic.sql,
