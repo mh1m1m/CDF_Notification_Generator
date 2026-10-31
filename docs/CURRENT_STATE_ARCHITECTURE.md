@@ -8,6 +8,23 @@
 > so §2.4 and risk T15 now read "a shared project, isolated and verified" (`docs/DEPLOYMENT_STATUS.md`); **Q1** is on an
 > owner card, with ADR-001 ("own records behind `CaseSourceAdapter`") in force meanwhile; §8 step 3 is tightened by
 > ADR-003: no `@supabase/*` package at all; S9 is addressed by the isolation plan (`docs/hosted/`).
+>
+> **Further superseded passages (added 31 Oct 2026 23:32 UTC, from SEC's E01 review on #75).** Do not build from the
+> passages below; the decisions cited govern.
+>
+> - **Identity** (§5 rows "Local-dev identity adapter" and "Supabase Auth identity adapter", §8 step 4): V13 has no
+>   Supabase Auth users and no Supabase Auth adapter. Sign-in is a synthetic persona behind Vercel Authentication,
+>   enabled only by `V13_PERSONA_SIGNIN=enabled` (ADR-004; CLAUDE.md §2 and §4), implemented in `lib/auth`.
+>   PRODUCTION_SUBSTITUTION_REQUIRED: the CDF corporate IdP (OIDC).
+> - **Target paths** (§5 "Target" column, §8): `supabase/migrations` and `supabase/seed` are `database/migrations`
+>   and `database/seed`, applied by the repository's own runner in number order and recorded in
+>   `cdf_notifications_v13.schema_migrations`. The Supabase migration tool is prohibited (ADR-012; CLAUDE.md §2).
+>   `lib/server/db`, `lib/server/identity` and `lib/server/adapters` are `lib/db`, `lib/auth` and `lib/adapters`
+>   (CLAUDE.md §3).
+> - **Secret scanning** (§8 step 3): the repository scans for credentials in tracked files and for personal data in
+>   demo inputs are V13-SEC-008 (#72).
+> - **Public repository** (§1.2, risk S4, Q3): the repository was still public when checked on 31 Oct 2026 at
+>   23:31 UTC (GitHub API `visibility: public`). Q3 stays open with the owner.
 
 ## 1. Scope and evidence base
 
