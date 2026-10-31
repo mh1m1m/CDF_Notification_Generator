@@ -107,7 +107,9 @@ Architect's rulings on #71:
   `Test_ID` names that check. Otherwise it stays IN_PROGRESS with `Evidence` "standing rule, review-enforced; no breach
   found on develop `<sha>`".
 
-COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, were checked by SEC before merge.
+COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, were checked by SEC before merge. REQ-SEC-002 and REQ-GOV-001
+are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Later merges (#61, #68, #69 and onwards)
+were not re-assessed in this pass; their owners update their rows (§6).
 
 **By status**
 
