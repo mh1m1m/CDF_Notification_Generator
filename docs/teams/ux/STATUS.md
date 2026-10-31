@@ -101,7 +101,8 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   at 360, 768, 1280 and 1920 px: `docs/design/reviews/M1_DESIGN_REVIEW.md` (14 findings).
 - Fixed in UX paths (`styles/globals.css`): M1-01 platform nav list, M1-02 workspace cards, M1-03 switcher menu panel
   inside the viewport under 768 px.
-- Routed to FE through ARCH: M1-04 to M1-13. Open rule with ARCH: M1-14 (digits in the product name and in titles).
+- Routed through ARCH: M1-04, 05, 06, 08, 10–13 → V13-UX-008 (next, after #69); M1-07 → FE-006 part 3; M1-09 →
+  FE-009. M1-14 ruled by ARCH (31 Oct 23:00), recorded as DESIGN_SYSTEM §6 D10.
 - Notification Operations Center (S4) waits for #61.
 - Evidence: temporary local Playwright capture (not committed), 64 page captures plus 4 open-menu captures, every page
   200, no page-level horizontal scroll, every Tab stop with a visible focus ring.
