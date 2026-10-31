@@ -119,13 +119,9 @@ export type SessionClaims = z.infer<typeof SessionClaimsSchema>;
 const seconds = (date: Date) => Math.floor(date.getTime() / 1000);
 
 /**
- * Signs a session for the subject. Payload: {persona_id, active_workspace, iat, exp}; lifetime 8 hours.
- *
- * Workspace switch (Scenario C): a Server Action takes the current session (getCurrentSession), checks that the
- * target workspace is one of `workspacesOf(session.persona)`, then calls
- * `createSessionToken({ persona_id: session.persona.persona_id, active_workspace: target })` and
- * `setSessionCookie(token)` (lib/auth/server-session.ts). The new session starts a fresh 8-hour lifetime;
- * sessionFromClaims refuses any workspace without a membership, and the database re-checks the membership again.
+ * Signs a new session for the subject at sign-in. Payload: {persona_id, active_workspace, iat, exp}; lifetime
+ * 8 hours. Only sign-in starts a lifetime: a workspace switch uses reissueSessionToken, which keeps the current exp
+ * (ARCH ruling on SEC's review of #10, 28 Oct 2026).
  */
 export async function createSessionToken(
   subject: { persona_id: string; active_workspace: string },
@@ -139,6 +135,40 @@ export async function createSessionToken(
     .setIssuedAt(iat)
     .setExpirationTime(iat + SESSION_MAX_AGE_SECONDS)
     .sign(key);
+}
+
+export class SessionReissueError extends Error {
+  override readonly name = "SessionReissueError";
+  constructor(readonly code: "SESSION_EXPIRED" | "SESSION_LIFETIME_INVALID") {
+    super(code);
+  }
+}
+
+/**
+ * Re-issues the current session for another active workspace (Scenario C). Keeps persona_id and exp from the
+ * verified claims, so a switch never extends the session; iat is now. Returns the token and the cookie Max-Age, which
+ * equals the remaining lifetime, so the cookie never outlives the token. Membership is not checked here: the caller
+ * checks it before (lib/authz) and sessionFromClaims and the database check it again on every request.
+ * Throws SessionReissueError (code only) when the session has expired or its lifetime is out of bounds.
+ */
+export async function reissueSessionToken(
+  current: SessionClaims,
+  active_workspace: string,
+  options: SessionOptions = {},
+): Promise<{ token: string; maxAge: number }> {
+  const key = sessionKey(options.env);
+  const workspace = WorkspaceCodeSchema.parse(active_workspace);
+  const persona_id = PersonaIdSchema.parse(current.persona_id);
+  const iat = seconds(options.now ?? new Date());
+  const maxAge = current.exp - iat;
+  if (maxAge < 1) throw new SessionReissueError("SESSION_EXPIRED");
+  if (maxAge > SESSION_MAX_AGE_SECONDS) throw new SessionReissueError("SESSION_LIFETIME_INVALID");
+  const token = await new SignJWT({ persona_id, active_workspace: workspace })
+    .setProtectedHeader({ alg: ALGORITHM, typ: "JWT" })
+    .setIssuedAt(iat)
+    .setExpirationTime(current.exp)
+    .sign(key);
+  return { token, maxAge };
 }
 
 /** Returns the verified claims, or null on any failure (missing, malformed, tampered, expired, misconfigured). */
@@ -216,11 +246,13 @@ export interface SessionCookieReader {
   get(name: string): { value: string } | undefined;
 }
 
+/** Cookie attributes as written: SESSION_COOKIE_OPTIONS with a Max-Age of 0 (expire) up to the session lifetime. */
+export type SessionCookieAttributes = Omit<typeof SESSION_COOKIE_OPTIONS, "maxAge"> & { maxAge: number };
+
 /** The part of a cookie store needed to write the session (`await cookies()` in actions, `NextResponse.cookies`). */
 export interface SessionCookieWriter {
-  set(name: string, value: string, options: typeof SESSION_COOKIE_OPTIONS | ExpiredCookieOptions): unknown;
+  set(name: string, value: string, options: SessionCookieAttributes): unknown;
 }
-type ExpiredCookieOptions = Omit<typeof SESSION_COOKIE_OPTIONS, "maxAge"> & { maxAge: 0 };
 
 export async function readSession(
   store: SessionCookieReader,
@@ -230,8 +262,19 @@ export async function readSession(
   return claims ? sessionFromClaims(claims) : null;
 }
 
-export function writeSessionCookie(store: SessionCookieWriter, token: string): void {
-  store.set(SESSION_COOKIE_NAME, token, SESSION_COOKIE_OPTIONS);
+/**
+ * Writes the session cookie. `maxAge` (seconds, integer 1..SESSION_MAX_AGE_SECONDS) is the token's remaining
+ * lifetime after a re-issue; it defaults to the full lifetime of a new sign-in session.
+ */
+export function writeSessionCookie(
+  store: SessionCookieWriter,
+  token: string,
+  maxAge: number = SESSION_MAX_AGE_SECONDS,
+): void {
+  if (!Number.isInteger(maxAge) || maxAge < 1 || maxAge > SESSION_MAX_AGE_SECONDS) {
+    throw new SessionReissueError("SESSION_LIFETIME_INVALID");
+  }
+  store.set(SESSION_COOKIE_NAME, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
 }
 
 /** Expires the cookie with the same attributes it was set with (required for `__Host-` cookies). */
