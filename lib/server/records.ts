@@ -3,10 +3,12 @@
 import "server-only";
 import type {
   CorrelationId,
+  NotificationCenterReader,
   NotificationDraftPort,
   NotificationRecordsReader,
   ProceduralRecordsReader,
 } from "@/lib/contracts";
+import { createV13NotificationCenterReader } from "@/lib/adapters/notification-records/v13-notification-center";
 import { createV13NotificationDrafts } from "@/lib/adapters/notification-records/v13-notification-drafts";
 import { createV13NotificationRecordsReader } from "@/lib/adapters/notification-records/v13-notification-records";
 import { createV13ProceduralRecordsReader } from "@/lib/adapters/procedural-records/v13-procedural-records";
@@ -20,6 +22,12 @@ export function proceduralRecordsFor(correlationId: CorrelationId): ProceduralRe
 
 export function notificationRecordsFor(correlationId: CorrelationId): NotificationRecordsReader {
   return createV13NotificationRecordsReader((identity, fn) =>
+    withRequestContext(identity, fn, { correlationId }),
+  );
+}
+
+export function notificationCenterFor(correlationId: CorrelationId): NotificationCenterReader {
+  return createV13NotificationCenterReader((identity, fn) =>
     withRequestContext(identity, fn, { correlationId }),
   );
 }

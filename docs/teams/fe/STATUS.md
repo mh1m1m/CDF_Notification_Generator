@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 21:10 UTC · Branch: feature/V13-FE-006-notification-center (FE-006 part 1, Scenario E draft; #19, #23, #27, #32 merged into develop) · Head: see PR
+Updated: 2026-10-31 22:15 UTC · Branch: feature/V13-FE-006-notification-center-list (FE-006 part 2; part 1 #51 merged into develop 65a251d) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -36,8 +36,17 @@ Updated: 2026-10-31 21:10 UTC · Branch: feature/V13-FE-006-notification-center 
   that may draft (COMMITTEE_SECRETARY, INVESTIGATOR) on ACTIVE cases; Server Action → lib/server (pre-check, Zod,
   `api_create_notification_draft`); one fresh idempotency key per rendered form; a created draft redirects to the case
   id the command returned (SEC condition 1); every refusal (incl. a reused key) is one generic message with a reference,
-  shown in place (useActionState), nothing written. Contract proposed in `lib/contracts/notification-draft.ts` (needs ARCH + SEC ACCEPT). — IN_REVIEW.
-  Part 2 (`/notifications` with the D6 guard, the list on DB-015, the in-case preview on PROC-008) follows.
+  shown in place (useActionState), nothing written. Contract `lib/contracts/notification-draft.ts`. PR #51 — COMPLETE (merged into develop 65a251d, 31 Oct).
+- V13-FE-006 part 2, Notification Operations Center list (SCREENS S4) — `/notifications`: pre-check
+  `notifications.center.read` first, so an investigator gets the unknown-route page (status 404, same body and same
+  title) on every URL of the route (D6, SEC-APP-17); GET filter form (lifecycle status, template code, case number,
+  created from/to as Asia/Riyadh days), keyset paging with previous/next, authorised total; each row names its case
+  (number link by UUID + title, `data-case-id`, `data-case-ref`), template name + code + version, recipient class (a
+  class, never a person), status in words ("sent — delivery not confirmed", never "delivered"), created, last event.
+  Reads DB-015 (`notifications_page` + `notifications_count`, one statement). Proposed contract
+  `lib/contracts/notification-center.ts` (NotificationCenterReader, row and filter schemas) and `InvalidCursorError`
+  moved into `lib/contracts` (OI-031, own file `lib/contracts/cursor.ts`; `lib/adapters/case-source/cursor.ts` re-exports it): needs ARCH + SEC ACCEPT.
+  Rows link to the case's Notifications tab; the in-case preview (`?n=`) is part 3 — IN_REVIEW.
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -63,6 +72,13 @@ Updated: 2026-10-31 21:10 UTC · Branch: feature/V13-FE-006-notification-center 
   lib/server/{my-work,my-work-binding}.ts, lib/adapters/my-work/v13-my-work.ts, lib/contracts/{my-work,index}.ts
   (proposed), lib/i18n/myWork/{ar,en}.ts, tests/unit/server/{my-work.spec.tsx,v13-my-work-adapter.spec.ts,
   support/fake-my-work.ts,support/fake-case-source.ts}, tests/integration/fe/{my-work-command,my-work-read}.spec.ts
+- FE-006 part 2: app/(platform)/notifications/{page.tsx,_components/{NotificationCenterView.tsx,center.module.css}},
+  lib/server/{notification-center,notification-center-query,records}.ts,
+  lib/adapters/notification-records/v13-notification-center.ts, lib/adapters/case-source/cursor.ts,
+  lib/contracts/{notification-center,index}.ts (proposed), lib/i18n/notifications/{ar,en}.ts,
+  tests/unit/server/{notification-center.spec.tsx,v13-notification-center-adapter.spec.ts,
+  support/fake-notification-center.ts}, tests/integration/fe/notification-center.spec.ts,
+  tests/e2e/notification-center.spec.ts (FE-committed, for QA's review, as agreed for Scenario E on #51)
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -104,12 +120,19 @@ Updated: 2026-10-31 21:10 UTC · Branch: feature/V13-FE-006-notification-center 
 | FE-005 throwaway browser probe (not committed; e2e is QA's): Alpha 7 rows = Open count, Truth Inspector 0 violations, axe 0 violations (wcag2a/aa, 21a/aa), OPEN task unmarked, IN_PROGRESS recorded; update OPEN → IN_PROGRESS shows the updated notice and the badge becomes recorded; a second tab's version-1 form → stale message; forged task id (0009) → generic reference, server logs code NOT_FOUND only; Due-this-week filter link; Gamma's closed-case task has no form | pass | 1/1 | bffeb64 |
 | OI-023 (PR #27, 17f4107 on develop c4b37c3): `pnpm test` / `pnpm test:db` / `pnpm test:e2e`; browser probe: forged target refused with cookie unchanged, real switch → exactly 1 WORKSPACE_SWITCHED row | pass | 725 / 212 / 56 (17 skipped) / 1 | 17f4107 |
 | FE-005 after merging develop 69e03d6 (#23 merged), My Work table in `ScrollRegion` (caption `my-work-table-caption`) + guard test: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` / throwaway narrow axe probe incl. `/my-work` at 375 and 1280 px, ar + en (not committed) | pass | — / 1177 / 389 / 101 / 2/2 | FE-005 head |
+| FE-006 part 2 (branch from develop b24db04): lint, typecheck, format, db:lint (11 migrations, 0 findings), build (`/notifications` dynamic route) | pass | — | FE-006 part 2 head |
+| Same: `pnpm test` (unit; Center 40 + adapter/cursor 43 new) | pass | 66 files, 1764 | FE-006 part 2 head |
+| Same: `pnpm db:reset` then `pnpm test:db` (new FE suite notification-center 13: Alpha 4 rows newest first, never 0009; row shape; Delta in both workspaces; 0009 Beta only; hidden, other-workspace and unknown case numbers and Epsilon → no rows, total 0; filters; one-row keyset walk with microsecond cursor; bad cursor refused; Scenario E draft in 0001 appears first with case 0001 only, rolled back) | pass | 26 files, 423 | FE-006 part 2 head |
+| Same: `pnpm db:reset` then `pnpm test:e2e` (new spec 6: Beta and Gamma 404 identical to an unknown route on 4 URLs, no nav item; Alpha via nav, rows name visible cases only, count = rows; case filter; hidden/unknown case → no results; edited URL → invalid with reference; Delta GOVERNANCE) | pass | 132 passed | FE-006 part 2 head |
+| FE-006 part 2 + keyed Center filter form (OI-043 fix applied to S4): `pnpm test` / `pnpm db:reset` + `pnpm test:e2e` with a throwaway probe (Center Clear empties status and case, Back restores them; not committed) | pass | 1765 / 133 (132 + probe) | FE-006 part 2 head |
+| FE-006 part 2 after ARCH CHANGES ac30892: `InvalidCursorError` in its own `lib/contracts/cursor.ts` (both ports name the refusal), `lib/server/cases.ts` imports it from contracts, page-max comment, page + count in one statement (one snapshot at READ COMMITTED): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 1765 / 423 / 132 | FE-006 part 2 head |
 
 | FE-006 part 1 (develop ec8653a): lint, typecheck, format:check, build / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (new `tests/integration/fe/notification-draft.spec.ts`, 12) / `pnpm db:reset` + `pnpm test:e2e` / throwaway Scenario E browser probe (not committed; e2e is QA's): Alpha drafts on 0001 (count +1, row marked, axe 0, no CSP console error), id absent from 0003, resubmitted old key → duplicate notice and no new row, case id tampered to 0009 → not-found page, no draft form on closed 0010 or for Delta | pass | — / 1615 (52 new: service+markup+action 33, adapter 19) / 384 / 101 / 2/2 | FE-006 head |
 
 | FE-006 part 1 after merging develop d694ff8 + ARCH/SEC conditions (DB-returned case id only, one generic refusal shown in place, swap test, negatives): lint, typecheck, format:check, build / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (FE draft suite 13) / `pnpm db:reset` + `pnpm test:e2e` / throwaway probe (`/mnt/project-files/v13-fe/probes/zz-fe-draft-probe.spec.ts`, committed as tests/e2e/scenario-e-notification-draft.spec.ts): Alpha WITNESS draft on 0001 (+1, axe 0, no CSP error), id absent from 0003; own key again, 0009, 0002, 0010, unknown and malformed case ids → same generic reference on the 0001 page, counts on 0001 and 0010 unchanged; no form on 0010 or for Delta | pass | — / 1706 / 402 / 101 / 2/2 | FE-006 head |
 | FE-006 part 1, SEC CHANGES 150d54a (integration access negatives, all NOT_FOUND with no notification, event or audit row): Alpha on 0002 and 0005, Alpha and Gamma on restricted 0009, unknown UUID, Gamma (Investigations) on 0008 (visible only in other workspaces), Delta (role): `pnpm db:reset` + `pnpm test:db` (FE draft suite 16) | pass | 405 | FE-006 head |
 | FE-006 part 1: committed `tests/e2e/scenario-e-notification-draft.spec.ts` (ARCH: rides #51, QA reviews; SEC condition 2 with relative counts): `pnpm db:reset` + `pnpm test:e2e`; then `db:reset` + the spec with `--repeat-each=2 --workers=1` (second pass on a database the first wrote to). A second server start without `db:reset` fails every e2e suite with CLAIMS_KEY_MISMATCH (migration 0007, known local constraint), not this spec | pass | 103 / 4 | FE-006 head |
+| FE-006 part 2 after merging develop 65a251d (#51; records.ts keeps both bindings, contracts index keeps both exports): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 69 files, 1860 / 28 files, 447 / 150 | FE-006 part 2 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
@@ -141,6 +164,10 @@ Updated: 2026-10-31 21:10 UTC · Branch: feature/V13-FE-006-notification-center 
   labels stay in `case.task.status.*` (OI-029); the count strip has no "due today" bucket (today counts as this week).
 - Local note: with migration 0007 the database holds one claims key; after `pnpm test:db` (test key) run `pnpm db:reset`
   before starting the app with another session secret, otherwise every read fails closed (CLAIMS_KEY_MISMATCH).
+
+- FE-006 part 2 known gaps: the template filter is a code text field (no template catalogue read for the Center yet);
+  status and recipient labels live in `notifications.status.*` / `notifications.recipient.*` until PROC's catalogue
+  (OI-029); rows link to the case's Notifications tab until the in-case preview (part 3, after #51 and UX #54).
 
 ## Dependencies and requests
 - DB-010 (my_work_tasks columns, migration 0008): merged on develop b5ee5f4; FE-005 reads it.
