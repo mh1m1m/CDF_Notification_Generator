@@ -3,8 +3,8 @@
 // are never listed, so their sessions are minted with createSessionToken and the run's session secret (ARCH, review
 // of PR #1). SYNTHETIC identities only.
 import { expect, type BrowserContext, type Page } from "@playwright/test";
-import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
-import { PERSONAS, type Persona } from "@/lib/contracts";
+import { createSessionToken, SESSION_COOKIE_NAME } from "@/lib/auth/session";
+import { PERSONAS, type Persona, type WorkspaceCode } from "@/lib/contracts";
 
 export const SESSION_COOKIE = SESSION_COOKIE_NAME;
 
@@ -30,4 +30,36 @@ export async function signInAs(page: Page, slug: string): Promise<Persona> {
 /** The session cookie of the context, if any. */
 export async function sessionCookie(context: BrowserContext) {
   return (await context.cookies()).find((c) => c.name === SESSION_COOKIE);
+}
+
+/**
+ * Gives the context a session for a negative-test persona (expired membership, inactive persona), minted with the
+ * run's session secret, because persona sign-in never offers them. Returns the token. Needs V13_E2E_SESSION_SECRET,
+ * which playwright.config.ts sets for locally started builds.
+ */
+export async function mintSession(
+  context: BrowserContext,
+  baseURL: string,
+  slug: string,
+  workspace: WorkspaceCode,
+): Promise<string> {
+  const secret = process.env.V13_E2E_SESSION_SECRET;
+  if (!secret) throw new Error("minting a session needs V13_E2E_SESSION_SECRET (a locally started build)");
+  const p = persona(slug);
+  const token = await createSessionToken(
+    { persona_id: p.persona_id, active_workspace: workspace },
+    { env: { V13_SESSION_SECRET: secret, V13_PERSONA_SIGNIN: "enabled" } },
+  );
+  await context.addCookies([
+    {
+      name: SESSION_COOKIE,
+      value: token,
+      domain: new URL(baseURL).hostname,
+      path: "/",
+      secure: true,
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
+  return token;
 }

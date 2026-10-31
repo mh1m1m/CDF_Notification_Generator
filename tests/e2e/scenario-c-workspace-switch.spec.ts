@@ -4,9 +4,8 @@
 // member of, a forged code, a single-membership persona, a negative-test persona. SYNTHETIC personas only.
 // The database half (RLS re-derives the membership on every request) is covered by DB/SEC's suites.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { createSessionToken } from "@/lib/auth/session";
 import { messagesFor } from "@/lib/i18n";
-import { persona, sessionCookie, SESSION_COOKIE, signInAs } from "../fixtures/personas";
+import { mintSession, sessionCookie, SESSION_COOKIE, signInAs } from "../fixtures/personas";
 
 const ar = messagesFor("ar");
 const DELTA = "governance-officer-delta";
@@ -168,27 +167,19 @@ test.describe("Scenario C — negatives leave the session unchanged", () => {
     page,
     context,
   }) => {
-    const secret = process.env.V13_E2E_SESSION_SECRET;
-    test.skip(!secret, "needs the run's session secret (set by playwright.config.ts for local builds)");
-    const epsilon = persona("secretary-epsilon");
-    const token = await createSessionToken(
-      { persona_id: epsilon.persona_id, active_workspace: "SECRETARIAT" },
-      { env: { V13_SESSION_SECRET: secret, V13_PERSONA_SIGNIN: "enabled" } },
+    test.skip(
+      !process.env.V13_E2E_SESSION_SECRET,
+      "needs the run's session secret (set by playwright.config.ts for local builds)",
     );
-    const baseURL = test.info().project.use.baseURL!;
-    await context.addCookies([
-      {
-        name: SESSION_COOKIE,
-        value: token,
-        domain: new URL(baseURL).hostname,
-        path: "/",
-        secure: true,
-        httpOnly: true,
-        sameSite: "Lax",
-      },
-    ]);
+    const token = await mintSession(
+      context,
+      test.info().project.use.baseURL!,
+      "secretary-epsilon",
+      "SECRETARIAT",
+    );
     await page.goto("/workspaces");
-    // Wherever the app lands (sign-in or an empty list), Epsilon is offered no workspace and keeps her token.
+    // Wherever the app lands (sign-in or an empty list), Epsilon is offered no workspace and keeps the token. The
+    // `?? token` fallback also passes when the app clears the cookie: either way no other session is issued.
     await expect(page.locator('[data-testid^="workspace-go-"]')).toHaveCount(0);
     expect((await sessionCookie(context))?.value ?? token).toBe(token);
   });
