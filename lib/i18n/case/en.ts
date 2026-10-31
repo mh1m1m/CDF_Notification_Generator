@@ -63,6 +63,16 @@ export const en: Record<keyof typeof ar, string> = {
   "notifications.column.recipient": "Recipient class",
   "notifications.column.status": "Status",
   "notifications.column.created": "Created",
+  "notifications.column.preview": "Preview",
+  "notifications.previewLink": "Preview",
+  "notifications.previewLinkLabel": "Preview {code} for {recipient}",
+  "preview.heading": "Notification preview",
+  "preview.close": "Close preview",
+  "preview.unmapped":
+    "No preview: the recipient class {recipient} has no approved disclosure mapping yet, so nothing is shown for it. This is an open owner decision.",
+  "preview.unavailableTitle": "This preview cannot be shown",
+  "preview.unavailableBody":
+    "The preview is not available for this case. If you expected one, send the reference number to the support team.",
   "draft.heading": "Create a notification draft",
   "draft.hint":
     "The draft is created for this case only, and nothing is sent. It records the template and the recipient class, not the notice text.",

@@ -5,6 +5,9 @@
 // persona is on, and the draft counts do not change. The closed case and a role that may not draft get no form.
 // Assertions are on this test's own rows by id (TEST_ARCHITECTURE §5.3), so the suite holds on a database that earlier
 // or parallel runs wrote to. At 375 px the tab with the form has no horizontal page scroll (WCAG 1.4.10, QA review).
+// Preview (FE-006 part 3): a WITNESS draft opens in UX-006's sandboxed frame from its row's link; the seed's database
+// recipient classes show the OI-037 state; another case's id, an unknown id and a malformed value show one generic
+// state; a WITNESS draft on restricted 0009 fails closed with that same state.
 // SYNTHETIC personas only.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
@@ -112,5 +115,134 @@ test.describe("Scenario E — notification draft", () => {
     await page.goto(`/cases/${C(1)}/notifications`);
     await expect(page.getByTestId("case-notifications")).toBeVisible();
     await expect(page.getByTestId("draft-form")).toHaveCount(0);
+  });
+});
+
+test.describe("Scenario E — notification preview", () => {
+  const NTF = (n: number) => `2f000000-0000-4000-8000-0000000000${String(n).padStart(2, "0")}`;
+  // Alpha's preview drafts are written on 0004, so they never race the draft test's row checks on 0001 and 0010.
+  const ALPHA_CASE = 4;
+
+  /** Creates a WITNESS draft on case i with the first offered template; returns its id. */
+  async function witnessDraft(page: Page, i: number): Promise<string> {
+    await page.goto(`/cases/${C(i)}/notifications`);
+    await page.getByTestId("draft-recipient").selectOption("WITNESS");
+    await page.getByTestId("draft-submit").click();
+    await expect(page.getByTestId("draft-created")).toBeVisible();
+    const created = new URL(page.url()).searchParams.get("created");
+    expect(created).toMatch(UUID);
+    return created!;
+  }
+
+  /** The generic state's visible text with the reference number removed (it differs per request). */
+  async function genericText(page: Page): Promise<string> {
+    const box = page.getByTestId("case-preview-unavailable");
+    await expect(box).toBeVisible();
+    await expect(box.getByTestId("case-preview-correlation-id")).toHaveText(UUID);
+    const ref = await box.getByTestId("case-preview-correlation-id").innerText();
+    return (await box.innerText()).replace(ref, "<ref>");
+  }
+
+  test("a WITNESS draft opens in the sandboxed frame from its row; nothing runs and nothing leaks into the page", async ({
+    page,
+  }) => {
+    const csp: string[] = [];
+    page.on("console", (m) => {
+      if (/Content Security Policy/i.test(m.text())) csp.push(m.text());
+    });
+    await signInAs(page, "secretary-alpha");
+    const id = await witnessDraft(page, ALPHA_CASE);
+    await page.getByTestId(`case-notification-preview-link-${id}`).click();
+    await expect(page).toHaveURL(new RegExp(`/cases/${C(ALPHA_CASE)}/notifications\\?n=${id}$`));
+    const ready = page.getByTestId("case-preview-ready");
+    await expect(ready).toHaveAttribute("data-notification-id", id);
+    await expect(page.getByTestId(`case-notification-${id}`)).toHaveAttribute("data-selected", "true");
+    await expect(page.getByTestId(`case-notification-preview-link-${id}`)).toHaveAttribute("aria-current", "true");
+    const frame = page.getByTestId("case-notification-preview-frame");
+    await expect(frame).toHaveAttribute("sandbox", "");
+    expect(await frame.getAttribute("src")).toBeNull();
+    expect(await frame.getAttribute("srcdoc")).toContain('data-marking="DESIGN_PREVIEW"');
+    // the notice is inside the frame only
+    await expect(page.locator('[data-marking="DESIGN_PREVIEW"]')).toHaveCount(0);
+    const inner = page.frameLocator('[data-testid="case-notification-preview-frame"]');
+    await expect(inner.locator("h1#ntf-title")).toBeVisible();
+    await expect(inner.locator('[data-marking="DESIGN_PREVIEW"]')).toBeVisible();
+    // The page around the frame (axe cannot run inside a frame that allows no script, so iframes are not entered)…
+    const axe = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .options({ iframes: false })
+      .analyze();
+    expect(axe.violations.map((v) => v.id)).toEqual([]);
+    // …and the framed document itself, opened as its own page from the same srcdoc.
+    const doc = await page.context().newPage();
+    await doc.setContent((await frame.getAttribute("srcdoc"))!);
+    const inside = await new AxeBuilder({ page: doc })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(inside.violations.map((v) => v.id)).toEqual([]);
+    await doc.close();
+    await page.getByTestId("case-preview-close").click();
+    await expect(page).toHaveURL(new RegExp(`/cases/${C(ALPHA_CASE)}/notifications$`));
+    await expect(page.getByTestId("case-preview")).toHaveCount(0);
+    expect(csp).toEqual([]);
+  });
+
+  test("the seed's database recipient classes show the OI-037 state, never a frame", async ({ page }) => {
+    await signInAs(page, "secretary-alpha");
+    await page.goto(`/cases/${C(1)}/notifications?n=${NTF(1)}`); // CASE_TEAM
+    await expect(page.getByTestId("case-preview-unmapped")).toContainText("CASE_TEAM");
+    await expect(page.getByTestId("case-notification-preview-frame")).toHaveCount(0);
+    await page.goto(`/cases/${C(3)}/notifications?n=${NTF(2)}`); // COMMITTEE_MEMBERS
+    await expect(page.getByTestId("case-preview-unmapped")).toContainText("COMMITTEE_MEMBERS");
+    await expect(page.getByTestId("case-notification-preview-frame")).toHaveCount(0);
+  });
+
+  test("another case's notification, an unknown id and a malformed value show one generic state", async ({
+    page,
+  }) => {
+    await signInAs(page, "secretary-alpha");
+    const texts: string[] = [];
+    for (const n of [
+      NTF(2), // case 0003's notification under 0001
+      NTF(4), // restricted 0009's notification, hidden from Alpha
+      "2f000000-0000-4000-8000-0000000000ff", // unknown
+      "CDF-DEMO-2026-0001", // a display number is never a key
+      "%27--",
+    ]) {
+      await page.goto(`/cases/${C(1)}/notifications?n=${n}`);
+      texts.push(await genericText(page));
+      await expect(page.getByTestId("case-notification-preview-frame")).toHaveCount(0);
+      await expect(page.getByTestId("case-preview-unmapped")).toHaveCount(0);
+      expect(await page.getByTestId("case-preview").innerText()).not.toMatch(
+        /2f000000|0c000000|COMMITTEE|CASE_TEAM|WITNESS|sql|stack/i,
+      );
+    }
+    expect(new Set(texts).size).toBe(1);
+    // the generic state of the preview is also what a hidden case's notification gives its own case page
+    await page.goto(`/cases/${C(9)}/notifications?n=${NTF(4)}`);
+    await expect(page.getByTestId("not-found-state")).toBeVisible();
+  });
+
+  test("negative: a WITNESS draft on restricted 0009 fails closed (no access-list result) with the generic state", async ({
+    page,
+  }) => {
+    await signInAs(page, "investigator-beta");
+    const id = await witnessDraft(page, 9);
+    await page.goto(`/cases/${C(9)}/notifications?n=${id}`);
+    await genericText(page);
+    await expect(page.getByTestId("case-notification-preview-frame")).toHaveCount(0);
+  });
+
+  test("at 375 px the tab with an open preview has no horizontal page scroll", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await signInAs(page, "secretary-alpha");
+    const id = await witnessDraft(page, ALPHA_CASE);
+    await page.goto(`/cases/${C(ALPHA_CASE)}/notifications?n=${id}`);
+    await expect(page.getByTestId("case-notification-preview-frame")).toBeVisible();
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(scrollWidth).toBe(clientWidth);
   });
 });

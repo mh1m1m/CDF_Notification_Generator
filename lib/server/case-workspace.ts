@@ -12,6 +12,7 @@ import type {
   CaseSummary,
   CaseTask,
   NotificationDraftPort,
+  NotificationPreviewReader,
   NotificationRecordsReader,
   ProceduralRecordsReader,
 } from "@/lib/contracts";
@@ -19,6 +20,7 @@ import { getCaseForRoute } from "./cases";
 import type { RequestContext } from "./context";
 import { toUserError } from "./errors";
 import { loadDraftForm, type DraftFormView, type DraftNotice } from "./notification-draft";
+import { loadNotificationPreview, type NotificationPreviewView } from "./notification-preview";
 
 export const CASE_TABS = ["overview", "events", "tasks", "notifications"] as const;
 export type CaseTab = (typeof CASE_TABS)[number];
@@ -34,6 +36,10 @@ export interface CaseWorkspaceDeps {
   readonly drafts?: NotificationDraftPort;
   /** The outcome flag of the last draft action, already parsed (notifications tab only). */
   readonly notice?: DraftNotice | null;
+  /** The in-case preview's read (V13-FE-006 part 3); without it the tab shows no preview. */
+  readonly preview?: NotificationPreviewReader;
+  /** The raw `?n=` value (notifications tab only); undefined when absent. */
+  readonly previewId?: string;
 }
 
 interface Frame {
@@ -54,13 +60,14 @@ export type CaseWorkspaceView =
       readonly notifications: readonly CaseNotification[];
       readonly draft: DraftFormView | null;
       readonly notice: DraftNotice | null;
+      readonly preview: NotificationPreviewView;
     });
 
 const OPEN_STATUSES = new Set(["OPEN", "IN_PROGRESS", "BLOCKED"]);
 
 /** Loads one tab of one case. Throws AppError("NOT_FOUND") for anything the persona may not see. */
 export async function loadCaseWorkspace(
-  { ctx, source, procedural, notifications, drafts, notice }: CaseWorkspaceDeps,
+  { ctx, source, procedural, notifications, drafts, notice, preview, previewId }: CaseWorkspaceDeps,
   rawCaseId: unknown,
   tab: CaseTab,
 ): Promise<CaseWorkspaceView> {
@@ -95,6 +102,9 @@ export async function loadCaseWorkspace(
         notifications: list,
         draft: drafts ? await loadDraftForm({ ctx, drafts }, summary) : null,
         notice: shown,
+        preview: preview
+          ? await loadNotificationPreview({ ctx, reader: preview, procedural }, summary, previewId)
+          : { kind: "none" },
       };
     }
   }

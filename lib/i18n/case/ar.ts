@@ -63,6 +63,16 @@ export const ar = {
   "notifications.column.recipient": "فئة المستلم",
   "notifications.column.status": "الحالة",
   "notifications.column.created": "أُنشئ في",
+  "notifications.column.preview": "المعاينة",
+  "notifications.previewLink": "معاينة",
+  "notifications.previewLinkLabel": "معاينة {code} للفئة {recipient}",
+  "preview.heading": "معاينة الإشعار",
+  "preview.close": "إغلاق المعاينة",
+  "preview.unmapped":
+    "لا توجد معاينة: لم يُعتمد بعد ربط إفصاح لفئة المستلم {recipient}، لذا لا يُعرض لها شيء. هذا قرار مفتوح لدى المالك.",
+  "preview.unavailableTitle": "تعذّر عرض هذه المعاينة",
+  "preview.unavailableBody":
+    "المعاينة غير متاحة لهذه القضية. إن كنت تتوقع ظهورها فأرسل رقم المتابعة إلى فريق الدعم.",
   "draft.heading": "إنشاء مسودة إشعار",
   "draft.hint":
     "تُنشأ المسودة لهذه القضية فقط، ولا يُرسل شيء. تحتفظ المسودة بالقالب وفئة المستلم، ولا تحمل نص الإشعار.",
