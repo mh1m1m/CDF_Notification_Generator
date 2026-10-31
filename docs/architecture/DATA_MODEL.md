@@ -74,7 +74,7 @@ erDiagram
 | 0001 | `persona_workspace_membership` | persona × workspace × role, `valid_from`/`valid_to` | active when `valid_from <= now() < valid_to` |
 | 0001 | `claims_key` | `key_version` = 1 | ipad/opad keys + sha256 of K; restrictive deny-all, no grant; cleared only by `database/hosted/reset_claims_key.sql` |
 | 0001 | `audit_event` | `id`, `seq` identity, `row_hash` unique | append-only, hash chain (`prev_hash` → `row_hash`), no reader grant |
-| 0002 | `case_record` | `id`, `display_number` unique | stage, `is_restricted`, `records_state` ACTIVE/CLOSED (+`closed_at` consistency), `owning_workspace_id`, `source_system` = `V13_SYNTHETIC`, `source_ref`, `row_version` |
+| 0002 | `case_record` | `id`, `display_number` unique | stage, `is_restricted`, `records_state` ACTIVE/CLOSED (+`closed_at` consistency), `owning_workspace_id`, `source_system` = `V13_SYNTHETIC`, `source_ref` NOT NULL (pattern-checked; seed `seed:m1:NNNN`), `row_version`, `updated_at` |
 | 0002 | `case_workspace_visibility` | (`case_id`, `workspace_id`) | owning workspace inserted by trigger |
 | 0002 | `case_assignment` | persona × case × capacity, window | capacities LEAD_INVESTIGATOR, INVESTIGATOR, SECRETARY, GOVERNANCE_REVIEWER |
 | 0003 | `procedural_event` | `id`; unique (`id`, `case_id`) | append-only Layer A record; `occurred_at`/`recorded_at`; provenance RECORDED_IN_V13 / SEED_SYNTHETIC; `causation_id` same case |
@@ -82,7 +82,7 @@ erDiagram
 | 0004 | `notification_recipient_class` | `code` | reference data in the migration |
 | 0004 | `notification_template` | `id`, `code` unique | `is_active` |
 | 0004 | `notification_template_version` | (`template_id`, `version`, `language`) unique | immutable; `content_sha256` computed by trigger; `basis` = source reference |
-| 0004 | `notification` | `id`, `idempotency_key` unique; unique (`id`, `case_id`) | lifecycle DRAFT…SUPERSEDED; `supersedes_id` same case |
+| 0004 | `notification` | `id`; unique (`created_by_persona_id`, `idempotency_key`) (keys scoped to their author); unique (`id`, `case_id`) | lifecycle DRAFT…SUPERSEDED; `supersedes_id` same case |
 | 0004 | `notification_event` | `id`; FK (`notification_id`, `case_id`) | append-only; `provenance` COMMAND (default) / SEED_SYNTHETIC |
 | 0004 | `dispatch_outbox` | `id`; FK (`notification_id`, `case_id`); unique per channel | content-free; restrictive deny-all, no grant (ADR-010, used from M5) |
 
@@ -99,12 +99,12 @@ erDiagram
 | `current_role_codes()`, `has_role(text)` | definer, stable | yes | roles in the current workspace |
 | `is_assigned_to_case(uuid)` | definer, stable | yes | active assignment on the case |
 | `can_access_case(uuid)` | definer, stable | yes | **the single case-access rule** (§5) |
-| `portfolio_page(...)`, `portfolio_count(...)` | invoker | yes | keyset page (limit 1..100) and count; RLS filters before filters, order, limit and count |
-| `case_header(uuid)` | invoker | yes | one case by UUID; no row for unknown or unauthorised |
+| `portfolio_page(...)`, `portfolio_count(...)` (migration 0003) | invoker | yes | keyset page (limit 1..100) and count with one filter set (stage, records state, search, assigned-to-me = active case assignment); RLS filters before filters, order, limit, count and row summaries; rows carry `updated_at`, `source_system`, `source_ref`, the case's last recorded event (`last_event_id`, `last_event_at`) and the caller's own open-task count (`my_open_task_count`) (FE contract ruling and FE-003, 28 Oct) |
+| `case_header(uuid)` | invoker | yes | one case by UUID, same columns as a portfolio row; no row for unknown or unauthorised |
 | `my_work_tasks(boolean)` | invoker | yes | the persona's tasks in accessible cases |
 | `case_notifications(uuid)` | invoker | yes | notification history of one case |
-| `api_update_task_status(uuid, text, int, uuid)` | definer command | yes | §6 |
-| `api_create_notification_draft(uuid, uuid, text, text, uuid)` | definer command | yes | §6 |
+| `api_update_task_status(uuid, text, int)` | definer command | yes | §6 |
+| `api_create_notification_draft(uuid, uuid, text, text)` | definer command | yes | §6 |
 | `verify_audit_chain()` | definer | **no** (owner/administrator) | recomputes the chain; counts and first broken `seq` only |
 | `_append_audit`, `_audit_row_hash`, `_reject_mutation`, `_task_transition_allowed`, `_case_owning_visibility`, `_template_version_hash` | internal | no | — |
 | `_is_colleague(uuid)` | internal definer | yes (used inside the `persona` policy) | persona is active and has an active membership in the current workspace (an inactive persona is never listed as a colleague) |
@@ -144,8 +144,8 @@ violation · `V1500` audit append outside READ COMMITTED.
 
 | Command | Who | Checks | Writes (one transaction) |
 | ------- | --- | ------ | ------------------------ |
-| `api_update_task_status` | the task's assignee, or a persona with an active assignment on the case | context; task exists and `can_access_case`; case ACTIVE; expected `row_version`; allowed transition (DONE, CANCELLED terminal) | task (+1 version), `procedural_event` TASK_STATUS_CHANGED, `audit_event` TASK_STATUS_CHANGED |
-| `api_create_notification_draft` | COMMITTEE_SECRETARY or INVESTIGATOR in the current workspace with case access | context; `can_access_case`; role; case ACTIVE; recipient class and active template version exist; key is 64 hex and unused (serialised by advisory lock in the V13 namespace) | `notification` DRAFT with the authorised `case_id`, `notification_event` DRAFT_CREATED, `audit_event` NOTIFICATION_DRAFT_CREATED |
+| `api_update_task_status` | the task's assignee, or a persona with an active assignment on the case | context; task exists and `can_access_case`, checked before the row is locked (`FOR UPDATE` only after access is proven, so a caller without access never waits on or locks a task); case ACTIVE; expected `row_version`; allowed transition (DONE, CANCELLED terminal) | task (+1 version), `procedural_event` TASK_STATUS_CHANGED, `audit_event` TASK_STATUS_CHANGED |
+| `api_create_notification_draft` | COMMITTEE_SECRETARY or INVESTIGATOR in the current workspace with case access | context; `can_access_case`; role; case ACTIVE; recipient class and active template version exist; key is 64 hex and not used before by the same persona (serialised by an advisory lock on author and key in the V13 namespace; another persona's key gives no signal) | `notification` DRAFT with the authorised `case_id`, `notification_event` DRAFT_CREATED, `audit_event` NOTIFICATION_DRAFT_CREATED |
 
 ## 6a. Definer discipline (TM-T10, SEC-DB-30)
 
