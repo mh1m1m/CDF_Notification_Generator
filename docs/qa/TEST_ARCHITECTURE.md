@@ -189,6 +189,10 @@ Library `tests/truth/inspector.ts`.
   task's status equals the fold of its TASK_STATUS_CHANGED events from OPEN (each step starts where the last ended),
   **U2** no event is recorded in the future or occurred after it was recorded, **U3** one CASE_OPENED per case and
   CLOSED ⇔ CASE_CLOSED, **U4** every notification starts with DRAFT_CREATED. Planted-fault self-test as above.
+- **Notification preview frames** (ARCH ruling, 31 Oct): inside a preview frame T1 and T8 do not apply; **T9** every
+  `data-epistemic` there is one of the renderer's values, `DATA_EPISTEMIC_VALUES` imported from
+  `lib/notifications/data-epistemic.ts` (V13-PROC-011), never copied. A status badge planted in a frame still gets
+  T2–T6; an unreadable frame stays T7; outside a frame nothing changes.
 - **Planted-badge self-test** (acceptance). `planted-badge.spec.ts` injects (via `page.route`) a StatusBadge marked
   `data-epistemic="recorded"` `data-status="COMPLETED"` with (a) no `data-event-id`, (b) a random UUID, (c) the id of a
   real event of another case. Each must make the Inspector fail.
