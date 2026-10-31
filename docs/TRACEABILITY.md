@@ -97,31 +97,41 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 The 280 rows with `Milestone` = M1, counted from the CSV on `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026). The
 status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
 merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
-merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Rows whose only evidence is a
-document or a standing rule, with no test that can exercise them, are IN_PROGRESS with the document in `Evidence` and an
-empty `Test_ID` (96 rows). COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, are checked by SEC before merge.
+merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief
+Architect's rulings on #71:
+
+- A **document deliverable** is COMPLETE when the document is merged, an independent reviewer accepted it and it covers
+  what the row asks for M1; its `Test_ID` reads `review: #PR ACCEPT <sha>`. A living document that M1 only starts stays
+  IN_PROGRESS.
+- A **standing rule** (a prohibition or a process rule) is COMPLETE only when an automated check enforces it and
+  `Test_ID` names that check. Otherwise it stays IN_PROGRESS with `Evidence` "standing rule, review-enforced; no breach
+  found on develop `<sha>`".
+
+COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, were checked by SEC before merge.
 
 **By status**
 
 | Status | Rows |
 |---|---|
-| COMPLETE | 61 |
-| IN_PROGRESS | 177 |
+| COMPLETE | 67 |
+| IN_PROGRESS | 172 |
+| — of which review-enforced standing rules | 51 |
+| — of which document or configuration evidence only, no test | 39 |
 | BLOCKED | 16 |
 | PRODUCTION_SUBSTITUTION_REQUIRED | 1 |
-| NOT_STARTED | 25 |
+| NOT_STARTED | 24 |
 | **Total** | **280** |
 
 **By owner team**
 
 | Owner team | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
 |---|---|---|---|---|---|---|
-| ARCH | 105 | 5 | 84 | 12 | 0 | 4 |
-| QA | 51 | 8 | 25 | 4 | 0 | 14 |
-| DB | 33 | 14 | 18 | 0 | 1 | 0 |
-| FE | 31 | 13 | 18 | 0 | 0 | 0 |
+| ARCH | 105 | 8 | 82 | 12 | 0 | 3 |
+| QA | 51 | 9 | 24 | 4 | 0 | 14 |
+| DB | 33 | 15 | 17 | 0 | 1 | 0 |
+| FE | 31 | 12 | 19 | 0 | 0 | 0 |
 | SEC | 27 | 14 | 13 | 0 | 0 | 0 |
-| UX | 26 | 3 | 16 | 0 | 0 | 7 |
+| UX | 26 | 5 | 14 | 0 | 0 | 7 |
 | PROC | 7 | 4 | 3 | 0 | 0 | 0 |
 
 PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
@@ -135,7 +145,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | QG-03 | 32 | 21 | 8 | 2 | 1 | 0 |
 | QG-04 | 11 | 5 | 6 | 0 | 0 | 0 |
 | QG-05 | 18 | 6 | 10 | 1 | 0 | 1 |
-| QG-06 | 23 | 5 | 15 | 2 | 0 | 1 |
+| QG-06 | 23 | 4 | 16 | 2 | 0 | 1 |
 | QG-07 | 18 | 1 | 7 | 0 | 0 | 10 |
 | QG-08 | 17 | 3 | 10 | 0 | 0 | 4 |
 | QG-09 | 7 | 1 | 4 | 0 | 0 | 2 |
@@ -153,7 +163,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | Gate H | 2 | 0 | 2 | 0 | 0 | 0 |
 | Gate I | 5 | 3 | 2 | 0 | 0 | 0 |
 | Gate J | 10 | 0 | 1 | 9 | 0 | 0 |
-| (none) | 110 | 11 | 91 | 2 | 0 | 6 |
+| (none) | 110 | 18 | 85 | 2 | 0 | 5 |
 
 ## 4. Gate crosswalk
 
