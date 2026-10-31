@@ -1,0 +1,211 @@
+{
+  "classification": "SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production. Synthetic scenario; expectations hand-derived by W-C from catalogue_v13.json (PROPOSED).",
+  "author": "W-C",
+  "version": "SC-V13-draft-2026-10-27",
+  "semantics": {
+    "expected": "expected.actual and expected.expected_steps are the complete Layer A and Layer B lists (catalogue order); note must match exactly (absent = no note); evidence_event_id is checked where given, and every COMPLETED step must cite an input event of one of its completion types (completion_event_type, or a pattern of completion_any_of; with completion_target SELF the event must name the object itself). Other keys are subset checks.",
+    "must_not": "'<symbol> on <step_id>' (symbol ✔ ● ○; checked on the resolver state and on the built view) | 'L1' (no Level 1) | 'L1 <sub-state>' | 'L1 ✔ on <stage>' | 'derived.<key>' (false or null) | 'deadline.at' (every at is null) | 'L1 in the <CLASS> view' | '<step_id> in the <CLASS> view'",
+    "variants": "A variant applies, in order: events (full replacement), events_add (appended), events_replace (payload replaced by event_id), procedural_object_patch (shallow merge), case_patch (shallow merge; null deletes the key). variant.expected inherits l1 and notice_location from the base scenario when it does not state them; every other key is the variant's own."
+  },
+  "id": "RET-01",
+  "title": {
+    "ar": "إحالة مُعادة للاستكمال: ↩ على خطوة الإعادة، والتقديم بانتظار إعادة",
+    "en": "Referral returned for completion: ↩ on the returning step; resubmission awaits action"
+  },
+  "journey": "J-DR-PREPARER",
+  "assignment_id": "CF-02",
+  "recipient_class": "PREPARER",
+  "recipient_class_note": "PREPARER is a capacity extension, not one of the 13 recipient classes (charter 5): the progress view fails closed for it; tests also build the SECRETARY view to check the absence of Level 1.",
+  "case": {
+    "case_id": null,
+    "internal_ref": null,
+    "track": "DR",
+    "classification": "INTERNAL",
+    "status": null,
+    "flags": {
+      "suspended": false,
+      "returned": false,
+      "cancelled": false,
+      "reopened": false,
+      "closed": false
+    },
+    "restrictions": {
+      "rca_required": false
+    },
+    "exists": false
+  },
+  "procedural_object": {
+    "object_id": "0b1ec700-0000-4000-8000-06382a69f0f6",
+    "type": "REFERRAL",
+    "case_id": null,
+    "journey_id": "J-DR-PREPARER",
+    "status": "RETURNED",
+    "status_source_event_id": "evt-RET-01-03",
+    "steps": [],
+    "deadlines": []
+  },
+  "events": [
+    {
+      "event_id": "evt-RET-01-01",
+      "type": "REFERRAL_CREATED",
+      "occurred_at": "2026-10-20T08:00:00Z",
+      "recorded_at": "2026-10-20T08:00:30Z",
+      "case_id": null,
+      "object": {
+        "type": "REFERRAL",
+        "id": "0b1ec700-0000-4000-8000-06382a69f0f6"
+      },
+      "actor": {
+        "capacity": "PREPARER",
+        "id": "usr-demo-preparer"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/RET-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-RET-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-RET-01-02",
+      "type": "REFERRAL_SUBMITTED",
+      "occurred_at": "2026-10-20T09:00:00Z",
+      "recorded_at": "2026-10-20T09:00:30Z",
+      "case_id": null,
+      "object": {
+        "type": "REFERRAL",
+        "id": "0b1ec700-0000-4000-8000-06382a69f0f6"
+      },
+      "actor": {
+        "capacity": "PREPARER",
+        "id": "usr-demo-preparer"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/RET-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-RET-01",
+      "payload": {}
+    },
+    {
+      "event_id": "evt-RET-01-03",
+      "type": "REFERRAL_HEAD_DECIDED",
+      "occurred_at": "2026-10-20T10:00:00Z",
+      "recorded_at": "2026-10-20T10:00:30Z",
+      "case_id": null,
+      "object": {
+        "type": "REFERRAL",
+        "id": "0b1ec700-0000-4000-8000-06382a69f0f6"
+      },
+      "actor": {
+        "capacity": "SECTOR_HEAD",
+        "id": "usr-demo-sector-head"
+      },
+      "provenance": {
+        "source": "SYNTHETIC_DEMO",
+        "ref": "notifications/v13/src/journeys/scenarios/RET-01.json"
+      },
+      "version": 1,
+      "causation_id": null,
+      "correlation_id": "corr-RET-01",
+      "payload": {
+        "decision": "RETURNED"
+      }
+    }
+  ],
+  "expected": {
+    "l1": null,
+    "actual": [
+      {
+        "step_id": "J-DR-PREPARER/1/1",
+        "state": "COMPLETED"
+      },
+      {
+        "step_id": "J-DR-PREPARER/1/2",
+        "state": "PENDING"
+      },
+      {
+        "step_id": "J-DR-PREPARER/2/2",
+        "state": "RETURNED",
+        "evidence_event_id": "evt-RET-01-03"
+      }
+    ],
+    "expected_steps": [
+      {
+        "step_id": "J-DR-PREPARER/2/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-DR-PREPARER/3/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-DR-PREPARER/3/2",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-DR-PREPARER/4/1",
+        "kind": "EXPECTED"
+      },
+      {
+        "step_id": "J-DR-PREPARER/4/2",
+        "kind": "ALTERNATIVE"
+      },
+      {
+        "step_id": "J-DR-PREPARER/4/3",
+        "kind": "ALTERNATIVE",
+        "note": "BRANCH_NOT_DECIDED"
+      },
+      {
+        "step_id": "J-DR-PREPARER/4/4",
+        "kind": "ALTERNATIVE"
+      },
+      {
+        "step_id": "J-DR-PREPARER/5/1",
+        "kind": "CONDITIONAL"
+      },
+      {
+        "step_id": "J-DR-PREPARER/5/2",
+        "kind": "CONDITIONAL"
+      }
+    ],
+    "previous_round": [
+      {
+        "step_id": "J-DR-PREPARER/1/2",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-RET-01-02"
+      },
+      {
+        "step_id": "J-DR-PREPARER/2/1",
+        "state": "COMPLETED",
+        "evidence_event_id": "evt-RET-01-03"
+      }
+    ],
+    "stage_n": 1,
+    "notice_location": "actual",
+    "lifecycle": {
+      "returned": true
+    },
+    "must_not": [
+      "L1",
+      "● on J-DR-PREPARER/1/1",
+      "✔ on J-DR-PREPARER/2/2",
+      "○ on J-DR-PREPARER/2/2",
+      "✔ on J-DR-PREPARER/1/2"
+    ]
+  },
+  "v12_behaviour": {
+    "label": "FACT",
+    "fact": "L1 «● S1 … └ موقع الحالة: S1.01 ورود الطلب» although no case exists; L2 «● 1. إعداد الإحالة وتقديمها / ○ 2. اعتماد رئيس القطاع»; L3 «● إعداد الإحالة / ○ التقديم إلى رئيس القطاع»; marker «↳ هذا الإشعار: معادة للاستكمال»: the return renders as a first pass (W3 F16).",
+    "evidence": [
+      "notifications/eml/ar/CF-02_REFERRAL_RETURNED.eml",
+      "notifications/exports/v12/csv/CDF_Notifications_V12_Texts__Register_EML_Texts.csv row CF-02 ar",
+      "notifications/review/v12-forensic/work/W3_journeys_review.md F16"
+    ]
+  },
+  "variants": []
+}

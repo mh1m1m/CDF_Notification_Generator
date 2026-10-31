@@ -86,13 +86,30 @@ pages choose the namespace); layout uses logical properties only (`ms-`, `pe-`, 
 | `SyntheticDataBanner` | `{ label: string }` | Always rendered, not dismissible, `role="note"`, glyph (flask) + text; Chardonnay fill + Cinder text; never hidden in screenshots | `synthetic-banner` |
 | `TopBar` | `{ productName; logo: { src; alt }; workspace: ReactNode; language: ReactNode; persona: ReactNode }` | 48 px, Warm Gray, product name H2 Regular (DG p. 29); logo 152×26 at the start edge; controls ≥ 44 px targets | `top-bar` |
 | `SideNav` | `{ label: string; items: { key; href; label; count?; countLabel? }[]; current?: string }` | `nav aria-label`; `aria-current="page"` + 4 px inline-start bar + selected tint (not colour alone); counts "9+" cap with sr-only label (PLT). Each count badge carries `data-testid="count-nav-<key>"` and `data-count` = the **real** number (the persona's own items, already authorised); "9+" is display only | `app-sidebar`, `nav-<key>`, `count-nav-<key>` |
-| `WorkspaceSwitcher` | `{ label; current: { code; name; role }; options: { code; name; role; current: boolean }[]; action: (formData) => Promise<void> \| string; pageHref: "/workspaces" }` | Client component (disclosure). The control (button, or plain text with one membership) carries `data-testid="workspace-switcher"` and `data-workspace-code` = active code (ADR-013); each option carries `data-workspace-code` too. Single option → plain text. Each option is a `<form>` submit. Escape closes, focus returns. Without JS: a link to `pageHref`. Active option: check glyph + "الحالية" + `aria-current="true"` | `workspace-switcher`, `workspace-option-<CODE>`, `workspace-current` |
+| `WorkspaceSwitcher` | `{ label; current: { code; name; role }; options: { code; name; role; current: boolean }[]; action: (formData) => Promise<void> \| string; pageHref: "/workspaces" }` | Client component (disclosure). The control (button, or plain text with one membership) carries `data-testid="workspace-switcher"` and `data-workspace-code` = active code (ADR-013); each option carries `data-workspace-code` too. Single option → plain text. Each option is a `<form>` submit. Escape closes, focus returns. Without JS: a link to `pageHref`. Active option: check glyph + "الحالية" + `aria-current="true"`. Option buttons have no `aria-label`; a visually hidden verb ("الانتقال إلى مساحة …") precedes the visible name, so the accessible name contains the visible label (WCAG 2.5.3) | `workspace-switcher`, `workspace-menu-option-<CODE>`, `workspace-menu-current`, `workspace-menu-all` (the `/workspaces` page keeps `workspace-option-<CODE>`, `workspace-current`) |
 | `LanguageSwitch` | `{ current: "ar" \| "en"; action; labels }` | Form submit setting the locale cookie; the option is labelled in its own language ("English", "العربية") with `lang` attribute | `language-switch` |
 | `PersonaMenu` | `{ name; roleLabel; signOutAction; labels }` | Disclosure (`<details>` works without JS); shows synthetic persona name and role; sign out | `persona-menu`, `sign-out` |
 | `Breadcrumbs` | `{ label; items: { href?; label }[] }` | `nav aria-label="مسار التنقل"`, ordered list, last item `aria-current="page"` without link; separators are CSS, mirrored in RTL | `breadcrumbs` |
 | `CaseWorkspace` | `{ caseId; caseRef; children }` | The root that wraps **all** `/cases/[caseId]/*` content: CaseHeader, tab links, tab body and the `?n=` notification preview. Carries `data-testid="case-workspace"`, `data-case-id` (UUID) and `data-case-ref` (display number) (ADR-013). The Sentinel scopes "no other case inside" to this element | `case-workspace` |
 | `CaseHeader` | `{ caseId; caseRef; title; stage: StatusBadgeProps; recordsState: { code; label }; restricted?: { label }; capacity?: string; labels }` | `header` inside `CaseWorkspace`, also with `data-case-id` and `data-case-ref` (same values, allowed by the Sentinel rule); display number in `<bdi dir="ltr">`; indicators by shape + glyph; closed case shows a read-only notice slot | `case-header`, `case-number`, `case-stage` |
 | `PageHeading` | `{ title; subtitle?; actions? }` | the page's only `h1`; actions at the inline-end | `page-heading` |
+
+**As built (V13-UX-002).** The components above are in `components/shell/`, with `Count` in `components/data/` (the
+SideNav needs it) and icons in `components/icons/`. Shell chrome text comes from the `t` translator, as in the
+foundation's components. Content strings (area names, tab names, case title) arrive as props from the page. Where the
+build differs from the table:
+
+| Item | As built |
+| ---- | -------- |
+| `AppShell` | Has two forms while V13-FE-002 is open. The frame form takes `topBar`, `sideNav?` and `breadcrumbs?`. The session-bar form is the foundation's, still used by `app/(platform)/layout.tsx`, and goes when FE-002 lands. The root layout keeps the skip link and the banner. |
+| Banner | Keeps the foundation's name `SyntheticBanner` and key `common.banner.synthetic`. It now has the flask glyph. |
+| `LanguageSwitch` | The foundation's `LocaleToggle` (test id `locale-toggle`, already used by e2e) fills this role. No second component. |
+| `TopBar` | `logo` is optional. Until the brand asset arrives (SOURCE_REQUIRED) the organisation name is a text wordmark. The product name is styled H2 Regular but is a `<p>`, so `<main>` holds the only heading level 1. Under 640 px the product name is hidden. |
+| `WorkspaceSwitcher`, `PersonaMenu` | Server components over a small client `Disclosure`. It uses `<details>`, so it opens without JavaScript. With JavaScript it adds Escape (closes and returns focus), Arrow Up and Down, and click-outside. Options are `<form>` submits with the field `workspace`. The panel always links to `pageHref`. The PersonaMenu test ids are `persona-menu`, `persona-menu-button`, `persona-menu-name`, `persona-menu-role` and `sign-out`. |
+| `CaseHeader` | `stage` is a slot for the recorded StatusBadge of V13-UX-003. Indicators (named access, capacity) sit in their own row. Test ids `case-records-state` (with `data-records-state`), `case-restricted` and `case-capacity` are added. |
+| `CaseTabs` | New. Tabs are links in `nav aria-label="أقسام القضية"`, with test ids `case-tab-<key>`. |
+| Case identity | `CaseWorkspace` and `CaseHeader` refuse to render unless `caseId` is a UUID and `caseRef` is a display number. A swapped or empty identity throws. |
+| Unsaved-input confirmation | Belongs to FE's forms. The string `shell.workspace.unsavedConfirm` is ready. |
 
 Keyboard paths to verify (acceptance): skip link → main; Tab order banner → TopBar controls → SideNav → main; switcher
 fully operable by keyboard; visible 3 px focus ring on every control in both themes.
@@ -181,6 +198,26 @@ M5 are added when PROC fixes the lifecycle (V13-PROC-005).
 | `DeadlineText` | `{ due: string; now: string; labels }` | date + words ("متأخر ٣ أيام", "يستحق اليوم", "خلال ٥ أيام"), warning glyph when overdue; `now` comes from the server `ClockPort`, never `Date.now()` in the component | `deadline` |
 | `Button` | `{ variant: "primary" \| "secondary" \| "tertiary" \| "text"; … }` | DG p. 33: primary Cinder/white, secondary white with Cinder 1 px border (0.5 px in DG, rendered 1 px), tertiary 2 px bottom stroke, text plain; radius 0; height ≥ 44 px; `critical` only inside a confirm dialog (PLT) | `data-testid` passed through |
 | `ConfirmDialog` | `{ title; body; confirmLabel; cancelLabel; action }` | native `<dialog>`, focus trapped by the platform, Escape cancels, focus returns to the opener | `confirm-dialog` |
+
+### 3.4a As built (V13-UX-003)
+
+The components are in `components/data/`. They take `t` and `locale` where they show chrome text, numbers or dates.
+Where the build differs from §3.1–§3.4:
+
+| Item | As built |
+| ---- | -------- |
+| `StatusBadge` | The union above plus `t`, `locale`, `testId?` and an optional `tone` for recorded badges. Unknown recorded codes are neutral with the glyph ▪. Runtime guards render nothing and log a warning without content in three cases: a recorded badge without an event id; a projected badge with a completed-class status (the domain's `COMPLETED_CLASS_STATUSES` in `lib/domain/badge.ts`, the list QA's inspector uses for rule T5); a projected badge whose label or condition uses ✔, ● or "سُجل / مسجل / اكتُمل / تم / recorded / completed / done" (Arabic diacritics ignored). Visible words are joined with spaces. The screen-reader suffix is a visually hidden span, not `aria-label`. A long badge wraps inside its container, with the glyph kept on the first line, and never makes the page scroll sideways (WCAG 1.4.10; checked at 375 px, ar and en). |
+| `Timeline` | An entry takes `status: { statusKind, status, label, tone? }`, and the recorded badge is built from the entry's own `eventId` and `recordedAt`, so badge and entry cannot disagree. Entries are sorted newest first by occurred time. |
+| `ExpectedSteps` | Takes projected badges with a `key`. It renders nothing when there are no steps (the card is absent, not empty). |
+| `DataTable` | Takes `t` and `testId`. The scroll region is `role="region"` with `tabindex="0"` (axe `scrollable-region-focusable`). Row headers are `<th scope="row">`. |
+| `Pagination` | Takes `t` and `locale`. A missing direction is disabled text (`aria-disabled`), not a link. |
+| `ErrorState` | Generic words come from `common.error.*`. `afterUserAction` switches on `role="alert"`. The copy button appears only with JavaScript and the Clipboard API. |
+| `NotFoundState` | Takes its words as props, so the page chooses them. The test shows the markup is identical apart from the correlation id. |
+| `DeadlineText` | Counts calendar days in Riyadh time, with Arabic plural forms via `Intl.PluralRules` (`common.days.*`). |
+| Dates | Gregorian, Riyadh time, long month (`٢٠ أكتوبر ٢٠٢٦`), Arabic-Indic digits in Arabic (`components/format.ts`). |
+| `Button` | `Button` plus `ButtonLink`, for navigation only. `critical` is used only by `ConfirmDialog`. |
+| `ConfirmDialog` | A client component (`showModal`). It needs JavaScript to open, so pages use it only for confirmations. |
+| Not built yet | The notification sending family (§3.3) waits for V13-PROC-005, so that "sent" and "delivered" are not shown before PROC fixes where they come from. `NamedAccessFlag` and `RecordsStateBadge` are inside `CaseHeader` (V13-UX-002) until a list needs them. |
 
 ### 3.5 Tests (V13-UX-002/003 acceptance)
 

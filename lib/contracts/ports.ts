@@ -1,6 +1,6 @@
 // Ports: the interfaces the application layer depends on. Implementations live outside lib/contracts.
 import { z } from "zod";
-import type { CaseListFilter, CaseListPage, CaseSummary } from "./case-summary";
+import type { CaseHeader, CaseListFilter, CaseListPage } from "./case-summary";
 import {
   CaseIdSchema,
   CorrelationIdSchema,
@@ -21,7 +21,8 @@ import { WorkspaceIdSchema } from "./workspaces";
  * - `getCase` resolves to `null` both when the case does not exist and when the identity may not see it. Callers
  *   cannot tell the two apart: same value, no distinct error, no distinct log line visible to the user.
  * - Restricted cases (`is_restricted`) are returned only to identities the source authorises for them explicitly.
- * - Results carry nothing beyond `CaseSummary` (no narratives, evidence or reporter identity).
+ * - Results carry nothing beyond `CaseSummary`, plus the caller's own capacity in `CaseHeader` (no narratives,
+ *   evidence or reporter identity).
  *
  * PRODUCTION_SUBSTITUTION_REQUIRED: the prototype adapter reads synthetic rows from schema cdf_notifications_v13
  * (and synthetic mirrors of other systems). Production adapters call the CDF case system of record through the
@@ -31,7 +32,8 @@ export interface CaseSourceAdapter {
   /** Upper-snake code identifying this source; equals `CaseSummary.source_system` of what it returns. */
   readonly sourceSystem: string;
   listCases(identity: RequestIdentity, filter: CaseListFilter): Promise<CaseListPage>;
-  getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseSummary | null>;
+  /** The case header: the summary plus the identity's own capacity on the case (null when it holds none). */
+  getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null>;
 }
 
 /** The current time. Inject a fixed clock in tests; never call `new Date()` inside domain rules. */

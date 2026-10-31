@@ -3,5 +3,7 @@ export * from "./ids";
 export * from "./workspaces";
 export * from "./identity";
 export * from "./case-summary";
+export * from "./procedural-records";
+export * from "./notification-records";
 export * from "./ports";
 export * from "./personas";

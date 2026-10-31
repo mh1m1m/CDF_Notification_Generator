@@ -1,12 +1,13 @@
 // The migration runner and the hosted bundle against a Supabase-like cluster whose administrator `postgres` is NOT a
 // superuser (tests/integration/support/hosted-sim.ts). Proves: the history is read and written as cdf_v13_owner; the
 // bundle's dry run leaves nothing behind; its guards refuse re-application, out-of-order versions, drifted history and
-// a missing bootstrap; and runner and bundle share one history.
+// a missing bootstrap; its text guard (plan §5.7) refuses any text that differs from the generated one; and runner and
+// bundle share one history.
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { buildHostedBundle } from "@/scripts/db/hosted-bundle.mjs";
+import { buildHostedBundle, TEXT_GUARD_MARKER } from "@/scripts/db/hosted-bundle.mjs";
 import { MIGRATIONS_DIR, readMigrations } from "@/scripts/db/lib/migrations.mjs";
 import { migrate } from "@/scripts/db/migrate.mjs";
 import { clusterAvailable, errorCodeOf, HOSTED_SIM_SUPERUSER_URL } from "./support/clusters";
@@ -86,20 +87,21 @@ describe.skipIf(!available)("hosted simulation: runner as a non-superuser admini
     expect(who).toEqual({ rolsuper: false, rolcreaterole: true, rolbypassrls: true });
 
     const result = await migrate({ url: sim.adminUrl, runner: "ci" });
-    expect(result.applied).toEqual(["0000_bootstrap.sql"]);
-    const [bootstrap] = readMigrations();
-    expect(await history(sim.adminUrl)).toEqual([
-      {
-        version: "0000",
-        name: "bootstrap",
-        checksum_sha256: bootstrap?.checksum,
-        runner: "ci",
-        applied_by: "postgres",
-      },
-    ]);
+    const migrations = readMigrations();
+    expect(result.applied).toEqual(migrations.map((m) => m.file));
+    expect((await history(sim.adminUrl))[0]).toEqual({
+      version: "0000",
+      name: "bootstrap",
+      checksum_sha256: migrations[0]?.checksum,
+      runner: "ci",
+      applied_by: "postgres",
+    });
+    expect((await history(sim.adminUrl)).map((h) => h.version)).toEqual(migrations.map((m) => m.version));
     // Re-running applies nothing; a dry run has nothing to apply.
     expect((await migrate({ url: sim.adminUrl, runner: "ci" })).applied).toEqual([]);
-    expect((await migrate({ url: sim.adminUrl, runner: "ci", dryRun: true })).alreadyApplied).toBe(1);
+    expect((await migrate({ url: sim.adminUrl, runner: "ci", dryRun: true })).alreadyApplied).toBe(
+      migrations.length,
+    );
   });
 
   it("leaves the administrator without direct access to the history (RLS on, no grants)", async () => {
@@ -182,5 +184,39 @@ describe.skipIf(!available)("hosted simulation: bundle", () => {
       ["0001", "hosted"],
       ["0002", "ci"],
     ]);
+  });
+
+  it("text guard: PostgreSQL refuses a changed, padded, shortened or lengthened text and applies nothing", async () => {
+    const sim = await resetHostedSim();
+    const bundle = buildHostedBundle({ version: "0000" });
+    const cut = bundle.indexOf(TEXT_GUARD_MARKER);
+    const before = bundle.slice(0, cut);
+    const guard = bundle.slice(cut);
+    const lines = before.split("\n");
+    const comment = lines.findIndex((line) => line.startsWith("-- Classification"));
+    const tampered: [string, string][] = [
+      ["a changed byte", before.replace("SYNTHETIC-DATA", "SYNTHETIC-DATB")],
+      ["a changed string literal", before.replace("lock_timeout = '5s'", "lock_timeout = '6s'")],
+      ["a trailing space", before.replace("begin;\n", "begin; \n")],
+      ["a dropped line", [...lines.slice(0, comment), ...lines.slice(comment + 1)].join("\n")],
+      ["an added blank line", before.replace("begin;\n", "begin;\n\n")],
+    ];
+    for (const [label, changed] of tampered) {
+      expect(changed, label).not.toBe(before);
+      const refused = await applyBundle(sim.adminUrl, `${changed}${guard}`);
+      expect(refused?.code, label).toBe("P0001");
+      expect(refused?.message, label).toBe(
+        "V13 text guard: the text received differs from the repository text",
+      );
+      expect(await v13Objects(sim.superuserUrl), label).toEqual({ roles: 0, schemas: 0 });
+    }
+
+    // The unchanged text passes, also with a trailer after the final statement (the connector appends one).
+    expect(
+      await applyBundle(sim.adminUrl, `${buildHostedBundle({ version: "0000", dryRun: true })}-- trailer\n`),
+    ).toBeNull();
+    expect(await v13Objects(sim.superuserUrl)).toEqual({ roles: 0, schemas: 0 });
+    expect(await applyBundle(sim.adminUrl, `${bundle}-- trailer\n`)).toBeNull();
+    expect(await v13Objects(sim.superuserUrl)).toEqual({ roles: 3, schemas: 1 });
   });
 });

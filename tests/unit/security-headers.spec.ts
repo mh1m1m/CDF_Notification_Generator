@@ -108,3 +108,9 @@ describe("next.config.ts headers", () => {
     }
   });
 });
+
+describe("next.config.ts agent rules", () => {
+  it("keeps next dev from generating AGENTS.md (docs/DEPENDENCIES.md decision 16)", () => {
+    expect(config.agentRules).toBe(false);
+  });
+});

@@ -23,6 +23,7 @@ const healthy: DatabaseProbe = {
   login_is_app_role: true,
   v13_schema_usage: true,
   isolated_from: { auth: true, storage: true, vault: true, cdf: "absent" },
+  claims_key: "INSTALLED_MATCH",
 };
 
 beforeEach(() => {
@@ -73,6 +74,27 @@ describe("GET /api/health", () => {
       expect(body.status).toBe("degraded");
       expect(body.db.status).toBe("ISOLATION_FAILED");
     }
+  });
+
+  it("503 when the claims key is another deployment's or missing; isolation failures are reported first", async () => {
+    for (const [probe, status] of [
+      [{ ...healthy, claims_key: "INSTALLED_MISMATCH" }, "CLAIMS_KEY_MISMATCH"],
+      [{ ...healthy, claims_key: "NOT_INSTALLED" }, "CLAIMS_KEY_NOT_INSTALLED"],
+      [{ ...healthy, claims_key: "INSTALLED_MISMATCH", login_is_app_role: false }, "ISOLATION_FAILED"],
+    ] as const) {
+      db.probe.mockResolvedValue(probe);
+      const { response, body } = await call();
+      expect(response.status).toBe(503);
+      expect(body.status).toBe("degraded");
+      expect(body.db).toMatchObject({ status, claims_key: probe.claims_key });
+    }
+  });
+
+  it("200 with claims_key NOT_CHECKED when no session secret is configured", async () => {
+    db.probe.mockResolvedValue({ ...healthy, claims_key: "NOT_CHECKED" });
+    const { response, body } = await call();
+    expect(response.status).toBe(200);
+    expect(body.db).toMatchObject({ status: "ok", claims_key: "NOT_CHECKED" });
   });
 
   it("503 DB_NOT_CONFIGURED without a database URL, and never runs the probe", async () => {

@@ -26,6 +26,9 @@ export function securityHeaders(): { key: string; value: string }[] {
 const config: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // CLAUDE.md is the repository's only agent-instructions file: next dev must not generate AGENTS.md
+  // (docs/DEPENDENCIES.md decision 16).
+  agentRules: false,
   // The postgres driver stays a Node.js runtime dependency of the server bundle (lib/db only).
   serverExternalPackages: ["postgres"],
   async headers() {

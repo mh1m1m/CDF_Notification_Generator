@@ -10,6 +10,13 @@ UX's proposed wording for them.
 
 ## `shell`
 
+As built (V13-UX-002): the banner and skip-link text keep the foundation's keys `common.banner.synthetic` and
+`common.skipLink.label`. Workspace and role names come from the `workspaces` and `persona` namespaces
+(`WORKSPACE_NAME_KEYS`, `ROLE_NAME_KEYS`), not from `shell.workspace.<CODE>` / `shell.role.<CODE>`. The language button
+uses `common.locale.switchTo`. Sign-out is `shell.signOut`. Added: `shell.workspace.switchTo`,
+`shell.workspace.allWorkspaces`, `shell.case.number`, `shell.case.stage` and `shell.case.recordsState`. Records-state
+keys are lower case (`common.records.active`, `common.records.closed`) to match the i18n key pattern.
+
 | Key | العربية | English |
 | --- | ------- | ------- |
 | `shell.productName` | منصة ذكاء القضايا والإشعارات | Case & Notification Intelligence Platform |
@@ -49,6 +56,13 @@ UX's proposed wording for them.
 | `shell.case.restricted` | وصول مسمّى | Named access |
 
 ## `common`
+
+As built (V13-UX-003): the keys follow the i18n key pattern (each segment starts lower case). So `common.layerA.*` uses
+`completed`, `inProgress`, `pending`, `suspended`, `returned`, `cancelled`, `failed` and `notApplicable`.
+`common.epistemic.recorded` is `common.epistemic.recordedAria`. `common.notFound.*` is not added, because the
+foundation's `common.notFound.*` keys already serve `app/not-found.tsx` and `NotFoundState` takes its words as props.
+Added: `common.pagination.label`, `common.epistemic.awaitingApprover`, and `common.days.zero|one|two|few|many|other`
+(day counts with plural forms). `common.sending.*` waits for V13-PROC-005.
 
 | Key | العربية | English |
 | --- | ------- | ------- |

@@ -13,20 +13,16 @@
 //      future, and the oracle's status for it equals the shown status (PROC's fold; ARCH ruling on derived states)
 //   T5 a completed-class status is never shown as anything but recorded
 //   T6 a non-recorded element is distinguishable from a recorded one of the same status by its text, not by colour
+//   T7 every child frame of the page could be read (evaluated, or parsed from its srcdoc); none passes silently
+//   T8 an element with data-status or data-status-kind but no data-epistemic is allowed only as an OPEN task with no
+//      data-event-id (ARCH ruling on FE-004, allow-list); every other unmarked status element is a violation
 import type { Page } from "@playwright/test";
+import { BADGE_EPISTEMIC_VALUES, isCompletedClassStatus } from "@/lib/domain";
+import { readChildFrames, type FramePage, type UnreadableFrame } from "../sentinel/frames";
 
-export const EPISTEMIC_VALUES = ["recorded", "expected", "conditional", "awaiting_approval"] as const;
+// One source for both lists: lib/domain (PROC-001), the same ones the components use.
+export const EPISTEMIC_VALUES = BADGE_EPISTEMIC_VALUES;
 const UUID_EXACT = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-/** Statuses that claim something has happened; they may only be shown from a recorded event. */
-export const COMPLETED_CLASS = new Set([
-  "COMPLETED",
-  "APPROVED",
-  "SENT",
-  "DELIVERED",
-  "DECIDED",
-  "CLOSED",
-  "ADOPTED",
-]);
 
 export interface EpistemicNode {
   path: string;
@@ -57,7 +53,9 @@ export interface TruthViolation {
   detail: string;
 }
 
-function collectInPage(): EpistemicNode[] {
+/** Runs in the browser on its document, or on `html` parsed in place (a frame's srcdoc). Self-contained. */
+function collectInPage(html: string | null): EpistemicNode[] {
+  const doc = html === null ? document : new DOMParser().parseFromString(html, "text/html");
   const pathOf = (el: Element): string => {
     const parts: string[] = [];
     let node: Element | null = el;
@@ -68,7 +66,7 @@ function collectInPage(): EpistemicNode[] {
     }
     return parts.join(" > ");
   };
-  return Array.from(document.querySelectorAll("[data-epistemic]")).map((el) => {
+  return Array.from(doc.querySelectorAll("[data-epistemic], [data-status], [data-status-kind]")).map((el) => {
     const owner = el.closest("[data-case-id]");
     const label = el.getAttribute("aria-label") ?? "";
     const text = ((el instanceof HTMLElement ? el.innerText : el.textContent) ?? "").trim();
@@ -84,8 +82,33 @@ function collectInPage(): EpistemicNode[] {
   });
 }
 
-export async function snapshotEpistemic(page: Page): Promise<EpistemicNode[]> {
-  return page.evaluate(collectInPage);
+export interface EpistemicSnapshot {
+  nodes: EpistemicNode[];
+  /** Child frames the harness could not read (T7). */
+  unreadableFrames: UnreadableFrame[];
+}
+
+export async function snapshotEpistemic(
+  page: Page,
+  frames: FramePage | Page = page,
+): Promise<EpistemicSnapshot> {
+  const nodes = await page.evaluate(collectInPage, null);
+  // Child frames (e.g. a sandboxed notification preview) are checked like the main page (ARCH reviews of #7, #13).
+  const { reads, unreadable } = await readChildFrames(frames, collectInPage);
+  for (const { url, via, result } of reads) {
+    const prefix = via === "frame" ? `frame(${url})` : `frame(${url}, srcdoc)`;
+    nodes.push(...result.map((n) => ({ ...n, path: `${prefix} ${n.path}` })));
+  }
+  return { nodes, unreadableFrames: unreadable };
+}
+
+/** T7: a frame the harness could not read is a violation, never a pass. */
+export function checkFrames(unreadableFrames: UnreadableFrame[]): TruthViolation[] {
+  return unreadableFrames.map((f) => ({
+    rule: "T7",
+    where: `frame(${f.url})`,
+    detail: `frame could not be inspected: ${f.reason}`,
+  }));
 }
 
 export async function checkTruth(
@@ -98,7 +121,18 @@ export async function checkTruth(
 
   for (const n of nodes) {
     const where = n.path;
-    if (!n.epistemic || !(EPISTEMIC_VALUES as readonly string[]).includes(n.epistemic)) {
+    if (n.epistemic === null) {
+      // Allow-list of one: an OPEN task with no status event. Anything else must say what it is.
+      const openTask = n.statusKind === "task" && n.status === "OPEN" && n.eventId === null;
+      if (!openTask)
+        v.push({
+          rule: "T8",
+          where,
+          detail: `${n.statusKind ?? "?"}/${n.status ?? "?"}${n.eventId ? ` (event ${n.eventId})` : ""} shown without data-epistemic`,
+        });
+      continue;
+    }
+    if (!(EPISTEMIC_VALUES as readonly string[]).includes(n.epistemic)) {
       v.push({ rule: "T1", where, detail: `data-epistemic ${JSON.stringify(n.epistemic)} is not allowed` });
       continue;
     }
@@ -117,7 +151,7 @@ export async function checkTruth(
     if (!recorded && n.eventId !== null)
       v.push({ rule: "T3", where, detail: `${n.epistemic} element carries data-event-id ${n.eventId}` });
 
-    if (!recorded && n.status && COMPLETED_CLASS.has(n.status))
+    if (!recorded && isCompletedClassStatus(n.status))
       v.push({ rule: "T5", where, detail: `${n.status} shown as ${n.epistemic}` });
 
     if (recorded && n.eventId) {
@@ -153,7 +187,7 @@ export async function checkTruth(
   }
 
   for (const n of nodes) {
-    if (n.epistemic === "recorded" || !n.statusKind || !n.status) continue;
+    if (n.epistemic === null || n.epistemic === "recorded" || !n.statusKind || !n.status) continue;
     if (recordedTextByStatus.get(`${n.statusKind}/${n.status}`)?.has(n.text))
       v.push({
         rule: "T6",
@@ -173,6 +207,12 @@ export function formatTruthViolations(violations: TruthViolation[]): string {
   return violations.map((x) => `${x.rule} ${x.where}: ${x.detail}`).join("\n");
 }
 
-export async function inspectTruth(page: Page, oracle: EventOracle, now?: Date): Promise<TruthViolation[]> {
-  return checkTruth(await snapshotEpistemic(page), oracle, now);
+export async function inspectTruth(
+  page: Page,
+  oracle: EventOracle,
+  now?: Date,
+  frames: FramePage | Page = page,
+): Promise<TruthViolation[]> {
+  const { nodes, unreadableFrames } = await snapshotEpistemic(page, frames);
+  return [...(await checkTruth(nodes, oracle, now)), ...checkFrames(unreadableFrames)];
 }
