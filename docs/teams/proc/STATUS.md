@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-28 ~04:25 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 2990c28
+Updated: 2026-10-31 ~18:25 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 2ec6ce0
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -11,7 +11,7 @@ Updated: 2026-10-28 ~04:25 UTC · Branch: `claude/project-thread-94r9g5` · Base
 ## In progress / next
 | Task | State | Note |
 | ---- | ----- | ---- |
-| V13-PROC-001 domain status model | IN_REVIEW | `lib/domain` + `tests/unit/domain` (203 tests); badge mapping (ADR-013) and rule T5 list; format gate waits ARCH-002 (`__evidence__` ignores) |
+| V13-PROC-001 domain status model | IN_REVIEW | `lib/domain` + `tests/unit/domain` (203 tests); badge mapping (ADR-013) and rule T5 list; PR #18, ready for SEC review |
 | V13-PROC-002 journeys + BL-45/BL-46 fixture fixes | NOT_STARTED | fixtures fixed before DB-005 seeds from them |
 | V13-PROC-003 disclosure | NOT_STARTED | |
 | V13-PROC-004 authority | NOT_STARTED | |
@@ -29,7 +29,8 @@ Updated: 2026-10-28 ~04:25 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | `node --test "tests/**/*.test.js"` in a scratch copy of `/mnt/project-files/notifications/v13` with `journeys/`, `generator/` and the built demo | PASS | 726 tests · 726 pass · 0 fail · 0 skipped | reference package (not this repository) |
 | `pnpm lint` · `pnpm typecheck` · `pnpm format:check` · `pnpm test` on this branch after merging `develop` f0a7220 (no PROC code yet) | PASS | lint 0 errors/warnings; typecheck 0 errors; format clean; unit 17 files · 251 tests · 251 pass | 8e8236c |
 | PROC-001: `pnpm lint` · `pnpm typecheck` · `pnpm test` (develop 2990c28 + PROC-001) | PASS | lint exit 0; typecheck exit 0; unit 22 files · 541 tests · 541 pass, of which `tests/unit/domain` 4 files · 203 pass · 0 skipped | PROC-001 head |
-| PROC-001: `pnpm format:check` | FAIL (expected until ARCH-002) | only `tests/unit/domain/__evidence__/{level2_journeys,v9_data}.json`, byte-exact copies that ARCH-002 puts in `.prettierignore` | PROC-001 head |
+| PROC-001: `pnpm format:check` | FAIL then (expected) | only the two byte-exact evidence JSON copies; fixed by #20 (evidence ignores) | 37a5cfc |
+| PROC-001 after merging `develop` 2ec6ce0: `pnpm format:check` · `pnpm lint` · `pnpm typecheck` · `pnpm test` | PASS | format, lint, typecheck exit 0; unit 30 files · 694 pass, of which `tests/unit/domain` 4 files · 203 pass · 0 skipped; EVIDENCE_MANIFEST sha256 of all 4 domain copies match byte for byte | merge of 2ec6ce0 |
 | PROC-001: copy-time scan `tests/unit/domain/evidence-scan.spec.ts` (EVS-01/02) | PASS | 4 evidence files · 0 hits · 0 allowed | PROC-001 head |
 | same, `src/` + `tests/` only | FAIL (expected: evidence missing) | 713 run · 705 pass · 5 fail · 3 skipped | reference package |
 
@@ -71,4 +72,4 @@ evidence); with the V12 siblings and the demo built, 726 / 726.
   renamed `CDF-IC-2026-0001` → `CDF-DEMO-2026-0001`, scan allowance dropped.
 - Checks moved out of the domain specs because they read other modules' data: ST-29b, ST-32b, ST-34 land with PROC-002;
   ST-28b with PROC-004; ST-07b with PROC-005. Each is strict (a missing file fails).
-- Waiting: ARCH-002 (`tests/unit/**/__evidence__/` in `.prettierignore` and ESLint ignores); SEC review of PROC-001.
+- Evidence ignores landed in #20 (develop 2ec6ce0, 31 Oct). Waiting: SEC review of PR #18.
