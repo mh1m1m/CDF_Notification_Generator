@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 28 Oct 2026 03:40 UTC · Branch: `docs/V13-SEC-001-threat-model` · Base: `develop` `38dc495`
+Updated: 31 Oct 2026 19:20 UTC · Branch: `docs/V13-SEC-001-threat-model` · `develop` now at `a6c224a`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -8,6 +8,17 @@ Updated: 28 Oct 2026 03:40 UTC · Branch: `docs/V13-SEC-001-threat-model` · Bas
   catalogue (`docs/security/AUTHORIZATION_MATRIX.md`): 8 subjects × 4 case variants, 17 read objects, 7 command rows,
   16 application surfaces; 30 planned database tests (SEC-DB-01..30), 18 planned application tests (SEC-APP-01..18);
   4 recommendations SEC-REC-01..04 (all ACCEPTED, ADR-014); ruling D6 — IN_REVIEW (reviewer: DB)
+- V13-SEC-003 — application adversarial tests (sessions, static boundaries, Server Actions, surface) — COMPLETE,
+  merged #11 (`0f22e04`)
+- V13-SEC-002 — database adversarial suites (`tests/security/db/`: context forgery with a coverage guard over every
+  executable function, persona × workspace oracle, commands, catalogue hardening; `docs/security/DB_ADVERSARIAL_TESTS.md`)
+  — COMPLETE, merged #29 (`50850a4`), DB ACCEPT + ARCH merge, CI run 41231449891 green
+- V13-SEC-004 — hosted post-apply checks (`database/hosted/post_apply_checks.sql`, P00–P09 + VERDICT, read-only,
+  rolled back; `tests/security/db/post-apply-checks.spec.ts` with 17 planted faults + hosted-simulation block) — COMPLETE,
+  merged #30 (`a6c224a`), DB ACCEPT + ARCH ACCEPT `9f1e8bd`, CI run 41232084126 green; ARCH's hosted-like re-run PASS
+  (7 planted faults each FAIL on the right check). ARCH runs it on hosted after each migration with isolation_checks.sql
+- Reviews since: #24 PROC-002 ACCEPT `2aed44d`; #26 DB-006 ACCEPT `3f2108a`; #28 DB-009 ACCEPT `125b1f0`;
+  #31 DB-010 ACCEPT `3bd1c93`; #32 FE-005 ACCEPT `018b46e`
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/teams/sec/STATUS.md`
@@ -18,12 +29,14 @@ Updated: 28 Oct 2026 03:40 UTC · Branch: `docs/V13-SEC-001-threat-model` · Bas
 | Local PostgreSQL 16.x, `0000_bootstrap.sql` applied, then as `cdf_v13_user` inside one transaction: `select set_config('request.v13.claims', '{"persona_id":"FORGED"}', true)` | **succeeds**, `current_user = cdf_v13_user` — confirms TM-S4: the request role can rewrite its own claims, so the claims are only as trustworthy as the SQL the BFF sends | 1 probe | `b02e672` |
 | Local, ARCH-001 head `5c53ec4`: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, then manual probes against `next start` (synthetic secret, no DB) | lint 0, typecheck 0, unit **251 passed / 17 files**, build ok; signOut action by id: runs via `/my-work` with cookie, refused cross-origin (500, digest only), **not run** via public `/sign-in` without cookie; health has resource CSP + no-store | 251 + 8 probes | `5c53ec4` |
 
-No SEC-DB or SEC-APP test exists yet: they need V13-ARCH-001 (tooling) and DB-001..004 / FE-001..006.
+| Local, #32 head `018b46e` merged with `develop` `a6c224a` (throwaway branch): `pnpm db:reset`, `pnpm typecheck`, `pnpm test`, `pnpm test:db` | typecheck 0, unit **909/909**, test:db **377/377** (includes SEC-002 suites and post-apply checks) | 909 + 377 | `018b46e` + `a6c224a` |
 
 ## Unresolved defects
-- TM-S4 / OI-018 (HIGH, design, IN_PROGRESS): claims forgeable by SQL running as `cdf_v13_user`. Fix accepted as
-  ADR-014 §4 (claims MAC); DB builds it in DB-001, SEC reviews it against THREAT_MODEL §7. Until merged, the only
-  control is parameterised SQL (no `unsafe` calls outside migration tooling, lint-enforced by ARCH-001).
+- TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.
+- SEC-INFO-3 (LOW, residual risk ACCEPTED by ARCH, OPEN_ISSUES): PUBLIC holds TEMP on the database, so the request
+  role can create temp tables; pinned by catalog-hardening so a change is visible.
+- Follow-up (cosmetic): P08 detail `string_agg` in post_apply_checks.sql has no ORDER BY (ARCH note); next SEC PR.
+- INFO on #32: `?ref=`/`?stale=` echo any well-formed UUID as a reference (no disclosure).
 
 ## Dependencies and requests
 - ARCH: SEC-REC-01..04 accepted (ADR-014); SEC-REC-04 checked by ARCH in ARCH-003. SEC reviews ARCH-001
