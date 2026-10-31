@@ -1,13 +1,13 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 · Branch: `feature/V13-UX-003-data-components` · Base: `feature/V13-UX-002-shell` `dd00ccc` (PR #14, includes `develop` `a6c224a`)
+Updated: 2026-10-31 · Branch: `feature/V13-UX-003-data-components` · Base: `develop` `40901f3` (#14 merged; merged in)
 
 ## Completed
 - V13-UX-004: information architecture, the five screen specs, design-system spec and strings, in `docs/design/`.
   PR #4, merged into `develop` (`54a94f3`). COMPLETE.
 - V13-UX-001: one token source, `styles/tokens.css`, plus `globals.css` on semantic tokens, with 87 token tests. PR #8,
   CI green on `070a371`. IN_REVIEW (reviewer: QA).
-- V13-UX-002: shell components in `components/shell/` (AppShell frame form, TopBar, SideNav, WorkspaceSwitcher,
+- V13-UX-002: MERGED into `develop` (`40901f3`, PR #14, QA ACCEPT at `dd00ccc`). Shell components in `components/shell/` (AppShell frame form, TopBar, SideNav, WorkspaceSwitcher,
   PersonaMenu, Breadcrumbs, PageHeading, CaseWorkspace, CaseHeader, CaseTabs, banner glyph). Also `Count`, icons, the
   `shell` strings, and shell styles. PR #14, stacked on PR #8. IN_REVIEW (reviewer: QA).
 - V13-UX-003: data components in `components/data/`: StatusBadge (four epistemic variants, type-enforced, with runtime
@@ -46,20 +46,19 @@ Updated: 2026-10-31 · Branch: `feature/V13-UX-003-data-components` · Base: `fe
 | `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | 81 passed |
 | Keyboard check (local Chromium, temporary preview page, not committed) | Enter opens the switcher; Arrow Down moves through the options and then the page link; Escape closes it and focus returns to the switcher; the breadcrumb chevron is mirrored in Arabic and not in English |
 
-## Test evidence (V13-UX-003, local, 31 Oct after merging UX-002 `dd00ccc`)
+## Test evidence (V13-UX-003, local, 31 Oct after merging develop `40901f3` and the badge reflow fix)
 
-The merge brought develop's `lib/domain` badge module. `StatusBadge` now takes its completed class from
+The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` takes its completed class from
 `COMPLETED_CLASS_STATUSES` (11 statuses, ARCH 28 Oct 03:50), the list the Truth Inspector uses, instead of its own copy.
 
 | Command | Result |
 | ------- | ------ |
-| `pnpm lint` | pass (logical-css: 43 files) |
-| `pnpm typecheck` | pass |
-| `pnpm format:check` | pass |
-| `pnpm test` | 35 files, 819 tests passed |
-| `pnpm build` | pass |
-| `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | 81 passed |
-| axe-core (WCAG 2.0/2.1/2.2 A and AA) on a temporary preview page with every data component, not committed | 0 violations: Arabic light, English light, Arabic dark |
+| `pnpm lint` · `pnpm typecheck` · `pnpm format:check` · `pnpm build` | pass |
+| `pnpm test` | 45 files, 1063 tests passed |
+| `pnpm db:reset` then `pnpm test:db` | 19 files, 352 tests passed (a run straight after e2e, without a reset, failed 18 on leftover e2e state; ARCH's reset-first rule) |
+| `pnpm db:reset` then `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e` | 92 passed |
+| Badge reflow, local Chromium at 375 px on the built CSS (temporary page, not committed) | badge 343 px, no sideways scroll, ar and en |
+| axe-core (WCAG 2.0/2.1/2.2 A and AA), 28 Oct, temporary preview page, not committed | 0 violations: Arabic light, English light, Arabic dark |
 | QA's `checkTruth` over the rendered markup (unit test) | no violation, apart from one planted wrong-status badge, which it reports as T4 |
 
 ## QA CHANGES on #16 at `cfab726` (31 Oct), fixed
