@@ -47,7 +47,8 @@ test.describe("Scenario C — Delta switches workspace", () => {
     await signInAs(page, DELTA);
     await expect(switcher(page)).toHaveAttribute("data-workspace-code", "GOVERNANCE");
     await expect(page.getByTestId("my-work-workspace")).toHaveText(ar["workspaces.name.governance"]);
-    const first = (await sessionCookie(context))?.value;
+    const firstCookie = await sessionCookie(context);
+    const first = firstCookie?.value;
 
     await page.getByTestId("workspace-switcher-open").click();
     await expect(page).toHaveURL(/\/workspaces$/);
@@ -69,6 +70,10 @@ test.describe("Scenario C — Delta switches workspace", () => {
     const second = (await sessionCookie(context))?.value;
     expect(second).toBeDefined();
     expect(second).not.toBe(first);
+    // A switch never extends the session (ARCH ruling on SEC's review of #10): the cookie keeps the sign-in expiry.
+    const secondCookie = await sessionCookie(context);
+    expect(secondCookie!.expires).toBeGreaterThan(Date.now() / 1000);
+    expect(secondCookie!.expires).toBeLessThanOrEqual(firstCookie!.expires + 1);
 
     // The new workspace survives a reload (it is in the session, not in the URL).
     await page.goto("/my-work");
