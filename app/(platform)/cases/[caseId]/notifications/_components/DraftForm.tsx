@@ -2,7 +2,7 @@
 // Scenario E draft form (V13-FE-006). A client component only for useActionState: a refusal is shown in place with
 // its reference, on the page the persona is on. It receives plain, already-localised strings and ids from the server
 // component; it imports nothing from lib/server, lib/disclosure or lib/authority (DESIGN §12, unit-tested).
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { createDraft, type DraftActionState } from "../actions";
 import styles from "../../_components/case.module.css";
 
@@ -26,12 +26,18 @@ export interface DraftFormProps {
 
 export function DraftForm({ caseId, idempotencyKey, templates, recipients, text }: DraftFormProps) {
   const [state, action, pending] = useActionState<DraftActionState, FormData>(createDraft, null);
+  // After a refusal, focus moves to the alert: the submit button was disabled while pending, so focus would otherwise
+  // fall to <body> and keyboard users would lose their place (QA review of #51).
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (state) errorRef.current?.focus();
+  }, [state]);
   return (
     <section aria-labelledby="draft-heading" data-testid="draft-section">
       <h2 id="draft-heading">{text.heading}</h2>
       <p className={styles.meta}>{text.hint}</p>
       {state ? (
-        <div role="alert" className="v13-error" data-testid="draft-error">
+        <div ref={errorRef} tabIndex={-1} role="alert" className="v13-error" data-testid="draft-error">
           <p>{text.error}</p>
           <p>
             <span>{text.correlation}</span>{" "}

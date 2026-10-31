@@ -138,3 +138,10 @@
   align-items: end;
   margin-block-start: var(--cdf-space-2);
 }
+
+/* A select's intrinsic width follows its longest option (template name · code · version · language); without these
+   limits it overflows a 375 px viewport (WCAG 1.4.10 Reflow, QA review of #51). */
+.form > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
