@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 ~21:30 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` b24db04
+Updated: 2026-10-31 ~21:50 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 21f94a0
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -19,7 +19,8 @@ Updated: 2026-10-31 ~21:30 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | V13-PROC-005 notifications | COMPLETE | PR #45 merged into `develop` ec8653a (31 Oct; SEC ACCEPT, CI 41239195320); `lib/notifications` (lifecycle, consistency PC-00..29, next action, render); renderers take only `Projected<T>`; the 13 deferred DIS tests; NDB-01/02 (diagnostics never reach a recipient); reference skip guards made strict; OI-035 server binding `lib/notifications/binding/server-projection.ts` (context only from the case row's `is_restricted` + the server access-list result, recipient class only from the DB recipient row, fail closed; SPB-01..12) |
 | V13-PROC-007 renderer wording into `lib/i18n` (OI-036) | COMPLETE | PR #48 merged into `develop` 45b29cf (31 Oct; SEC ACCEPT and ARCH ACCEPT 8f3c3fa; combined tree unit 1654, test:db 389, e2e 101); OI-036 closed; new PROC namespace `notificationRender` (`lib/i18n/notificationRender/{ar,en}.ts`, 166 keys), registered in `lib/i18n/index.ts` (ARCH-009 folded in); `lib/notifications/render/i18n.ts` only shapes dictionary entries; the other render files' wording moved too (sender, preview notices, deadline basis, issuer, months, AM/PM, separators); RI-01..03; 516 rendered files equal the reference |
 | V13-PROC-008 notification model from server records (FE-006 preview) | COMPLETE | PR #55 merged into `develop` b24db04 (31 Oct; CI 41241834121, 6/6); `lib/notifications/binding/model-from-records.ts` `buildModelFromRecords(records)`: case row + notification row (with template) + the case's events, server records only; fills template_code, notice_reference, case_number (policy decides), event_title (template names), issuer/help/confidentiality (per class), classification_marking (RESTRICTED if restricted, else INTERNAL, never PUBLIC), delivery_status (DRAFT, PENDING_APPROVAL, APPROVED, DISPATCHED → sent-not-confirmed, CANCELLED; anything else refused); empty by ruling: l1_stage_name (OI-039), event_summary, next_action, deadline, levels 2–3, evidence_refs; MFR-01..14 |
-| V13-PROC-009 owner decision briefs OI-037 / OI-039 | IN_REVIEW | `docs/teams/proc/DECISION_BRIEFS.md`, docs only, everything PROPOSED, no mapping applied: OI-037 options per migration 0004 recipient code with the policy's per-class disclosure (computed with `decide()`), recommended least disclosure (WITNESS as is, CASE_TEAM/COMMITTEE_MEMBERS/GOVERNANCE keep refusing, SUBJECT_EMPLOYEE → SUBJECT); OI-039 options per `case_record.stage` (A keep empty, B stage only, C stage + sub-code), recommended A; PRELIMINARY_REVIEW and COMMITTEE_DELIBERATION flagged ambiguous |
+| V13-PROC-009 owner decision briefs OI-037 / OI-039 | COMPLETE | PR #57 merged into `develop` 21f94a0 (31 Oct; CI 41242891735); `docs/teams/proc/DECISION_BRIEFS.md`, docs only, everything PROPOSED, no mapping applied: OI-037 options per migration 0004 recipient code with the policy's per-class disclosure (computed with `decide()`), recommended least disclosure (WITNESS as is, CASE_TEAM/COMMITTEE_MEMBERS/GOVERNANCE keep refusing, SUBJECT_EMPLOYEE → SUBJECT); OI-039 options per `case_record.stage` (A keep empty, B stage only, C stage + sub-code), recommended A; PRELIMINARY_REVIEW and COMMITTEE_DELIBERATION flagged ambiguous |
+| V13-PROC-010 QG-01 source integrity ledger | IN_REVIEW | `scripts/integrity/source-ledger.mjs` (capture / verify: path, size, sha256 per file, sorted; reads only under `/mnt/project-files/notifications/`, refuses any other root, a root that is, is inside or contains the excluded upload, and a ledger path under the base; never follows a link; never overwrites a ledger); SL-01..18 on temporary fixtures; ledger kept outside Git in `/mnt/project-files/v13-enterprise/integrity/` (no file name in Git): 16 roots, 2,215 files, 693,421,471 bytes |
 
 ## Changed files
 - PR #3: `docs/teams/proc/PORT_PLAN.md`, `docs/teams/proc/STATUS.md`
@@ -35,6 +36,7 @@ Updated: 2026-10-31 ~21:30 UTC · Branch: `claude/project-thread-94r9g5` · Base
 - PROC-003: `lib/disclosure/{project,index}.ts`, `lib/disclosure/policy_v13.json`,
   `tests/unit/disclosure/{disclosure,projected-brand}.spec.ts`, `tests/unit/authority/data-boundary.spec.ts` (BND-05/06),
   this file
+- PROC-010: `scripts/integrity/source-ledger.mjs` (new), `tests/unit/integrity/source-ledger.spec.ts` (new), this file
 - PROC-009: `docs/teams/proc/DECISION_BRIEFS.md` (new), this file. No code, migration or test change.
 - PROC-008: `lib/notifications/binding/{model-from-records,server-projection}.ts`, `lib/notifications/render/model.ts`
   (`recipientNotices` extracted, same rule), `tests/unit/notifications/model-from-records.spec.ts` (new), this file
