@@ -6,12 +6,7 @@
 // classes (OI-037) never render; restricted case 0009 fails closed (no access-list result). Synthetic data only.
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import {
-  RequestIdentitySchema,
-  type CaseId,
-  type CaseSummary,
-  type RequestIdentity,
-} from "@/lib/contracts";
+import { RequestIdentitySchema, type CaseId, type CaseSummary, type RequestIdentity } from "@/lib/contracts";
 import { createV13RecordsCaseSource } from "@/lib/adapters/case-source/v13-records";
 import { createV13NotificationDrafts } from "@/lib/adapters/notification-records/v13-notification-drafts";
 import { createV13NotificationPreviewReader } from "@/lib/adapters/notification-records/v13-notification-preview";
@@ -153,7 +148,7 @@ describe.skipIf(!available)("V13 notification preview on the primary cluster (FE
     expect(view.notificationId).toBe(id);
     expect(view.lang).toBe("en"); // template version 1f…04 is the English one
     expect(view.html).toContain('data-marking="DESIGN_PREVIEW"');
-    expect(view.html).toContain("data-experience=\"PLATFORM\"");
+    expect(view.html).toContain('data-experience="PLATFORM"');
     expect(view.html).not.toMatch(/<script|\son[a-z]+=|\{\{/i);
     // the template's text (subject, body) is never read, so it cannot appear
     expect(view.html).not.toContain("You are invited to a committee meeting");

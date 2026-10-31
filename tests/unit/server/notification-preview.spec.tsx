@@ -206,7 +206,9 @@ describe("loadNotificationPreview", () => {
       kind: "unavailable",
       correlationId: CORRELATION,
     });
-    expect((logServerError.mock.calls[0]?.[2] as { code?: string }).code).toBe("UNSUPPORTED_LIFECYCLE_STATUS");
+    expect((logServerError.mock.calls[0]?.[2] as { code?: string }).code).toBe(
+      "UNSUPPORTED_LIFECYCLE_STATUS",
+    );
   });
 
   it("negative: a read failure is generic and logged by code only; NOT_FOUND and UNAUTHENTICATED go to the page", async () => {
@@ -221,9 +223,9 @@ describe("loadNotificationPreview", () => {
       correlationId: CORRELATION,
     });
     expect(logServerError).toHaveBeenCalledWith("notification_preview_error", CORRELATION, raw);
-    await expect(load(WITNESS_1.notification_id, 1, SECRETARY, failing(new AppError("NOT_FOUND")))).rejects.toThrow(
-      "NOT_FOUND",
-    );
+    await expect(
+      load(WITNESS_1.notification_id, 1, SECRETARY, failing(new AppError("NOT_FOUND"))),
+    ).rejects.toThrow("NOT_FOUND");
     await expect(
       load(WITNESS_1.notification_id, 1, SECRETARY, failing(new AppError("UNAUTHENTICATED"))),
     ).rejects.toThrow("UNAUTHENTICATED");
@@ -273,7 +275,7 @@ describe("Case Workspace notifications tab with the preview", () => {
     }
   });
 
-  it("the preview renders inside UX-006's frame: sandbox=\"\", srcdoc only, lang and dir of the notice", async () => {
+  it('the preview renders inside UX-006\'s frame: sandbox="", srcdoc only, lang and dir of the notice', async () => {
     const v = await tab(WITNESS_1.notification_id, createFakeNotificationPreview(ROWS));
     const out = html(v);
     expect(out).toContain('data-preview-state="preview"');
@@ -294,7 +296,11 @@ describe("NotificationPreviewSection states", () => {
     );
 
   it("unmapped (OI-037) names only the recipient class and renders no frame", () => {
-    const out = section({ kind: "unmapped", notificationId: WITNESS_1.notification_id, recipientClass: "CASE_TEAM" });
+    const out = section({
+      kind: "unmapped",
+      notificationId: WITNESS_1.notification_id,
+      recipientClass: "CASE_TEAM",
+    });
     expect(out).toContain('data-testid="case-preview-unmapped"');
     expect(out).toContain("CASE_TEAM");
     expect(out).not.toContain("<iframe");
@@ -318,7 +324,9 @@ describe("NotificationPreviewSection states", () => {
 
 describe("M1-07: the Notifications tab shows labels and the template's name, not raw codes", () => {
   const table = (rows: Parameters<typeof NotificationTable>[0]["notifications"], locale: Locale) =>
-    renderToStaticMarkup(<NotificationTable t={createTranslator(locale)} locale={locale} notifications={rows} />);
+    renderToStaticMarkup(
+      <NotificationTable t={createTranslator(locale)} locale={locale} notifications={rows} />,
+    );
   const row = (over: Partial<ReturnType<typeof previewRecord>> = {}) => previewRecord(1, 1, over);
 
   it("labels the status and the recipient class in both languages; DISPATCHED never reads delivered", () => {
@@ -350,7 +358,9 @@ describe("M1-07: the Notifications tab shows labels and the template's name, not
   it("shows the template's catalogue name in the page language beside its code (Latin, isolated)", () => {
     const en = table([row()], "en");
     expect(en).toContain('data-testid="case-notification-template-name">Meeting invitation<');
-    expect(en).toMatch(/<bdi dir="ltr"[^>]*data-testid="case-notification-template-code">CF-24_MEETING_INVITATION</);
+    expect(en).toMatch(
+      /<bdi dir="ltr"[^>]*data-testid="case-notification-template-code">CF-24_MEETING_INVITATION</,
+    );
     expect(table([row()], "ar")).toContain('data-testid="case-notification-template-name">دعوة اجتماع<');
   });
 

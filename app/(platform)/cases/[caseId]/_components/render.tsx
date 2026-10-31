@@ -23,39 +23,41 @@ export interface CaseRouteProps {
 
 // `noticeKey` and `previewKey` are primitive key parts (cache() compares arguments by identity): the serialised parsed
 // flag or "", and the raw `?n=` value or undefined.
-const load = cache(async (
-  rawCaseId: string,
-  tab: CaseTab,
-  noticeKey = "",
-  previewKey?: string,
-): Promise<CaseWorkspaceResult> => {
-  const notice = noticeKey ? (JSON.parse(noticeKey) as DraftNotice) : null;
-  try {
-    const ctx = await requireRequestContext();
-    return await resolveCaseWorkspace(
-      {
-        ctx,
-        source: caseSourceFor(ctx.correlationId),
-        procedural: proceduralRecordsFor(ctx.correlationId),
-        notifications: notificationRecordsFor(ctx.correlationId),
-        ...(tab === "notifications"
-          ? {
-              drafts: notificationDraftsFor(ctx.correlationId),
-              notice,
-              preview: notificationPreviewFor(ctx.correlationId),
-              ...(previewKey === undefined ? {} : { previewId: previewKey }),
-            }
-          : {}),
-      },
-      rawCaseId,
-      tab,
-    );
-  } catch (error) {
-    if (isAppError(error) && error.code === "UNAUTHENTICATED") redirect("/sign-in");
-    if (isAppError(error) && error.code === "NOT_FOUND") notFound();
-    throw error;
-  }
-});
+const load = cache(
+  async (
+    rawCaseId: string,
+    tab: CaseTab,
+    noticeKey = "",
+    previewKey?: string,
+  ): Promise<CaseWorkspaceResult> => {
+    const notice = noticeKey ? (JSON.parse(noticeKey) as DraftNotice) : null;
+    try {
+      const ctx = await requireRequestContext();
+      return await resolveCaseWorkspace(
+        {
+          ctx,
+          source: caseSourceFor(ctx.correlationId),
+          procedural: proceduralRecordsFor(ctx.correlationId),
+          notifications: notificationRecordsFor(ctx.correlationId),
+          ...(tab === "notifications"
+            ? {
+                drafts: notificationDraftsFor(ctx.correlationId),
+                notice,
+                preview: notificationPreviewFor(ctx.correlationId),
+                ...(previewKey === undefined ? {} : { previewId: previewKey }),
+              }
+            : {}),
+        },
+        rawCaseId,
+        tab,
+      );
+    } catch (error) {
+      if (isAppError(error) && error.code === "UNAUTHENTICATED") redirect("/sign-in");
+      if (isAppError(error) && error.code === "NOT_FOUND") notFound();
+      throw error;
+    }
+  },
+);
 
 export async function caseTabMetadata(props: CaseRouteProps, tab: CaseTab): Promise<Metadata> {
   const { caseId } = await props.params;

@@ -157,7 +157,10 @@ test.describe("Scenario E — notification preview", () => {
     const ready = page.getByTestId("case-preview-ready");
     await expect(ready).toHaveAttribute("data-notification-id", id);
     await expect(page.getByTestId(`case-notification-${id}`)).toHaveAttribute("data-selected", "true");
-    await expect(page.getByTestId(`case-notification-preview-link-${id}`)).toHaveAttribute("aria-current", "true");
+    await expect(page.getByTestId(`case-notification-preview-link-${id}`)).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
     const frame = page.getByTestId("case-notification-preview-frame");
     await expect(frame).toHaveAttribute("sandbox", "");
     expect(await frame.getAttribute("src")).toBeNull();

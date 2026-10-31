@@ -433,7 +433,11 @@ export function NotificationPreviewSection({
 }) {
   if (preview.kind === "none") return null;
   return (
-    <section aria-labelledby="case-preview-heading" data-testid="case-preview" data-preview-state={preview.kind}>
+    <section
+      aria-labelledby="case-preview-heading"
+      data-testid="case-preview"
+      data-preview-state={preview.kind}
+    >
       <h2 id="case-preview-heading">{t("case.preview.heading")}</h2>
       {preview.kind === "preview" ? (
         <div data-testid="case-preview-ready" data-notification-id={preview.notificationId}>
@@ -447,7 +451,11 @@ export function NotificationPreviewSection({
         </div>
       ) : null}
       {preview.kind === "unmapped" ? (
-        <p className="v13-notice" data-testid="case-preview-unmapped" data-notification-id={preview.notificationId}>
+        <p
+          className="v13-notice"
+          data-testid="case-preview-unmapped"
+          data-notification-id={preview.notificationId}
+        >
           {t("case.preview.unmapped", { recipient: preview.recipientClass })}
         </p>
       ) : null}

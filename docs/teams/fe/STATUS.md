@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 22:15 UTC · Branch: feature/V13-FE-006-notification-center-list (FE-006 part 2; part 1 #51 merged into develop 65a251d) · Head: see PR
+Updated: 2026-10-31 23:25 UTC · Branch: feature/V13-FE-006-notification-preview (FE-006 part 3 + M1-07; part 1 #51 and part 2 #61 merged into develop) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -46,7 +46,19 @@ Updated: 2026-10-31 22:15 UTC · Branch: feature/V13-FE-006-notification-center-
   Reads DB-015 (`notifications_page` + `notifications_count`, one statement). Proposed contract
   `lib/contracts/notification-center.ts` (NotificationCenterReader, row and filter schemas) and `InvalidCursorError`
   moved into `lib/contracts` (OI-031, own file `lib/contracts/cursor.ts`; `lib/adapters/case-source/cursor.ts` re-exports it): needs ARCH + SEC ACCEPT.
-  Rows link to the case's Notifications tab; the in-case preview (`?n=`) is part 3 — IN_REVIEW.
+  Rows link to the case's Notifications tab; the in-case preview (`?n=`) is part 3. Part 2 — COMPLETE (#61, merged into develop 9290778).
+- V13-FE-006 part 3, in-case preview (SCREENS S3, REQ-NOTIF-011) + UX review M1-07 — `/cases/<id>/notifications?n=<uuid>`:
+  the read is keyed by the authorised case AND the notification id under RLS (`NotificationPreviewReader`, proposed
+  `lib/contracts/notification-preview.ts`), so unknown, other-case, hidden and malformed values show one generic state
+  with a reference; one frozen `case_record` object goes to `buildModelFromRecords` and `projectForRecipient` (ARCH
+  ruling 31 Oct), no `access_list` is passed, so restricted 0009 fails closed (NO_ACCESS_LIST_RESULT); only
+  `renderPlatform`'s HTML of the projected model reaches UX-006's `sandbox=""` frame; the binding's UNKNOWN_RECIPIENT
+  (every database class except WITNESS, OI-037) shows the OI-037 state; any other binding or read error is the generic
+  state, logged by code only. Each row of the tab and of the Center links to its preview by ids. M1-07: status and
+  recipient labels from `lib/i18n/case` (DISPATCHED reads "sent — delivery not confirmed"), template name beside its
+  code; `CaseNotificationSchema` gains `template_name` and `listForCase` joins `notification_template` by its unique
+  code with an explicit order (proposed contract change). Needs ARCH (contracts), SEC (lib/server, keyed read), QA (UI)
+  — IN_REVIEW.
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -82,6 +94,7 @@ Updated: 2026-10-31 22:15 UTC · Branch: feature/V13-FE-006-notification-center-
 
 ## Test evidence
 | Command | Result | Counts | Commit |
+| FE-006 part 3 + M1-07 after merging develop 9290778 (#61; Center rows open `?n=`): lint, typecheck, format:check / `pnpm test` (preview 25 + adapter 11 + list-reader 3 new) / `pnpm db:reset` + `pnpm test:db` (new `tests/integration/fe/notification-preview.spec.ts` 9: keyed read, other-case/hidden/unknown/other-workspace null, WITNESS draft renders inside a rolled-back request, 0009 fails closed, four database classes show OI-037, list names + order) / `pnpm db:reset` + `pnpm test:e2e` (Scenario E preview 5 + Center row link 1 new; axe on the page in legacy mode with iframes off, and on the srcdoc as its own page; the two ✘ are QA's `test.fail()` pins that #63 removes) | pass | 1927 / 456 / 156 | FE-006 part 3 head |
 | ------- | ------ | ------ | ------ |
 | `pnpm lint` | pass | 0 problems | c4c7f8f |
 | `pnpm typecheck` | pass | — | c4c7f8f |

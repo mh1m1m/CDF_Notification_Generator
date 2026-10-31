@@ -7,6 +7,7 @@ import Link from "next/link";
 import { NOTIFICATION_LIFECYCLE_STATUSES, type NotificationLifecycleStatus } from "@/lib/contracts";
 import type { Locale, MessageKey, Translator } from "@/lib/i18n";
 import type { NotificationCenterView as View } from "@/lib/server/notification-center";
+import { previewHref } from "@/lib/server/notification-preview";
 import {
   CENTER_PATH,
   centerFilterFormKey,
@@ -317,7 +318,7 @@ function Results({
                     </th>
                     <td>
                       <Link
-                        href={`/cases/${n.case_id}/notifications`}
+                        href={previewHref(n.case_id, n.notification_id)}
                         data-testid={`notifications-open-${n.notification_id}`}
                       >
                         {n.template_name[locale]}

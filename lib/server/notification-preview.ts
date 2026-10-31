@@ -30,10 +30,7 @@ import {
   type CaseRecordRow,
   type NotificationRecordSet,
 } from "@/lib/notifications/binding/model-from-records";
-import {
-  NotificationBindingError,
-  projectForRecipient,
-} from "@/lib/notifications/binding/server-projection";
+import { NotificationBindingError, projectForRecipient } from "@/lib/notifications/binding/server-projection";
 import { renderPlatform } from "@/lib/notifications/render/platform";
 import type { RequestContext } from "./context";
 import { toUserError } from "./errors";

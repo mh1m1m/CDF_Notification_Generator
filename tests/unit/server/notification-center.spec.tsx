@@ -305,7 +305,8 @@ describe("NotificationCenterView markup", () => {
       `data-testid="notification-row-${notificationIdOf(1)}" data-notification-id="${notificationIdOf(1)}" data-case-id="${caseIdOf(1)}" data-case-ref="CDF-DEMO-2026-0001"`,
     );
     expect(html).toContain(`href="/cases/${caseIdOf(1)}"`);
-    expect(html).toContain(`href="/cases/${caseIdOf(1)}/notifications"`);
+    // FE-006 part 3: each row opens its own preview on its own case (ids only)
+    expect(html).toContain(`href="/cases/${caseIdOf(1)}/notifications?n=${notificationIdOf(1)}"`);
     expect(html).toContain("Demo case 1");
     expect(html).toContain("CF-20_INVESTIGATION_ASSIGNED");
     expect(html).not.toContain("CDF-DEMO-2026-0002");
