@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, feature/V13-FE-004-case-workspace · Head: see PRs
+Updated: 2026-10-31 21:00 UTC · Branch: feature/V13-FE-006-notification-center (FE-006 part 1, Scenario E draft) · #32 FE-005 in re-confirmation · Head: see PRs
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -23,6 +23,12 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
   badges via `lib/domain` toBadgeEpistemic (server only). `app/not-found.tsx` gains `data-testid="not-found-state"` (ARCH
   path, ARCH ACCEPT needed). PR #23 (stacked on #19) — IN_REVIEW once #19 lands.
 - OI-023 — workspace switch runs `api_switch_workspace` before the cookie is re-issued — PR #27 — IN_REVIEW.
+
+- V13-FE-006 part 1, Scenario E draft — the case Notifications tab offers "Create a notification draft" to roles
+  that may draft (COMMITTEE_SECRETARY, INVESTIGATOR) on ACTIVE cases; Server Action → lib/server (pre-check, Zod,
+  `api_create_notification_draft`); one fresh idempotency key per rendered form; outcomes created / duplicate / generic
+  error with reference. Contract proposed in `lib/contracts/notification-draft.ts` (needs ARCH + SEC ACCEPT). — IN_REVIEW.
+  Part 2 (`/notifications` with the D6 guard, the list on DB-015, the in-case preview on PROC-008) follows.
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -80,7 +86,13 @@ Updated: 2026-10-31 18:30 UTC · Branches: feature/V13-FE-003-case-portfolio, fe
 | Same: `pnpm build && pnpm start`, `pnpm test:e2e` plus the throwaway FE probe (3: Truth Inspector 0 violations, axe 0 serious/critical on 4 tabs, negatives 404 with `not-found-state`, 360 px, LTR, Beta 0009, Delta other workspace) | pass | 59 passed (56 + 3), 17 skipped | FE-004 head |
 | OI-023 (PR #27, 17f4107 on develop c4b37c3): `pnpm test` / `pnpm test:db` / `pnpm test:e2e`; browser probe: forged target refused with cookie unchanged, real switch → exactly 1 WORKSPACE_SWITCHED row | pass | 725 / 212 / 56 (17 skipped) / 1 | 17f4107 |
 
+| FE-006 part 1 (develop ec8653a): lint, typecheck, format:check, build / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (new `tests/integration/fe/notification-draft.spec.ts`, 12) / `pnpm db:reset` + `pnpm test:e2e` / throwaway Scenario E browser probe (not committed; e2e is QA's): Alpha drafts on 0001 (count +1, row marked, axe 0, no CSP console error), id absent from 0003, resubmitted old key → duplicate notice and no new row, case id tampered to 0009 → not-found page, no draft form on closed 0010 or for Delta | pass | — / 1615 (52 new: service+markup+action 33, adapter 19) / 384 / 101 / 2/2 | FE-006 head |
+
 ## Unresolved defects
+- FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
+  field. A tampered id to a case the persona may not draft on is refused (NOT_FOUND / CASE_CLOSED, nothing written);
+  a swap to another case it may draft on lands there, with the redirect to that case. Strict binding would need a
+  signing helper in lib/auth (asked of ARCH, 31 Oct).
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
   pattern `^[A-Za-z0-9._:-]{1,80}$` (both in `lib/contracts`, this PR, needs ARCH + SEC ACCEPT); DB returns
   `updated_at`, `source_system`, `source_ref` and makes `source_ref` NOT NULL in its PR (b). Until DB's PR lands the

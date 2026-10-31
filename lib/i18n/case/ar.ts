@@ -63,6 +63,16 @@ export const ar = {
   "notifications.column.recipient": "فئة المستلم",
   "notifications.column.status": "الحالة",
   "notifications.column.created": "أُنشئ في",
+  "draft.heading": "إنشاء مسودة إشعار",
+  "draft.hint":
+    "تُنشأ المسودة لهذه القضية فقط، ولا يُرسل شيء. تحتفظ المسودة بالقالب وفئة المستلم، ولا تحمل نص الإشعار.",
+  "draft.template": "القالب",
+  "draft.templateOption": "{name} — {code} — الإصدار {version} — {language}",
+  "draft.recipient": "فئة المستلم",
+  "draft.submit": "إنشاء المسودة",
+  "draft.created": "أُنشئت مسودة الإشعار لهذه القضية.",
+  "draft.duplicate": "أُنشئت هذه المسودة من قبل، فلم تُنشأ مرة ثانية. رقم المتابعة: {reference}",
+  "draft.error": "تعذّر إنشاء المسودة. لم يتغير شيء.",
   "error.title": "تعذّر عرض هذه الصفحة الآن",
   "error.body":
     "حدث خطأ غير متوقع. حاول مرة أخرى بعد قليل، وإن تكرر الخطأ فأرسل رقم المتابعة إلى فريق الدعم.",

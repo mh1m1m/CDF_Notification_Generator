@@ -63,6 +63,17 @@ export const en: Record<keyof typeof ar, string> = {
   "notifications.column.recipient": "Recipient class",
   "notifications.column.status": "Status",
   "notifications.column.created": "Created",
+  "draft.heading": "Create a notification draft",
+  "draft.hint":
+    "The draft is created for this case only, and nothing is sent. It records the template and the recipient class, not the notice text.",
+  "draft.template": "Template",
+  "draft.templateOption": "{name} — {code} — version {version} — {language}",
+  "draft.recipient": "Recipient class",
+  "draft.submit": "Create draft",
+  "draft.created": "The notification draft was created for this case.",
+  "draft.duplicate":
+    "This draft was already created, so it was not created again. Reference number: {reference}",
+  "draft.error": "The draft could not be created. Nothing changed.",
   "error.title": "This page cannot be shown right now",
   "error.body":
     "Something went wrong. Try again shortly; if it happens again, send the reference number to the support team.",
