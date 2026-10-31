@@ -146,7 +146,7 @@ Mutation checks (not committed, each reverted and rebuilt before the final run):
 
 ## 4. CI
 
-Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6).
+Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #26 (V13-DB-006) it has six jobs: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build, end-to-end (Playwright). On pull requests the Vercel preview is a seventh check.
 
 | Run                                                                                              | Commit    | Result                                                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -154,6 +154,38 @@ Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6).
 
 Every pinned action SHA resolved. Warnings: the pinned versions target Node.js 20 and ran on Node.js 24 (OI-021); the
 dependency cache could not be saved (GitHub service message), which does not affect results.
+
+### 4.1 `develop`: one push run per merge (read from GitHub Actions, 31 Oct 2026 ≈ 19:20 UTC)
+
+Each merge rests on the PR run named in its merge commit: green CI on the head the independent reviewer accepted. The workflow cancels a running push run when a newer push to the same branch arrives (`concurrency`, `cancel-in-progress: true`), so a merge pushed within a minute of the next one shows a cancelled push run. The next successful push run contains that merge and verifies the combination; it is named in the last column.
+
+| Merge | PR, task | PR run (merge basis) | `develop` push run | Push run result |
+| ----- | -------- | -------------------- | ------------------ | --------------- |
+| `f0a7220` | #6 ARCH-001 | [40627224227](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40627224227) | [40627572982](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40627572982) | success |
+| `54a94f3` | #4 UX-004 | [40627775569](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40627775569) | [40628437067](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40628437067) | cancelled; verified by [40628544723](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40628544723) |
+| `d5066f4` | #1 QA-001 | [40627780225](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40627780225) | [40628513722](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40628513722) | cancelled; verified by [40628544723](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40628544723) |
+| `e04c164` | #7 QA-003 | [40627934314](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40627934314) | [40628544723](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40628544723) | success |
+| `f384507` | #8 UX-001 | [40628472115](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40628472115) | [40629000919](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40629000919) | success |
+| `f0d52d2` | #5 ARCH-006 | [40627774719](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40627774719) | [40629508846](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40629508846) | success |
+| `2990c28` | #3 PROC-001 | [40628002314](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40628002314) | [40631471656](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40631471656) | cancelled; verified by [40631508845](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40631508845) |
+| `0f22e04` | #11 SEC-003 | [40630470189](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40630470189) | [40631508845](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40631508845) | success (see OI-028) |
+| `d41a3c8` | #9 FE-001 | [40631539499](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40631539499) | [40631947040](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40631947040) | success |
+| `a5bbb10` | #13 QA-004 | [40632016065](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40632016065) | [41227655399](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41227655399) | success |
+| `ae52b7f` | #10 FE-002 | [40632046062](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/40632046062) | [41227936693](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41227936693) | success |
+| `2ec6ce0` | #20 ARCH-001 | [41228022228](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41228022228) | [41228685749](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41228685749) | success |
+| `64aa5c1` | #18 PROC-001 | [41228849177](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41228849177) | [41229085327](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229085327) | success |
+| `2386ce9` | #12 DB-001 | [41229010531](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229010531) | [41229215802](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229215802) | cancelled; verified by [41229344428](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229344428) |
+| `7a79857` | #15 DB-002 | [41229073486](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229073486) | [41229292122](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229292122) | cancelled; verified by [41229344428](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229344428) |
+| `e6717de` | #17 DB-007 | [41229075673](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229075673) | [41229319820](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229319820) | cancelled; verified by [41229344428](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229344428) |
+| `c4b37c3` | #21 DB-008 | [41229075061](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229075061) | [41229344428](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229344428) | success |
+| `b193a1c` | #22 QA-004 | [41229383439](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229383439) | [41229647806](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229647806) | success |
+| `f431b98` | #26 DB-006 | [41229690020](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41229690020) | [41230839811](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41230839811) | success (first rehearsal job on develop) |
+| `558d4ae` | #28 DB-009 | [41230326573](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41230326573) | [41230926095](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41230926095) | success |
+| `50850a4` | #29 SEC-002 | [41231449891](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231449891) | [41231779492](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231779492) | cancelled; verified by [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) |
+| `b5ee5f4` | #31 DB-010 | [41231559873](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231559873) | [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) | success, 6 of 6 jobs |
+| `a6c224a` | #30 SEC-004 | [41232084126](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41232084126) | [41232604284](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41232604284) | success |
+
+Run [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) on `develop` `b5ee5f4`: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build and Playwright all succeeded. Test counts are in each PR's evidence and in the job logs; this table records the job outcome only.
 
 ## 5. Deployment checks
 
