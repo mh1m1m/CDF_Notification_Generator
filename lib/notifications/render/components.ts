@@ -41,6 +41,7 @@ import {
   type DeliveryInput,
 } from "./types";
 import { isNil } from "@/lib/domain/nil";
+import { dataEpistemicFor } from "@/lib/notifications/data-epistemic";
 import { ar as AR } from "@/lib/i18n/notificationRender/ar";
 import { en as EN } from "@/lib/i18n/notificationRender/en";
 
@@ -399,15 +400,17 @@ export function renderEventSummary(model0: unknown, ctx: RenderCtx): ComponentOu
     return out(root(ctx, "EventSummary", {}, m.html), m.text, [tb(m.text)]);
   }
   const generalized = !!v && v.generalized === true;
+  // one value from the exported vocabulary (lib/notifications/data-epistemic.ts); an unknown class fails closed
+  const epistemic = dataEpistemicFor(v?.epistemic, generalized);
   const tag =
-    !generalized && (v?.epistemic ?? "RECORDED_FACT") === "RECORDED_FACT"
+    epistemic === "RECORDED_FACT"
       ? ` <span${sty(ctx, "stateLabel")}>(${escHtml(L(ctx, S.recordedFact))})</span>`
       : "";
   const mt = meetingLine(F(model, "meeting_info"), ctx);
   const html = root(
     ctx,
     "EventSummary",
-    { "data-epistemic": generalized ? "GENERALIZED" : (v?.epistemic ?? "RECORDED_FACT") },
+    { "data-epistemic": epistemic },
     el(ctx, "p", "p", {}, `<span data-field="event_summary">${escHtml(s)}</span>${tag}`) +
       (mt ? el(ctx, "p", "meta", { "data-field": "meeting_info" }, escHtml(mt)) : ""),
   );
