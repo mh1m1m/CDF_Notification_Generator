@@ -42,7 +42,7 @@ docs/qa/                   this file, SCENARIOS.md, SCREENSHOT_LIBRARY.md, repor
 | `mobile-ar` | Chromium | 360×780 (Pixel-class) | `ar-SA` | every PR | Gate G, mobile navigation |
 | `tablet-ar` | Chromium | 768×1024 | `ar-SA` | every PR | Gate G |
 | `wide-ar` | Chromium | 1920×1080 | `ar-SA` | every PR (visual only) | Gate G |
-| `firefox-ar`, `webkit-ar` | Firefox, WebKit | 1280×800 | `ar-SA` | CI nightly / on demand | cross-engine; not in the Claude sandbox (only Chromium is installed there) |
+| `firefox-ar`, `webkit-ar` | Firefox, WebKit | 1280×800 | `ar-SA` | `cross-browser.yml`: every push to `develop`, and PRs labelled `cross-browser` (V13-QA-016) | cross-engine emulation of tests/e2e and tests/a11y minus the Chromium-only specs; only when `V13_E2E_BROWSERS` names them; not in the Claude sandbox (only Chromium is installed there) |
 | `db-only` | none | — | — | every PR | Sentinel DB half and Truth DB half (no browser) |
 | `staging` | Chromium | 1280×800 | `ar-SA` | on demand / Gate J | read-only smoke + isolation against the staging preview (§9) |
 
@@ -298,6 +298,33 @@ key or element access whose name is not a written string or number, and a spread
 literal all fail G7. No line of a workflow or of `package.json` may hand the runner `--update-snapshots`,
 `--update-source-snapshots` or `-u`. Each form is planted into a synthetic config or workflow line in the guard spec,
 and a mutation of the real config (`updateSnapshots: "missing"`) fails at its line.
+
+**B1 (V13-QA-016).** The Firefox and WebKit projects (`tests/fixtures/browsers.ts`) leave the Chromium-only specs out
+through their `testIgnore`, never through a skip. B1 checks on the runner's own listing, with both engines selected
+(`V13_E2E_BROWSERS=firefox-ar,webkit-ar`; nothing is launched), that `desktop-ar` still lists every Sentinel spec and
+every Playwright leak suite, that each engine lists only specs directly under `tests/e2e` or `tests/a11y` and none of
+the Chromium-only ones, and that every Chromium-only entry names an existing file. Without `V13_E2E_BROWSERS` only
+`desktop-ar` is listed, and an unknown name is refused. Planted listings (a Sentinel spec or an e2e leak suite dropped
+from Chromium, an engine running a Sentinel spec, SEC's browser suite or a Chromium-only spec, an empty or missing
+engine, a stale entry) and a planted Chromium `testIgnore` in a temporary configuration each fail B1. The engines run
+`tests/e2e` and `tests/a11y` by a regular expression, because a Playwright glob `e2e/**` also matches
+`tests/security/e2e`. Chromium-only today, with reasons in the file: Scenarios A and D (the Sentinel's response-body
+reads and CDP history steps), Scenario E (CSP console checks that match Chromium's text) and the negative-persona pin
+(the Sentinel).
+
+**WebKit over TLS (V13-QA-016).** Playwright's WebKit on Linux drops a `Secure` cookie on plain-http `localhost`, where
+Chromium and Firefox keep it, so the `__Host-` session cookie never reached WebKit (first cross-browser run 41287885521:
+Firefox 71/71; WebKit 44 signed-in tests failed with no session cookie). The app and its cookie stay as they are. When
+`webkit-ar` is selected and `V13_E2E_TLS_CERT` / `V13_E2E_TLS_KEY` name a certificate, the config starts
+`tests/fixtures/tls-front.mjs`, a loopback HTTPS front that forwards every request unchanged (Host included, plus
+`x-forwarded-proto: https`) to the same started app, and `webkit-ar` uses `https://127.0.0.1:3443` with
+`ignoreHTTPSErrors`. The CI job makes a one-day self-signed certificate with `openssl` in the runner's temp directory, key mode 0600;
+locally, make one the same way in the OS temp directory. Neither is ever committed or uploaded. The front listens on
+127.0.0.1 only, refuses any target but the started app on `http://127.0.0.1`, and stops with the web server; Chromium
+and Firefox stay on `http://localhost:3100`, and only `webkit-ar` has `ignoreHTTPSErrors`. WebKit itself is proven only
+by the next cross-browser run.
+Locally the front was proven with the `webkit-ar` settings run in Chromium: 71/71, with the Server Action POSTs and the
+`Secure` cookie through the front.
 
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 

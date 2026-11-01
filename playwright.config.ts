@@ -12,14 +12,22 @@
 // this run's secret at start (ADR-014), so the database must not hold another key: run `pnpm db:reset` before every
 // local run (CI runs it in the e2e job). The database URL is never printed.
 //
-// One project for now, desktop-ar (Arabic, RTL, the primary language). QA adds further projects, including the
-// `staging` project that `pnpm test:e2e:staging` selects.
+// desktop-ar (Chromium, Arabic, RTL, the primary language) runs every suite. V13_E2E_BROWSERS=firefox-ar,webkit-ar adds
+// the Firefox and WebKit projects (V13-QA-016, tests/fixtures/browsers.ts), which CI's cross-browser workflow selects;
+// without it no other engine is needed. QA adds further projects, including the `staging` project that
+// `pnpm test:e2e:staging` selects.
 // PW_CHROMIUM_PATH points Playwright at a pre-installed Chromium in sandboxes without browser downloads; CI runs
 // `playwright install --with-deps chromium` instead.
 import { randomBytes } from "node:crypto";
 import { defineConfig, devices } from "@playwright/test";
 import { isLoopbackUrl, LOCAL_DATABASE, localPrimaryPort, V13_APP } from "./scripts/db/lib/migrations.mjs";
 import { DEFAULT_LOCAL_APP_PASSWORD } from "./scripts/db/reset-local.mjs";
+import {
+  CHROMIUM_PROJECT,
+  crossBrowserProject,
+  selectedBrowsers,
+  TLS_PROJECTS,
+} from "./tests/fixtures/browsers";
 
 const PORT = 3100;
 const externalBaseUrl = process.env.V13_E2E_BASE_URL?.trim();
@@ -60,6 +68,18 @@ function e2eDatabaseUrl(env: Readonly<Record<string, string | undefined>>): stri
   return url;
 }
 const chromiumPath = process.env.PW_CHROMIUM_PATH?.trim();
+const browsers = selectedBrowsers(process.env.V13_E2E_BROWSERS);
+
+// The local TLS front for WebKit (V13-QA-016, tests/fixtures/tls-front.mjs): started only for a locally started app,
+// when a TLS project is selected and V13_E2E_TLS_CERT / V13_E2E_TLS_KEY name a throwaway certificate (the CI
+// cross-browser job makes one with openssl). It forwards to the same app; nothing about the app changes.
+const TLS_PORT = 3443;
+const tlsFront =
+  !externalBaseUrl &&
+  browsers.some((b) => TLS_PROJECTS.includes(b)) &&
+  Boolean(process.env.V13_E2E_TLS_CERT?.trim()) &&
+  Boolean(process.env.V13_E2E_TLS_KEY?.trim());
+const tlsBaseURL = tlsFront ? `https://127.0.0.1:${TLS_PORT}` : undefined;
 const isCI = process.env.CI === "true";
 // The screenshot library (V13-QA-014, docs/qa/M1_OPEN_QA_ROWS_DESIGN.md §2): about 200 images, so it runs only when
 // asked for, in its own project (the CI visual job; `--project=visual-library` locally), never in every e2e run.
@@ -112,7 +132,7 @@ export default defineConfig({
   ...(visualLibrary ? { globalTeardown: "./tests/visual/library-teardown.ts" } : {}),
   projects: [
     {
-      name: "desktop-ar",
+      name: CHROMIUM_PROJECT,
       testIgnore: [LIBRARY_SPEC, BASELINE_SPEC],
       use: {
         ...devices["Desktop Chrome"],
@@ -141,26 +161,46 @@ export default defineConfig({
           },
         ]
       : []),
+    ...browsers.map((name) => crossBrowserProject(name, tlsBaseURL)),
   ],
   webServer: externalBaseUrl
     ? undefined
-    : {
-        command: `pnpm build && pnpm start --port ${PORT}`,
-        // /api/health answers 503 without a database; the sign-in page is the readiness signal.
-        url: `${baseURL}/sign-in`,
-        reuseExistingServer: false,
-        timeout: 300_000,
-        stdout: "ignore",
-        stderr: "pipe",
-        env: {
-          V13_PERSONA_SIGNIN: "enabled",
-          V13_SESSION_SECRET: sessionSecret,
-          // Set explicitly, so the app never inherits another V13_DATABASE_URL from the shell.
-          V13_DATABASE_URL: e2eDatabaseUrl(process.env),
-          // Playwright merges the runner's environment into the server's: the app gets no administrator URL.
-          V13_ADMIN_DATABASE_URL: "",
-          V13_HOSTED_SIM_SUPERUSER_URL: "",
-          NEXT_TELEMETRY_DISABLED: "1",
+    : [
+        {
+          command: `pnpm build && pnpm start --port ${PORT}`,
+          // /api/health answers 503 without a database; the sign-in page is the readiness signal.
+          url: `${baseURL}/sign-in`,
+          reuseExistingServer: false,
+          timeout: 300_000,
+          stdout: "ignore",
+          stderr: "pipe",
+          env: {
+            V13_PERSONA_SIGNIN: "enabled",
+            V13_SESSION_SECRET: sessionSecret,
+            // Set explicitly, so the app never inherits another V13_DATABASE_URL from the shell.
+            V13_DATABASE_URL: e2eDatabaseUrl(process.env),
+            // Playwright merges the runner's environment into the server's: the app gets no administrator URL.
+            V13_ADMIN_DATABASE_URL: "",
+            V13_HOSTED_SIM_SUPERUSER_URL: "",
+            NEXT_TELEMETRY_DISABLED: "1",
+          },
         },
-      },
+        ...(tlsFront
+          ? [
+              {
+                command: "node tests/fixtures/tls-front.mjs",
+                url: `${tlsBaseURL}/sign-in`,
+                ignoreHTTPSErrors: true,
+                reuseExistingServer: false,
+                timeout: 30_000,
+                stdout: "ignore" as const,
+                stderr: "pipe" as const,
+                env: {
+                  V13_E2E_TLS_PORT: String(TLS_PORT),
+                  V13_E2E_TLS_TARGET: `http://127.0.0.1:${PORT}`,
+                },
+              },
+            ]
+          : []),
+      ],
 });

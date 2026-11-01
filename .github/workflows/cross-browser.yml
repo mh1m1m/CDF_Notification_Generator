@@ -1,0 +1,92 @@
+# Cross-browser e2e for CDF V13 Enterprise (V13-QA-016, REQ-QA-003; M1_OPEN_QA_ROWS_DESIGN §9.3, ARCH ruling D3).
+# SYNTHETIC-DATA REFERENCE IMPLEMENTATION, not CDF production. Results are "Chromium/Firefox/WebKit emulation", never
+# real-device testing.
+#
+# Runs the Firefox and WebKit projects (tests/fixtures/browsers.ts: the e2e scenarios and smoke, and tests/a11y; the
+# Sentinel, the Truth Inspector, SEC's browser suites and the Chromium-only specs stay in CI's Chromium e2e job) on every
+# push to develop, and on a pull request labelled `cross-browser`. Schedule and dispatch wait until the workflow is on
+# main (D3). After five green develop runs in a row ARCH makes it a required check on every PR.
+#
+# Security (SEC's CI rules): `pull_request`, never `pull_request_target`; `contents: read` and no secrets; no event text
+# in any `run:`; the database passwords exist only in the job's container and are deliberately not secret; the
+# artifact holds the JUnit report and failure screenshots only (no trace, no HTML report, no storageState, no cookie).
+name: Cross-browser
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    types: [labeled, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cross-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  e2e:
+    name: End-to-end in Firefox and WebKit (Playwright)
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'cross-browser')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      V13_ADMIN_DATABASE_URL: postgres://postgres:ci-only-not-a-secret@127.0.0.1:5432/v13_local
+      V13_MIGRATION_RUNNER: ci
+      V13_E2E_DATABASE_URL: postgres://cdf_v13_app:local-only-not-a-secret@127.0.0.1:5432/v13_local
+      V13_E2E_BROWSERS: firefox-ar,webkit-ar
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:reset
+      - run: pnpm exec playwright install --with-deps firefox webkit
+      # WebKit reaches the app through a local TLS front (tests/fixtures/tls-front.mjs): Playwright's WebKit on Linux drops
+      # the Secure session cookie on plain-http localhost. A throwaway one-day certificate in the runner's temp directory,
+      # outside the workspace: never committed, never uploaded. (The runner context is not available in a job's env, so
+      # the paths go to GITHUB_ENV from RUNNER_TEMP.)
+      - name: Throwaway certificate for the WebKit TLS front
+        run: |
+          umask 077
+          dir="$RUNNER_TEMP/e2e-tls"
+          mkdir -p "$dir"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
+            -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
+            -keyout "$dir/key.pem" -out "$dir/cert.pem"
+          chmod 600 "$dir/key.pem"
+          echo "V13_E2E_TLS_CERT=$dir/cert.pem" >> "$GITHUB_ENV"
+          echo "V13_E2E_TLS_KEY=$dir/key.pem" >> "$GITHUB_ENV"
+      # Only the two engine projects: Chromium already runs every suite in CI's e2e job. No trace is recorded here, so
+      # none can reach the artifact.
+      - run: pnpm exec playwright test --project=firefox-ar --project=webkit-ar --trace=off
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cross-browser-results
+          path: |
+            test-results/e2e-junit.xml
+            test-results/playwright/**/*.png
+          if-no-files-found: ignore
+          retention-days: 14

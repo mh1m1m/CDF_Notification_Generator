@@ -56,8 +56,77 @@ async function measure(page: Page, edges: boolean): Promise<Finding[]> {
     const name = (el: Element) =>
       `${el.tagName.toLowerCase()}${el.getAttribute("data-testid") ? `[${el.getAttribute("data-testid")}]` : ""}` +
       `${el.className && typeof el.className === "string" ? `.${el.className.trim().split(/\s+/).join(".")}` : ""}`;
-    if (root.scrollWidth > root.clientWidth)
-      out.push({ check: 1, detail: `the page scrolls inline: ${root.scrollWidth} > ${root.clientWidth}` });
+    if (root.scrollWidth > root.clientWidth) {
+      // What makes the page wider, named in the failure (V13-QA-016: WebKit showed a page scroll that no measured
+      // element explained). Diagnosis only; it decides nothing. Every element is looked at, including those check 1
+      // skips (inside a scroll region, screen-reader only, hidden), plus elements whose own content spills out of them.
+      const where = (el: Element) => {
+        const region = el.parentElement?.closest("[data-scroll-region], .v13-scroll-region");
+        const notes = [
+          region ? `in ${name(region)}` : "",
+          el.closest(".v13-sr-only") ? "sr-only" : "",
+          getComputedStyle(el).visibility === "hidden" ? "hidden" : "",
+        ].filter(Boolean);
+        return notes.length ? ` (${notes.join(", ")})` : "";
+      };
+      const past: [number, string][] = [];
+      const spilling: Element[] = [];
+      for (const el of document.body.querySelectorAll("*")) {
+        const box = el.getBoundingClientRect();
+        const beyond = Math.max(box.right - root.clientWidth, -box.left);
+        // Content of a marked scroll region lies past the edges by design: listed last.
+        const inRegion = !!el.parentElement?.closest("[data-scroll-region], .v13-scroll-region");
+        if (box.width > 0 && beyond > 1)
+          past.push([
+            inRegion ? beyond - 1e6 : beyond,
+            `${name(el)} at ${Math.round(box.left)}…${Math.round(box.right)}${where(el)}`,
+          ]);
+        if (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && !inRegion) spilling.push(el);
+      }
+      // The deepest elements whose content is wider than their box (no spilling descendant), with their children's
+      // widths: the element that makes the page wider is among them.
+      // Which child makes the page wider: hide each in turn and measure the page again (restored at once).
+      const culprits = (el: Element) =>
+        [...el.children]
+          .filter((c): c is HTMLElement => c instanceof HTMLElement && c.getClientRects().length > 0)
+          .map((c) => {
+            const before = c.style.getPropertyValue("display");
+            const priority = c.style.getPropertyPriority("display");
+            c.style.setProperty("display", "none", "important");
+            const width = root.scrollWidth;
+            c.style.setProperty("display", before, priority);
+            if (!before) c.style.removeProperty("display");
+            return `${name(c)} ${width}`;
+          })
+          .slice(0, 10)
+          .join(", ");
+      const spills: [number, string][] = spilling
+        .filter((el) => !spilling.some((other) => other !== el && el.contains(other)))
+        .map((el) => [
+          el.scrollWidth - el.clientWidth,
+          `${name(el)} (overflow-x ${getComputedStyle(el).overflowX}) content ${el.scrollWidth} in ${el.clientWidth}${where(el)}; children: ${[
+            ...el.children,
+          ]
+            // Hidden inputs (React adds several to a Server Action form) have no box and would fill the list.
+            .filter((c) => c.getClientRects().length > 0)
+            .map((c) => {
+              const b = c.getBoundingClientRect();
+              return `${name(c)} ${Math.round(b.left)}…${Math.round(b.right)} ${Math.round(b.width)}/${c.scrollWidth}`;
+            })
+            .slice(0, 10)
+            .join(", ")}; page width without each: ${culprits(el)}`,
+        ]);
+      const top = (xs: [number, string][]) =>
+        xs
+          .sort((a, b) => b[0] - a[0])
+          .slice(0, 3)
+          .map((x) => x[1])
+          .join("; ") || "none";
+      out.push({
+        check: 1,
+        detail: `the page scrolls inline: ${root.scrollWidth} > ${root.clientWidth}; past the edges: ${top(past)}; spilling: ${top(spills)}`,
+      });
+    }
     if (edges) {
       for (const link of document.querySelectorAll('a[data-testid^="nav-"], a[data-testid^="case-tab-"]')) {
         if (link.getClientRects().length === 0) continue;
