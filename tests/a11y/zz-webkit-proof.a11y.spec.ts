@@ -10,19 +10,18 @@ const SPACING =
 
 const CANDIDATES: Record<string, string> = {
   baseline: "",
-  "A select inline-size 100%": "select.v13-control { inline-size: 100%; }",
-  "B form>select flex 1 1 100%": "[data-testid='draft-form'] > select { flex: 1 1 100%; }",
-  "C select contain inline-size": "select.v13-control { contain: inline-size; }",
-  "D select overflow hidden": "select.v13-control { overflow: hidden; }",
-  "E form column": "[data-testid='draft-form'] { flex-direction: column; align-items: stretch; }",
-  "F select min-inline-size 0 + inline-size 100%":
-    "select.v13-control { min-inline-size: 0; inline-size: 100%; }",
-  "G no code paragraph": "[data-testid='draft-template-code'] { display: none; }",
+  "H form overflow-x clip": "[data-testid='draft-form'] { overflow-x: clip; }",
+  "I form contain layout paint": "[data-testid='draft-form'] { contain: layout paint; }",
+  "J form display grid": "[data-testid='draft-form'] { display: grid; }",
+  "K select appearance none": "select.v13-control { appearance: none; -webkit-appearance: none; }",
+  "L select display block": "select.v13-control { display: block; }",
+  "M form display block": "[data-testid='draft-form'] { display: block; }",
+  "N select contain strict size": "select.v13-control { contain: size layout paint; block-size: 2.75rem; }",
 };
 
 test("WebKit draft form: page width per candidate fix", async ({ page, browserName, baseURL, context }) => {
   test.skip(browserName !== "webkit" && !process.env.QA_LOCAL_TRY, "WebKit experiment only");
-  test.setTimeout(240_000);
+  test.setTimeout(900_000);
   const results: string[] = [];
   await signInAs(page, "secretary-alpha");
   for (const locale of ["ar", "en"]) {
@@ -59,7 +58,18 @@ test("WebKit draft form: page width per candidate fix", async ({ page, browserNa
               void f.offsetWidth;
               f.style.display = "";
             }
-            return `${first} (form ${form}, select ${sel}; after form relayout ${r.scrollWidth})`;
+            // The widest option label, measured in the select's own font: does it match the extra width?
+            let widest = 0;
+            if (s) {
+              const cs = getComputedStyle(s);
+              const ctx = document.createElement("canvas").getContext("2d");
+              if (ctx) {
+                ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+                for (const o of (s as HTMLSelectElement).options)
+                  widest = Math.max(widest, ctx.measureText(o.text).width);
+              }
+            }
+            return `${first} (form ${form}, select ${sel}, widest option text ${Math.round(widest)}; after form relayout ${r.scrollWidth})`;
           });
           results.push(`${locale} ${width}${spacing ? "+spacing" : ""} ${label}: page ${m}`);
           await p.close();
