@@ -21,9 +21,9 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-017]` | `feature/V13-DB-017-seed-lint` | OI-041: db:lint covers database/seed; seed bundle and db:reset refuse a seed with findings; transaction control inside DO/function bodies | COMPLETE — #62 merged (a9745ba), SEC ACCEPT 2fe462d |
 | `[V13-DB-018]` | `feature/V13-DB-018-rollback-register` | REQ-DATA-023: per-migration rollback register (DATA_MODEL.md §9) and its automated check | COMPLETE — #101 merged (85f7332), SEC ACCEPT 434c1c7 |
 | `[V13-DB-019]` | `feature/V13-DB-019-keyset-paged-reads` | REQ-PERF-003, OI-026: migration 0011, keyset-paged per-case reads | COMPLETE — #110 merged (800ab8a), CI 41269347309 6/6 |
-| `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note (#115 merged 937cff3, ACCEPT c35d6c1), then migration 0012 on `feature/V13-DB-020-audit-outcome-policy-version` | IN_PROGRESS — 0012 PR open, SEC review pending |
-| `[V13-DB-021]` | `feature/V13-DB-021-refusal-audit`, stacked on DB-020's 0012 branch | REQ-AUD-005: refused commands audited (design note #120, ACCEPTED); migration 0013, adapters and `lib/server` (FE path-owner), SEC suites, `post_apply_checks.sql` P03 (ARCH path) | IN_PROGRESS — DRAFT PR, waits for #119 |
-| `[V13-DB-022]` | `feature/V13-DB-022-my-open-case-tasks`, stacked on DB-021 (#127) | REQ-PERF-003, OI-054: migration 0014, `case_my_open_tasks_page` (the caller's open tasks on one case, paged) | IN_PROGRESS — DRAFT PR stacked on #127, SEC review |
+| `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note (#115 merged 937cff3, ACCEPT c35d6c1), then migration 0012 on `feature/V13-DB-020-audit-outcome-policy-version` | COMPLETE — 0012 merged with #119 (0bc2542) |
+| `[V13-DB-021]` | `feature/V13-DB-021-refusal-audit`, stacked on DB-020's 0012 branch | REQ-AUD-005: refused commands audited (design note #120, ACCEPTED); migration 0013, adapters and `lib/server` (FE path-owner), SEC suites, `post_apply_checks.sql` P03 (ARCH path) | COMPLETE — #127 merged (94fd0b7), CI green on 321051c |
+| `[V13-DB-022]` | `feature/V13-DB-022-my-open-case-tasks` (#129) | REQ-PERF-003, OI-054: migration 0014, `case_my_open_tasks_page` (the caller's open tasks on one case, paged) | IN_PROGRESS — DRAFT PR #129 on develop, SEC review |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -194,7 +194,7 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 - Not in this step: refusals (V13-DB-021, own note and SEC threat review first); the disclosure policy version (M5,
   REQ-AUD-003), so REQ-AUD-005 stays IN_PROGRESS for that part.
 
-## In progress: V13-DB-021 (REQ-AUD-005, refused commands)
+## Completed: V13-DB-021 (REQ-AUD-005, refused commands; #127 merged 94fd0b7)
 - Design note `docs/teams/db/DB-021_REFUSED_COMMAND_AUDIT.md`: ACCEPTED (#120); §8 lists where the build differs.
 - Migration 0013: command bodies moved verbatim into owner-only `_api_*_impl`; wrappers record V1401/V1404/V1409/
   V1422/V1423 as one REFUSED row (subtransaction) and answer `refusal`; one command per transaction (V1500, install
@@ -211,9 +211,10 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
   `task_case_assignee_open_idx`; `V13-ACCESS-0014` as the last statement. DATA_MODEL §4 and §9 entries.
 - Tests: `tests/integration/case-my-open-tasks.spec.ts` (16); `context-forgery` registry entry (SEC path, separate
   commit); policy register and hosted resume extended to 0014.
-- Evidence (local, 1 Nov): unit 2159/2159, test:db 599/599 (34 files) before the collation pin test (spec now 16/16),
-  lint, typecheck, prettier, db:lint clean, rollback register 0 findings, shared-database rehearsal PASS.
-- Lands after #127 (migrations in number order). The FE switch to the new read is V13-FE-014.
+- Evidence (local, 1 Nov, after merging develop 94fd0b7): unit 2224/2224 (88 files), test:db 609/609 (35 files),
+  lint, typecheck, prettier, db:lint clean, rollback register 0 findings. Before the merge: shared-database rehearsal
+  PASS, CI 6/6 on 07dc591 (run 41276230713).
+- #127 (0013) merged at 94fd0b7; develop merged into #129. The FE switch to the new read is V13-FE-014.
 
 ## Next
 - Next free migration: 0015.
