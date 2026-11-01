@@ -2,7 +2,8 @@
 //
 // Every call runs inside the per-transaction security context (withRequestContext: claims + SET LOCAL ROLE
 // cdf_v13_user), so RLS (can_access_case) filters rows before filters, ordering, paging or counting. Only the
-// SECURITY INVOKER read functions portfolio_page, portfolio_count and case_header are called; nothing here reads a table directly
+// SECURITY INVOKER read functions portfolio_page, portfolio_count and case_header are called (plus the access-record
+// command api_record_access before the header when a case is opened, V13-FE-017); nothing here reads a table directly
 // or builds SQL from strings. Rows that do not satisfy the CaseSummary contract are refused as a whole (the call
 // fails; the BFF answers UNAVAILABLE) rather than partly shown.
 //
@@ -24,6 +25,7 @@ import {
   type RequestIdentity,
 } from "@/lib/contracts";
 import type { Tx } from "@/lib/db/security-context";
+import { recordAccess } from "./access-record";
 import { decodeCursor, encodeCursor } from "./cursor";
 
 export const V13_SOURCE_SYSTEM = "V13_SYNTHETIC";
@@ -92,6 +94,19 @@ export function rowToCaseListItem(row: PortfolioRow): CaseListItem {
   return { ...rowToCaseSummary(row), ...extras };
 }
 
+/** The case header (case_header, migration 0002) in `tx`; null for an unknown or unauthorised case. */
+async function readHeader(tx: Tx, caseId: CaseId): Promise<CaseHeader | null> {
+  const rows = await tx<(CaseRow & { my_capacity: string | null })[]>`
+    select h.id, h.display_number, h.title_ar, h.title_en, h.stage, h.is_restricted, h.records_state,
+           h.updated_at, h.source_system, h.source_ref, h.my_capacity
+      from cdf_notifications_v13.case_header(${caseId}::uuid) h`;
+  const row = rows[0];
+  if (!row) return null;
+  // my_capacity must be present (null or a capacity): a header without it is refused (fail closed).
+  const my_capacity = CaseCapacitySchema.nullable().parse(row.my_capacity);
+  return { ...rowToCaseSummary(row), my_capacity };
+}
+
 export function createV13RecordsCaseSource(run: RequestContextRunner): CaseSourceAdapter {
   return {
     sourceSystem: V13_SOURCE_SYSTEM,
@@ -129,19 +144,14 @@ export function createV13RecordsCaseSource(run: RequestContextRunner): CaseSourc
     },
 
     async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
-      const rows = await run(
-        identity,
-        (tx) =>
-          tx<(CaseRow & { my_capacity: string | null })[]>`
-          select h.id, h.display_number, h.title_ar, h.title_en, h.stage, h.is_restricted, h.records_state,
-                 h.updated_at, h.source_system, h.source_ref, h.my_capacity
-            from cdf_notifications_v13.case_header(${caseId}::uuid) h`,
+      return run(identity, (tx) => readHeader(tx, caseId));
+    },
+
+    // V13-FE-017 (DB-023): the access record first, then the header, in one transaction. A refusal reads nothing.
+    async openCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
+      return run(identity, async (tx) =>
+        (await recordAccess(tx, { kind: "CASE", caseId })) ? readHeader(tx, caseId) : null,
       );
-      const row = rows[0];
-      if (!row) return null;
-      // my_capacity must be present (null or a capacity): a header without it is refused (fail closed).
-      const my_capacity = CaseCapacitySchema.nullable().parse(row.my_capacity);
-      return { ...rowToCaseSummary(row), my_capacity };
     },
   };
 }

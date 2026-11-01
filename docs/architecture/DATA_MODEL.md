@@ -85,6 +85,7 @@ erDiagram
 | 0004 | `notification_event` | `id`; FK (`notification_id`, `case_id`) | append-only; `provenance` COMMAND (default) / SEED_SYNTHETIC |
 | 0012 | `policy_version` | `version` (`V13-ACCESS-NNNN`) | append-only register of access-policy versions with their fingerprint (§7); restrictive deny-all, no grant |
 | 0013 | `refusal_window` | (`actor_key`, `command`, `refusal`) | per persona (nil UUID for none), command and code: the start of the current 60 s audit window and the refusals it suppressed (§7); restrictive deny-all, no grant; written only by `_append_audit_refused` |
+| 0015 | `access_window` | (`persona_id`, `case_id`, `action`, `entity_id`) | per persona, case, access action and entity: the start of the current 300 s access-audit window and the opens it suppressed (§7); `CASE_OPENED` and `NOTIFICATION_PREVIEW_OPENED` only (restricted opens are never windowed); restrictive deny-all, no grant; written only by `_record_access_row` |
 | 0004 | `dispatch_outbox` | `id`; FK (`notification_id`, `case_id`); unique per channel | content-free; restrictive deny-all, no grant (ADR-010, used from M5) |
 
 ## 4. Functions
@@ -118,6 +119,8 @@ erDiagram
 | `_api_update_task_status_impl`, `_api_create_notification_draft_impl`, `_api_switch_workspace_impl`, `_api_install_claims_key_impl` (migration 0013) | internal definer | **no** | the four command bodies, unchanged from 0001/0003/0004/0005; run only by their `api_*` wrapper (§6) |
 | `_append_audit_refused(text, text, text, uuid, uuid)` (migration 0013) | internal definer | **no** | records one refused command (§7) |
 | `_append_audit_row(...)`, `_claim_command_slot()` (migration 0013) | internal invoker | **no** | the shared hash-chained append; the one-command-per-transaction mark (§6) |
+| `api_record_access(text, uuid, uuid)` (migration 0015) | definer command | yes | records a case open (`CASE`: `CASE_OPENED`, or `RESTRICTED_CASE_OPENED` for a restricted case) or a notification preview (`NOTIFICATION_PREVIEW`), ids only, in the read's own transaction (§7); returns one `refusal` column: null, V1401, V1404 (unknown and unauthorised alike), V1422, or V1500 |
+| `_api_record_access_impl(text, uuid, uuid)`, `_record_access_row(text, text, uuid, uuid)` (migration 0015) | internal definer | **no** | the access command's body; the windowed access-row writer (§7) |
 | `verify_audit_chain()` | definer | **no** (owner/administrator) | recomputes the chain, each row by its hash version (0012); counts and first broken `seq` only |
 | `_policy_fingerprint()`, `_acl_canonical(aclitem[])` (migration 0012) | invoker, stable | **no** (owner/administrator) | sha256 of the V13 access policy (§7) |
 | `_append_audit`, `_audit_row_hash`, `_audit_row_hash_v2`, `_reject_mutation`, `_task_transition_allowed`, `_case_owning_visibility`, `_template_version_hash` | internal | no | — |
@@ -184,7 +187,8 @@ Read functions are `SECURITY INVOKER`; any future view is `WITH (security_invoke
 `SECURITY DEFINER` is used only for: `api_*` commands (each calls `can_access_case` itself when case-keyed); the claims
 and access-rule helpers and the `_case_owning_visibility` trigger; `current_persona()`; `_append_audit` and
 `verify_audit_chain` (never granted to `cdf_v13_user`); since 0013 the four command bodies `_api_*_impl` and
-`_append_audit_refused` (never granted). A new definer function outside these groups needs ARCH and SEC.
+`_append_audit_refused` (never granted); since 0015 `api_record_access` (granted) and its body `_api_record_access_impl`
+and writer `_record_access_row` (never granted). A new definer function outside these groups needs ARCH and SEC.
 
 ## 6b. Seed notifications
 
@@ -219,6 +223,16 @@ Architect's decisions: `docs/teams/db/DB-020_AUDIT_RECORD_CONTENT.md`.
   (no chain lock, no ledger row); the next window's row carries the count. A count with no later refusal stays in
   `refusal_window`, readable by the owner. No reader of REFUSED rows exists; any later governance read excludes them
   for case-team capacities (DB-021 §4.4).
+- **Access rows** (0015, V13-DB-023, REQ-AUD-001): `api_record_access` runs first in the header read's (or the
+  preview read's) own short transaction, so the read and its row commit together or not at all (fail closed). Actions
+  `CASE_OPENED` and `RESTRICTED_CASE_OPENED` (entity `case`, restricted decided from `case_record.is_restricted` at write
+  time) and `NOTIFICATION_PREVIEW_OPENED` (entity `notification`); `SUCCEEDED`; ids only; metadata `{}` or
+  `{"suppressed": n}`. `CASE_OPENED` and `NOTIFICATION_PREVIEW_OPENED` keep one row per (persona, case, action, entity)
+  per `ACCESS_AUDIT_WINDOW_SECONDS` = 300 (DB-proposed, SEC agreed) in `access_window`; every `RESTRICTED_CASE_OPENED` is
+  a row. Unknown and unauthorised cases and notifications refuse with the same id-less `COMMAND_REFUSED` row
+  (command `api_record_access`, never an id whatever the code). The shape constraint pins all of this. Known limit: a
+  count left in `access_window` with no later open never reaches the ledger. Lists, paging, prefetch and router-cache
+  re-display write nothing (DB-023 §1, §9).
 - **Policy version**: the highest `policy_version.version`. Every migration that changes the access policy inserts its
   own row as its last statement: `V13-ACCESS-<migration>`, with `_policy_fingerprint()` computed on the server that
   applies it. The fingerprint covers, in schema `cdf_notifications_v13` only, the schema ACL; every table, view and
@@ -501,3 +515,18 @@ roles, and P10 passing is not evidence about them.
 - **Data lost on revert:** none (a read function and an index hold no data).
 - **Local:** `pnpm db:reset`.
 - **Hosted:** a forward-fix migration that corrects or drops the read and records a new `policy_version` row.
+
+### 0015_case_access_audit.sql
+
+- **Creates:** `table access_window`, `policy access_window_deny_all`, `function _record_access_row`,
+  `function _api_record_access_impl`, `function api_record_access`
+- **Replaces:** `function _append_audit_refused`
+- **Drops:** none
+- **Alters:** `constraint refusal_window_command_check on refusal_window`,
+  `constraint audit_event_refusal_shape_check on audit_event`
+- **Data lost on revert:** the window counters in `access_window` (suppressed counts not yet carried into a ledger row).
+  Access rows and their refused rows are never removed (ADR-011); a revert that keeps them must keep the shape
+  constraint or a looser one. The adapters' recording reads must be reverted in the same change.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that replaces the command or the writer (the connector's DROP confirmation for a
+  constraint, ADR-012) and records a new `policy_version` row; never a ledger rewrite.

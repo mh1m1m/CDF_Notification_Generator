@@ -34,6 +34,7 @@ const APP_ROLES = ["cdf_v13_user", "cdf_v13_app", "PUBLIC"];
 const DEFINER_ALLOWED = new Set([
   "_api_create_notification_draft_impl",
   "_api_install_claims_key_impl",
+  "_api_record_access_impl",
   "_api_switch_workspace_impl",
   "_api_update_task_status_impl",
   "_append_audit",
@@ -42,9 +43,11 @@ const DEFINER_ALLOWED = new Set([
   "_claim_uuid",
   "_claims_hmac",
   "_is_colleague",
+  "_record_access_row",
   "_verified_claims",
   "api_create_notification_draft",
   "api_install_claims_key",
+  "api_record_access",
   "api_switch_workspace",
   "api_update_task_status",
   "can_access_case",
@@ -79,6 +82,9 @@ const OWNER_ONLY = [
   "_api_update_task_status_impl(uuid, text, integer)",
   "_api_create_notification_draft_impl(uuid, uuid, text, text)",
   "_api_switch_workspace_impl(uuid)",
+  // 0015 (V13-DB-023): the access-row writer and the access command's body.
+  "_record_access_row(text, text, uuid, uuid)",
+  "_api_record_access_impl(text, uuid, uuid)",
 ];
 
 /** A command's refusal (migration 0013), its raised SQLSTATE, or "OK". */

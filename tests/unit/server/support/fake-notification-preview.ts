@@ -29,14 +29,32 @@ export function previewRecord(
 
 export function createFakeNotificationPreview(
   rows: readonly NotificationPreviewRecord[],
-): NotificationPreviewReader & { calls: { caseId: string; notificationId: string }[] } {
+): NotificationPreviewReader & {
+  calls: { caseId: string; notificationId: string }[];
+  unrecorded: number;
+} {
   const calls: { caseId: string; notificationId: string }[] = [];
-  return {
-    calls,
-    async getForCase(identity, caseId, notificationId) {
-      calls.push({ caseId, notificationId });
-      if (!visibleTo(identity).some((c) => c.case_id === caseId)) return null;
-      return rows.find((r) => r.case_id === caseId && r.notification_id === notificationId) ?? null;
-    },
+  const read: NotificationPreviewReader["getForCase"] = async (identity, caseId, notificationId) => {
+    if (!visibleTo(identity).some((c) => c.case_id === caseId)) return null;
+    return rows.find((r) => r.case_id === caseId && r.notification_id === notificationId) ?? null;
   };
+  const fake = {
+    calls,
+    unrecorded: 0,
+    // Counted apart: the preview must read with getForCaseRecorded only (V13-FE-017).
+    async getForCase(identity, caseId, notificationId) {
+      fake.unrecorded += 1;
+      return read(identity, caseId, notificationId);
+    },
+    async getForCaseRecorded(identity, caseId, notificationId) {
+      calls.push({ caseId, notificationId });
+      return read(identity, caseId, notificationId);
+    },
+  } satisfies NotificationPreviewReader & { calls: unknown; unrecorded: number };
+  return fake;
 }
+
+/** For inline readers in tests: the unrecorded read, which the preview must never use (V13-FE-017). */
+export const unrecordedPreviewRead = async (): Promise<never> => {
+  throw new Error("the preview must read with getForCaseRecorded");
+};

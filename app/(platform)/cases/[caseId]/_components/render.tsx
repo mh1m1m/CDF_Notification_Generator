@@ -1,5 +1,6 @@
-// Shared page plumbing for the Case Workspace tabs (FE-004). One cached load per request, shared by generateMetadata
-// and the page: request context → getCaseForRoute (lib/authz pre-check + CaseSourceAdapter) → V13 records.
+// Shared page plumbing for the Case Workspace tabs (FE-004). One load per page render: request context →
+// getCaseForRoute (lib/authz pre-check + CaseSourceAdapter.openCase, which writes the case's access record in the same
+// transaction, V13-FE-017) → V13 records. generateMetadata reads nothing (see caseTabMetadata).
 // Anything the persona may not see is notFound(), the same page as an unknown route; no session goes to sign-in.
 import "server-only";
 import type { Metadata } from "next";
@@ -63,18 +64,15 @@ const load = cache(
   },
 );
 
-export async function caseTabMetadata(props: CaseRouteProps, tab: CaseTab): Promise<Metadata> {
-  const { caseId } = await props.params;
+/**
+ * The tab's document title, read from no record (V13-FE-017, DB-023 D1/D2). Next.js resolves metadata on its own: on a
+ * link prefetch (which then carries the head) and apart from the page on a document request, so a title built from the
+ * case would open the case for a prefetch, and twice per page. The title therefore names the tab only; the case number
+ * stays in the page (and out of the browser history).
+ */
+export async function caseTabMetadata(_props: CaseRouteProps, tab: CaseTab): Promise<Metadata> {
   const { t } = await getTranslator();
-  const result = await load(
-    caseId,
-    tab,
-    await noticeKeyOf(props, tab),
-    await previewKeyOf(props, tab),
-    await pageKeyOf(props),
-  );
-  if (result.kind === "error") return { title: t("case.error.title") };
-  return { title: `${result.view.summary.case_number} · ${t(TAB_KEYS[tab])}` };
+  return { title: t("case.documentTitle", { tab: t(TAB_KEYS[tab]) }) };
 }
 
 const noticeKeyOf = async (props: CaseRouteProps, tab: CaseTab): Promise<string> => {

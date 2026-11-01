@@ -19,6 +19,7 @@ export const en: Record<keyof typeof ar, string> = {
   "tab.events": "Recorded events",
   "tab.tasks": "Tasks",
   "tab.notifications": "Notifications",
+  documentTitle: "Case · {tab}",
   "header.stage": "Stage",
   "header.records": "Records state",
   capacity: "Your capacity: {capacity}",

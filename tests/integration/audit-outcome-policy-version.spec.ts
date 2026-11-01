@@ -135,7 +135,7 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
       ]);
     });
 
-    it("the register holds V13-ACCESS-0012, 0013 and 0014, and the highest equals this server's live fingerprint", async () => {
+    it("the register holds V13-ACCESS-0012 to 0015, and the highest equals this server's live fingerprint", async () => {
       const rows = await asOwner(
         admin,
         (tx) =>
@@ -143,23 +143,23 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
           select version, migration, fingerprint, cdf_notifications_v13._policy_fingerprint() as live
             from cdf_notifications_v13.policy_version order by version`,
       );
-      // Each migration that changes access ends with its own row (DB-020 rule): 0012, 0013 (V13-DB-021), then 0014
-      // (V13-DB-022).
+      // Each migration that changes access ends with its own row (DB-020 rule): 0012, 0013 (V13-DB-021), 0014
+      // (V13-DB-022), then 0015 (V13-DB-023).
       expect(rows.map((r) => [r.version, r.migration])).toEqual([
         ["V13-ACCESS-0012", "0012"],
         ["V13-ACCESS-0013", "0013"],
         ["V13-ACCESS-0014", "0014"],
+        ["V13-ACCESS-0015", "0015"],
       ]);
       for (const r of rows) expect(r.fingerprint).toMatch(/^[0-9a-f]{64}$/);
-      // The highest version wins: 0013 and 0014 each changed functions, so the earlier fingerprints are not live.
-      expect(rows[2]!.fingerprint).toBe(rows[2]!.live);
-      expect(rows[1]!.fingerprint).not.toBe(rows[1]!.live);
-      expect(rows[0]!.fingerprint).not.toBe(rows[0]!.live);
+      // The highest version wins: 0013, 0014 and 0015 each changed functions, so the earlier fingerprints are not live.
+      expect(rows[3]!.fingerprint).toBe(rows[3]!.live);
+      for (const r of rows.slice(0, 3)) expect(r.fingerprint).not.toBe(r.live);
       expect(await asOwner(admin, guard)).toBe(true);
     });
 
     it("every ledger row on this cluster is version 2 with the current policy version; REFUSED only for refusals", async () => {
-      // db:reset applies every migration before the seeds, so every row carries the highest version (0014). REFUSED
+      // db:reset applies every migration before the seeds, so every row carries the highest version (0015). REFUSED
       // rows come from refused commands of earlier suites (0013) and are always COMMAND_REFUSED.
       const rows = await asOwner(
         admin,
@@ -178,13 +178,13 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
       );
       expect(rows.map(({ n: _n, ...r }) => r)).toEqual(
         expect.arrayContaining([
-          { hash_version: 2, outcome: "SUCCEEDED", policy_version: "V13-ACCESS-0014", refused: false },
+          { hash_version: 2, outcome: "SUCCEEDED", policy_version: "V13-ACCESS-0015", refused: false },
         ]),
       );
       for (const { n: _n, ...r } of rows)
         expect([
-          { hash_version: 2, outcome: "SUCCEEDED", policy_version: "V13-ACCESS-0014", refused: false },
-          { hash_version: 2, outcome: "REFUSED", policy_version: "V13-ACCESS-0014", refused: true },
+          { hash_version: 2, outcome: "SUCCEEDED", policy_version: "V13-ACCESS-0015", refused: false },
+          { hash_version: 2, outcome: "REFUSED", policy_version: "V13-ACCESS-0015", refused: true },
         ]).toContainEqual(r);
       expect(rows.find((r) => r.outcome === "SUCCEEDED")!.n).toBeGreaterThanOrEqual(2);
       expect((await asOwner(admin, verify)).is_valid).toBe(true);
@@ -273,7 +273,7 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
       expect(row).toMatchObject({
         hash_version: 2,
         outcome: "SUCCEEDED",
-        policy_version: "V13-ACCESS-0014",
+        policy_version: "V13-ACCESS-0015",
         actor_persona_id: PERSONA.alpha,
         correlation_id: CORRELATION,
         ok: true,
@@ -407,7 +407,7 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
     });
 
     it("reports a v2 row whose policy version was rewritten", async () => {
-      // The appended row carries the current version (0014); 0012 is another recorded version.
+      // The appended row carries the current version (0015); 0012 is another recorded version.
       const [seq, verdict] = await rewriteLast("policy_version = 'V13-ACCESS-0012'");
       expect(verdict).toMatchObject({ is_valid: false, first_broken_seq: seq });
     });

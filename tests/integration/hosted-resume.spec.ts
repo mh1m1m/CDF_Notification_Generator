@@ -1,5 +1,5 @@
 // V13-DB-016 · Rehearsal of the hosted resume: the hosted project stands at 0005 (docs/TEST_EVIDENCE.md §2.1); the
-// Chief Architect will send, through the Supabase connector, the bundles 0006 to 0014 (each dry run,
+// Chief Architect will send, through the Supabase connector, the bundles 0006 to 0015 (each dry run,
 // then apply), then seeds 0001 and 0002 (each dry run, then apply). This file runs that exact sequence on the
 // Supabase-like cluster (tests/integration/support/hosted-sim.ts: non-superuser administrator `postgres`, API roles,
 // foreign schemas) and proves:
@@ -135,7 +135,7 @@ const expectedHistory = (upTo: string) =>
   }));
 
 describe.skipIf(!available)(
-  "V13-DB-016 hosted resume rehearsal: 0005 → 0014, then seeds 0001 and 0002",
+  "V13-DB-016 hosted resume rehearsal: 0005 → 0015, then seeds 0001 and 0002",
   () => {
     let adminUrl: string;
     let freshFingerprint: Record<string, string>;
@@ -178,8 +178,19 @@ describe.skipIf(!available)(
       }
     }, 180_000);
 
-    it("the plan: the repository holds 0006–0014 after 0005 (0011 joined in V13-DB-019, 0012 in V13-DB-020, 0013 in V13-DB-021, 0014 in V13-DB-022), and seeds 0001 and 0002", () => {
-      expect(RESUME).toEqual(["0006", "0007", "0008", "0009", "0010", "0011", "0012", "0013", "0014"]);
+    it("the plan: the repository holds 0006–0015 after 0005 (0011 joined in V13-DB-019, 0012 in V13-DB-020, 0013 in V13-DB-021, 0014 in V13-DB-022, 0015 in V13-DB-023), and seeds 0001 and 0002", () => {
+      expect(RESUME).toEqual([
+        "0006",
+        "0007",
+        "0008",
+        "0009",
+        "0010",
+        "0011",
+        "0012",
+        "0013",
+        "0014",
+        "0015",
+      ]);
       expect(SEEDS).toEqual(["0001", "0002"]);
     });
 
@@ -208,7 +219,7 @@ describe.skipIf(!available)(
       expect(await history(adminUrl)).toEqual(expectedHistory(HOSTED_AT));
     });
 
-    it("0006–0014: each dry run leaves nothing behind, each apply records the repository's row", async () => {
+    it("0006–0015: each dry run leaves nothing behind, each apply records the repository's row", async () => {
       for (const version of RESUME) {
         const historyBefore = await history(adminUrl);
         const fingerprintBefore = await fingerprint(adminUrl);

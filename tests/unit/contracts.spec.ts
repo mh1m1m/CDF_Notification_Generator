@@ -257,6 +257,9 @@ describe("CaseSourceAdapter contract", () => {
       const found = allowed.find((c) => c.case_id === caseId);
       return found ? { ...found, my_capacity: null } : null;
     },
+    async openCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
+      return this.getCase(identity, caseId);
+    },
   };
   const secretary = RequestIdentitySchema.parse({
     persona_id: "0b000000-0000-4000-8000-000000000001",
@@ -269,6 +272,9 @@ describe("CaseSourceAdapter contract", () => {
     const unauthorised = await adapter.getCase(secretary, hidden.case_id);
     expect(unknown).toBeNull();
     expect(unauthorised).toBeNull();
+    // openCase (V13-FE-017) answers the same null for both.
+    expect(await adapter.openCase(secretary, CaseIdSchema.parse(crypto.randomUUID()))).toBeNull();
+    expect(await adapter.openCase(secretary, hidden.case_id)).toBeNull();
   });
 
   it("lists pages whose total counts only cases the identity may see", async () => {

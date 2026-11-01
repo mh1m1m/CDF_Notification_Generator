@@ -164,9 +164,12 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
       select p.proname as name from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid = p.pronamespace
        where n.nspname = 'cdf_notifications_v13' and p.proname like 'api\\_%' order by 1`;
     // api_install_claims_key is covered by identity-claims.spec.ts (first writer wins, audited once, ids only).
+    // api_record_access (0015) records a read, not a state change; tests/integration/case-access-audit.spec.ts covers it
+    // and context-forgery.spec.ts its hostile contexts.
     expect(rows.map((r) => r.name)).toEqual([
       "api_create_notification_draft",
       "api_install_claims_key",
+      "api_record_access",
       "api_switch_workspace",
       "api_update_task_status",
     ]);

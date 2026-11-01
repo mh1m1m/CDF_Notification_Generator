@@ -18,7 +18,7 @@ import { WorkspaceIdSchema } from "./workspaces";
  * Every implementation must honour this contract:
  * - Authorisation is applied inside the adapter on every call (database RLS for SQL adapters), before any
  *   filtering, ordering, counting or paging, so unauthorised cases never influence a result.
- * - `getCase` resolves to `null` both when the case does not exist and when the identity may not see it. Callers
+ * - `getCase` and `openCase` resolve to `null` both when the case does not exist and when the identity may not see it. Callers
  *   cannot tell the two apart: same value, no distinct error, no distinct log line visible to the user.
  * - Restricted cases (`is_restricted`) are returned only to identities the source authorises for them explicitly.
  * - Results carry nothing beyond `CaseSummary`, plus the caller's own capacity in `CaseHeader` (no narratives,
@@ -38,6 +38,13 @@ export interface CaseSourceAdapter {
   listCases(identity: RequestIdentity, filter: CaseListFilter): Promise<CaseListPage>;
   /** The case header: the summary plus the identity's own capacity on the case (null when it holds none). */
   getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null>;
+  /**
+   * Opening a case (V13-FE-017, DB-023): records that the identity opened the case, then reads the header, both in one
+   * transaction, so the header is never shown without its access record. The same `null` as `getCase` for an unknown
+   * or unauthorised case (a refused record reads nothing). A record that cannot be written throws: the case is not
+   * shown. Only the route's case read (getCaseForRoute) calls it; prefetches, lists and commands never do.
+   */
+  openCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null>;
 }
 
 /** The current time. Inject a fixed clock in tests; never call `new Date()` inside domain rules. */

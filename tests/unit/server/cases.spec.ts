@@ -5,7 +5,7 @@ import type { CaseSourceAdapter, CaseSummary } from "@/lib/contracts";
 import { InvalidCursorError } from "@/lib/contracts";
 import { getCaseForRoute, listPortfolio } from "@/lib/server/cases";
 import { AppError } from "@/lib/server/errors";
-import { caseIdOf, createFakeCaseSource, FAKE_CASES } from "./support/fake-case-source";
+import { caseIdOf, createFakeCaseSource, FAKE_CASES, unrecordedCaseRead } from "./support/fake-case-source";
 import {
   ctxFor,
   GOVERNANCE,
@@ -70,7 +70,8 @@ describe("getCaseForRoute", () => {
     const wrong: CaseSourceAdapter = {
       sourceSystem: "V13_SYNTHETIC",
       listCases: async () => ({ items: [], next_cursor: null, total: 0 }),
-      getCase: async () => ({ ...(FAKE_CASES[1] as CaseSummary), my_capacity: null }),
+      getCase: unrecordedCaseRead,
+      openCase: async () => ({ ...(FAKE_CASES[1] as CaseSummary), my_capacity: null }),
     };
     await notFound(getCaseForRoute({ ctx: ctxFor(SECRETARY), source: wrong }, caseIdOf(1)));
   });
@@ -81,7 +82,8 @@ describe("getCaseForRoute", () => {
       listCases: async () => {
         throw new Error("boom");
       },
-      getCase: async () => {
+      getCase: unrecordedCaseRead,
+      openCase: async () => {
         throw new Error("boom");
       },
     };
@@ -143,6 +145,7 @@ describe("listPortfolio", () => {
         throw new InvalidCursorError("bad cursor");
       },
       getCase: async () => null,
+      openCase: async () => null,
     };
     const error = await listPortfolio({ ctx: ctxFor(SECRETARY), source }, { cursor: "zz" }).catch(
       (e: unknown) => e,
