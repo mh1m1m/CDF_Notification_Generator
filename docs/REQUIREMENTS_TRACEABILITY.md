@@ -93,15 +93,16 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 | QA | Playwright & Visual QA | 76 |
 | SEC | Security & Adversarial Testing | 39 |
 
-### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-019)
+### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-020)
 
 The 280 rows with `Milestone` = M1, counted from this CSV. Their statuses were assessed against the merges up to
 `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026), plus #72 (REQ-SEC-002, REQ-GOV-001), #75 (REQ-ARCH-025) and #77
 (REQ-DOC-008) in V13-PROC-012, the merges from `4cc72ec` to `d5b61b0` (#61, #63, #68, #69, #73) in V13-PROC-013,
 the merges from `d5b61b0` to `d26ada9` (#78, #70, #76, #83, #80) in V13-PROC-014, the merges from `d26ada9` to `286eb93`
 (#74, #84, #85, #81) in V13-PROC-015, the merges from `286eb93` to `40af5ef` (#87, #89, #91, #92, #93) in
-V13-PROC-016, the merges from `40af5ef` to `11fad34` (#90, #94, #82, #95) in V13-PROC-017, and the merges from
-`11fad34` to **`a0bf765`** (#96, #88, #97, #99) in V13-PROC-019.
+V13-PROC-016, the merges from `40af5ef` to `11fad34` (#90, #94, #82, #95) in V13-PROC-017, the merges from
+`11fad34` to `a0bf765` (#96, #88, #97, #99) in V13-PROC-019, and the merges from `373f19c` to **`75733ba`** (#103,
+#105, #101, #106) in V13-PROC-020.
 The status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
 merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
 merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief
@@ -122,8 +123,8 @@ assessed in the next pass; owners update their rows meanwhile (§6).
 
 | Status | Rows |
 |---|---|
-| COMPLETE | 73 |
-| IN_PROGRESS | 175 |
+| COMPLETE | 74 |
+| IN_PROGRESS | 174 |
 | — of which review-enforced standing rules | 51 |
 | — of which document or configuration evidence only, no test | 44 |
 | BLOCKED | 16 |
@@ -137,7 +138,7 @@ assessed in the next pass; owners update their rows meanwhile (§6).
 |---|---|---|---|---|---|---|
 | ARCH | 105 | 9 | 82 | 12 | 0 | 2 |
 | QA | 51 | 11 | 24 | 4 | 0 | 12 |
-| DB | 33 | 15 | 17 | 0 | 1 | 0 |
+| DB | 33 | 16 | 16 | 0 | 1 | 0 |
 | FE | 31 | 13 | 18 | 0 | 0 | 0 |
 | SEC | 27 | 14 | 13 | 0 | 0 | 0 |
 | UX | 26 | 6 | 19 | 0 | 0 | 1 |
@@ -172,7 +173,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | Gate H | 2 | 0 | 2 | 0 | 0 | 0 |
 | Gate I | 5 | 3 | 2 | 0 | 0 | 0 |
 | Gate J | 10 | 0 | 1 | 9 | 0 | 0 |
-| (none) | 110 | 19 | 85 | 2 | 0 | 4 |
+| (none) | 110 | 20 | 84 | 2 | 0 | 4 |
 
 ### 3.2 Superseded wording (Chief Architect)
 
