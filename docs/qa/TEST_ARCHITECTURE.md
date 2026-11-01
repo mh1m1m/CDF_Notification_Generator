@@ -45,6 +45,7 @@ docs/qa/                   this file, SCENARIOS.md, SCREENSHOT_LIBRARY.md, repor
 | `firefox-ar`, `webkit-ar` | Firefox, WebKit | 1280×800 | `ar-SA` | CI nightly / on demand | cross-engine; not in the Claude sandbox (only Chromium is installed there) |
 | `db-only` | none | — | — | every PR | Sentinel DB half and Truth DB half (no browser) |
 | `staging` | Chromium | 1280×800 | `ar-SA` | on demand / Gate J | read-only smoke + isolation against the staging preview (§9) |
+| `access-audit` | Chromium | 1280×720 | `ar-SA`, `rtl` | every PR, after `desktop-ar` (`dependencies`) | V13-QA-022: a prefetch records no access row, a page request exactly one (DB-023 D1); alone so no other spec opens a case for its persona while it counts |
 
 Configuration rules: `executablePath` from `PW_CHROMIUM_PATH` when set (Claude sandboxes:
 `/opt/pw-browsers/chromium`); CI uses the browsers of the pinned `@playwright/test` version. `fullyParallel: true`,
@@ -107,6 +108,10 @@ visibly distinct from `recorded` without colour alone (checked in `tests/a11y`: 
   `cdf_v13_app`, then per query `SET LOCAL ROLE cdf_v13_user` with the persona's claims — the same security context as
   the app (ADR-003). It never connects as the owner role except for the single expected-visibility read in §4, which
   runs in a read-only transaction.
+- The one administrator read (V13-QA-022): the audit ledger and `access_window` are deny-all to every application
+  role, so `ledger()` in `tests/fixtures/db.ts` reads them as the local administrator of `pnpm db:reset`
+  (`V13_ADMIN_DATABASE_URL`, loopback only, never against an external base URL), each read a `READ ONLY` transaction,
+  ids, actions and counts only.
 - A reset per CI job (not per test). Write tests (Scenario B, E) create their own rows through the app and assert on
   their own rows by id, so parallel workers never depend on each other's writes.
 
