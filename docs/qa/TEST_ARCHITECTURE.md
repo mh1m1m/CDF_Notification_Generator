@@ -321,7 +321,9 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
 - **Screenshot library (UXQA-05)**: the five M1 screens × {desktop, tablet, mobile} × {ar, en} × the states the
   screens actually support (data, empty, error, restricted, loading only where it can be captured deterministically).
   Files under `test-results/library/` with an index in `docs/qa/SCREENSHOT_LIBRARY.md`; states that do not exist are
-  listed as "not applicable", never staged.
+  listed as "not applicable", never staged. The plan for the library, visual baselines and their review, the manual
+  accessibility checklist and audit, Firefox and WebKit, and the PR quality report is in
+  `docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` (V13-QA-013).
 
 ## 11. Evidence and reporting
 
