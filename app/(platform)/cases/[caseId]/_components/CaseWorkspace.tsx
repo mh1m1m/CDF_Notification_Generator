@@ -15,19 +15,16 @@ import { DraftForm } from "../notifications/_components/DraftForm";
 import { DataTable } from "@/components/data/DataTable";
 import { StatusBadge, type Tone } from "@/components/data/StatusBadge";
 import { Timeline as UxTimeline } from "@/components/data/Timeline";
-import { formatDate } from "@/components/format";
+import { formatDate, formatDateTime } from "@/components/format";
 import { Breadcrumbs } from "@/components/shell/Breadcrumbs";
 import { CaseHeader } from "@/components/shell/CaseHeader";
 import { CaseTabs } from "@/components/shell/CaseTabs";
 import { CaseWorkspace as UxCaseWorkspace } from "@/components/shell/CaseWorkspace";
-import { ScrollRegion } from "../../../_components/ScrollRegion";
 import styles from "./case.module.css";
 import {
   CAPACITY_KEYS,
-  dateTimeFormat,
   eventLabel,
   notificationStatusLabel,
-  numberFormat,
   PROVENANCE_KEYS,
   recipientClassLabel,
   stageLabel,
@@ -314,12 +311,15 @@ function UnmappedClass({ t, code }: { t: Translator; code: string }) {
 export function NotificationTable({
   t,
   locale,
+  caseRef,
   notifications,
   createdId = null,
   selectedId = null,
 }: {
   t: Translator;
   locale: Locale;
+  /** The case's display number, carried on every row as ADR-013 evidence (never a key). */
+  caseRef: string;
   notifications: readonly CaseNotification[];
   createdId?: string | null;
   /** The notification shown in the preview below the table, if any. */
@@ -332,73 +332,110 @@ export function NotificationTable({
       </p>
     );
   }
-  const when = dateTimeFormat(locale);
-  const num = numberFormat(locale);
+  // FE-010 (UXB-08, UX-009 R-04): the shared DataTable, so the caption stays in view and wraps to the visible width
+  // at 320 px and 200% zoom instead of being cut at the scroll region's edge.
   return (
-    <ScrollRegion className={styles.scroll} labelledBy="case-notifications-caption">
-      <table className={styles.table} data-testid="case-notifications" data-count={notifications.length}>
-        <caption id="case-notifications-caption">{t("case.notifications.caption")}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("case.notifications.column.template")}</th>
-            <th scope="col">{t("case.notifications.column.version")}</th>
-            <th scope="col">{t("case.notifications.column.recipient")}</th>
-            <th scope="col">{t("case.notifications.column.status")}</th>
-            <th scope="col">{t("case.notifications.column.created")}</th>
-            <th scope="col">{t("case.notifications.column.preview")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {notifications.map((n) => (
-            <tr
-              key={n.notification_id}
-              data-testid={`case-notification-${n.notification_id}`}
-              data-notification-id={n.notification_id}
-              data-created={n.notification_id === createdId ? "true" : undefined}
-              data-selected={n.notification_id === selectedId ? "true" : undefined}
+    <DataTable<CaseNotification>
+      t={t}
+      scope="case"
+      testId="case-notifications"
+      tableData={{ "data-count": notifications.length }}
+      captionId="case-notifications-caption"
+      caption={t("case.notifications.caption")}
+      rows={notifications}
+      rowKey={(n) => n.notification_id}
+      rowTestId={(n) => `case-notification-${n.notification_id}`}
+      rowData={(n) => ({
+        "data-notification-id": n.notification_id,
+        "data-created": n.notification_id === createdId ? "true" : undefined,
+        "data-selected": n.notification_id === selectedId ? "true" : undefined,
+      })}
+      rowCaseId={(n) => n.case_id}
+      rowCaseRef={() => caseRef}
+      empty={null}
+      columns={[
+        {
+          key: "template",
+          header: t("case.notifications.column.template"),
+          rowHeader: true,
+          cell: (n) => (
+            <>
+              <span data-testid="case-notification-template-name">{n.template_name[locale]}</span>{" "}
+              <bdi dir="ltr" className={styles.metaRow} data-testid="case-notification-template-code">
+                {n.template_code}
+              </bdi>
+              <span
+                className={styles.metaRow}
+                data-testid="case-notification-language"
+                data-language={n.language}
+              >
+                {t(n.language === "ar" ? "case.language.ar" : "case.language.en")}
+              </span>
+            </>
+          ),
+        },
+        {
+          key: "version",
+          header: t("case.notifications.column.version"),
+          // Template versions are identifiers: Latin in <bdi> in both languages (DESIGN_SYSTEM §6 D10; UXB-04).
+          cell: (n) => (
+            <bdi dir="ltr" data-testid="case-notification-version">
+              {n.template_version}
+            </bdi>
+          ),
+        },
+        {
+          key: "recipient",
+          header: t("case.notifications.column.recipient"),
+          cellData: (n) => ({
+            "data-testid": "case-notification-recipient",
+            "data-recipient-class": n.recipient_class,
+          }),
+          cell: (n) => (
+            <CodeLabel label={recipientClassLabel(t, n.recipient_class)} code={n.recipient_class} />
+          ),
+        },
+        {
+          key: "status",
+          header: t("case.notifications.column.status"),
+          cellData: (n) => ({
+            "data-testid": "case-notification-status",
+            "data-lifecycle-status": n.lifecycle_status,
+          }),
+          cell: (n) => (
+            <CodeLabel label={notificationStatusLabel(t, n.lifecycle_status)} code={n.lifecycle_status} />
+          ),
+        },
+        {
+          key: "created",
+          header: t("case.notifications.column.created"),
+          cell: (n) => (
+            <time dateTime={n.created_at} className="v13-nowrap">
+              {/* The month in words, as in the Center (UXB-02). */}
+              {formatDateTime(locale, n.created_at)}
+            </time>
+          ),
+        },
+        {
+          key: "preview",
+          header: t("case.notifications.column.preview"),
+          cell: (n) => (
+            <Link
+              href={previewHref(n.case_id, n.notification_id)}
+              // QA CHANGES 982bd76: the accessible name uses the words on the row, never raw codes.
+              aria-label={t("case.notifications.previewLinkLabel", {
+                template: n.template_name[locale],
+                recipient: recipientClassLabel(t, n.recipient_class) ?? n.recipient_class,
+              })}
+              aria-current={n.notification_id === selectedId ? "true" : undefined}
+              data-testid={`case-notification-preview-link-${n.notification_id}`}
             >
-              <th scope="row">
-                <span data-testid="case-notification-template-name">{n.template_name[locale]}</span>{" "}
-                <bdi dir="ltr" className={styles.metaRow} data-testid="case-notification-template-code">
-                  {n.template_code}
-                </bdi>
-                <span
-                  className={styles.metaRow}
-                  data-testid="case-notification-language"
-                  data-language={n.language}
-                >
-                  {t(n.language === "ar" ? "case.language.ar" : "case.language.en")}
-                </span>
-              </th>
-              <td>{num.format(n.template_version)}</td>
-              <td data-testid="case-notification-recipient" data-recipient-class={n.recipient_class}>
-                <CodeLabel label={recipientClassLabel(t, n.recipient_class)} code={n.recipient_class} />
-              </td>
-              <td data-testid="case-notification-status" data-lifecycle-status={n.lifecycle_status}>
-                <CodeLabel label={notificationStatusLabel(t, n.lifecycle_status)} code={n.lifecycle_status} />
-              </td>
-              <td className={styles.nowrap}>
-                <time dateTime={n.created_at}>{when.format(new Date(n.created_at))}</time>
-              </td>
-              <td>
-                <Link
-                  href={previewHref(n.case_id, n.notification_id)}
-                  // QA CHANGES 982bd76: the accessible name uses the words on the row, never raw codes.
-                  aria-label={t("case.notifications.previewLinkLabel", {
-                    template: n.template_name[locale],
-                    recipient: recipientClassLabel(t, n.recipient_class) ?? n.recipient_class,
-                  })}
-                  aria-current={n.notification_id === selectedId ? "true" : undefined}
-                  data-testid={`case-notification-preview-link-${n.notification_id}`}
-                >
-                  {t("case.notifications.previewLink")}
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+              {t("case.notifications.previewLink")}
+            </Link>
+          ),
+        },
+      ]}
+    />
   );
 }
 
@@ -485,7 +522,6 @@ function DraftNoticeView({ t, notice }: { t: Translator; notice: DraftNotice | n
 
 /** Server-side preparation of the Scenario E form: ids and already-localised strings only. */
 function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; draft: DraftFormView }) {
-  const num = numberFormat(locale);
   return (
     <DraftForm
       caseId={draft.caseId}
@@ -496,7 +532,9 @@ function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; dra
         label: t("case.draft.templateOption", {
           name: o.template_name[locale],
           code: o.template_code,
-          version: num.format(o.version),
+          // A version is an identifier: Latin digits in both languages, never grouped (D10). An <option> holds
+          // text only, so no <bdi> here.
+          version: String(o.version),
           language: t(o.language === "ar" ? "case.language.ar" : "case.language.en"),
         }),
       }))}
@@ -588,6 +626,7 @@ export function CaseTabContent({
           <NotificationTable
             t={t}
             locale={locale}
+            caseRef={view.summary.case_number}
             notifications={view.notifications}
             createdId={view.notice?.kind === "created" ? view.notice.notificationId : null}
             selectedId={

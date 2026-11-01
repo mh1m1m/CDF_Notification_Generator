@@ -495,7 +495,12 @@ describe("NotificationPreviewSection states", () => {
 describe("M1-07: the Notifications tab shows labels and the template's name, not raw codes", () => {
   const table = (rows: Parameters<typeof NotificationTable>[0]["notifications"], locale: Locale) =>
     renderToStaticMarkup(
-      <NotificationTable t={createTranslator(locale)} locale={locale} notifications={rows} />,
+      <NotificationTable
+        t={createTranslator(locale)}
+        locale={locale}
+        caseRef="CDF-DEMO-2026-0001"
+        notifications={rows}
+      />,
     );
   const row = (over: Partial<ReturnType<typeof previewRecord>> = {}) => previewRecord(1, 1, over);
 

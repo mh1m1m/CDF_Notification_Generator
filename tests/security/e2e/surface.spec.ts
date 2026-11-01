@@ -10,6 +10,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type APIResponse, type Page } from "@playwright/test";
 import { DEFAULT_LOCAL_APP_PASSWORD } from "../../../scripts/db/reset-local.mjs";
+import { requireBuildWhenSignalled } from "../build-readiness";
 
 const SESSION_COOKIE = "__Host-v13_session";
 const LOCAL_BUILD = !process.env.V13_E2E_BASE_URL?.trim();
@@ -245,6 +246,8 @@ test.describe("SEC-APP-13 nothing secret reaches the client (TM-I8)", () => {
   test("no secret name, connection string, role or claims setting in the client bundle", () => {
     test.skip(!LOCAL_BUILD, "scans the local build's .next/static");
     const root = join(process.cwd(), ".next", "static");
+    // V13-SEC-012: in CI a missing build fails here; only a local run reaches the allow-listed skip below.
+    requireBuildWhenSignalled("SEC-APP-13 bundle scan", existsSync(root));
     test.skip(!existsSync(root), "no local build");
     const walk = (dir: string): string[] =>
       readdirSync(dir).flatMap((n) => {
