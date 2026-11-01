@@ -82,15 +82,6 @@ export function recipientClassLabel(t: Translator, code: string): string | null 
   return key ? t(key) : null;
 }
 
-/** Instants in the CDF time zone, Arabic-Indic digits in Arabic (DESIGN_SYSTEM.md §5). */
-export function dateTimeFormat(locale: Locale): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-u-nu-arab" : "en-GB-u-nu-latn", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Riyadh",
-  });
-}
-
 /** Calendar dates (YYYY-MM-DD), shown as that date whatever the time zone. */
 export function dateFormat(locale: Locale): Intl.DateTimeFormat {
   return new Intl.DateTimeFormat(locale === "ar" ? "ar-u-nu-arab" : "en-GB-u-nu-latn", {
