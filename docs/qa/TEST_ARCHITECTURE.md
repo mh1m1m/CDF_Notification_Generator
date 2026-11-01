@@ -132,6 +132,18 @@ Detail and step tables go in `docs/qa/SCENARIOS.md` once the screens exist. Outl
 | **D** Search and filters (M1 basics; full in M2) | filter portfolio by stage and status, paginate, open a case, come back | filters kept in the URL; counts equal DB counts after authorisation; restricted 0009 absent for unassigned personas, also from counts | display-number URL `/cases/CDF-DEMO-2026-0009` and a random UUID give the same 404-equivalent page |
 | **E** Notification in case A never appears as case B's | generate a draft in 0001, open 0002's Notifications tab and the Notification Operations Center | DB: the new notification row has 0001's `case_id`; it is listed only under 0001; preview shows only 0001's reference, stage, recipient | same idempotency key twice → one row; Sentinel clean on the preview |
 
+**E, disclosure to the recipient** (V13-QA-009, REQ-NOTIF-011). For a WITNESS draft previewed in an Arabic and an
+English template, the oracle is the policy file read directly (`lib/disclosure/policy_v13.json`, WITNESS rows, the
+policy's own precedence and restrictiveness order), not `lib/disclosure`, so a projector that drifts from the policy is
+caught. Every field the policy withholds (today `case_number`, `card_content`, `preheader`, `subject_detail`,
+`delivery_status`) must leave no marker in the frame's document, its text, its accessible names (ARIA snapshot), the
+frame's title, or the frame document inside any document or RSC payload; field names and the projector's log never
+appear in a payload at all. The GENERALIZED `classification_marking` shows the class-safe wording only. Control: the
+allowed fields are rendered. A withheld field without browser markers in the test fails it. Mutation checks: the
+loader writing the case number into the frame, and the policy no longer generalizing the classification, both fail
+the test; making `case_number` or `delivery_status` ALLOWED in the policy is clamped by the projector's WITNESS
+scenario ceiling (defence in depth), so nothing changes in the browser.
+
 ## 7. Case Context Sentinel (QG-02, Gate B)
 
 Library `tests/sentinel/sentinel.ts`. Where each rule runs today (ARCH and SEC review of #84; the design aim is every

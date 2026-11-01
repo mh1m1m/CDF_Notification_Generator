@@ -8,13 +8,121 @@
 // Preview (FE-006 part 3): a WITNESS draft opens in UX-006's sandboxed frame from its row's link; the seed's database
 // recipient classes show the OI-037 state; another case's id, an unknown id and a malformed value show one generic
 // state; a WITNESS draft on restricted 0009 fails closed with that same state.
+// Disclosure (V13-QA-009, REQ-NOTIF-011): for a WITNESS preview in either template language, the fields the policy
+// withholds from WITNESS are absent from the frame's document, from its accessible names and from every document and
+// RSC payload of the page; the generalized classification shows only the class-safe wording; the allowed fields are
+// there (control). The oracle is the policy file itself (lib/disclosure/policy_v13.json), read independently of the
+// projector, so a projector that drifts from the policy fails here.
 // SYNTHETIC personas only.
+import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Response } from "@playwright/test";
+import { createTranslator } from "@/lib/i18n";
+import { ar as RENDER_AR } from "@/lib/i18n/notificationRender/ar";
+import { en as RENDER_EN } from "@/lib/i18n/notificationRender/en";
 import { signInAs } from "../fixtures/personas";
 
 const C = (i: number) => `0c000000-0000-4000-8000-0000000000${String(i).padStart(2, "0")}`;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+/** The fields the binding puts into a notice's model (lib/notifications/render/model.ts, buildModelFromRecords). */
+const MODEL_FIELDS: Readonly<Record<string, true>> = Object.freeze({
+  event_title: true,
+  issuer: true,
+  notice_reference: true,
+  template_code: true,
+  case_number: true,
+  card_content: true,
+  preheader: true,
+  subject_detail: true,
+  classification_marking: true,
+  delivery_status: true,
+  confidentiality_notice: true,
+});
+
+/** The seeded templates' names (database/seed/0002_m1_cases.sql): the event title a WITNESS may see. */
+const TEMPLATE_NAMES: Readonly<Record<string, { ar: string; en: string }>> = {
+  "CF-20_INVESTIGATION_ASSIGNED": { ar: "إسناد التحقيق", en: "Investigation assigned" },
+  "CF-24_MEETING_INVITATION": { ar: "دعوة اجتماع", en: "Meeting invitation" },
+};
+
+interface PolicyFile {
+  rows: { recipient: string; field: string; channel: string; context: string; outcome: string }[];
+  generalized_texts: Record<string, Record<string, { ar: string; en: string }>>;
+  restrictiveness_order: string[];
+}
+
+/**
+ * WITNESS outcomes for the model's fields on the platform preview (channel IN_APP, context CASE_PUBLIC: an
+ * unrestricted case), read straight from the policy file with its own precedence (field-exact 4, context-exact 2,
+ * channel-exact 1; ties go to the more restrictive outcome). Independent of lib/disclosure.
+ */
+function witnessOracle(): {
+  withheld: string[];
+  kept: string[];
+  generalized: Record<string, { ar: string; en: string }>;
+} {
+  const policy = JSON.parse(readFileSync("lib/disclosure/policy_v13.json", "utf8")) as PolicyFile;
+  const order = policy.restrictiveness_order;
+  const outcome = (field: string): string => {
+    let best: { score: number; outcome: string } | null = null;
+    for (const r of policy.rows) {
+      if (r.recipient !== "WITNESS") continue;
+      if (r.field !== field && r.field !== "*") continue;
+      if (r.channel !== "IN_APP" && r.channel !== "*") continue;
+      if (r.context !== "CASE_PUBLIC" && r.context !== "*") continue;
+      const score = (r.field === field ? 4 : 0) + (r.context !== "*" ? 2 : 0) + (r.channel !== "*" ? 1 : 0);
+      if (
+        !best ||
+        score > best.score ||
+        (score === best.score && order.indexOf(r.outcome) > order.indexOf(best.outcome))
+      )
+        best = { score, outcome: r.outcome };
+    }
+    return best?.outcome ?? "PROHIBITED";
+  };
+  const withheld: string[] = [];
+  const kept: string[] = [];
+  const generalized: Record<string, { ar: string; en: string }> = {};
+  for (const field of Object.keys(MODEL_FIELDS)) {
+    const o = outcome(field);
+    if (o === "ALLOWED") kept.push(field);
+    else if (o === "GENERALIZED") generalized[field] = policy.generalized_texts[field]!.WITNESS!;
+    else withheld.push(field);
+  }
+  return { withheld, kept, generalized };
+}
+
+/** A document or RSC body with HTML-attribute and JSON-string escaping undone, so markers match in either. */
+function unescapePayload(body: string): string {
+  return body
+    .replace(/\\u003c/gi, "<")
+    .replace(/\\u003e/gi, ">")
+    .replace(/\\u0026/gi, "&")
+    .replace(/\\"/g, '"')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
+
+/**
+ * The rendered notice documents inside a payload: around each DESIGN_PREVIEW marking, from the nearest preceding
+ * doctype to the next closing html tag (the page's own doctype comes earlier, so it is never part of a match).
+ */
+function previewDocuments(body: string): string[] {
+  const docs: string[] = [];
+  const lower = body.toLowerCase();
+  let at = body.indexOf('data-marking="DESIGN_PREVIEW"');
+  while (at !== -1) {
+    const start = lower.lastIndexOf("<!doctype html>", at);
+    const end = lower.indexOf("</html>", at);
+    if (start !== -1 && end !== -1) docs.push(body.slice(start, end + "</html>".length));
+    at = body.indexOf('data-marking="DESIGN_PREVIEW"', end === -1 ? at + 1 : end);
+  }
+  return docs;
+}
 
 /** The ids of the notifications the persona sees on a case's Notifications tab (empty for the empty state). */
 async function notificationIds(page: Page, i: number): Promise<string[]> {
@@ -123,9 +231,10 @@ test.describe("Scenario E — notification preview", () => {
   // Alpha's preview drafts are written on 0004, so they never race the draft test's row checks on 0001 and 0010.
   const ALPHA_CASE = 4;
 
-  /** Creates a WITNESS draft on case i with the first offered template; returns its id. */
-  async function witnessDraft(page: Page, i: number): Promise<string> {
+  /** Creates a WITNESS draft on case i with the given template version (default: the first offered); returns its id. */
+  async function witnessDraft(page: Page, i: number, templateVersionId?: string): Promise<string> {
     await page.goto(`/cases/${C(i)}/notifications`);
+    if (templateVersionId) await page.getByTestId("draft-template").selectOption(templateVersionId);
     await page.getByTestId("draft-recipient").selectOption("WITNESS");
     await page.getByTestId("draft-submit").click();
     await expect(page.getByTestId("draft-created")).toBeVisible();
@@ -164,7 +273,11 @@ test.describe("Scenario E — notification preview", () => {
     const frame = page.getByTestId("case-notification-preview-frame");
     // UX finding on #74: the frame's name is a UI string (event title + the localised preview word), never the raw marking.
     const frameTitle = (await frame.getAttribute("title")) ?? "";
-    expect(frameTitle).toMatch(/^.+ — عرض تجريبي$/);
+    const eventTitle = await page
+      .getByTestId(`case-notification-${id}`)
+      .getByTestId("case-notification-template-name")
+      .innerText();
+    expect(frameTitle).toBe(createTranslator("ar")("case.preview.frameTitle", { title: eventTitle }));
     expect(frameTitle).not.toContain("DESIGN_PREVIEW");
     await expect(frame).toHaveAttribute("sandbox", "");
     expect(await frame.getAttribute("src")).toBeNull();
@@ -258,6 +371,147 @@ test.describe("Scenario E — notification preview", () => {
     await genericText(page);
     await expect(page.getByTestId("case-notification-preview-frame")).toHaveCount(0);
   });
+
+  for (const notice of [
+    { lang: "ar", templateVersionId: "1f000000-0000-4000-8000-000000000001" },
+    { lang: "en", templateVersionId: "1f000000-0000-4000-8000-000000000002" },
+  ] as const) {
+    test(`disclosure (${notice.lang} notice): the fields withheld from WITNESS are absent from the frame, its names and every payload`, async ({
+      page,
+    }) => {
+      const { withheld, kept, generalized } = witnessOracle();
+      // the oracle is not vacuous: the fields ARCH named for QA-009 are where the policy puts them
+      expect(withheld).toEqual(
+        expect.arrayContaining([
+          "case_number",
+          "card_content",
+          "preheader",
+          "subject_detail",
+          "delivery_status",
+        ]),
+      );
+      expect(kept).toEqual(
+        expect.arrayContaining([
+          "event_title",
+          "issuer",
+          "notice_reference",
+          "template_code",
+          "confidentiality_notice",
+        ]),
+      );
+      expect(Object.keys(generalized)).toEqual(["classification_marking"]);
+
+      await signInAs(page, "secretary-alpha");
+      const id = await witnessDraft(page, ALPHA_CASE, notice.templateVersionId);
+      const caseRef = await page.getByTestId("case-header").getAttribute("data-case-ref");
+      expect(caseRef).toBe(`CDF-DEMO-2026-${String(ALPHA_CASE).padStart(4, "0")}`);
+      const templateOption = page.locator(
+        `[data-testid="draft-template"] option[value="${notice.templateVersionId}"]`,
+      );
+      const templateCode = await templateOption.getAttribute("data-template-code");
+      expect(templateCode).toMatch(/^CF-\d+_[A-Z_]+$/);
+
+      // Every document and RSC body the page receives while the preview opens (link click) and on a reload.
+      const bodies: Promise<string>[] = [];
+      const collect = (r: Response) => {
+        const type = r.headers()["content-type"] ?? "";
+        if (
+          /text\/html|text\/x-component/.test(type) &&
+          r.url().includes(`/cases/${C(ALPHA_CASE)}/notifications`)
+        )
+          bodies.push(r.text().catch(() => ""));
+      };
+      page.on("response", collect);
+      await page.getByTestId(`case-notification-preview-link-${id}`).click();
+      await expect(page.getByTestId("case-preview-ready")).toHaveAttribute("data-notification-id", id);
+      await page.reload();
+      await expect(page.getByTestId("case-preview-ready")).toHaveAttribute("data-notification-id", id);
+      page.off("response", collect);
+      const payloads = (await Promise.all(bodies)).map(unescapePayload);
+      const frameDocs = payloads.flatMap(previewDocuments);
+      // at least the reload's document and the click's RSC payload carry the frame's document
+      expect(frameDocs.length).toBeGreaterThanOrEqual(2);
+
+      const frame = page.getByTestId("case-notification-preview-frame");
+      const srcdoc = (await frame.getAttribute("srcdoc")) ?? "";
+      const title = (await frame.getAttribute("title")) ?? "";
+      const inner = page.frameLocator('[data-testid="case-notification-preview-frame"]');
+      const names = await inner.locator("body").ariaSnapshot();
+      const text = await inner.locator("body").innerText();
+      const dict = notice.lang === "ar" ? RENDER_AR : RENDER_EN;
+      const ownMarking = dict["classification.internal"];
+
+      // Markers a withheld field would leave in the rendered notice, per field. A withheld field the table does not
+      // know fails, so a new PROHIBITED field gets a browser check before it can pass.
+      const leaks: Record<string, readonly string[]> = {
+        case_number: [caseRef!, 'data-field="case_number"', RENDER_AR["ui.caseRef"], RENDER_EN["ui.caseRef"]],
+        card_content: [
+          'data-field="card_content"',
+          "card_content",
+          "AdaptiveCard",
+          "application/adaptivecard",
+        ],
+        preheader: ['data-field="preheader"', "preheader", "mso-hide:all"],
+        subject_detail: ['data-field="subject_detail"', "subject_detail", "{{case_reference}}"],
+        delivery_status: [
+          'data-field="delivery_status"',
+          "data-delivery=",
+          RENDER_AR["ui.delivery"],
+          RENDER_EN["ui.delivery"],
+          RENDER_AR["ui.deliveryNote"],
+          RENDER_EN["ui.deliveryNote"],
+        ],
+      };
+      for (const field of withheld) {
+        if (!(field in MODEL_FIELDS)) continue; // a policy field this notice's model does not carry
+        const markers = leaks[field];
+        expect(markers, `no browser leak markers for withheld field ${field}`).toBeDefined();
+        for (const m of markers!) {
+          expect(srcdoc, `${field}: ${m} in the frame document`).not.toContain(m);
+          expect(text, `${field}: ${m} in the frame text`).not.toContain(m);
+          expect(names, `${field}: ${m} in the frame's accessible names`).not.toContain(m);
+          expect(title, `${field}: ${m} in the frame title`).not.toContain(m);
+          for (const doc of frameDocs)
+            expect(doc, `${field}: ${m} in a payload's frame document`).not.toContain(m);
+        }
+      }
+      // field names and the projector's log never travel to the browser at all (the page shows the case number in its
+      // own header, so that value is checked inside the frame's document only)
+      for (const body of payloads) {
+        for (const m of [
+          "card_content",
+          "subject_detail",
+          "delivery_status",
+          "_disclosure_log",
+          "_disclosure_applied",
+        ])
+          expect(body, `${m} in a payload`).not.toContain(m);
+        expect(body).not.toContain('data-field="case_number"');
+        expect(body).not.toContain('data-field="delivery_status"');
+        expect(body).not.toContain(RENDER_AR["classification.internal"]);
+        expect(body).not.toContain(RENDER_EN["classification.internal"]);
+      }
+
+      // GENERALIZED: the classification shows the class-safe wording only, never the notice's own marking
+      const badge = inner.locator('[data-field="classification_marking"]');
+      await expect(badge).toHaveCount(1);
+      await expect(badge).toContainText(generalized.classification_marking![notice.lang]);
+      expect(srcdoc).not.toContain(ownMarking);
+      expect(names).not.toContain(ownMarking);
+
+      // control: the allowed fields are rendered
+      const eventTitle =
+        notice.lang === "ar" ? TEMPLATE_NAMES[templateCode!]!.ar : TEMPLATE_NAMES[templateCode!]!.en;
+      await expect(inner.locator('[data-field="event_title"]')).toHaveText(eventTitle);
+      await expect(inner.locator('[data-field="issuer"]')).not.toBeEmpty();
+      await expect(inner.locator('[data-field="notice_reference"]')).toHaveText(/^NTF-DEMO-[0-9A-F]{8}$/);
+      await expect(inner.locator('[data-field="confidentiality_notice"]')).not.toBeEmpty();
+      // template_code is ALLOWED for WITNESS, but the platform renderer shows it nowhere in the notice (the e-mail
+      // renderer carries it in a metadata header only), so there is nothing to find in the frame: not a control here.
+      expect(names).toContain(eventTitle);
+      expect(title).toBe(createTranslator("ar")("case.preview.frameTitle", { title: eventTitle }));
+    });
+  }
 
   test("at 375 px the tab with an open preview has no horizontal page scroll", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 });
