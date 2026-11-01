@@ -12,6 +12,7 @@ import { DB_PERSONAS } from "../fixtures/db-personas";
 import { TEST_CLAIMS_KEY } from "./support/claims";
 import { clusterAvailable, errorCodeOf, PRIMARY_ADMIN_URL } from "./support/clusters";
 import { adminClient, appClient, asPersona, asRaw, claimsText, PERSONA, WORKSPACE } from "./support/context";
+import { draftFixture } from "./support/refusal";
 
 const available = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
 
@@ -133,6 +134,9 @@ describe.skipIf(!present)("keyset-paged per-case reads (migration 0011)", () => 
   const as = <T>(persona: string, workspace: string, fn: (tx: Tx) => Promise<T>) =>
     asRaw(app, { claims: claimsText(persona, workspace), mac: "valid" }, fn);
   const beta = <T>(fn: (tx: Tx) => Promise<T>) => as(PERSONA.beta, WORKSPACE.INVESTIGATIONS, fn);
+  /** As `as`, on the administrator connection, so fixtures can write several drafts (draftFixture). */
+  const asAdmin = <T>(persona: string, workspace: string, fn: (tx: Tx) => Promise<T>) =>
+    asRaw(admin, { claims: claimsText(persona, workspace), mac: "valid" }, fn);
   /** Writes rows as the administrator, then reads as Beta in INVESTIGATIONS, in one rolled-back transaction. */
   const seededAsBeta = <T>(setup: (tx: Tx) => Promise<unknown>, fn: (tx: Tx) => Promise<T>) =>
     asRaw(admin, { claims: claimsText(PERSONA.beta, WORKSPACE.INVESTIGATIONS), mac: "valid" }, async (tx) => {
@@ -246,10 +250,9 @@ describe.skipIf(!present)("keyset-paged per-case reads (migration 0011)", () => 
                            'SEED_SYNTHETIC')`;
       },
       async (tx) => {
-        await tx`select notification_id from cdf_notifications_v13.api_create_notification_draft(
-                   ${CASE(2)}::uuid, ${TEMPLATE_VERSION_2}::uuid, 'CASE_TEAM', ${key("tie-1")})`;
-        await tx`select notification_id from cdf_notifications_v13.api_create_notification_draft(
-                   ${CASE(2)}::uuid, ${TEMPLATE_VERSION_2}::uuid, 'CASE_TEAM', ${key("tie-2")})`;
+        // Two drafts in one transaction (fixture writes: one command per transaction since 0013).
+        await draftFixture(tx, CASE(2), TEMPLATE_VERSION_2, "CASE_TEAM", key("tie-1"));
+        await draftFixture(tx, CASE(2), TEMPLATE_VERSION_2, "CASE_TEAM", key("tie-2"));
         const out: Record<string, { whole: Row[]; byOne: Row[] }> = {};
         for (const read of READS)
           out[read.name] = {
@@ -291,10 +294,9 @@ describe.skipIf(!present)("keyset-paged per-case reads (migration 0011)", () => 
   });
 
   it("limit 100 is the upper edge: 101 drafts page as 100 + the rest", async () => {
-    const result = await beta(async (tx) => {
+    const result = await asAdmin(PERSONA.beta, WORKSPACE.INVESTIGATIONS, async (tx) => {
       for (let k = 0; k < 101; k += 1)
-        await tx`select notification_id from cdf_notifications_v13.api_create_notification_draft(
-                   ${CASE(2)}::uuid, ${TEMPLATE_VERSION_2}::uuid, 'CASE_TEAM', ${key(`edge-${k}`)})`;
+        await draftFixture(tx, CASE(2), TEMPLATE_VERSION_2, "CASE_TEAM", key(`edge-${k}`));
       const whole = await READS[2]!.unpaged(tx, CASE(2));
       return { whole, pages: await allPages(READS[2]!, tx, CASE(2), 100) };
     });
@@ -359,12 +361,10 @@ describe.skipIf(!present)("keyset-paged per-case reads (migration 0011)", () => 
   it("other workspace and other persona: a case not visible there pages to nothing, with or without a cursor", async () => {
     // 0002 is visible to Delta in GOVERNANCE and not in SECRETARIAT (it has no seeded notification, so Gamma writes an
     // uncommitted draft first); 0004 is visible to Alpha, not to Gamma (Alpha writes a draft there).
-    const result = await as(PERSONA.gamma, WORKSPACE.INVESTIGATIONS, async (tx) => {
-      await tx`select notification_id from cdf_notifications_v13.api_create_notification_draft(
-                 ${CASE(2)}::uuid, ${TEMPLATE_VERSION_2}::uuid, 'CASE_TEAM', ${key("other-workspace")})`;
+    const result = await asAdmin(PERSONA.gamma, WORKSPACE.INVESTIGATIONS, async (tx) => {
+      await draftFixture(tx, CASE(2), TEMPLATE_VERSION_2, "CASE_TEAM", key("other-workspace"));
       await switchTo(tx, PERSONA.alpha, WORKSPACE.SECRETARIAT);
-      await tx`select notification_id from cdf_notifications_v13.api_create_notification_draft(
-                 ${CASE(4)}::uuid, ${TEMPLATE_VERSION_2}::uuid, 'CASE_TEAM', ${key("other-persona")})`;
+      await draftFixture(tx, CASE(4), TEMPLATE_VERSION_2, "CASE_TEAM", key("other-persona"));
       const out: Record<string, unknown> = {};
       for (const read of READS) {
         await switchTo(tx, PERSONA.delta, WORKSPACE.GOVERNANCE);

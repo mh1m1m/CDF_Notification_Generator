@@ -18,6 +18,7 @@ import {
   PERSONA,
   WORKSPACE,
 } from "./support/context";
+import { outcomeOf } from "./support/refusal";
 
 const available = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
 const seeded = available && (await identitySeedPresent(adminClient()));
@@ -31,7 +32,12 @@ const APP_ROLES = ["cdf_v13_user", "cdf_v13_app", "PUBLIC"];
  * trigger, the audit writer and the chain verifier. Anything else must be SECURITY INVOKER.
  */
 const DEFINER_ALLOWED = new Set([
+  "_api_create_notification_draft_impl",
+  "_api_install_claims_key_impl",
+  "_api_switch_workspace_impl",
+  "_api_update_task_status_impl",
   "_append_audit",
+  "_append_audit_refused",
   "_case_owning_visibility",
   "_claim_uuid",
   "_claims_hmac",
@@ -65,16 +71,18 @@ const OWNER_ONLY = [
   "_audit_row_hash_v2(bigint, timestamptz, uuid, uuid, text, text, uuid, uuid, uuid, text, text, jsonb, text)",
   "_policy_fingerprint()",
   "_acl_canonical(aclitem[])",
+  // 0013 (V13-DB-021, R3): the private append helper, the REFUSED writer, the command slot and the four bodies.
+  "_append_audit_row(text, text, uuid, uuid, jsonb, text)",
+  "_append_audit_refused(text, text, text, uuid, uuid)",
+  "_claim_command_slot()",
+  "_api_install_claims_key_impl(bytea)",
+  "_api_update_task_status_impl(uuid, text, integer)",
+  "_api_create_notification_draft_impl(uuid, uuid, text, text)",
+  "_api_switch_workspace_impl(uuid)",
 ];
 
-async function codeOf(promise: Promise<unknown>): Promise<string> {
-  try {
-    await promise;
-    return "OK";
-  } catch (error) {
-    return String((error as { code?: unknown }).code ?? "UNKNOWN");
-  }
-}
+/** A command's refusal (migration 0013), its raised SQLSTATE, or "OK". */
+const codeOf = outcomeOf;
 
 describe.skipIf(!seeded)("catalog invariants and the audit ledger", () => {
   let admin: postgres.Sql;

@@ -322,15 +322,10 @@ describe.skipIf(!present)("my_work_tasks with case columns (migration 0008, V13-
 
     it("closed: the hint is a hint, the command still refuses (V1423) a task on the closed case", async () => {
       const code = await asPersona(app, PERSONA.gamma, "INVESTIGATIONS", async (tx) => {
-        try {
-          await tx.savepoint(
-            (sp) =>
-              sp`select cdf_notifications_v13.api_update_task_status(${TASK(20)}::uuid, 'IN_PROGRESS', 1)`,
-          );
-          return "OK";
-        } catch (error) {
-          return String((error as { code?: unknown }).code);
-        }
+        // Since 0013 the refusal is the command's answer (V13-DB-021), not a raised error.
+        const [row] = await tx<{ refusal: string | null }[]>`
+          select refusal from cdf_notifications_v13.api_update_task_status(${TASK(20)}::uuid, 'IN_PROGRESS', 1)`;
+        return row?.refusal ?? "OK";
       });
       expect(code).toBe("V1423");
     });

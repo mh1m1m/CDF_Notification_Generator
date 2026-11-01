@@ -10,6 +10,7 @@ import { claimsMac, type Tx } from "@/lib/db/security-context";
 import { TEST_CLAIMS_KEY } from "./support/claims";
 import { clusterAvailable, errorCodeOf, PRIMARY_ADMIN_URL } from "./support/clusters";
 import { adminClient, appClient, asPersona, asRaw, claimsText, PERSONA, WORKSPACE } from "./support/context";
+import { draftFixture } from "./support/refusal";
 
 const available = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
 
@@ -174,6 +175,9 @@ describe.skipIf(!present)("Notification Operations Center reads (migration 0010)
   const as = <T>(persona: string, workspace: string, fn: (tx: Tx) => Promise<T>) =>
     asRaw(app, { claims: claimsText(persona, workspace), mac: "valid" }, fn);
   const alpha = <T>(fn: (tx: Tx) => Promise<T>) => as(PERSONA.alpha, WORKSPACE.SECRETARIAT, fn);
+  /** As `alpha`, on the administrator connection, so fixtures can write several drafts (draftFixture). */
+  const alphaAdmin = <T>(fn: (tx: Tx) => Promise<T>) =>
+    asRaw(admin, { claims: claimsText(PERSONA.alpha, WORKSPACE.SECRETARIAT), mac: "valid" }, fn);
 
   beforeAll(async () => {
     app = appClient();
@@ -377,10 +381,11 @@ describe.skipIf(!present)("Notification Operations Center reads (migration 0010)
   });
 
   it("paging: limit 1..100, every row once over all pages (ties included), count = rows over all pages", async () => {
-    const result = await alpha(async (tx) => {
-      // Two drafts in one transaction share created_at (now()): the id breaks the tie.
-      await draft(CASE(1), "tie-a")(tx);
-      await draft(CASE(3), "tie-b")(tx);
+    const result = await alphaAdmin(async (tx) => {
+      // Two drafts in one transaction share created_at (now()): the id breaks the tie. Fixture writes: one command per
+      // transaction since 0013 (V13-DB-021 R1).
+      await draftFixture(tx, CASE(1), TEMPLATE_VERSION(2), "CASE_TEAM", key("tie-a"));
+      await draftFixture(tx, CASE(3), TEMPLATE_VERSION(2), "CASE_TEAM", key("tie-b"));
       const one = await page()(tx);
       const byOne = await allPages({}, 1)(tx);
       const byTwo = await allPages({}, 2)(tx);
@@ -403,8 +408,9 @@ describe.skipIf(!present)("Notification Operations Center reads (migration 0010)
   });
 
   it("paging: the limit is capped at 100", async () => {
-    const result = await alpha(async (tx) => {
-      for (let k = 0; k < 101; k += 1) await draft(CASE(1), `cap-${k}`)(tx);
+    const result = await alphaAdmin(async (tx) => {
+      for (let k = 0; k < 101; k += 1)
+        await draftFixture(tx, CASE(1), TEMPLATE_VERSION(2), "CASE_TEAM", key(`cap-${k}`));
       return { capped: await page({}, undefined, 1000)(tx), n: await count()(tx) };
     });
     expect(result.n).toBe(105);

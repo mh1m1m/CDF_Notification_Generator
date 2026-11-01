@@ -20,6 +20,7 @@ import {
   PERSONA,
   WORKSPACE,
 } from "./support/context";
+import { outcomeOf } from "./support/refusal";
 
 const available = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
 
@@ -51,14 +52,8 @@ const UNKNOWN = "0c000000-0000-4000-8000-0000000000ff";
 const demo = (ns: number[]) => ns.map((n) => `CDF-DEMO-2026-${String(n).padStart(4, "0")}`);
 const key = (label: string) => createHash("sha256").update(`test:${label}`).digest("hex");
 
-async function codeOf(promise: Promise<unknown>): Promise<string> {
-  try {
-    await promise;
-    return "OK";
-  } catch (error) {
-    return String((error as { code?: unknown }).code ?? "UNKNOWN");
-  }
-}
+/** A command's refusal (migration 0013), its raised SQLSTATE, or "OK". */
+const codeOf = outcomeOf;
 
 /** Visibility matrix of the M1 seed (docs/architecture/DATA_MODEL.md ยง5). */
 const VISIBLE: [string, string, WorkspaceCode, number[]][] = [
@@ -449,7 +444,7 @@ describe.skipIf(!seeded)("case access, tasks and notifications (migrations 0002โ
         },
       );
       expect([...result]).toEqual([
-        { task_id: TASK(1), case_id: CASE(1), status: "BLOCKED", row_version: 2 },
+        { task_id: TASK(1), case_id: CASE(1), status: "BLOCKED", row_version: 2, refusal: null },
       ]);
       expect(inspected.task).toEqual({ status: "BLOCKED", row_version: 2 });
       expect(inspected.events).toEqual([
@@ -573,7 +568,7 @@ describe.skipIf(!seeded)("case access, tasks and notifications (migrations 0002โ
       ).toBe("42883");
     });
 
-    it("refuses without any claims (V1401) and writes nothing when refused", async () => {
+    it("refuses without any claims (V1401) and changes no task when refused", async () => {
       expect(await codeOf(asRaw(app, {}, update(TASK(1), "BLOCKED", 1)))).toBe("V1401");
       const [row] = await asOwner(
         admin,
@@ -715,11 +710,20 @@ describe.skipIf(!seeded)("case access, tasks and notifications (migrations 0002โ
     const seedKey = (n: string) => createHash("sha256").update(`seed-m1:${n}`).digest("hex");
 
     it("an idempotency key is used once per author: a replay, or the caller's own seed key, is V1409", async () => {
+      // One command per transaction (V13-DB-021 R1): the first draft is written by the command's body (_impl, called
+      // as the administrator under the same verified claims), then the request role replays the key; rolled back.
       const code = await codeOf(
-        rolledBack(PERSONA.alpha, "SECRETARIAT", async (tx) => {
-          await draft(CASE(1), TEMPLATE_VERSION(2), "CASE_TEAM", key("dup"))(tx);
-          await draft(CASE(1), TEMPLATE_VERSION(2), "CASE_TEAM", key("dup"))(tx);
-        }),
+        asRaw(
+          admin,
+          { claims: claimsText(PERSONA.alpha, WORKSPACE.SECRETARIAT), mac: "valid" },
+          async (tx) => {
+            await tx.unsafe("reset role");
+            await tx`select * from cdf_notifications_v13._api_create_notification_draft_impl(
+                       ${CASE(1)}, ${TEMPLATE_VERSION(2)}, 'CASE_TEAM', ${key("dup")})`;
+            await tx.unsafe("set local role cdf_v13_user");
+            return draft(CASE(1), TEMPLATE_VERSION(2), "CASE_TEAM", key("dup"))(tx);
+          },
+        ),
       );
       expect(code).toBe("V1409");
       // Seed notification 01 was drafted by Secretary Alpha.
