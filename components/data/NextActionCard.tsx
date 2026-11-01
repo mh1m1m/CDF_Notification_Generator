@@ -20,7 +20,8 @@ export interface NextActionCardTask {
   readonly status: ReactNode;
   /** The recorded due date and FE's day count from `deadlineOf` (same clock as My Work); null when none is recorded. */
   readonly due: { readonly date: string; readonly days: number } | null;
-  /** FE's link to this task, one that shows it whichever page of the Tasks tab it is on. */
+  /** FE's in-page link to this task's row in the overview's "my open tasks" list on the same page (`#task-<id>`;
+   *  ARCH ruling, 1 Nov): no query parameter, no route state, no read by task id. */
   readonly href: string;
 }
 

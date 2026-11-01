@@ -95,9 +95,11 @@ authorised action is the first thing after the header. Built on PROC's contract 
   the Tasks tab shows it (existing labels and recorded badge; BLOCKED and DONE wording stays PROPOSED), and "تاريخ
   الاستحقاق" with `DeadlineText` from the recorded `due_date` and FE's `deadlineOf` day count (the same clock as My Work).
   No due date recorded → no due line; no date is invented, and the card says "due date", never "deadline under the rules".
-- **The link.** Goes to the task itself, not to page 1 of the Tasks tab, because on the paged tab the task may be on a
-  later page. FE chooses the URL (for example `/cases/{case_id}/tasks?task={task_id}`); the page it opens must show that
-  task's row.
+- **The link (ARCH ruling, 1 Nov).** An in-page link to the same task's row in the overview's own "مهامي المفتوحة في هذه
+  القضية" list on the same page (for example `#task-{task_id}`, an anchor FE puts on that row in V13-FE-015). The card's
+  task is always that list's first row: both come from one source in one order (PROC-026's order is DB-022's read, which
+  FE-014 puts on the overview). No `?task=` parameter, no new route state and no read by task id: such a read would have
+  to make unknown and unauthorised ids look identical, which is new surface for M1.
 - **NONE.** The card renders nothing: no element, no heading, no line, no placeholder. NONE carries no reason, and the
   overview's own "لا توجد مهام مفتوحة مسندة إليك في هذه القضية" already covers the common case.
 - **Look.** Card surface with a 1 px control border and a 4 px start-side bar in `--cdf-primary`; the heading is small

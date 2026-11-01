@@ -203,7 +203,7 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Strings `common.nextAction.heading|status|dueDate` (ar, en). Styles `.v13-next-action*` in `styles/globals.css`.
 - Spec: SCREENS.md S3 (Next Action Card), DESIGN_SYSTEM.md §3.4a, STRINGS.md.
 - Tests: `tests/unit/components/next-action-card.spec.tsx` (14). FE wires the card (calls `nextActionForCase`, passes
-  status, day count and a link that shows the task on any page of the Tasks tab); QA checks it on the page then.
+  status, day count and an in-page `#task-<id>` link to the overview row, ARCH ruling); QA checks it on the page then.
 
 ## Unresolved defects
 - UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is OPEN, owned by FE as V13-FE-016

@@ -8,8 +8,7 @@ import { NextActionCard, type NextActionCardTask } from "@/components/data/NextA
 import { createTranslator, type Locale } from "@/lib/i18n";
 
 const TASK_ID = "0d000000-0000-4000-8000-000000000001";
-const CASE_ID = "0c000000-0000-4000-8000-000000000001";
-const HREF = `/cases/${CASE_ID}/tasks?task=${TASK_ID}`;
+const HREF = `#task-${TASK_ID}`;
 
 const task = (over: Partial<NextActionCardTask> = {}): NextActionCardTask => ({
   taskId: TASK_ID,
@@ -84,14 +83,13 @@ describe("NextActionCard: a task", () => {
     expect(html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
   });
 
-  it("carries only this task: no case id, persona, other task or count in the markup", () => {
+  it("carries only this task: no case id, persona, other task or count in the markup (in-page link only)", () => {
     const html = render("en", task());
     const uuids = [...html.matchAll(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g)].map(
       (m) => m[0],
     );
-    // The task id appears as the card's attribute and inside FE's link; the case id only inside FE's link.
-    expect(new Set(uuids)).toEqual(new Set([TASK_ID, CASE_ID]));
-    expect(html.replace(HREF, "")).not.toContain(CASE_ID);
+    // Only this task's id: on the card and in FE's in-page link.
+    expect(new Set(uuids)).toEqual(new Set([TASK_ID]));
     expect(html).not.toMatch(/data-count|persona/);
   });
 
