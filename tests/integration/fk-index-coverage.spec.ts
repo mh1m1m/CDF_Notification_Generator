@@ -25,9 +25,10 @@ async function ready(): Promise<boolean> {
 const present = await ready();
 if (available && !present) console.warn("[integration] skipping fk-index-coverage: migration 0009 missing");
 
-/** Accepted without an index (migration 0009 gives each reason). */
+/** Accepted without an index (migrations 0009 and 0012 give each reason). */
 const ACCEPTED_UNINDEXED = [
   "audit_event_actor_persona_id_fkey",
+  "audit_event_policy_version_fk",
   "audit_event_workspace_id_fkey",
   "case_record_owning_workspace_id_fkey",
   "dispatch_outbox_notification_fk",

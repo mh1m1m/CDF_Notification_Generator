@@ -6,8 +6,9 @@
 -- project administrator, who becomes cdf_v13_owner for the run (bootstrap membership, SET only), so the owner-only
 -- objects below can be counted and verified.
 --
--- One READ ONLY transaction that ends in ROLLBACK. It reads catalogue metadata only. The two exceptions read no row
--- content: the number of rows in claims_key, and the verdict of verify_audit_chain().
+-- One READ ONLY transaction that ends in ROLLBACK. It reads catalogue metadata only. The three exceptions read no row
+-- content: the number of rows in claims_key, the verdict of verify_audit_chain(), and the latest policy_version row
+-- (a version code and a fingerprint).
 --
 -- Output: one row per check (check_id | detail | breaches), then VERDICT: PASS only when every check has 0 breaches.
 --   P01 RLS enabled on every V13 table
@@ -27,6 +28,10 @@
 --       function with no ACL counts as PUBLIC EXECUTE). PUBLIC or any other role is a breach. Predefined roles such as
 --       pg_read_all_data pass has_*_privilege by design on hosted and hold no V13 grant; they are not ACL grantees,
 --       so P09 does not report them, and P08 proves no V13 role belongs to one.
+--   P10 the access policy is the recorded one: _policy_fingerprint() on this server equals the fingerprint of the highest
+--       policy_version row (V13-DB-020, REQ-AUD-005). A migration that changes a policy, an RLS flag, an ACL, a trigger's
+--       state or a function without recording a new version fails here. Needs migration 0012; after 0006–0011 run the
+--       file as it stood before P10.
 -- The section between BEGIN CHECKS and END CHECKS is one SELECT; the local test runs it verbatim.
 
 begin read only;
@@ -233,6 +238,17 @@ checks (check_id, detail, breaches) as (
     from (select * from acl
            where acl.grantee = 0
               or pg_catalog.pg_get_userbyid(acl.grantee) not in (select rolname from v13_roles)) x
+  union all
+  select 'P10_policy_version_current',
+         case when pv.version is null then 'no policy_version row'
+              when pv.fingerprint = f.live then 'live access policy = ' || pv.version
+              else 'access policy changed since ' || pv.version || ' without a new policy_version row' end,
+         case when pv.version is not null and pv.fingerprint = f.live then 0 else 1 end
+    from (select cdf_notifications_v13._policy_fingerprint() as live) f
+    left join (select v.version, v.fingerprint
+                 from cdf_notifications_v13.policy_version v
+                order by v.version desc
+                limit 1) pv on true
 )
 select check_id, detail, breaches::int as breaches from checks
 union all
