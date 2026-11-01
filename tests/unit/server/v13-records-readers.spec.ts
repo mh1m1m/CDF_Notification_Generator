@@ -10,7 +10,7 @@ import {
   createV13ProceduralRecordsReader,
   rowToCaseTask,
 } from "@/lib/adapters/procedural-records/v13-procedural-records";
-import type { CaseId, RequestIdentity } from "@/lib/contracts";
+import { InvalidCursorError, type CaseId, type RequestIdentity } from "@/lib/contracts";
 import type { Tx } from "@/lib/db/security-context";
 import { caseIdOf } from "./support/fake-case-source";
 import { caseEventId, caseNotificationId, caseTaskId } from "./support/fake-records";
@@ -222,5 +222,82 @@ describe("V13 record readers", () => {
 
   it("an OPEN task needs no status event", () => {
     expect(rowToCaseTask(taskRow({ status: "OPEN", status_event_id: null })).status_event_id).toBeNull();
+  });
+});
+
+// V13-FE-014 (DB-022 migration 0014): the overview's own open tasks, one page of case_my_open_tasks_page.
+describe("listMyOpenTasksPage", () => {
+  const mineRow = (n: number, extra: Record<string, unknown> = {}) =>
+    taskRow({ id: caseTaskId(1, n), is_mine: true, page_cursor: `2026-11-0${n}|INTAKE_REVIEW`, ...extra });
+  const pageOf = (rows: unknown[]) => {
+    const r = recorder(rows);
+    const procedural = createV13ProceduralRecordsReader(
+      async <T>(identity: RequestIdentity, fn: (tx: Tx) => Promise<T>) => {
+        const tx = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+          r.calls.push({ text: strings.join("$"), values, identity });
+          return Promise.resolve(rows);
+        }) as unknown as Tx;
+        return fn(tx);
+      },
+    );
+    return {
+      calls: r.calls,
+      read: (cursor?: string) =>
+        procedural.listMyOpenTasksPage(SECRETARY, CASE, { limit: 2, ...(cursor ? { cursor } : {}) }),
+    };
+  };
+
+  it("calls only case_my_open_tasks_page, case id and cursor bound, limit + 1; the persona is never an argument", async () => {
+    const { calls, read } = pageOf([mineRow(1), mineRow(2)]);
+    const page = await read();
+    expect(page.items.map((t) => t.id)).toEqual([caseTaskId(1, 1), caseTaskId(1, 2)]);
+    expect(page.next_cursor).toBeNull();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.identity).toBe(SECRETARY);
+    expect(calls[0]!.text).toMatch(
+      /from cdf_notifications_v13\.case_my_open_tasks_page\(\$::uuid, \$::text,\s+\$::uuid, \$::integer\)/,
+    );
+    expect(calls[0]!.text).not.toContain("*");
+    expect(calls[0]!.values).toEqual([CASE, null, null, 3]);
+    expect(JSON.stringify(calls[0]!.values)).not.toContain(SECRETARY.persona_id);
+  });
+
+  it("issues a cursor of its own list; the tasks tab's cursor is refused before any read", async () => {
+    const { read } = pageOf([mineRow(1), mineRow(2), mineRow(3)]);
+    const page = await read();
+    expect(page.items).toHaveLength(2);
+    const decoded = JSON.parse(Buffer.from(page.next_cursor!, "base64url").toString("utf8"));
+    expect(decoded).toEqual({ v: 1, k: "myOpenTasks", at: "2026-11-02|INTAKE_REVIEW", id: caseTaskId(1, 2) });
+    const next = pageOf([mineRow(3)]);
+    await next.read(page.next_cursor!);
+    expect(next.calls[0]!.values).toEqual([CASE, "2026-11-02|INTAKE_REVIEW", caseTaskId(1, 2), 3]);
+    const tasksCursor = Buffer.from(JSON.stringify({ ...decoded, k: "tasks" }), "utf8").toString("base64url");
+    const refused = pageOf([mineRow(1)]);
+    await expect(refused.read(tasksCursor)).rejects.toThrow(InvalidCursorError);
+    expect(refused.calls).toEqual([]);
+  });
+
+  it.each([
+    ["another persona's task", mineRow(1, { is_mine: false })],
+    ["a DONE task", mineRow(1, { status: "DONE" })],
+    ["a CANCELLED task", mineRow(1, { status: "CANCELLED" })],
+    ["another case's task", mineRow(1, { case_id: OTHER })],
+    ["a row without its page_cursor", mineRow(1, { page_cursor: undefined })],
+    [
+      "an events-shaped page_cursor",
+      mineRow(1, { page_cursor: "2026-10-01T08:00:00.000000Z|2026-10-01T08:00:00.000000Z" }),
+    ],
+  ] as const)("refuses the whole page for %s (fail closed)", async (_n, row) => {
+    const { read } = pageOf([mineRow(2), row]);
+    await expect(read()).rejects.toThrow();
+  });
+
+  it("not mine or not open is a CaseRecordsMismatchError", async () => {
+    await expect(pageOf([mineRow(1, { is_mine: false })]).read()).rejects.toBeInstanceOf(
+      CaseRecordsMismatchError,
+    );
+    await expect(pageOf([mineRow(1, { status: "DONE" })]).read()).rejects.toBeInstanceOf(
+      CaseRecordsMismatchError,
+    );
   });
 });

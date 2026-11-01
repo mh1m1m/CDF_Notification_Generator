@@ -290,12 +290,87 @@ describe("paged Case Workspace tabs", () => {
     }
     expect(r.calls).toEqual([]);
   });
+});
 
-  it("the overview reads one page of five events and ignores any page in the URL", async () => {
+// V13-FE-014 (DB-022, OI-054): the overview's own open tasks are pages of case_my_open_tasks_page; its last five
+// events are one unpaged page of five whatever the URL says.
+describe("the overview's own open tasks", () => {
+  const OVERVIEW = `/cases/${C1}`;
+  const mine = (v: CaseWorkspaceView) => (v.tab === "overview" ? v.myTasks.map((t) => t.id) : []);
+  const pagingOfOverview = (v: CaseWorkspaceView) => (v.tab === "overview" ? v.paging : null);
+
+  it("reads one page of five events and one page of own open tasks; never the whole task list", async () => {
     const r = manyRecords(60);
-    const v = await load("overview", { ok: false }, r);
+    const v = await load("overview", FIRST_PAGE, r);
     expect(v.tab === "overview" && v.events).toHaveLength(5);
-    expect(r.calls).toEqual(["listEventsPage", "listTasks"]);
+    expect(mine(v)).toHaveLength(CASE_RECORDS_PAGE_SIZE);
+    expect(r.calls).toEqual(["listEventsPage", "listMyOpenTasksPage"]);
+    expect(r.calls).not.toContain("listTasks");
+    expect(r.calls).not.toContain("listTasksPage");
+  });
+
+  it("25 rows a page, next / previous walk every own open task once in order; events stay five", async () => {
+    const r = manyRecords(60);
+    const seen: string[] = [];
+    let v = await load("overview", FIRST_PAGE, r);
+    expect(pagingOfOverview(v)!.prevHref).toBeNull();
+    seen.push(...mine(v));
+    let next = pagingOfOverview(v)!.nextHref;
+    const pages: string[] = [];
+    while (next) {
+      pages.push(next);
+      const url = new URL(next, "http://x");
+      expect(url.pathname).toBe(OVERVIEW);
+      v = await load("overview", parseListPage(Object.fromEntries(url.searchParams)), r);
+      expect(v.tab === "overview" && v.events).toHaveLength(5);
+      seen.push(...mine(v));
+      next = pagingOfOverview(v)!.nextHref;
+    }
+    expect(seen).toHaveLength(60);
+    expect(new Set(seen).size).toBe(60);
+    expect(pagingOfOverview(v)!.prevHref).toBe(pages[0]);
+  });
+
+  it("a tampered URL or a refused cursor: no own task rows, a first-page link, the events still shown", async () => {
+    for (const page of [
+      { ok: false } as const,
+      { ok: true, query: { after: "Zm9yZ2Vk", trail: [""] } } as const,
+      {
+        ok: true,
+        query: {
+          after: Buffer.from(JSON.stringify({ k: "tasks", n: 25 })).toString("base64url"),
+          trail: [""],
+        },
+      } as const,
+    ]) {
+      const r = manyRecords(60);
+      const v = await load("overview", page, r);
+      expect(mine(v)).toEqual([]);
+      expect(v.tab === "overview" && v.events).toHaveLength(5);
+      expect(pagingOfOverview(v)).toEqual({ prevHref: OVERVIEW, nextHref: null, search: "" });
+      const out = renderToStaticMarkup(<CaseWorkspace t={createTranslator("en")} locale="en" view={v} />);
+      expect(out).toContain('data-testid="case-my-tasks-empty"');
+      expect(out).toContain('data-testid="case-my-tasks-prev"');
+      expect(out).not.toContain('data-testid="case-my-tasks-next"');
+      expect(out).not.toContain('data-testid="case-error"');
+    }
+  });
+
+  it("pager markup: a labelled nav under the own tasks, none on a single page", async () => {
+    const many = renderToStaticMarkup(
+      <CaseWorkspace t={createTranslator("ar")} locale="ar" view={await load("overview", FIRST_PAGE)} />,
+    );
+    expect(many).toMatch(/<nav aria-label="صفحات القائمة"[^>]*data-testid="case-my-tasks-pagination"/);
+    expect(many).toMatch(/<a[^>]*rel="next"[^>]*data-testid="case-my-tasks-next"[^>]*>التالي<\/a>/);
+    const one = renderToStaticMarkup(
+      <CaseWorkspace
+        t={createTranslator("en")}
+        locale="en"
+        view={await load("overview", FIRST_PAGE, manyRecords(3))}
+      />,
+    );
+    expect(one).toContain('data-testid="case-my-tasks"');
+    expect(one).not.toContain("case-my-tasks-pagination");
   });
 });
 
