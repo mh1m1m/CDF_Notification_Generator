@@ -1,0 +1,71 @@
+# UX improvement backlog (UXQA-19, V13-UX-010)
+
+**Classification: SYNTHETIC-DATA REFERENCE IMPLEMENTATION.** Synthetic personas and `CDF-DEMO-2026-NNNN` cases only.
+
+Serves REQ-QA-038 (PROMPT_B §22 UXQA-19, §21.10 "Evidence-Based UX Backlog"): a continuously maintained,
+evidence-based backlog that converts verified defects into development tasks with reproducible evidence.
+
+## Rules
+
+- **Only verified items.** An item enters the backlog only with evidence: a findings-register row, a PR review, an
+  open-issue row or a test. Opinions without a reproduction stay out.
+- **One owner task per item.** Each item names the team and the board task that closes it. Paths follow the board's
+  ownership: UX does not fix FE, QA, SEC or PROC paths; items on those paths are routed through ARCH.
+- **Severity** (as the M1 register): HIGH blocks a gate, MEDIUM visible defect, LOW polish.
+- **Priority** orders the work:
+  - **P1**: MEDIUM on an M1 gate screen (QG-09 / Gate F, QG-08), with a fix ready or in review.
+  - **P2**: LOW visible defect on an M1 screen, or a check that keeps a fixed defect fixed.
+  - **P3**: consistency or debt with a user-visible effect, or a fix that waits on another task.
+  - **P4**: blocked on an owner decision or a source; no work until it arrives.
+- **Status**: OPEN · IN_REVIEW (a PR is up) · BLOCKED (waits on a decision or source) · DONE (merged, with sha). A DONE
+  item stays in the table for one review cycle with its merge sha, then moves to the closed list.
+- **Maintenance.** UX updates this file in every UX PR that adds, fixes or re-checks a finding, and after each design
+  re-review. A routed item is re-checked on `develop` once its fix merges, and only then marked DONE.
+
+## Sources
+
+| Source | What it holds | Evidence |
+| --- | --- | --- |
+| `docs/design/reviews/M1_DESIGN_REVIEW.md` (V13-UX-007) | Findings M1-01 … M1-19 on the M1 screens, ar/en, 360–1920 px | #69 `f069850` (CI 41248768824); M1-15 … M1-19 #76 `e9cd74d` (CI 41255696874) |
+| `docs/design/reviews/UX009_TEXT_RESIZE_REFLOW.md` (V13-UX-009) | R-01 … R-04: text resize 200 %, reflow at 320 px, text spacing (WCAG 1.4.4, 1.4.10, 1.4.12) | #96 (in review) |
+| `docs/OPEN_ISSUES.md` | Open issues with a user-visible effect (OI-005, OI-027, OI-039, OI-050) | `develop` `988b1d6` |
+| QA reviews of UX PRs (`docs/teams/qa/STATUS.md`) | Every QA CHANGES on a UX PR was fixed in that PR; QA lists no open defects | `develop` `988b1d6` |
+
+## Backlog
+
+Ordered by priority, then severity.
+
+| ID | Item | Evidence | Reproduce | Sev. | Pri. | Owner (task) | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| UXB-01 | Notification Operations Center table is squeezed to the viewport: template codes break inside the identifier and are cut at the scroll-region edge; the caption is cut mid-word. Fix: minimum inline size, scroll inside the region, codes on one line (as M1-04 on `DataTable`). | M1-15 | Secretary Alpha, `/notifications`, ar, 360 px | MEDIUM | P1 | FE (V13-FE-009) | IN_REVIEW (#82) |
+| UXB-02 | Notification dates and times are numeric in Arabic (`٢٠٢٦/١٠/٠٣، ١٢:٠٠ م`), not the long-month form; also the case Notifications tab, which M1-06's fix left to FE. Fix: `components/format.ts`. | M1-18; M1-06 (case Notifications tab remainder) | Secretary Alpha, `/notifications` and `/cases/{0001}` Notifications tab, ar | MEDIUM | P1 | FE (V13-FE-009) | IN_REVIEW (#82) |
+| UXB-03 | Template code breaks at its hyphen (`CF-` / `20_INVESTIGATION_ASSIGNED`). | M1-16 | Secretary Alpha, `/notifications`, en, 768 px | LOW | P2 | FE (V13-FE-009) | IN_REVIEW (#82) |
+| UXB-04 | Template version renders as `الإصدار ١`; under DESIGN_SYSTEM §6 D10 it is an identifier: Latin inside `<bdi dir="ltr">`. | M1-17 | Secretary Alpha, `/notifications`, ar | LOW | P2 | FE (V13-FE-009) | IN_REVIEW (#82) |
+| UXB-05 | The notification tables' caption sits inside the scrolling table, so its second line is cut at the region edge. Content stays reachable (1.4.10 passes); visible defect. `DataTable`'s sticky caption already solves it on the UX tables. | R-04 (UX-009) | Secretary Alpha, `/notifications` and case Notifications tab, ar and en, 320 px and 640 px | LOW | P2 | FE (V13-FE-010, after #82) | OPEN |
+| UXB-06 | Automate UX-009's six checks (no page-level inline scroll at 320 px and 200 %, no clipped text with the text-spacing override, tables scroll only in labelled regions …) so R-01 … R-03 stay fixed in the browser; `tests/unit/components/reflow.spec.ts` pins only the CSS. | UX-009 §4 | spec in UX009_TEXT_RESIZE_REFLOW.md §4 | LOW | P2 | QA (V13-QA-010) | OPEN |
+| UXB-07 | Re-run the M1 design review on UXB-01 … UXB-05 once their fixes merge, using QA-005's screenshot library in place of the temporary capture; mark each item DONE with its sha. | M1 review "Next" | as each source row | LOW | P2 | UX (with QA-005) | BLOCKED (waits on #82, FE-010) |
+| UXB-08 | The case Notifications tab keeps FE's own table instead of `DataTable` (the rest of the Case Workspace moved in UX-008(c)), so it misses the shared minimum width, sticky caption and row ids, and can drift visually from the other tabs. | M1-11 remainder (#90 `f11e65a`, Notifications tab left alone by the brief) | `/cases/{0001}` Notifications tab vs Tasks tab, ar and en, 360 px | LOW | P3 | FE, or UX with ARCH's advance agreement (new task) | OPEN (needs a task id) |
+| UXB-09 | Event and stage labels come from the Case Workspace's own maps (`labels.ts`), not the `lib/domain` catalogues; a code missing from one list shows as unknown on one screen and labelled on another. | OI-027 | compare an event code's label on the case Events tab with its catalogue entry | LOW | P3 | PROC (catalogues), then FE | BLOCKED (waits on PROC catalogues) |
+| UXB-10 | The in-case preview of a restricted case (0009) fails closed for every persona, its team included, so the team sees the failure state instead of a preview. Correct fail-closed behaviour; the UX gap is that no persona can preview. | OI-050 | Secretary Alpha, `/cases/{0009}` Notifications tab, open a preview | LOW | P3 | ARCH (choose the read and its owner) | BLOCKED |
+| UXB-11 | The case header stage is a plain label: no stage name from the journey catalogue (no new stage keys until the owner maps stages). | OI-039 (ARCH ruling, 1 Nov) | `/cases/{0001}` header | LOW | P4 | Owner (PROC brief V13-PROC-009) | BLOCKED (owner decision) |
+| UXB-12 | Arabic text uses the documented fallback font stack, labelled SOURCE_REQUIRED; the brand Arabic font is not supplied. | OI-005 | any page, ar | LOW | P4 | Owner (font files and licence), then UX (`styles/tokens.css`) | BLOCKED (source) |
+
+## Ruled or accepted (not backlog)
+
+| ID | Finding | Ruling |
+| --- | --- | --- |
+| M1-14 | Digits in the product name and in stored case titles | RULED (ARCH 31 Oct 23:00, DESIGN_SYSTEM §6 D10): shown as written |
+| M1-19 | Native date inputs show `mm/dd/yyyy` in the Arabic UI (Chromium uses the browser locale) | NOTED (ARCH 31 Oct): accepted platform behaviour; labels are Arabic, values post as ISO |
+
+## Closed
+
+Fixed and re-checked on `develop`; evidence in the source register.
+
+| Source | Items | Fixed by |
+| --- | --- | --- |
+| M1 review | M1-01, M1-02, M1-03 | #69 `f069850` (V13-UX-007) |
+| M1 review | M1-04, M1-05, M1-06 (Portfolio, My Work), M1-13 | #85 `f45f192` (V13-UX-008(b)) |
+| M1 review | M1-07 | #74 `a93fa61` (V13-FE-006 part 3) |
+| M1 review | M1-08, M1-10 | #76 `e9cd74d` (V13-UX-008(a)) |
+| M1 review | M1-06 (Case Workspace), M1-09, M1-11 (Case Workspace), M1-12 | #90 `f11e65a` (V13-UX-008(c)) |
+| UX-009 | R-01, R-02, R-03 | #96 (in review; moves here on merge) |
