@@ -34,10 +34,26 @@ export class WorkspaceSwitchMismatchError extends Error {
   readonly code = "WORKSPACE_SWITCH_MISMATCH";
 }
 
+export class WorkspaceSwitchRefusedError extends Error {
+  override readonly name = "WorkspaceSwitchRefusedError";
+  readonly code = "WORKSPACE_SWITCH_REFUSED";
+  constructor(readonly refusal: "NO_CONTEXT" | "NOT_FOUND") {
+    super("WORKSPACE_SWITCH_REFUSED");
+  }
+}
+
+/** The command's refusal codes (migration 0005), returned in its `refusal` column since migration 0013 (V13-DB-021). */
+const REFUSALS: Readonly<Record<string, WorkspaceSwitchRefusedError["refusal"]>> = {
+  V1401: "NO_CONTEXT",
+  V1404: "NOT_FOUND",
+};
+
 /**
  * Runs api_switch_workspace for `target` in the current identity's request context and returns once it has
- * committed. The database refuses (V1401 no verified persona, V1404 any unusable target) by throwing; the answer must
- * name exactly the workspace asked for, or the switch is refused (fail closed).
+ * committed. The database refuses (V1401 no verified persona, V1404 any unusable target) in its `refusal` column; that
+ * column is read first, after the transaction has committed (so its COMMAND_REFUSED audit row persists), and throws
+ * WorkspaceSwitchRefusedError. Any other refusal value throws a plain Error. The answer must name exactly the
+ * workspace asked for, or the switch is refused (fail closed).
  */
 export async function confirmWorkspaceSwitch(
   run: RequestContextRunner,
@@ -48,11 +64,21 @@ export async function confirmWorkspaceSwitch(
   const rows = await run(
     identity,
     (tx) =>
-      tx<{ workspace_id: string; workspace_code: string }[]>`
-      select s.workspace_id, s.workspace_code
+      tx<{ workspace_id: string | null; workspace_code: string | null; refusal: string | null }[]>`
+      select s.workspace_id, s.workspace_code, s.refusal
         from cdf_notifications_v13.api_switch_workspace(${targetId}::uuid) s`,
   );
-  if (rows.length !== 1 || rows[0]?.workspace_id !== targetId || rows[0]?.workspace_code !== target) {
+  if (rows.length !== 1) throw new WorkspaceSwitchMismatchError("WORKSPACE_SWITCH_MISMATCH");
+  const row = rows[0] as { workspace_id: unknown; workspace_code: unknown; refusal: unknown };
+  if (row.refusal !== null) {
+    const refusal =
+      typeof row.refusal === "string" && Object.hasOwn(REFUSALS, row.refusal)
+        ? REFUSALS[row.refusal]
+        : undefined;
+    if (!refusal) throw new Error("api_switch_workspace: unknown refusal");
+    throw new WorkspaceSwitchRefusedError(refusal);
+  }
+  if (row.workspace_id !== targetId || row.workspace_code !== target) {
     throw new WorkspaceSwitchMismatchError("WORKSPACE_SWITCH_MISMATCH");
   }
 }

@@ -1,7 +1,8 @@
 # V13-DB-021 — Recording refused commands in the audit ledger (design note)
 
-**SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Team DB · 1 Nov 2026 · status: **PROPOSED**, for SEC's
-threat review first, then the Chief Architect. No migration or code is written until both accept it. Requirement:
+**SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Team DB · 1 Nov 2026 · status: **ACCEPTED** (SEC
+threat review ACCEPT f1eb959 with required items R1–R7, #120 comment 6553371697; Chief Architect ACCEPT 26024a9; #120
+merged). Built as migration 0013; §8 lists where the build differs from this note. Requirement:
 **REQ-AUD-005** (outcome on every audit record), following V13-DB-020 (migration 0012, PR #119), which added
 `audit_event.outcome` with `REFUSED` reserved for this step. SEC's five questions (#117, comment 6553236861) are
 answered in §4. Governing: ADR-011 (append-only hash-chained ledger), ADR-017 (attribution from verified claims).
@@ -185,3 +186,31 @@ Conditions:
 1. For SEC: write path **C** (recommended) or A?
 2. For SEC: the window bound in §4.5 (one row per persona, command and code per 60 s, with a suppressed count)?
 3. Decided (§6): DB proposes the adapter and server edits in the migration PR.
+
+## 8. As built (migration 0013)
+
+- **R1, one command per transaction.** Every `api_*` function, **`api_install_claims_key` included**, calls
+  `_claim_command_slot()`: a transaction-level advisory lock on (`hashtext('cdf_notifications_v13')`, backend pid),
+  checked in `pg_locks`. A second call in the same transaction is refused: the three request-time commands return
+  `refusal` = `V1500` (not recorded, no window), `api_install_claims_key` raises `V1500`. The request role cannot
+  release the lock (`pg_advisory_unlock` returns false); rolling back to a savepoint releases it with the command's
+  work. Including the install command means no transaction can run it together with a request command.
+- **Four bodies, not three.** `_api_install_claims_key_impl` holds the install body too, so its wrapper can take the
+  mark first; it records no refusal (§1 unchanged). Names: `_api_<command>_impl`; bodies copied verbatim.
+- **Shared append.** `_append_audit_row` (invoker, owner-only) holds 0012's append; `_append_audit` (SUCCEEDED) and
+  `_append_audit_refused` (REFUSED) call it. `_append_audit` keeps its signature and is re-created.
+- **Targets.** A refused draft has no notification, so its row carries the case only (`entity_id` null). The task
+  wrapper looks the task's case up as the owner and `_append_audit_refused` re-checks `can_access_case` (R7).
+- **R2.** The handler is `when sqlstate 'V1401' or … 'V1423'` and keeps `left(sqlstate, 5)` only. `V1500` is not in the
+  list, so an audit append outside READ COMMITTED still raises.
+- **R4.** `audit_event_refusal_shape_check`: REFUSED ⇒ action `COMMAND_REFUSED`, metadata keys ⊆ {command, refusal,
+  suppressed} with allow-listed values and `suppressed` a positive integer, no id on V1401/V1404, actor null only on
+  V1401; SUCCEEDED ⇒ not `COMMAND_REFUSED` and no `refusal` or `suppressed` key.
+- **Window.** `REFUSAL_AUDIT_WINDOW_SECONDS` = 60 is a DB-proposed value (register §9 and DATA_MODEL §7).
+- **Adapters (§6).** `lib/adapters/my-work`, `lib/adapters/notification-records` and `lib/server/workspace.ts` read
+  `refusal` first, after `run(...)` resolves, through the same allow-list map; any other value throws a plain error.
+  `lib/server/workspace.ts` gains `WorkspaceSwitchRefusedError`. A raised V14xx is no longer mapped (it cannot occur).
+- **Tests.** `tests/integration/refused-command-audit.spec.ts` (R1, R2, R3, R4, R6, R7, window, hosted-layout grants);
+  existing command suites read the `refusal` column; fixtures that wrote several drafts in one transaction call the
+  draft body as the administrator (`draftFixture`), since a second command is now refused.
+

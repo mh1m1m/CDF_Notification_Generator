@@ -135,7 +135,7 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
       ]);
     });
 
-    it("the register holds V13-ACCESS-0012 from migration 0012, and it equals this server's live fingerprint", async () => {
+    it("the register holds V13-ACCESS-0012 and V13-ACCESS-0013, and the highest equals this server's live fingerprint", async () => {
       const rows = await asOwner(
         admin,
         (tx) =>
@@ -143,27 +143,47 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
           select version, migration, fingerprint, cdf_notifications_v13._policy_fingerprint() as live
             from cdf_notifications_v13.policy_version order by version`,
       );
-      expect(rows.map((r) => [r.version, r.migration])).toEqual([["V13-ACCESS-0012", "0012"]]);
-      expect(rows[0]!.fingerprint).toMatch(/^[0-9a-f]{64}$/);
-      expect(rows[0]!.fingerprint).toBe(rows[0]!.live);
+      // Each migration that changes access ends with its own row (DB-020 rule): 0012, then 0013 (V13-DB-021).
+      expect(rows.map((r) => [r.version, r.migration])).toEqual([
+        ["V13-ACCESS-0012", "0012"],
+        ["V13-ACCESS-0013", "0013"],
+      ]);
+      for (const r of rows) expect(r.fingerprint).toMatch(/^[0-9a-f]{64}$/);
+      // The highest version wins: 0013 replaced functions, so 0012's fingerprint is no longer the live one.
+      expect(rows[1]!.fingerprint).toBe(rows[1]!.live);
+      expect(rows[0]!.fingerprint).not.toBe(rows[0]!.live);
       expect(await asOwner(admin, guard)).toBe(true);
     });
 
-    it("every ledger row written after 0012 is version 2, SUCCEEDED, with the recorded policy version", async () => {
+    it("every ledger row on this cluster is version 2 with the current policy version; REFUSED only for refusals", async () => {
+      // db:reset applies every migration before the seeds, so every row carries the highest version (0013). REFUSED
+      // rows come from refused commands of earlier suites (0013) and are always COMMAND_REFUSED.
       const rows = await asOwner(
         admin,
         (tx) =>
-          tx<{ hash_version: number; outcome: string; policy_version: string | null; n: number }[]>`
-          select hash_version, outcome, policy_version, count(*)::int as n
-            from cdf_notifications_v13.audit_event group by 1, 2, 3`,
+          tx<
+            {
+              hash_version: number;
+              outcome: string;
+              policy_version: string | null;
+              refused: boolean;
+              n: number;
+            }[]
+          >`
+          select hash_version, outcome, policy_version, action = 'COMMAND_REFUSED' as refused, count(*)::int as n
+            from cdf_notifications_v13.audit_event group by 1, 2, 3, 4 order by 2`,
       );
-      expect(rows.length).toBe(1);
-      expect(rows[0]).toMatchObject({
-        hash_version: 2,
-        outcome: "SUCCEEDED",
-        policy_version: "V13-ACCESS-0012",
-      });
-      expect(rows[0]!.n).toBeGreaterThanOrEqual(2);
+      expect(rows.map(({ n: _n, ...r }) => r)).toEqual(
+        expect.arrayContaining([
+          { hash_version: 2, outcome: "SUCCEEDED", policy_version: "V13-ACCESS-0013", refused: false },
+        ]),
+      );
+      for (const { n: _n, ...r } of rows)
+        expect([
+          { hash_version: 2, outcome: "SUCCEEDED", policy_version: "V13-ACCESS-0013", refused: false },
+          { hash_version: 2, outcome: "REFUSED", policy_version: "V13-ACCESS-0013", refused: true },
+        ]).toContainEqual(r);
+      expect(rows.find((r) => r.outcome === "SUCCEEDED")!.n).toBeGreaterThanOrEqual(2);
       expect((await asOwner(admin, verify)).is_valid).toBe(true);
     });
 
@@ -202,17 +222,17 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
         await codeIn(
           tx,
           (sp) => sp`insert into cdf_notifications_v13.policy_version (version, fingerprint, migration)
-                                     values ('V13-ACCESS-13', repeat('0', 64), '0013')`,
+                                     values ('V13-ACCESS-99', repeat('0', 64), '0099')`,
         ),
         await codeIn(
           tx,
           (sp) => sp`insert into cdf_notifications_v13.policy_version (version, fingerprint, migration)
-                                     values ('V13-ACCESS-0013', repeat('0', 64), '0014')`,
+                                     values ('V13-ACCESS-0099', repeat('0', 64), '0100')`,
         ),
         await codeIn(
           tx,
           (sp) => sp`insert into cdf_notifications_v13.policy_version (version, fingerprint, migration)
-                                     values ('V13-ACCESS-0013', 'not-a-hash', '0013')`,
+                                     values ('V13-ACCESS-0099', 'not-a-hash', '0099')`,
         ),
       ]);
       expect(codes).toEqual(["23514", "23514", "23514"]);
@@ -250,7 +270,7 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
       expect(row).toMatchObject({
         hash_version: 2,
         outcome: "SUCCEEDED",
-        policy_version: "V13-ACCESS-0012",
+        policy_version: "V13-ACCESS-0013",
         actor_persona_id: PERSONA.alpha,
         correlation_id: CORRELATION,
         ok: true,
@@ -275,7 +295,7 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
     it("takes the highest version, not the latest recorded_at", async () => {
       const versions = await asOwner(admin, async (tx) => {
         await tx`insert into cdf_notifications_v13.policy_version (version, fingerprint, migration, recorded_at)
-                 values ('V13-ACCESS-0013', repeat('a', 64), '0013', '2000-01-01T00:00:00Z')`;
+                 values ('V13-ACCESS-0099', repeat('a', 64), '0099', '2000-01-01T00:00:00Z')`;
         await tx`insert into cdf_notifications_v13.policy_version (version, fingerprint, migration)
                  values ('V13-ACCESS-0005', repeat('b', 64), '0005')`;
         const [a] = await tx<{ id: string }[]>`
@@ -284,7 +304,7 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
           select policy_version from cdf_notifications_v13.audit_event where id = ${a!.id}`;
         return r!.policy_version;
       });
-      expect(versions).toBe("V13-ACCESS-0013");
+      expect(versions).toBe("V13-ACCESS-0099");
     });
 
     it("refuses to append when no policy version is recorded (V1501)", async () => {
@@ -358,10 +378,15 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
   });
 
   describe("the verifier", () => {
-    /** Rewrites one column of the last row (trigger switched off, rolled back) and returns [its seq, the verdict]. */
+    /**
+     * Appends one SUCCEEDED row, rewrites one column of it (trigger switched off, rolled back) and returns [its seq,
+     * the verdict]. Appending first keeps the target a SUCCEEDED v2 row whatever earlier suites left last (since 0013,
+     * a refused command commits a REFUSED row).
+     */
     const rewriteLast = (set: string, before?: string) =>
       asOwner(admin, async (tx) => {
         if (before) await tx.unsafe(before);
+        await tx`select cdf_notifications_v13._append_audit('TEST_TAMPER', 'test', null, null)`;
         const [last] = await tx<{ seq: string }[]>`
           select max(seq)::text as seq from cdf_notifications_v13.audit_event`;
         await tx`alter table cdf_notifications_v13.audit_event disable trigger audit_event_no_update_delete`;
@@ -370,21 +395,23 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
       });
 
     it("reports a v2 row whose outcome was rewritten", async () => {
-      const [seq, verdict] = await rewriteLast("outcome = 'REFUSED'");
+      // The row-shape constraint (0013) is dropped too (rolled back), so only the hash can give the rewrite away.
+      const [seq, verdict] = await rewriteLast(
+        "outcome = 'REFUSED'",
+        "alter table cdf_notifications_v13.audit_event drop constraint audit_event_refusal_shape_check",
+      );
       expect(verdict).toMatchObject({ is_valid: false, first_broken_seq: seq });
     });
 
     it("reports a v2 row whose policy version was rewritten", async () => {
-      const [seq, verdict] = await rewriteLast(
-        "policy_version = 'V13-ACCESS-0013'",
-        `insert into cdf_notifications_v13.policy_version (version, fingerprint, migration)
-         values ('V13-ACCESS-0013', repeat('c', 64), '0013')`,
-      );
+      // The appended row carries the current version (0013); 0012 is another recorded version.
+      const [seq, verdict] = await rewriteLast("policy_version = 'V13-ACCESS-0012'");
       expect(verdict).toMatchObject({ is_valid: false, first_broken_seq: seq });
     });
 
     it("reports a v2 row relabelled as v1 (a downgrade that drops outcome and version from the hash)", async () => {
       const [seq, verdict] = await asOwner(admin, async (tx) => {
+        await tx`select cdf_notifications_v13._append_audit('TEST_TAMPER', 'test', null, null)`;
         const [last] = await tx<{ seq: string }[]>`
           select max(seq)::text as seq from cdf_notifications_v13.audit_event`;
         await tx`alter table cdf_notifications_v13.audit_event disable trigger audit_event_no_update_delete`;
@@ -417,7 +444,7 @@ describe.skipIf(!present)("V13-DB-020 audit outcome and policy version (migratio
         await tx.unsafe(statement);
         const changed = await guard(tx);
         await tx`insert into cdf_notifications_v13.policy_version (version, fingerprint, migration)
-                 values ('V13-ACCESS-0013', cdf_notifications_v13._policy_fingerprint(), '0013')`;
+                 values ('V13-ACCESS-0099', cdf_notifications_v13._policy_fingerprint(), '0099')`;
         return [changed, await guard(tx)] as const;
       });
 

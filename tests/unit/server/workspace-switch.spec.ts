@@ -74,7 +74,7 @@ beforeEach(() => {
   written.clear();
   events.length = 0;
   db.calls.length = 0;
-  db.answer = { rows: [{ workspace_id: SECRETARIAT_ID, workspace_code: "SECRETARIAT" }] };
+  db.answer = { rows: [{ workspace_id: SECRETARIAT_ID, workspace_code: "SECRETARIAT", refusal: null }] };
   vi.resetModules();
   vi.spyOn(console, "error").mockImplementation(() => undefined);
   for (const [k, v] of Object.entries(env)) vi.stubEnv(k, v);
@@ -164,27 +164,29 @@ describe("switchWorkspace Server Action", () => {
     expect(call.identity).toMatchObject({ persona_id: DELTA, active_workspace: "GOVERNANCE" });
   });
 
+  const refusalRow = (refusal: unknown) => ({ workspace_id: null, workspace_code: null, refusal });
+  const okRow = { workspace_id: SECRETARIAT_ID, workspace_code: "SECRETARIAT", refusal: null };
   it.each([
-    ["the database refuses the target (V1404)", { code: "V1404" }],
-    ["the database finds no verified persona (V1401)", { code: "V1401" }],
+    ["the database refuses the target (refusal V1404)", { rows: [refusalRow("V1404")] }],
+    ["the database finds no verified persona (refusal V1401)", { rows: [refusalRow("V1401")] }],
+    // V13-DB-021 R5: the refusal column is read first, so a refusal row that also names the target is still refused.
+    ["a refusal row that also names the asked-for workspace", { rows: [{ ...okRow, refusal: "V1404" }] }],
+    ["an unknown refusal (V1500)", { rows: [refusalRow("V1500")] }],
+    ["an unknown refusal (__proto__)", { rows: [refusalRow("__proto__")] }],
+    ["refusal null and every other column null", { rows: [refusalRow(null)] }],
+    [
+      "an answer without the refusal column",
+      { rows: [{ workspace_id: SECRETARIAT_ID, workspace_code: "SECRETARIAT" }] },
+    ],
+    ["a raised database error (V1404)", { code: "V1404" }],
+    ["a raised database error (V1500)", { code: "V1500" }],
     ["the database answers no row", { rows: [] }],
     [
       "the database names another workspace",
-      { rows: [{ workspace_id: GOVERNANCE_ID, workspace_code: "GOVERNANCE" }] },
+      { rows: [{ ...okRow, workspace_id: GOVERNANCE_ID, workspace_code: "GOVERNANCE" }] },
     ],
-    [
-      "the database answers a mismatched code",
-      { rows: [{ workspace_id: SECRETARIAT_ID, workspace_code: "GOVERNANCE" }] },
-    ],
-    [
-      "the database answers two rows",
-      {
-        rows: [
-          { workspace_id: SECRETARIAT_ID, workspace_code: "SECRETARIAT" },
-          { workspace_id: SECRETARIAT_ID, workspace_code: "SECRETARIAT" },
-        ],
-      },
-    ],
+    ["the database answers a mismatched code", { rows: [{ ...okRow, workspace_code: "GOVERNANCE" }] }],
+    ["the database answers two rows", { rows: [okRow, okRow] }],
   ])("%s: cookie unchanged, generic reference", async (_n, answer) => {
     const before = await createSessionToken({ persona_id: DELTA, active_workspace: "GOVERNANCE" }, { env });
     jar.set(SESSION_COOKIE_NAME, before);
@@ -218,5 +220,61 @@ describe("switchWorkspace Server Action", () => {
     expect(after?.exp).toBe(before?.exp);
     const maxAge = (written.get(SESSION_COOKIE_NAME) as { maxAge: number }).maxAge;
     expect(Math.abs(maxAge - 5 * 3600)).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("confirmWorkspaceSwitch (V13-DB-021 R5, §6)", () => {
+  async function confirm(rows: unknown[]) {
+    const { confirmWorkspaceSwitch } = await import("@/lib/server/workspace");
+    const outcome: string[] = [];
+    const run = async <T>(_identity: unknown, fn: (tx: never) => Promise<T>): Promise<T> => {
+      const tx = (() => Promise.resolve(rows)) as never;
+      try {
+        const value = await fn(tx);
+        outcome.push("commit");
+        return value;
+      } catch (e) {
+        outcome.push("rollback");
+        throw e;
+      }
+    };
+    const error = await confirmWorkspaceSwitch(
+      run as never,
+      ctxFor(GOVERNANCE).session.identity,
+      "SECRETARIAT",
+    ).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    return { error, outcome };
+  }
+
+  it.each([
+    ["V1401", "NO_CONTEXT"],
+    ["V1404", "NOT_FOUND"],
+  ])("maps refusal %s to %s after the transaction has committed", async (code, refusal) => {
+    const { WorkspaceSwitchRefusedError } = await import("@/lib/server/workspace");
+    const { error, outcome } = await confirm([{ workspace_id: null, workspace_code: null, refusal: code }]);
+    expect(error).toBeInstanceOf(WorkspaceSwitchRefusedError);
+    expect((error as InstanceType<typeof WorkspaceSwitchRefusedError>).refusal).toBe(refusal);
+    expect(outcome).toEqual(["commit"]);
+  });
+
+  it.each([["V1409"], ["V1422"], ["V1423"], ["V1500"], ["constructor"], [""]])(
+    "throws a plain error on the refusal %j, which the switch command never answers",
+    async (code) => {
+      const { WorkspaceSwitchRefusedError } = await import("@/lib/server/workspace");
+      const { error } = await confirm([{ workspace_id: null, workspace_code: null, refusal: code }]);
+      expect(error).toBeInstanceOf(Error);
+      expect(error).not.toBeInstanceOf(WorkspaceSwitchRefusedError);
+    },
+  );
+
+  it("returns on the asked-for workspace with refusal null", async () => {
+    const { error, outcome } = await confirm([
+      { workspace_id: SECRETARIAT_ID, workspace_code: "SECRETARIAT", refusal: null },
+    ]);
+    expect(error).toBeNull();
+    expect(outcome).toEqual(["commit"]);
   });
 });

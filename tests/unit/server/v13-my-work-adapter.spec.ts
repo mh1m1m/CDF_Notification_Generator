@@ -1,7 +1,8 @@
 // V13 MyWorkReader and TaskCommandPort (SQL) with a recording transaction stub: only my_work_tasks and
 // api_update_task_status are called, with bound values, inside the identity's context; rows are validated against
-// the contract (one bad row refuses the list); the command's SQLSTATEs map to refusals and an answer that does not
-// match the command is refused.
+// the contract (one bad row refuses the list); the command's refusal column (migration 0013) is read first and maps to
+// refusals after the transaction commits, an unknown refusal throws, and an answer that does not match the command is
+// refused.
 import { describe, expect, it } from "vitest";
 import { createV13MyWork } from "@/lib/adapters/my-work/v13-my-work";
 import { TaskCommandRefusedError } from "@/lib/contracts";
@@ -85,57 +86,114 @@ describe("listMyTasks", () => {
 
 describe("updateStatus", () => {
   const command = { task_id: taskIdOf(5), new_status: "BLOCKED" as const, expected_version: 1 };
+  const ok = { task_id: taskIdOf(5), case_id: caseIdOf(3), status: "BLOCKED", row_version: 2 };
+  const refused = (refusal: unknown) => ({
+    task_id: null,
+    case_id: null,
+    status: null,
+    row_version: null,
+    refusal,
+  });
 
   it("calls api_update_task_status with bound values and returns the change", async () => {
-    const { calls, port } = recorder(async () => [
-      { task_id: taskIdOf(5), case_id: caseIdOf(3), status: "BLOCKED", row_version: 2 },
-    ]);
+    const { calls, port } = recorder(async () => [{ ...ok, refusal: null }]);
     const change = await port.updateStatus(SECRETARY, command);
-    expect(change).toEqual({ task_id: taskIdOf(5), case_id: caseIdOf(3), status: "BLOCKED", row_version: 2 });
+    expect(change).toEqual(ok);
+    expect(calls).toHaveLength(1);
     expect(calls[0]?.text).toContain("from cdf_notifications_v13.api_update_task_status(");
+    expect(calls[0]?.text).toContain("r.refusal");
     expect(calls[0]?.values).toEqual([taskIdOf(5), "BLOCKED", 1]);
   });
 
+  // V13-DB-021 R5 and §6: the refusal column is read first and mapped exactly as the SQLSTATE was before 0013, and
+  // only after run(...) has resolved, so the transaction holding the REFUSED audit row commits.
   it.each([
     ["V1401", "NO_CONTEXT"],
     ["V1404", "NOT_FOUND"],
     ["V1409", "STALE"],
     ["V1422", "INVALID_TRANSITION"],
     ["V1423", "CASE_CLOSED"],
-  ])("maps SQLSTATE %s to %s", async (code, refusal) => {
-    const { port } = recorder(async () => {
-      throw Object.assign(new Error("db"), { code });
+  ])("maps refusal %s to %s after the transaction has committed", async (code, refusal) => {
+    const outcome: string[] = [];
+    const calls: string[] = [];
+    const port = createV13MyWork(async <T>(_identity: RequestIdentity, fn: (tx: Tx) => Promise<T>) => {
+      const tx = ((strings: TemplateStringsArray) => {
+        calls.push(strings.join("$"));
+        return Promise.resolve([refused(code)]);
+      }) as unknown as Tx;
+      try {
+        const value = await fn(tx);
+        outcome.push("commit");
+        return value;
+      } catch (e) {
+        outcome.push("rollback");
+        throw e;
+      }
     });
     const error = await port.updateStatus(SECRETARY, command).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(TaskCommandRefusedError);
     expect((error as TaskCommandRefusedError).refusal).toBe(refusal);
     expect((error as Error).message).toBe(refusal);
+    expect(outcome).toEqual(["commit"]);
+    expect(calls).toHaveLength(1);
   });
 
-  it("lets any other failure propagate unchanged", async () => {
-    const boom = Object.assign(new Error("db"), { code: "40001" });
-    const { port } = recorder(async () => {
-      throw boom;
-    });
-    await expect(port.updateStatus(SECRETARY, command)).rejects.toBe(boom);
+  it("checks the refusal before any other column: a refusal row that also names the asked-for change is refused", async () => {
+    // Fails if the adapter ignores the refusal column (the mutation ARCH's §6 asks a test to catch).
+    const { port } = recorder(async () => [{ ...ok, refusal: "V1409" }]);
+    const error = await port.updateStatus(SECRETARY, command).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(TaskCommandRefusedError);
+    expect((error as TaskCommandRefusedError).refusal).toBe("STALE");
+  });
+
+  it.each([
+    ["V1500"],
+    ["V1400"],
+    ["42501"],
+    ["v1404"],
+    [""],
+    ["constructor"],
+    ["__proto__"],
+    ["toString"],
+    [1404],
+  ])("throws a plain error, never a refusal or a change, on the unknown refusal %j", async (code) => {
+    const { port } = recorder(async () => [refused(code)]);
+    const error = await port.updateStatus(SECRETARY, command).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(TaskCommandRefusedError);
+  });
+
+  it("a raised database error, V14xx included, propagates unchanged (no longer a refusal path)", async () => {
+    for (const code of ["40001", "V1404", "V1500", "42501"]) {
+      const boom = Object.assign(new Error("db"), { code });
+      const { port } = recorder(async () => {
+        throw boom;
+      });
+      await expect(port.updateStatus(SECRETARY, command)).rejects.toBe(boom);
+    }
   });
 
   it.each([
     ["no row", []],
-    ["two rows", [{ task_id: taskIdOf(5), case_id: caseIdOf(3), status: "BLOCKED", row_version: 2 }, {}]],
-    ["another task", [{ task_id: taskIdOf(2), case_id: caseIdOf(3), status: "BLOCKED", row_version: 2 }]],
-    ["another status", [{ task_id: taskIdOf(5), case_id: caseIdOf(3), status: "DONE", row_version: 2 }]],
     [
-      "a version that is not the next one",
-      [{ task_id: taskIdOf(5), case_id: caseIdOf(3), status: "BLOCKED", row_version: 3 }],
+      "two rows",
+      [
+        { ...ok, refusal: null },
+        { ...ok, refusal: null },
+      ],
     ],
-    [
-      "an extra column",
-      [{ task_id: taskIdOf(5), case_id: caseIdOf(3), status: "BLOCKED", row_version: 2, x: 1 }],
-    ],
+    ["a refusal row and a change", [refused("V1404"), { ...ok, refusal: null }]],
+    ["no refusal column", [ok]],
+    ["refusal null and every other column null", [refused(null)]],
+    ["another task", [{ ...ok, task_id: taskIdOf(2), refusal: null }]],
+    ["another status", [{ ...ok, status: "DONE", refusal: null }]],
+    ["a version that is not the next one", [{ ...ok, row_version: 3, refusal: null }]],
+    ["an extra column", [{ ...ok, refusal: null, x: 1 }]],
   ])("refuses an answer with %s", async (_n, rows) => {
     const { port } = recorder(async () => rows);
-    await expect(port.updateStatus(SECRETARY, command)).rejects.toThrow();
+    const error = await port.updateStatus(SECRETARY, command).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(TaskCommandRefusedError);
   });
 
   it("validates the command before any SQL", async () => {
