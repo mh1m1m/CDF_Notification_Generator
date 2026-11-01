@@ -134,8 +134,8 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 - V13-QA-015 — branch test/V13-QA-015-visual-baselines (stacked on V13-QA-014) — IN_REVIEW: visual baselines (36,
   committed only from the CI visual job's candidates) and guard G7 (`updateSnapshots` pinned, no update flag in
   workflows or scripts). Evidence: guard spec 129/129, library-index 13/13, unit 2401/2401, e2e 401/401, lint and
-  typecheck clean; local baseline probes (missing → 9 fail + 36 candidates; candidates in place → 9/9; swapped image →
-  fail with diff); library still 244/244. No ARCH hunk; the CI visual job (`V13_E2E_VISUAL=baseline`, upload
+  typecheck clean; local baseline probes (missing → 9 fail + 36 candidates; candidates in place → 9/9 on three fresh
+  databases; swapped image → fail with diff); library 244/244, identical to V13-QA-014's 3a75a42 in two runs. No ARCH hunk; the CI visual job (`V13_E2E_VISUAL=baseline`, upload
   `test-results/baseline-candidates/` and the Playwright output) is ARCH's.
 
 ## Unresolved defects

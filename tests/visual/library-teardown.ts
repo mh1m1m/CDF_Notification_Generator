@@ -8,6 +8,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   CAPTURE_STYLE,
+  DRAFT_TIME_STYLE,
   BROWSER_TIME,
   FONT_PACKAGES,
   imageCount,
@@ -38,6 +39,7 @@ export default function libraryTeardown(): void {
     browserTime: BROWSER_TIME,
     maskColor: MASK_COLOR,
     captureStyle: CAPTURE_STYLE,
+    draftTimeStyle: DRAFT_TIME_STYLE,
     fonts: fonts
       ? fonts.split("\n").map((line) => (/^\S+ \S/.test(line) ? line : `${line.trim()} (not installed)`))
       : "not recorded (not the CI visual job): these images are never baselines",

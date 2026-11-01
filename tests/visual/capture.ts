@@ -5,8 +5,11 @@ import { expect, type BrowserContext, type Locator, type Page } from "@playwrigh
 import { LOCALE_COOKIE } from "@/lib/i18n";
 import { mintSession, persona, signInAs } from "../fixtures/personas";
 import { checkSynthetic, formatFindings, type DataInput } from "./data-check";
+import { expectFramesPainted, frameBoxes, settleFrames } from "./frames";
 import {
   BROWSER_TIME,
+  captureStyle,
+  MASK_COLOR,
   MASKS,
   VIEWPORTS,
   withDraft,
@@ -69,8 +72,8 @@ export async function startRow(page: Page, context: BrowserContext, baseURL: str
 
 /**
  * Opens one cell (language, viewport, theme) of a row and proves it: the expected status, the page language, a title,
- * the state's own marker, the open switcher where asked, fonts loaded, and the data check (V1–V5) on the page and every
- * frame. Throws (fails the test) before any capture otherwise.
+ * the state's own marker, the open switcher where asked, fonts loaded, every frame in view and loaded, and the data
+ * check (V1–V5) on the page and every frame. Throws (fails the test) before any capture otherwise.
  */
 export async function openCell(
   page: Page,
@@ -93,6 +96,9 @@ export async function openCell(
     await expect(page.locator('[data-testid^="workspace-menu-option-"]').first()).toBeVisible();
   }
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  // Frames in view, loaded and with their fonts, before the data check reads them and before the capture (ARCH C1, C2
+  // on #140; frames.ts).
+  await settleFrames(page);
   const findings = checkSynthetic(await dataInputs(page), {
     personaNames: await page.locator('[data-testid="persona-menu-name"]').allTextContents(),
     secrets: await secretsOf(context),
@@ -107,4 +113,33 @@ export function masksFor(page: Page, c: Capture, draft: string | null): Locator[
     const selector = withDraft(mask.selector, draft);
     return mask.frame ? page.frameLocator(mask.frame).locator(selector) : page.locator(selector);
   });
+}
+
+/** Options shared by every capture and comparison of a row. */
+export function captureOptions(page: Page, c: Capture, draft: string | null) {
+  return {
+    animations: "disabled" as const,
+    caret: "hide" as const,
+    mask: masksFor(page, c, draft),
+    maskColor: MASK_COLOR,
+    style: captureStyle(draft),
+  };
+}
+
+/**
+ * Captures the opened cell to memory: mask counts first (ARCH C3 on #140; a mask inside a frame must cover its
+ * element), then the image, which must show every frame painted. The caller writes the image only after this returns.
+ */
+export async function captureCell(page: Page, c: Capture, draft: string | null) {
+  const options = captureOptions(page, c, draft);
+  const maskCounts = await Promise.all(options.mask.map((m) => m.count()));
+  c.masks.forEach((m, i) => {
+    if ((MASKS[m] as { frame?: string }).frame)
+      expect(maskCounts[i], `mask ${m} covers its element in the frame`).toBeGreaterThan(0);
+  });
+  if (c.element) return { png: await page.locator(c.element).screenshot(options), maskCounts };
+  const boxes = await frameBoxes(page);
+  const png = await page.screenshot({ ...options, fullPage: true });
+  await expectFramesPainted(page, png, boxes, MASK_COLOR);
+  return { png, maskCounts };
 }

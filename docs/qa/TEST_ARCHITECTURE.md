@@ -357,19 +357,29 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   Beta on 0005 (the seeded drafts' recipient classes have no disclosure mapping yet, captured as `no-mapping`; 0005 is
   visible to no other captured persona, so the draft cannot change another row); server-clock text is masked (deadline
   words and My Work's overdue and this-week counts, D1); the masked correlation id gets a fixed width during the
-  capture only, because its glyph width changes with the id. Two runs on two fresh databases gave 244/244 identical
-  images in the sandbox.
+  capture only, because its glyph width changes with the id; the run-made draft's masked created time likewise
+  (`DRAFT_TIME_STYLE`), because its width moved the table's columns. Frames (ARCH CHANGES on #140, `frames.ts`): before
+  the data check and the capture each frame is brought into view and must show non-empty content with its fonts loaded
+  (Chromium left the preview frame below a mobile viewport unpainted, so every mobile preview was an empty box, and a
+  data check that read the frame before it loaded could pass on an empty document); the page stays scrolled to the
+  frame, because back at the top Chromium again left it unpainted. The capture is taken to memory and written only
+  after a check that each frame's area of it holds at least 8 distinct colours (an empty frame has one), and mask
+  counts are taken before the capture; a mask inside a frame must cover its element. Four runs on four fresh databases
+  gave 244/244 identical images in the sandbox.
 - **Baselines (V13-QA-015, design §5)**: `baseline.spec.ts` compares the committed subset (`BASELINE_ROWS`: each
   screen's data state and the open workspace switcher, desktop and mobile, ar and en, light; 36 images) with
-  `tests/visual/__screenshots__/` through `toHaveScreenshot` (threshold 0.2, `maxDiffPixels: 0`), in the
+  `tests/visual/__screenshots__/` through `toMatchSnapshot` on the image the library's own capture path makes
+  (`captureCell`; threshold 0.2, `maxDiffPixels: 0`), in the
   `visual-baseline` project (`V13_E2E_VISUAL=baseline`). Each cell is opened and proven exactly as the library does
-  (`capture.ts`, shared by both specs: status, language, state marker, data check V1–V5), with the same masks and
+  (`capture.ts`, shared by both specs: status, language, state marker, frames in view and loaded, data check V1–V5), with the same masks and
   capture style. CI never writes a baseline (`updateSnapshots: "none"`, pinned by G7): a changed one fails with the
   expected, actual and diff images; a missing one fails too, and because Playwright then writes no image, the spec
   writes the candidate to `test-results/baseline-candidates/` with the same options. A new or changed baseline is a
   candidate from the CI visual job, committed in a PR that lists each file; none is made in a sandbox (fonts). Probed
   locally: with no baselines all 9 rows fail and 36 candidates are written; with those candidates in place a fresh
-  database gives 9/9 at zero differing pixels; a swapped image fails with 52,635 differing pixels. The PR that adds this
+  database gives 9/9 at zero differing pixels (three runs a minute apart); a swapped image fails with 52,635 differing
+  pixels. `toHaveScreenshot` was dropped because it captured the run-made draft's row without the capture style (its
+  time kept its own 174 px instead of 146 px), which made the preview's comparison depend on the clock. The PR that adds this
   ships no images; the first CI visual job produces the candidates.
 
 ## 11. Evidence and reporting

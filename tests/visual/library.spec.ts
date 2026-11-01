@@ -10,15 +10,13 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "@playwright/test";
-import { masksFor, openCell, startRow } from "./capture";
+import { captureCell, openCell, startRow } from "./capture";
 import {
   CAPTURES,
-  CAPTURE_STYLE,
   captureFile,
   LANGUAGES,
   LIBRARY_DIR,
   MANIFEST_PARTS_DIR,
-  MASK_COLOR,
   MASKS,
   THEMES,
   viewportsOf,
@@ -38,20 +36,10 @@ for (const c of CAPTURES) {
           await openCell(page, context, baseURL!, c, route, { lang, viewport, theme });
           const file = captureFile(c, lang, viewport, theme);
           const path = join(LIBRARY_DIR, file);
+          // To memory first: an empty frame or a frame mask with no element never yields an image (capture.ts).
+          const { png, maskCounts } = await captureCell(page, c, draft);
           mkdirSync(dirname(path), { recursive: true });
-          const masks = masksFor(page, c, draft);
-          const options = {
-            path,
-            animations: "disabled" as const,
-            caret: "hide" as const,
-            mask: masks,
-            maskColor: MASK_COLOR,
-            style: CAPTURE_STYLE,
-          };
-          if (c.element) await page.locator(c.element).screenshot(options);
-          else await page.screenshot({ ...options, fullPage: true });
-
-          const maskCounts = await Promise.all(masks.map((m) => m.count()));
+          writeFileSync(path, png);
           entries.push({
             file,
             screen: c.screen,
