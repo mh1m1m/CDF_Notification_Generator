@@ -472,13 +472,13 @@ export function NotificationPreviewSection({
             testId="case-notification-preview"
           />
           {/* V13-FE-011 (REQ-NOTIF-011): the plain-text twin of the same rendering, as escaped text in the notice's
-              language. Closed by default; native <details>, so it works without JavaScript. */}
+              language. Closed by default; native <details>, so it works without JavaScript. The notice's lang is on the
+              notice's text only; the summary is a UI string in the page language (UXB-13). */}
           <details className={styles.previewText} data-testid="case-preview-text">
             <summary data-testid="case-preview-text-toggle">{t("case.preview.textSummary")}</summary>
             <pre
               lang={preview.lang}
               dir={preview.lang === "ar" ? "rtl" : "ltr"}
-              aria-label={t("case.preview.textLabel")}
               data-testid="case-preview-text-body"
             >
               {preview.text}

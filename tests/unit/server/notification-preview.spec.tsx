@@ -519,17 +519,20 @@ describe("plain-text version of the preview (V13-FE-011)", () => {
     }
   });
 
-  it("is shown closed under the frame, in a native disclosure with a localised summary and name", () => {
-    for (const [locale, summary, label] of [
-      ["en", "Plain-text version", "Plain-text version of the notification"],
-      ["ar", "النسخة النصية", "النسخة النصية للإشعار"],
+  it("is shown closed under the frame, in a native disclosure with a localised summary", () => {
+    for (const [locale, summary] of [
+      ["en", "Plain-text version"],
+      ["ar", "النسخة النصية"],
     ] as const) {
       const out = section({ ...base, text: "DESIGN_PREVIEW\n\nBody" }, locale);
       const details = out.match(/<details[^>]*data-testid="case-preview-text"[^>]*>/)?.[0] ?? "";
       expect(details).not.toBe("");
       expect(details).not.toMatch(/\sopen/);
       expect(out).toContain(`<summary data-testid="case-preview-text-toggle">${summary}</summary>`);
-      expect(out).toContain(`aria-label="${label}"`);
+      // UXB-13: no UI-language label on the element tagged with the notice's language; the summary is outside it
+      const pre = out.match(/<pre[^>]*>/)?.[0] ?? "";
+      expect(pre).not.toMatch(/aria-label|title=/);
+      expect(out.indexOf("<summary")).toBeLessThan(out.indexOf("<pre"));
       // after the frame, inside the ready state
       expect(out.indexOf("<iframe")).toBeLessThan(out.indexOf('data-testid="case-preview-text"'));
     }

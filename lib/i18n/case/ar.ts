@@ -81,7 +81,6 @@ export const ar = {
   "preview.frameTitle": "{title} — عرض تجريبي",
   "preview.untitled": "إشعار",
   "preview.textSummary": "النسخة النصية",
-  "preview.textLabel": "النسخة النصية للإشعار",
   "preview.close": "إغلاق المعاينة",
   "preview.unmapped":
     "لا توجد معاينة: لم يُعتمد بعد ربط إفصاح لفئة المستلم هذه، لذا لا يُعرض لها شيء. هذا قرار مفتوح لدى المالك.",

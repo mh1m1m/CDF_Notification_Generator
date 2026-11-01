@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 03:50 UTC · Branch: feature/V13-FE-011-plain-text-preview (from develop 800ab8a; #82, #98 merged; FE-012 is #112) · Head: see PR
+Updated: 2026-11-01 04:04 UTC · Branch: feature/V13-FE-011-plain-text-preview (develop 937cff3 merged in; #82, #98 merged; FE-012 is #112) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -192,6 +192,7 @@ Updated: 2026-11-01 03:50 UTC · Branch: feature/V13-FE-011-plain-text-preview (
 | FE-010 + draft option version (D10) after merging develop 68a42b9: unit pin in ar and en with version 1234 ("الإصدار 1234" / "version 1234", no Arabic-Indic digits, no grouping); numberFormat output fails it (checked). Commands as above | pass | 80 files, 2026 / 468 / 235 of 235 | FE-010 head |
 | FE-010 after merging develop a0bf765 (#99, QA's leak-suite guard): commands as above | pass | 80 files, 2026 / 468 / 312 of 312 | FE-010 head |
 | FE-011 on develop 800ab8a: lint, typecheck, format:check / `pnpm test` (notification-preview 5 new: loader text is the renderer's twin for the projected model, ar + en; closed localised disclosure after the frame; notice's lang/dir; markup escaped; no text in unmapped/unavailable/none) / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (Scenario E: text version at 320 px, text only, axe). Mutation: the HTML in place of the text fails the loader test; `white-space: pre` fails the 320 px test (799 vs 320) | pass | 84 files, 2059 / 485 / 313 of 313 | FE-011 head |
+| FE-011 after merging develop 937cff3, and with the `<pre>`'s UI-language aria-label removed (the UXB-13 rule from #100: the notice's lang covers only the notice's text): commands as above | pass | 84 files, 2060 / 485 / 313 of 313 | FE-011 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
