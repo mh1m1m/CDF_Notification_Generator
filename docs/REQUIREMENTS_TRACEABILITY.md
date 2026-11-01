@@ -93,14 +93,14 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 | QA | Playwright & Visual QA | 76 |
 | SEC | Security & Adversarial Testing | 39 |
 
-### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-016)
+### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-017)
 
 The 280 rows with `Milestone` = M1, counted from this CSV. Their statuses were assessed against the merges up to
 `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026), plus #72 (REQ-SEC-002, REQ-GOV-001), #75 (REQ-ARCH-025) and #77
 (REQ-DOC-008) in V13-PROC-012, the merges from `4cc72ec` to `d5b61b0` (#61, #63, #68, #69, #73) in V13-PROC-013,
 the merges from `d5b61b0` to `d26ada9` (#78, #70, #76, #83, #80) in V13-PROC-014, the merges from `d26ada9` to `286eb93`
-(#74, #84, #85, #81) in V13-PROC-015, and the merges from `286eb93` to **`40af5ef`** (#87, #89, #91, #92, #93) in
-V13-PROC-016.
+(#74, #84, #85, #81) in V13-PROC-015, the merges from `286eb93` to `40af5ef` (#87, #89, #91, #92, #93) in
+V13-PROC-016, and the merges from `40af5ef` to **`11fad34`** (#90, #94, #82, #95) in V13-PROC-017.
 The status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
 merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
 merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief
@@ -114,15 +114,15 @@ Architect's rulings on #71:
   found on develop `<sha>`".
 
 COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, were checked by SEC before merge. REQ-SEC-002 and REQ-GOV-001
-are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Merges after `40af5ef` are
+are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Merges after `11fad34` are
 assessed in the next pass; owners update their rows meanwhile (§6).
 
 **By status**
 
 | Status | Rows |
 |---|---|
-| COMPLETE | 70 |
-| IN_PROGRESS | 176 |
+| COMPLETE | 71 |
+| IN_PROGRESS | 175 |
 | — of which review-enforced standing rules | 52 |
 | — of which document or configuration evidence only, no test | 44 |
 | BLOCKED | 16 |
@@ -140,7 +140,7 @@ assessed in the next pass; owners update their rows meanwhile (§6).
 | FE | 31 | 13 | 18 | 0 | 0 | 0 |
 | SEC | 27 | 14 | 13 | 0 | 0 | 0 |
 | UX | 26 | 5 | 18 | 0 | 0 | 3 |
-| PROC | 7 | 4 | 3 | 0 | 0 | 0 |
+| PROC | 7 | 5 | 2 | 0 | 0 | 0 |
 
 PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 
@@ -149,7 +149,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | Gate | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
 |---|---|---|---|---|---|---|
 | QG-01 | 10 | 2 | 8 | 0 | 0 | 0 |
-| QG-02 | 29 | 11 | 15 | 3 | 0 | 0 |
+| QG-02 | 29 | 12 | 14 | 3 | 0 | 0 |
 | QG-03 | 32 | 21 | 8 | 2 | 1 | 0 |
 | QG-04 | 11 | 5 | 6 | 0 | 0 | 0 |
 | QG-05 | 18 | 6 | 10 | 1 | 0 | 1 |
@@ -162,7 +162,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | QG-12 | 15 | 0 | 4 | 10 | 0 | 1 |
 | QG-13 | 15 | 1 | 11 | 3 | 0 | 0 |
 | Gate A | 4 | 0 | 3 | 1 | 0 | 0 |
-| Gate B | 19 | 8 | 8 | 3 | 0 | 0 |
+| Gate B | 19 | 9 | 7 | 3 | 0 | 0 |
 | Gate C | 23 | 14 | 7 | 2 | 0 | 0 |
 | Gate D | 5 | 0 | 2 | 0 | 0 | 3 |
 | Gate E | 16 | 3 | 10 | 0 | 0 | 3 |
