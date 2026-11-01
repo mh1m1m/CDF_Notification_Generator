@@ -118,6 +118,13 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
+- V13-QA-022 — branch test/V13-QA-022-prefetch-access-row — IN_REVIEW (SEC + ARCH): case-access audit in the
+  browser (DB-023 D1, REQ-AUD-001), project `access-audit` after `desktop-ar`. Beta views the portfolio and My Work
+  with every case link in view and hovered → 0 access rows and no counted open (control: case routes really
+  prefetched); document load, reload and client navigation to restricted 0009 → exactly one RESTRICTED_CASE_OPENED
+  each; document load, tab change and reload of 0001 → exactly one open each (rows + carried + window change).
+  Mutations: case-tab metadata loading the case again → test 1 fails (4 rows); the page opening the case twice →
+  test 2 fails (2 rows). Ledger read as the local administrator, read-only (`ledger()` in `tests/fixtures/db.ts`).
 - V13-QA-011 — branch test/V13-QA-011-guard-followups — IN_REVIEW (ARCH): G6 plain-literal annotation `type`;
   L1 `playwright test --list` per guarded Playwright suite vs its own test calls (helpers in other files caught at load time; run-time skips from helpers stay a stated limit, review covers them);
   surface allow-list reason updated after V13-SEC-012. TEST_ARCHITECTURE §7.1.

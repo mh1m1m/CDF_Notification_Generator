@@ -68,6 +68,10 @@ const LIBRARY_SPEC = "visual/library.spec.ts";
 // The committed visual baselines (V13-QA-015, §5): the `visual-baseline` project, only with V13_E2E_VISUAL=baseline.
 const visualBaseline = process.env.V13_E2E_VISUAL === "baseline";
 const BASELINE_SPEC = "visual/baseline.spec.ts";
+// The case-access audit (V13-QA-022) counts one persona's ledger rows, so it runs in its own project after every other
+// browser test: no other spec opens a case for that persona while it counts. If a desktop-ar test fails, Playwright
+// does not start this project and the run is already red.
+const ACCESS_AUDIT_SPEC = "e2e/case-access-audit.spec.ts";
 /** The visual projects write no failure screenshot, trace or video: nothing the data check refused, and no cookie. */
 const visualUse = {
   ...devices["Desktop Chrome"],
@@ -113,7 +117,17 @@ export default defineConfig({
   projects: [
     {
       name: "desktop-ar",
-      testIgnore: [LIBRARY_SPEC, BASELINE_SPEC],
+      testIgnore: [LIBRARY_SPEC, BASELINE_SPEC, ACCESS_AUDIT_SPEC],
+      use: {
+        ...devices["Desktop Chrome"],
+        locale: "ar-SA",
+        ...chromiumLaunch,
+      },
+    },
+    {
+      name: "access-audit",
+      testMatch: ACCESS_AUDIT_SPEC,
+      dependencies: ["desktop-ar"],
       use: {
         ...devices["Desktop Chrome"],
         locale: "ar-SA",
