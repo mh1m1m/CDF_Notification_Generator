@@ -20,7 +20,8 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-016]` | `feature/V13-DB-016-hosted-resume-rehearsal` | rehearsal of the hosted resume 0005 → 0010 + seeds 0001/0002; seed bundles (`--seed`) | COMPLETE — #56 merged (7a0eccb), SEC ACCEPT 54e1925 |
 | `[V13-DB-017]` | `feature/V13-DB-017-seed-lint` | OI-041: db:lint covers database/seed; seed bundle and db:reset refuse a seed with findings; transaction control inside DO/function bodies | COMPLETE — #62 merged (a9745ba), SEC ACCEPT 2fe462d |
 | `[V13-DB-018]` | `feature/V13-DB-018-rollback-register` | REQ-DATA-023: per-migration rollback register (DATA_MODEL.md §9) and its automated check | COMPLETE — #101 merged (85f7332), SEC ACCEPT 434c1c7 |
-| `[V13-DB-019]` | `feature/V13-DB-019-keyset-paged-reads` | REQ-PERF-003, OI-026: migration 0011, keyset-paged per-case reads | IN_PROGRESS — PR open, SEC review pending |
+| `[V13-DB-019]` | `feature/V13-DB-019-keyset-paged-reads` | REQ-PERF-003, OI-026: migration 0011, keyset-paged per-case reads | COMPLETE — #110 merged (800ab8a), CI 41269347309 6/6 |
+| `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note, audit outcome and policy version (no migration until ARCH accepts) | IN_PROGRESS — note PROPOSED, awaiting ARCH |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -154,7 +155,7 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 - Evidence (local, on develop 68a42b9 + this branch): lint, typecheck, prettier, db:lint clean; unit 2032/2032;
   db:reset then test:db 468/468.
 
-## In progress: V13-DB-019 (REQ-PERF-003, OI-026)
+## Completed: V13-DB-019 (REQ-PERF-003, OI-026) — #110 merged 800ab8a
 - Migration 0011: `case_events_page`, `case_tasks_page`, `case_notifications_page` (SECURITY INVOKER, `search_path`
   '', EXECUTE for `cdf_v13_user` only), each = its unpaged read one page at a time plus `page_cursor`;
   `_page_limit(integer)` refuses a limit outside 1..100 (NULL included) with 22023; index `task_case_page_idx`. The
@@ -168,12 +169,17 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
   empty; a restricted row as Gamma's cursor; other workspace / other persona; closed 0010 readable; Epsilon, Zeta,
   unknown, forged contexts; app login 42501; index plans. `hosted-resume.spec.ts` now resumes 0006–0011.
   Mutation-checked: 8 of 8 migration mutants fail the suite.
-- Needs SEC: the SEC-DB-17 coverage guard (`tests/security/db/context-forgery.spec.ts`) lists every function the request
-  role may execute; it needs entries for the three paged reads and `_page_limit` (tried locally: 18/18 with them).
+- SEC-DB-17 coverage guard entries for the three paged reads and `_page_limit` added as a separate commit on #110 at
+  ARCH's direction. Evidence: CI run 41269347309 green 6/6; local test:db 485/485, unit 2036, hosted-resume rehearsal
+  PASS.
+
+## In progress: V13-DB-020 (REQ-AUD-005)
+- Design note `docs/teams/db/DB-020_AUDIT_RECORD_CONTENT.md` (PROPOSED): outcome column, access-policy version with a
+  fingerprint guard, hash version 2 with version-1 rows verifying unchanged. No migration until ARCH accepts it; the
+  migration would be 0012.
 
 ## Next
 - Next free migration: 0012.
-- OI-026 per-case paging: proposal accepted by ARCH (`*_page` functions next to the current reads), after M1.
 
 ## Review given
 - #29 `[V13-SEC-002]`: `REVIEW: ACCEPT ede6f46`, re-confirmed `ACCEPT bc89156` after the develop merge (294/294).
