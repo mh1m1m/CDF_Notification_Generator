@@ -3,9 +3,10 @@
 **SYNTHETIC-DATA REFERENCE IMPLEMENTATION.** This register traces requirements for the CDF Case & Notification Intelligence Platform — V13 Enterprise (Cultural Development Fund — صندوق التنمية الثقافي). It is not a production system and does not represent any hosting approval.
 
 
-**Status: DRAFT (V13-ARCH-004).** Generated 28 Oct 2026 01:44 UTC from the owner's directive batches. The register has
-not yet been reviewed row by row against the sources. Every row starts at `NOT_STARTED`, and a row's status changes
-only when its task lands with evidence. Owner team `OPS` was folded into `ARCH`, because DevOps is the Chief
+**Status: DRAFT (V13-ARCH-004).** Generated 28 Oct 2026 01:44 UTC from the owner's directive batches. The requirement
+texts have not yet been reviewed row by row against the sources. Every row started at `NOT_STARTED`; a row's status
+changes only when its task lands with evidence, and the M1 rows were assessed in V13-PROC-012 (§3.1). This file was
+created as `docs/TRACEABILITY.md` and renamed to the directive's name, `docs/REQUIREMENTS_TRACEABILITY.md` (REQ-DOC-004). Owner team `OPS` was folded into `ARCH`, because DevOps is the Chief
 Architect's role (board §1). The CSV is the master copy; edit rows in place and never renumber them.
 Milestones were re-mapped on 28 Oct 2026 at 02:35 UTC to the plan's eight milestones (`docs/MASTER_EXECUTION_PLAN.md`
 §4). The register first used a five-milestone scheme of its own (OPEN_ISSUES OI-019). At the same time E12 moved to
@@ -14,7 +15,7 @@ decision of 28 Oct 00:29 UTC.
 
 ## 1. Purpose
 
-`REQUIREMENTS_REGISTER.csv` is the single consolidated requirements register required by ORCHESTRATION §18 and SWARM §2. It merges the owner's specification — CLOUD_INIT, PROMPT_A (Parts I–XXX), PROMPT_B (§0–§24), PROMPT_B_NOTE, ORCHESTRATION (§0–§22), SWARM and OWNER_NOTE — into one deduplicated list of 448 testable requirements. Overlapping statements were merged into one row, with the other sources in `Merged_From` (208 rows carry merges). Each PROMPT_A Part XXIX prohibition (#1–#20), each deliverable E01–E23 and UXQA-01–20, and each required docs file has its own row; the other "do not" rules are rows of their own or are folded into the row they restate. Every row starts as `NOT_STARTED`: nothing has been verified yet.
+`REQUIREMENTS_REGISTER.csv` is the single consolidated requirements register required by ORCHESTRATION §18 and SWARM §2. It merges the owner's specification — CLOUD_INIT, PROMPT_A (Parts I–XXX), PROMPT_B (§0–§24), PROMPT_B_NOTE, ORCHESTRATION (§0–§22), SWARM and OWNER_NOTE — into one deduplicated list of 448 testable requirements. Overlapping statements were merged into one row, with the other sources in `Merged_From` (208 rows carry merges). Each PROMPT_A Part XXIX prohibition (#1–#20), each deliverable E01–E23 and UXQA-01–20, and each required docs file has its own row; the other "do not" rules are rows of their own or are folded into the row they restate. Every row started as `NOT_STARTED`; §3.1 gives the M1 rows as assessed against merged work.
 
 ## 2. Field definitions
 
@@ -28,11 +29,11 @@ decision of 28 Oct 00:29 UTC.
 | Gate | Quality gates the row evidences: QG-01–QG-13 (ORCHESTRATION §19) and/or Gate A–J (PROMPT_B §23) |
 | Milestone | M1–M8 or LATER, as defined in `docs/MASTER_EXECUTION_PLAN.md` §4 (summary below the table); the earliest milestone in which the requirement must be demonstrably met for that milestone's scope; standing controls apply from then on |
 | Owner_Team | ARCH, DB, FE, UX, PROC, QA, SEC (see §3) |
-| Architecture_Component | Where the requirement lands (planned) |
+| Architecture_Component | Where the requirement lands; where a later decision replaced the directive's path, the real path with the directive's in brackets (§3.2) |
 | Implementation_Status | COMPLETE / IN_PROGRESS / BLOCKED / NOT_STARTED / PRODUCTION_SUBSTITUTION_REQUIRED |
-| Test_ID | Planned test identifier pattern only (e.g. `E2E-ISO-*`, `DB-RLS-*`, `A11Y-*`); not an executed test |
-| Evidence | Blank until executed results exist |
-| Open_Issue | Only unresolved approvals or blockers the source itself flags (29 rows) |
+| Test_ID | The merged tests that exercise the row: file and test title or id, or `review: #PR ACCEPT <sha>` for a document deliverable (§3.1); empty while none exists. Until V13-PROC-012 it held planned identifier patterns only |
+| Evidence | The merge (sha and PR) and its CI run, or the document; blank until executed results exist |
+| Open_Issue | The `docs/OPEN_ISSUES.md` items (OI-nnn) that block or qualify the row, or an unresolved approval the source itself flags |
 | Merged_From | Other source sections folded into the row, separated by `; ` |
 
 Milestones (plan §4): **M1** enterprise foundation (Slice 1 and the core of Slices 2, 3 and 5: app shell, persona sign-in, 10 synthetic cases, 3 roles, 3 workspaces, the five foundational screens, case-linked notification history, Playwright isolation tests, CI, synthetic staging) · **M2** multi-case and multi-workspace (Slices 2–3 complete: portfolio views, saved views, global search and palette, quick case switcher, workspace dashboards, My Work with deadlines) · **M3** procedural intelligence (Slice 4: journeys, actual and expected progress) · **M4** Notification Center (Slice 5: catalogue, templates, recipients, disclosure, generation) · **M5** notification operations (Slice 6: approval, outbox dispatch, delivery records, retry, corrections; stub sender) · **M6** advanced capabilities (Slice 7: committees, investigations, legal review, competent authority, reporting, administration) · **M7** operational hardening (Slice 8: security, performance, backup, monitoring, readiness assessment) · **M8** final delivery (E22, E23, UXQA-18, UXQA-20) · **LATER** conditional on approvals that do not exist (e.g. real-data production release).
@@ -94,8 +95,9 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 
 ### 3.1 M1 coverage (V13-PROC-012)
 
-The 280 rows with `Milestone` = M1, counted from the CSV on `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026). The
-status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
+The 280 rows with `Milestone` = M1, counted from this CSV. Their statuses were assessed against the merges up to
+`develop` **`4cc72ec`** (merge of #67, 31 Oct 2026), plus #72 (REQ-SEC-002, REQ-GOV-001), #75 (REQ-ARCH-025) and #77
+(REQ-DOC-008). The status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
 merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
 merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief
 Architect's rulings on #71:
@@ -116,19 +118,19 @@ were not re-assessed in this pass; their owners update their rows (§6).
 | Status | Rows |
 |---|---|
 | COMPLETE | 68 |
-| IN_PROGRESS | 171 |
+| IN_PROGRESS | 172 |
 | — of which review-enforced standing rules | 51 |
-| — of which document or configuration evidence only, no test | 38 |
+| — of which document or configuration evidence only, no test | 39 |
 | BLOCKED | 16 |
 | PRODUCTION_SUBSTITUTION_REQUIRED | 1 |
-| NOT_STARTED | 24 |
+| NOT_STARTED | 23 |
 | **Total** | **280** |
 
 **By owner team**
 
 | Owner team | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
 |---|---|---|---|---|---|---|
-| ARCH | 105 | 9 | 81 | 12 | 0 | 3 |
+| ARCH | 105 | 9 | 82 | 12 | 0 | 2 |
 | QA | 51 | 9 | 24 | 4 | 0 | 14 |
 | DB | 33 | 15 | 17 | 0 | 1 | 0 |
 | FE | 31 | 12 | 19 | 0 | 0 | 0 |
@@ -154,7 +156,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | QG-10 | 4 | 1 | 3 | 0 | 0 | 0 |
 | QG-11 | 14 | 0 | 11 | 2 | 0 | 1 |
 | QG-12 | 15 | 0 | 4 | 10 | 0 | 1 |
-| QG-13 | 15 | 1 | 10 | 3 | 0 | 1 |
+| QG-13 | 15 | 1 | 11 | 3 | 0 | 0 |
 | Gate A | 4 | 0 | 3 | 1 | 0 | 0 |
 | Gate B | 19 | 7 | 9 | 3 | 0 | 0 |
 | Gate C | 23 | 14 | 7 | 2 | 0 | 0 |
@@ -166,6 +168,21 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | Gate I | 5 | 3 | 2 | 0 | 0 | 0 |
 | Gate J | 10 | 0 | 1 | 9 | 0 | 0 |
 | (none) | 110 | 18 | 85 | 2 | 0 | 5 |
+
+### 3.2 Superseded wording (Chief Architect)
+
+Some requirement texts, taken from the directive, name something that a later binding decision replaced. The
+requirement text stays as written; the replacing decision is noted in `Evidence`, and `Architecture_Component` names
+the real location with the directive's path in brackets. Nothing was silently rewritten.
+
+| Rows | Directive's wording | Replaced by | Decision |
+|---|---|---|---|
+| REQ-ARCH-024; components of REQ-DATA-020, -022, -024, -026, REQ-SEC-003, -011, REQ-TEST-004, -005 | `supabase/` (migrations, seeds, tests) | `database/migrations` and `database/seed`, applied by the repository runner; tests in `tests/integration`, `tests/security/db` and `tests/unit` | ADR-012; CLAUDE.md §2 (the Supabase migration tool is never used) |
+| REQ-ARCH-024 | `features/`, `lib/database`, `lib/permissions` | `app/`, `components/`, `lib/server`; `lib/db`; `lib/authz` | CLAUDE.md §3 |
+| REQ-SEC-005 | "Supabase Auth" | Synthetic persona sign-in behind Vercel Authentication; PRODUCTION_SUBSTITUTION_REQUIRED: the CDF corporate IdP (OIDC) | ADR-004; CLAUDE.md §2 |
+| REQ-INFRA-009 | "Supabase environment variables" | `V13_DATABASE_URL` and `V13_SESSION_SECRET`, sensitive Vercel variables that the owner sets (OI-045) | ADR-012; CLAUDE.md §3 (no `@supabase/*` package) |
+| REQ-DOC-004 | `docs/REQUIREMENTS_TRACEABILITY.md` | This file, renamed from `docs/TRACEABILITY.md` to the directive's name | — |
+| REQ-DOC-012 | Ten named columns | The ten columns plus `Gate`, `Milestone`, `Owner_Team` and `Merged_From` (§2) | — |
 
 ## 4. Gate crosswalk
 
@@ -247,7 +264,7 @@ Gate G (Responsive Experience) has no direct QG equivalent; QG-01 and QG-13 have
 ## 6. How to update
 
 - **One register.** Edit only `REQUIREMENTS_REGISTER.csv`; never start a second register (ORCHESTRATION §18). Keep UTF-8, the header row and RFC 4180 quoting.
-- **Status vocabulary:** `COMPLETE`, `IN_PROGRESS`, `BLOCKED`, `NOT_STARTED`, `PRODUCTION_SUBSTITUTION_REQUIRED` (a prototype stand-in, such as Supabase Auth in place of an approved corporate identity provider, that must be replaced before production).
+- **Status vocabulary:** `COMPLETE`, `IN_PROGRESS`, `BLOCKED`, `NOT_STARTED`, `PRODUCTION_SUBSTITUTION_REQUIRED` (a prototype stand-in, such as the synthetic persona sign-in of ADR-004 in place of the CDF corporate identity provider, that must be replaced before production).
 - **COMPLETE needs proof.** A row may be marked COMPLETE only when `Test_ID` names real tests and `Evidence` points to executed results (CI run ID and commit, a `docs/TEST_EVIDENCE.md` entry, a deployment URL or screenshot reference). Planned patterns and passing builds are not evidence.
 - **BLOCKED** rows state the blocker in `Open_Issue`. A failed gate stays visible; never hide it behind a percentage (ORCHESTRATION §19).
 - **IDs are permanent.** New requirements take the next number in their area; never renumber or reuse an ID. When a requirement turns out to duplicate another, fold it into the surviving row's `Merged_From`.
