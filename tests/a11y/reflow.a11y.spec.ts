@@ -70,19 +70,32 @@ async function measure(page: Page, edges: boolean): Promise<Finding[]> {
         return notes.length ? ` (${notes.join(", ")})` : "";
       };
       const past: [number, string][] = [];
-      const spills: [number, string][] = [];
+      const spilling: Element[] = [];
       for (const el of document.body.querySelectorAll("*")) {
         const box = el.getBoundingClientRect();
         const beyond = Math.max(box.right - root.clientWidth, -box.left);
+        // Content of a marked scroll region lies past the edges by design: listed last.
+        const inRegion = !!el.parentElement?.closest("[data-scroll-region], .v13-scroll-region");
         if (box.width > 0 && beyond > 1)
-          past.push([beyond, `${name(el)} at ${Math.round(box.left)}…${Math.round(box.right)}${where(el)}`]);
-        const style = getComputedStyle(el);
-        if (style.overflowX === "visible" && el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0)
-          spills.push([
-            el.scrollWidth - el.clientWidth,
-            `${name(el)} content ${el.scrollWidth} in ${el.clientWidth}${where(el)}`,
+          past.push([
+            inRegion ? beyond - 1e6 : beyond,
+            `${name(el)} at ${Math.round(box.left)}…${Math.round(box.right)}${where(el)}`,
           ]);
+        if (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && !inRegion) spilling.push(el);
       }
+      // The deepest elements whose content is wider than their box (no spilling descendant), with their children's
+      // widths: the element that makes the page wider is among them.
+      const spills: [number, string][] = spilling
+        .filter((el) => !spilling.some((other) => other !== el && el.contains(other)))
+        .map((el) => [
+          el.scrollWidth - el.clientWidth,
+          `${name(el)} (overflow-x ${getComputedStyle(el).overflowX}) content ${el.scrollWidth} in ${el.clientWidth}${where(el)}; children: ${[
+            ...el.children,
+          ]
+            .map((c) => `${name(c)} ${Math.round(c.getBoundingClientRect().width)}/${c.scrollWidth}`)
+            .slice(0, 8)
+            .join(", ")}`,
+        ]);
       const top = (xs: [number, string][]) =>
         xs
           .sort((a, b) => b[0] - a[0])
