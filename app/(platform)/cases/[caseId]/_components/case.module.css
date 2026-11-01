@@ -1,13 +1,4 @@
 /* Case Workspace (FE-004). Logical properties only (RTL first); tokens from styles/tokens.css. */
-.crumbs ol {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cdf-space-2);
-  list-style: none;
-  padding: 0;
-  margin-block: var(--cdf-space-2);
-}
-
 .header {
   border-block-end: 1px solid var(--cdf-border);
   padding-block: var(--cdf-space-3);

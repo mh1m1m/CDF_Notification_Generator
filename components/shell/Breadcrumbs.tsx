@@ -9,6 +9,8 @@ export interface BreadcrumbItem {
   /** Omitted for the current page (the last item). */
   href?: string;
   label: ReactNode;
+  /** Optional test id on the item's link (or current-page span). */
+  testId?: string;
 }
 
 export function Breadcrumbs({ t, items }: { t: Translator; items: readonly BreadcrumbItem[] }) {
@@ -21,9 +23,13 @@ export function Breadcrumbs({ t, items }: { t: Translator; items: readonly Bread
           <li key={i}>
             {i > 0 ? <ChevronEndIcon className="v13-breadcrumb-sep" /> : null}
             {i === last || item.href === undefined ? (
-              <span aria-current={i === last ? "page" : undefined}>{item.label}</span>
+              <span aria-current={i === last ? "page" : undefined} data-testid={item.testId}>
+                {item.label}
+              </span>
             ) : (
-              <a href={item.href}>{item.label}</a>
+              <a href={item.href} data-testid={item.testId}>
+                {item.label}
+              </a>
             )}
           </li>
         ))}

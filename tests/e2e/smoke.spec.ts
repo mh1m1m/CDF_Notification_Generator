@@ -103,6 +103,7 @@ test("Secretary Alpha signs in to My work in the Secretariat, then signs out", a
   await page.goto("/sign-in");
   await expect(page).toHaveURL(/\/my-work$/);
 
+  await page.getByTestId("persona-menu-button").click();
   await page.getByTestId("sign-out").click();
   await expect(page).toHaveURL(/\/sign-in$/);
   expect((await context.cookies()).some((c) => c.name === SESSION_COOKIE)).toBe(false);
