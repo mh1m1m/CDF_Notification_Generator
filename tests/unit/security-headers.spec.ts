@@ -88,7 +88,9 @@ describe("next.config.ts headers", () => {
     const headers = new Map(securityHeaders().map((h) => [h.key, h.value]));
     expect(headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(headers.get("X-Frame-Options")).toBe("DENY");
-    expect(headers.get("Referrer-Policy")).toBe("no-referrer");
+    // same-origin, not no-referrer (V13-ARCH-013, OI-056): a form POST sent with JavaScript off keeps its Origin for
+    // the Server Actions check, and no referrer goes to another origin.
+    expect(headers.get("Referrer-Policy")).toBe("same-origin");
     expect(headers.get("Strict-Transport-Security")).toBe("max-age=63072000; includeSubDomains");
     expect(headers.get("Cross-Origin-Opener-Policy")).toBe("same-origin");
     expect(headers.get("Cross-Origin-Resource-Policy")).toBe("same-origin");
@@ -106,6 +108,15 @@ describe("next.config.ts headers", () => {
         { key: "Content-Security-Policy", value: RESOURCE_CONTENT_SECURITY_POLICY },
       ]);
     }
+  });
+});
+
+describe("Server Actions origin check (V13-ARCH-013)", () => {
+  // Fetch standard, "append a request `Origin` header": under `no-referrer` a POST that is not a CORS-mode fetch (a
+  // form submitted with JavaScript off) carries `Origin: null`. The fix is the referrer policy above; accepting
+  // `null` here instead would let any sandboxed or opaque-origin page pass the check.
+  it("is never widened: no allowedOrigins, so `null` is never an accepted origin", () => {
+    expect(config.experimental?.serverActions?.allowedOrigins).toBeUndefined();
   });
 });
 

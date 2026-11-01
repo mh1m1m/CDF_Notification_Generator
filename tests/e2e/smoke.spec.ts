@@ -49,7 +49,7 @@ test("production build sends the security headers and a fresh script nonce on ev
   expect(directive(csp, "object-src")).toBe("'none'");
   expect(headers["x-frame-options"]).toBe("DENY");
   expect(headers["x-content-type-options"]).toBe("nosniff");
-  expect(headers["referrer-policy"]).toBe("no-referrer");
+  expect(headers["referrer-policy"]).toBe("same-origin");
   expect(headers["x-powered-by"]).toBeUndefined();
 
   // Next.js put this request's nonce on every script tag it rendered.
