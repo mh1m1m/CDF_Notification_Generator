@@ -48,6 +48,17 @@ export const FONT_PACKAGES = [
 export const CAPTURE_STYLE =
   '[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; }';
 
+/**
+ * The same for the run-made draft's created time (masked): its text width changes with the time and moved the table's
+ * columns between runs (ARCH's two-run comparison on #140). Applied only to that draft's row, during the capture only.
+ */
+export const DRAFT_TIME_STYLE =
+  '[data-testid="case-notification-{draft}"] time { display: inline-block; inline-size: 18ch; white-space: nowrap; overflow: hidden; }';
+
+/** The capture style of a row: CAPTURE_STYLE, plus DRAFT_TIME_STYLE for the row's own draft. */
+export const captureStyle = (draft: string | null) =>
+  draft ? `${CAPTURE_STYLE}\n${withDraft(DRAFT_TIME_STYLE, draft)}` : CAPTURE_STYLE;
+
 /** One fixed mask colour, so a mask is recognisable in every image. */
 export const MASK_COLOR = "#FF00FF";
 

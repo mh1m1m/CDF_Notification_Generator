@@ -336,8 +336,15 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   Beta on 0005 (the seeded drafts' recipient classes have no disclosure mapping yet, captured as `no-mapping`; 0005 is
   visible to no other captured persona, so the draft cannot change another row); server-clock text is masked (deadline
   words and My Work's overdue and this-week counts, D1); the masked correlation id gets a fixed width during the
-  capture only, because its glyph width changes with the id. Two runs on two fresh databases gave 244/244 identical
-  images in the sandbox.
+  capture only, because its glyph width changes with the id; the run-made draft's masked created time likewise
+  (`DRAFT_TIME_STYLE`), because its width moved the table's columns. Frames (ARCH CHANGES on #140, `frames.ts`): before
+  the data check and the capture each frame is brought into view and must show non-empty content with its fonts loaded
+  (Chromium left the preview frame below a mobile viewport unpainted, so every mobile preview was an empty box, and a
+  data check that read the frame before it loaded could pass on an empty document); the page stays scrolled to the
+  frame, because back at the top Chromium again left it unpainted. The capture is taken to memory and written only
+  after a check that each frame's area of it holds at least 8 distinct colours (an empty frame has one), and mask
+  counts are taken before the capture; a mask inside a frame must cover its element. Four runs on four fresh databases
+  gave 244/244 identical images in the sandbox.
 
 ## 11. Evidence and reporting
 

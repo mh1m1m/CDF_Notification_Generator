@@ -1,7 +1,8 @@
 // Screenshot library (V13-QA-014; UXQA-05; REQ-VIS-001, -004, -005, -010, -011, -015; docs/qa/M1_OPEN_QA_ROWS_DESIGN.md
 // §2–§4). Every row of library-plan.ts is captured in every viewport, language and theme it applies to. Before each
-// capture the state's own marker must be visible (a wrong state never yields an image) and the data check
-// (data-check.ts, V1–V5) must pass on the unmasked page and every frame (a finding fails the test and writes no image).
+// capture the state's own marker must be visible (a wrong state never yields an image), every frame must be in view and
+// loaded (frames.ts), and the data check (data-check.ts, V1–V5) must pass on the unmasked page and every frame (a
+// finding fails the test and writes no image). After the capture, a frame's area of the image must not be empty.
 //
 // Runs only in the `visual-library` project (V13_E2E_VISUAL=library; playwright.config.ts), after `pnpm db:reset`.
 // Images go to test-results/library/<screen>/<state>.<lang>.<viewport>.<theme>.png and are never committed; each test
@@ -13,10 +14,11 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { LOCALE_COOKIE } from "@/lib/i18n";
 import { mintSession, persona, signInAs } from "../fixtures/personas";
 import { checkSynthetic, formatFindings, type DataInput } from "./data-check";
+import { expectFramesPainted, frameBoxes, settleFrames } from "./frames";
 import {
   BROWSER_TIME,
   CAPTURES,
-  CAPTURE_STYLE,
+  captureStyle,
   captureFile,
   LANGUAGES,
   LIBRARY_DIR,
@@ -99,6 +101,9 @@ for (const c of CAPTURES) {
             await expect(page.locator('[data-testid^="workspace-menu-option-"]').first()).toBeVisible();
           }
           await page.evaluate(() => document.fonts.ready.then(() => undefined));
+          // Frames in view, loaded and with their fonts, before the data check reads them and before the capture
+          // (ARCH C1, C2 on #140).
+          await settleFrames(page);
 
           const findings = checkSynthetic(await dataInputs(page), {
             personaNames: await page.locator('[data-testid="persona-menu-name"]').allTextContents(),
@@ -114,18 +119,30 @@ for (const c of CAPTURES) {
             const selector = withDraft(mask.selector, draft);
             return mask.frame ? page.frameLocator(mask.frame).locator(selector) : page.locator(selector);
           });
+          // Counted before the capture, so the manifest records what the capture masked (ARCH C3 on #140). A mask inside
+          // a frame always has its element once the frame has loaded; none means the frame was not what was drawn.
+          const maskCounts = await Promise.all(masks.map((m) => m.count()));
+          c.masks.forEach((m, i) => {
+            if ((MASKS[m] as { frame?: string }).frame)
+              expect(maskCounts[i], `mask ${m} covers its element in the frame`).toBeGreaterThan(0);
+          });
           const options = {
-            path,
             animations: "disabled" as const,
             caret: "hide" as const,
             mask: masks,
             maskColor: MASK_COLOR,
-            style: CAPTURE_STYLE,
+            style: captureStyle(draft),
           };
-          if (c.element) await page.locator(c.element).screenshot(options);
-          else await page.screenshot({ ...options, fullPage: true });
+          // Captured to memory and written only after the frame check: an empty frame never yields an image.
+          let png: Buffer;
+          if (c.element) png = await page.locator(c.element).screenshot(options);
+          else {
+            const boxes = await frameBoxes(page);
+            png = await page.screenshot({ ...options, fullPage: true });
+            await expectFramesPainted(page, png, boxes, MASK_COLOR);
+          }
+          writeFileSync(path, png);
 
-          const maskCounts = await Promise.all(masks.map((m) => m.count()));
           entries.push({
             file,
             screen: c.screen,
