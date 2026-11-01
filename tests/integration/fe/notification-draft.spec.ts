@@ -16,6 +16,9 @@ import {
 import { createV13NotificationDrafts } from "@/lib/adapters/notification-records/v13-notification-drafts";
 import { databaseClientOptions } from "@/lib/db/client";
 import { withRequestContext, type Tx } from "@/lib/db/security-context";
+import type { RequestContext } from "@/lib/server/context";
+import { signDraftBinding } from "@/lib/server/draft-binding";
+import { createNotificationDraft } from "@/lib/server/notification-draft";
 import { TEST_CLAIMS_KEY } from "../support/claims";
 import { clusterAvailable, PRIMARY_ADMIN_URL } from "../support/clusters";
 
@@ -175,7 +178,8 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
     ]);
   });
 
-  it("a swapped id to another case Alpha may draft on (0003) lands the draft and its audit event there only (known limit)", async () => {
+  // The port takes the case it is given; binding the case to the page's route is lib/server's job (V13-FE-012, below).
+  it("the command itself drafts on any case Alpha may draft on (0003): its draft and audit event land there only", async () => {
     const { outcome, after } = await attempt(ALPHA, { case_id: CASE(3) as never });
     expect(outcome).toBe("OK");
     expect(after.created.map((r) => r.case_id)).toEqual([CASE(3)]);
@@ -225,6 +229,93 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
     const { outcome, after } = await attempt(ALPHA, { case_id: CASE(10) as never });
     expect(outcome).toBe("CASE_CLOSED");
     expect(after).toEqual(before);
+  });
+
+  // V13-FE-012 (OI-049): lib/server binds the draft to the route's case. The form 0004's page renders carries a binding
+  // of (Alpha, Secretariat, 0004, key); posted with its case id edited, it is refused before any command call,
+  // whatever the id names, and writes nothing on 0001, 0004 or anywhere else.
+  describe("bound to the route's case (V13-FE-012)", () => {
+    // The session the form was rendered in: Alpha in Secretariat, issued a minute ago, eight hours to run.
+    const iat = Math.floor(Date.now() / 1000) - 60;
+    const exp = iat + 8 * 60 * 60;
+    const session = {
+      claims: { persona_id: ALPHA.persona_id, active_workspace: ALPHA.active_workspace, iat, exp },
+    };
+    const ctx = { session, identity: ALPHA, correlationId: CORRELATION } as unknown as RequestContext;
+    function boundPort() {
+      const inner = port(snapshot);
+      const seen = { calls: 0, after: undefined as Snapshot | undefined };
+      return {
+        seen,
+        drafts: {
+          options: inner.options,
+          async createDraft(identity: RequestIdentity, command: CreateNotificationDraftCommand) {
+            seen.calls += 1;
+            try {
+              return await inner.createDraft(identity, command);
+            } catch (error) {
+              if (!(error instanceof Rollback)) throw error;
+              const v = error.value as {
+                rows: { notification_id: string; case_id: string }[];
+                after: Snapshot;
+              };
+              seen.after = v.after;
+              return v.rows[0] as never;
+            }
+          },
+        },
+      };
+    }
+    const bindingKey = () => new Uint8Array(32).fill(9);
+    const bindingFor = (identity = ALPHA, caseId = CASE(4), key = KEY, at = iat) =>
+      signDraftBinding(bindingKey(), { identity, iat: at, exp }, caseId, key);
+    const formFor = (case_id: unknown, case_binding: unknown = bindingFor()) => ({
+      case_id,
+      template_version_id: TV(1),
+      recipient_class: "WITNESS",
+      idempotency_key: KEY,
+      case_binding,
+    });
+
+    it("route 0004 with the matching id: one draft on 0004, nothing elsewhere (positive control)", async () => {
+      const { drafts, seen } = boundPort();
+      const outcome = await createNotificationDraft({ ctx, drafts, bindingKey }, formFor(CASE(4)));
+      expect(outcome).toMatchObject({ kind: "created", caseId: CASE(4) });
+      expect(seen.calls).toBe(1);
+      expect(seen.after?.created.map((r) => r.case_id)).toEqual([CASE(4)]);
+      expect(seen.after?.auditForCorrelation.map((r) => r.case_id)).toEqual([CASE(4)]);
+    });
+
+    it.each([
+      ["a visible case Alpha may draft on (0001)", CASE(1)],
+      ["a case hidden from Alpha's workspace (0002)", CASE(2)],
+      ["an unknown UUID", CASE(99)],
+      ["a display number", "CDF-DEMO-2026-0001"],
+    ] as const)(
+      "form bound to 0004, posted id edited to %s: refused, no command call, nothing written",
+      async (_n, posted) => {
+        const { drafts, seen } = boundPort();
+        const outcome = await createNotificationDraft({ ctx, drafts, bindingKey }, formFor(posted));
+        expect(outcome).toEqual({ kind: "refused", correlationId: CORRELATION });
+        expect(seen.calls).toBe(0);
+        expect(await snapshot(admin)).toEqual(before);
+      },
+    );
+
+    it.each([
+      ["no binding", null],
+      ["a binding issued to Beta", bindingFor(BETA)],
+      ["a binding issued in another workspace (Delta, Governance)", bindingFor(DELTA_GOV)],
+      ["a binding for another case (0001)", bindingFor(ALPHA, CASE(1))],
+      ["a binding for another idempotency key", bindingFor(ALPHA, CASE(4), "b".repeat(64))],
+      ["a binding from another session (earlier issued-at)", bindingFor(ALPHA, CASE(4), KEY, iat - 3600)],
+    ] as const)("posted for 0004 with %s: refused, no command call, nothing written", async (_n, binding) => {
+      const { drafts, seen } = boundPort();
+      const outcome = await createNotificationDraft({ ctx, drafts, bindingKey }, formFor(CASE(4), binding));
+      expect(outcome).toEqual({ kind: "refused", correlationId: CORRELATION });
+      expect(seen.calls).toBe(0);
+      expect(await snapshot(admin)).toEqual(before);
+    });
   });
 
   it.each([

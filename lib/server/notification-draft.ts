@@ -1,8 +1,10 @@
-// Scenario E (V13-FE-006, SCREENS S3 Notifications tab): the draft form and the draft command. Order for the command:
-// lib/authz pre-check for the case named in the form → Zod parse (the contract's schema) → api_create_notification_draft,
-// which re-checks access, role, ACTIVE, input and the author's idempotency key and writes the audit event. The case id
-// comes from the route (rendered into the form by the server); the database decides whether this persona may draft
-// there, and only the case id it returns is used afterwards (SEC). Persona and workspace come only from the session.
+// Scenario E (V13-FE-006, SCREENS S3 Notifications tab): the draft form and the draft command. Order for the command
+// (V13-FE-012, ADR-020): Zod parse (the contract's schema) → the form binding (./draft-binding.ts): the case is the one
+// the server rendered the form for, verified against the session, and the posted case id must equal it → lib/authz
+// pre-check for that case → api_create_notification_draft, which re-checks access, role, ACTIVE, input and the author's
+// idempotency key and writes the audit event. A refusal at any step is the same generic outcome, whether an edited id
+// names a visible, hidden or unknown case. The database decides whether this persona may draft there, and only the
+// case id it returns is used afterwards (SEC). Persona and workspace come only from the session.
 // Outcomes carry ids only; logs carry codes only, never form values or database messages.
 import "server-only";
 import { precheck } from "@/lib/authz";
@@ -17,7 +19,9 @@ import {
   UuidSchema,
 } from "@/lib/contracts";
 import { logServerError } from "@/lib/http/errors";
+import { draftBindingKey } from "@/lib/auth/draft-binding-key";
 import type { RequestContext } from "./context";
+import { signDraftBinding, verifyDraftBinding, type DraftBindingSubject } from "./draft-binding";
 
 /** A fresh idempotency key for one rendering of the form: 32 random bytes, lower-case hex. */
 export function newIdempotencyKey(): string {
@@ -28,6 +32,8 @@ export function newIdempotencyKey(): string {
 export interface DraftFormView {
   readonly caseId: CaseId;
   readonly idempotencyKey: string;
+  /** Binds caseId and idempotencyKey to this persona, workspace and session (V13-FE-012). */
+  readonly binding: string;
   readonly templates: readonly DraftTemplateOption[];
   readonly recipientClasses: readonly DraftRecipientClass[];
 }
@@ -35,6 +41,15 @@ export interface DraftFormView {
 export interface DraftDeps {
   readonly ctx: RequestContext;
   readonly drafts: NotificationDraftPort;
+  /** The form-binding key (default: lib/auth/draft-binding-key.ts). */
+  readonly bindingKey?: () => Uint8Array;
+  /** The server clock (default: now). */
+  readonly now?: () => Date;
+}
+
+/** What a binding is bound to in this request: the session's persona, workspace, issued-at and expiry. */
+function bindingSubject(ctx: RequestContext): DraftBindingSubject {
+  return { identity: ctx.identity, iat: ctx.session.claims.iat, exp: ctx.session.claims.exp };
 }
 
 /**
@@ -42,7 +57,7 @@ export interface DraftDeps {
  * not ACTIVE, or there is nothing to choose from. Hiding is a convenience; the command decides again.
  */
 export async function loadDraftForm(
-  { ctx, drafts }: DraftDeps,
+  { ctx, drafts, bindingKey = draftBindingKey }: DraftDeps,
   summary: CaseSummary,
   issueKey: () => string = newIdempotencyKey,
 ): Promise<DraftFormView | null> {
@@ -50,7 +65,14 @@ export async function loadDraftForm(
   if (summary.records_state !== "ACTIVE") return null;
   const { templates, recipientClasses } = await drafts.options(ctx.identity);
   if (templates.length === 0 || recipientClasses.length === 0) return null;
-  return { caseId: summary.case_id, idempotencyKey: issueKey(), templates, recipientClasses };
+  const idempotencyKey = issueKey();
+  return {
+    caseId: summary.case_id,
+    idempotencyKey,
+    binding: signDraftBinding(bindingKey(), bindingSubject(ctx), summary.case_id, idempotencyKey),
+    templates,
+    recipientClasses,
+  };
 }
 
 /** Raw form values (untrusted). */
@@ -59,6 +81,7 @@ export interface DraftForm {
   readonly template_version_id: unknown;
   readonly recipient_class: unknown;
   readonly idempotency_key: unknown;
+  readonly case_binding: unknown;
 }
 
 /**
@@ -71,7 +94,7 @@ export type DraftOutcome =
   | { readonly kind: "refused"; readonly correlationId: string };
 
 export async function createNotificationDraft(
-  { ctx, drafts }: DraftDeps,
+  { ctx, drafts, bindingKey = draftBindingKey, now = () => new Date() }: DraftDeps,
   form: DraftForm,
 ): Promise<DraftOutcome> {
   const correlationId = ctx.correlationId;
@@ -79,9 +102,6 @@ export async function createNotificationDraft(
     logServerError("notification_draft_refused", correlationId, { code });
     return { kind: "refused", correlationId };
   };
-  if (!precheck(ctx.identity, "notification.draft.create", { caseId: form.case_id }).allow) {
-    return refused("PRECHECK");
-  }
   const parsed = CreateNotificationDraftCommandSchema.safeParse({
     case_id: form.case_id,
     template_version_id: form.template_version_id,
@@ -89,8 +109,22 @@ export async function createNotificationDraft(
     idempotency_key: form.idempotency_key,
   });
   if (!parsed.success) return refused("VALIDATION");
+  // Input binding (OI-049): the case is the one the server rendered this form for in this session; the posted case id
+  // must equal it. One code for every binding failure, so nothing (logs included) says which part failed.
+  const boundCase = verifyDraftBinding(
+    bindingKey(),
+    bindingSubject(ctx),
+    { caseId: parsed.data.case_id, idempotencyKey: parsed.data.idempotency_key, binding: form.case_binding },
+    Math.floor(now().getTime() / 1000),
+  );
+  if (boundCase === null) return refused("BINDING");
+  if (!precheck(ctx.identity, "notification.draft.create", { caseId: boundCase }).allow) {
+    return refused("PRECHECK");
+  }
   try {
-    const created = await drafts.createDraft(ctx.identity, parsed.data);
+    // The command's case is the verified binding's (SEC, ADR-020), equal to the posted one by now.
+    const command = { ...parsed.data, case_id: boundCase as CaseId };
+    const created = await drafts.createDraft(ctx.identity, command);
     return { kind: "created", caseId: created.case_id, notificationId: created.notification_id };
   } catch (error) {
     if (error instanceof NotificationCommandRefusedError) return refused(error.refusal);
