@@ -7,6 +7,7 @@
 import { expect, test } from "@playwright/test";
 import { databaseEventOracle, scenarioDb, visibleCases, type ScenarioDb } from "../fixtures/db";
 import { signInAs } from "../fixtures/personas";
+import { goBackOneEntry, goForwardOneEntry } from "../fixtures/history";
 import {
   caseId,
   casePath,
@@ -66,13 +67,14 @@ test("Scenario A — open, change tab, switch through the portfolio, back, forwa
   await expectCaseShown(page, TWO, "events", visible, oracle);
   await expectNoCaseInStorage(page);
 
-  // 4. Browser back: 0002 overview, the portfolio, then 0001 on the tasks tab, never a mix.
-  await page.goBack();
+  // 4. Browser back: 0002 overview, the portfolio, then 0001 on the tasks tab, never a mix. Each step waits until the
+  //    browser has recorded the entry it starts from (fixtures/history.ts, the #63 race).
+  await goBackOneEntry(page);
   await expectCaseShown(page, TWO, "overview", visible, oracle);
-  await page.goBack();
+  await goBackOneEntry(page);
   await expect(page).toHaveURL(/\/portfolio$/);
   await expect(page.getByTestId("case-workspace")).toHaveCount(0);
-  await page.goBack();
+  await goBackOneEntry(page);
   await expectCaseShown(page, ONE, "tasks", visible, oracle);
 
   // 5. Reload restores the same case and tab from the URL alone.
@@ -80,9 +82,9 @@ test("Scenario A — open, change tab, switch through the portfolio, back, forwa
   await expectCaseShown(page, ONE, "tasks", visible, oracle);
 
   // 6. Forward twice lands on 0002 again, also after a reload.
-  await page.goForward();
+  await goForwardOneEntry(page);
   await expect(page).toHaveURL(/\/portfolio$/);
-  await page.goForward();
+  await goForwardOneEntry(page);
   await expectCaseShown(page, TWO, "overview", visible, oracle);
   await page.reload();
   await expectCaseShown(page, TWO, "overview", visible, oracle);
