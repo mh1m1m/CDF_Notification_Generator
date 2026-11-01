@@ -44,6 +44,10 @@ CDF build protocol and the CDF Connected Engineering Operating Model (CDF-CEOM) 
   Only the Chief Architect runs SQL on the hosted project, and only these scripts and migrations that are reviewed and
   merged into `develop`. Team threads never connect to it. A fingerprint difference or isolation breach stops all
   hosted work (plan §8).
+- From migration `0012` on, a migration that changes a policy, an RLS flag, an ACL, a trigger's enabled state or a
+  function definition ends with its own `cdf_notifications_v13.policy_version` row (`V13-ACCESS-NNNN`, NNNN its number)
+  as its last statement, and `tests/integration/audit-outcome-policy-version.spec.ts` is extended to that row in the
+  same PR. The post-apply check P10 fails when the live `_policy_fingerprint()` differs from the highest row.
 - `database/hosted/rollback_v13.sql` runs **only on the owner's explicit word**.
 - No Supabase Auth users, Storage buckets, Realtime, Vault, Edge Functions, extensions or Data API exposure for V13.
 - V13 code never issues `NOTIFY`/`LISTEN`; advisory locks use the V13 namespace
