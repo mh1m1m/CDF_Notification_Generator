@@ -17,9 +17,31 @@ catalogue in `docs/security/AUTHORIZATION_MATRIX.md` §6 and the threats in `doc
 | `tests/security/app/repo-scans.spec.ts` + `tests/security/repo-scan.ts` (V13-SEC-008) | Vitest `unit` | SEC-APP-19, -20 | TM-I8 |
 | `tests/security/e2e/notification-center.spec.ts` (V13-SEC-007) | Playwright | SEC-APP-02, -07, -10 on `/notifications` | TM-I3, TM-I4, TM-I10 |
 | `tests/security/app/db-readiness.spec.ts` + `tests/security/db/readiness.ts` (V13-SEC-010) | Vitest `unit` | SEC-APP-21 (+ V13-SEC-011) | — (harness integrity) |
+| `tests/security/app/build-readiness.spec.ts` + `tests/security/build-readiness.ts` (V13-SEC-012) | Vitest `unit` | SEC-APP-22 | — (harness integrity) |
+| `tests/security/app/export-isolation.spec.ts` (V13-SEC-013) | Vitest `unit` | SEC-APP-23 (REQ-SEC-020, export) | TM-I1, TM-I5, TM-I6 |
 
 What each suite proves:
 
+- **Export isolation (V13-SEC-013)**: SEC-APP-23 runs the export path end to end with the real projection, the real
+  renderer and the lifecycle's default projection port (not the fixture stand-ins): `buildNotificationModel()` →
+  `projectForRecipient()` from server records → `renderEmail()` → lifecycle `exportEml()`. (a) Every string of every
+  field the projection withholds is replaced by a unique canary, and no canary, no internal disclosure marker
+  (`*_withheld`, `_disclosure`, `PROHIBITED`), no recipient address (the only address is the committed secretariat help
+  mailbox) and no addressee or send header reaches the exported bytes, in Arabic and English; `X-Unsent: 1` and the
+  lifecycle label are present. (b) A model projected for another case's notification is refused before any bytes
+  (`MODEL_CHANGED_SINCE_VALIDATION`) with one SECURITY denial and no export event or evidence. (c) A hand-made model
+  that only claims `_disclosure_applied` is refused. (d) An unknown notification, an unknown version and a stale
+  snapshot are refused with no export event. (e) A restricted case whose recipient is not on the access list renders
+  nothing, so nothing can be exported. (f) Bidi overrides, isolates and zero-width characters in model values never
+  reach the exported bytes. Eleven mutations of `lib/notifications` and `lib/disclosure` each fail at least one test.
+  Not covered: no route exports today, so there is no HTTP export surface to probe; REQ-SEC-020's browser-history and
+  cached-state clauses stay open.
+- **The bundle scan never skips silently in CI (V13-SEC-012)**: SEC-APP-22 pins `requireBuildWhenSignalled()`, which
+  `surface.spec.ts` calls immediately before its missing-build skip in the SEC-APP-13 bundle scan: a present build
+  runs the scan; a missing `.next/static` fails when any `requiredBy()` signal is set (truthy `CI`,
+  `V13_DB_TESTS_REQUIRED=1`, `GITHUB_ACTIONS=true`), naming the signals; locally it returns and the allow-listed
+  `test.skip` acts. A source check fails if the call is removed or moved away from the skip, whose text is unchanged
+  because QA-008's allow-list matches it.
 - **Database suites never skip silently in CI (V13-SEC-010)**: SEC-APP-21 pins the readiness verdict that every
   database-security suite (`case-matrix`, `catalog-hardening`, `commands`, `context-forgery`) calls through
   `databaseReady()`: ready → run; not ready with `CI` set (`true`, `1`, `yes`, any case) → the suite **fails** with the
