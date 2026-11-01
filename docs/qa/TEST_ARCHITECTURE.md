@@ -297,7 +297,11 @@ Firefox 71/71; WebKit 44 signed-in tests failed with no session cookie). The app
 `webkit-ar` is selected and `V13_E2E_TLS_CERT` / `V13_E2E_TLS_KEY` name a certificate, the config starts
 `tests/fixtures/tls-front.mjs`, a loopback HTTPS front that forwards every request unchanged (Host included, plus
 `x-forwarded-proto: https`) to the same started app, and `webkit-ar` uses `https://127.0.0.1:3443` with
-`ignoreHTTPSErrors`. The CI job makes a one-day self-signed certificate with `openssl` in the runner's temp directory.
+`ignoreHTTPSErrors`. The CI job makes a one-day self-signed certificate with `openssl` in the runner's temp directory, key mode 0600;
+locally, make one the same way in the OS temp directory. Neither is ever committed or uploaded. The front listens on
+127.0.0.1 only, refuses any target but the started app on `http://127.0.0.1`, and stops with the web server; Chromium
+and Firefox stay on `http://localhost:3100`, and only `webkit-ar` has `ignoreHTTPSErrors`. WebKit itself is proven only
+by the next cross-browser run.
 Locally the front was proven with the `webkit-ar` settings run in Chromium: 71/71, with the Server Action POSTs and the
 `Secure` cookie through the front.
 

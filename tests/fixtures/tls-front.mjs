@@ -18,8 +18,14 @@ const port = Number(process.env.V13_E2E_TLS_PORT || 3443);
 const target = new URL(process.env.V13_E2E_TLS_TARGET || "http://127.0.0.1:3100");
 if (!cert || !key)
   throw new Error("V13_E2E_TLS_CERT and V13_E2E_TLS_KEY must name the certificate and key files");
-if (!["127.0.0.1", "localhost", "[::1]"].includes(target.hostname) || target.protocol !== "http:")
-  throw new Error("the TLS front forwards to a loopback http app only");
+// Loopback only, both ways (ARCH conditions on #152): it listens on 127.0.0.1 and forwards to an http app on 127.0.0.1.
+if (
+  target.hostname !== "127.0.0.1" ||
+  target.protocol !== "http:" ||
+  target.pathname !== "/" ||
+  target.search
+)
+  throw new Error("the TLS front forwards to the started app on http://127.0.0.1 only");
 
 const server = https.createServer({ cert: readFileSync(cert), key: readFileSync(key) }, (req, res) => {
   const upstream = http.request(

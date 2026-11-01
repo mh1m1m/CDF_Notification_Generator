@@ -74,6 +74,7 @@ jobs:
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
             -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
             -keyout "$V13_E2E_TLS_KEY" -out "$V13_E2E_TLS_CERT"
+          chmod 600 "$V13_E2E_TLS_KEY"
       # Only the two engine projects: Chromium already runs every suite in CI's e2e job. No trace is recorded here, so
       # none can reach the artifact.
       - run: pnpm exec playwright test --project=firefox-ar --project=webkit-ar --trace=off
