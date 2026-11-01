@@ -155,9 +155,9 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   `docs/design/reviews/UX009_TEXT_RESIZE_REFLOW.md` (4 findings). No two-dimensional page scroll anywhere; tables
   scroll only inside their labelled regions.
 - Fixed in `styles/globals.css`: R-01 area navigation and R-02 case tabs wrap instead of scrolling (nothing off-screen
-  at 320 px), R-03 skip link width limit. R-04 (caption inside the scrolling table) → FE-009 with M1-15.
+  at 320 px), R-03 skip link width limit. R-04 (caption inside the scrolling table) → FE (V13-FE-010, after #82).
 - `tests/unit/components/reflow.spec.ts` pins R-01 to R-03 and the no-clipping rules (fails on the old stylesheet).
-- Spec for QA's a11y e2e in the register §4. M1-09 recorded FIXED by #90; M1-12 now wraps (R-02).
+- Spec for QA's a11y e2e in the register §4 (V13-QA-010). M1-09 recorded FIXED by #90; M1-12 now wraps (R-02).
 
 ## Unresolved defects
 - QA nit from #74 (preview frame title "— DESIGN_PREVIEW"): routed by ARCH to FE-009 (#82); no UX change.
