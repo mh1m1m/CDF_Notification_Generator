@@ -14,6 +14,8 @@
  *     time) — `X-CDF-Exported-At` instead, and `X-CDF-Issued-At` only when the evidence records an issue time;
  *   - no `To:` header and no address: the recipient is an opaque reference (`X-CDF-Recipient-Ref`) and a class;
  *   - a CR or LF in any header value is refused (header injection, W4-02); header values are ASCII or RFC 2047 words;
+ *   - control characters, bidi embeddings, overrides, isolates and marks, zero-width characters and the BOM are stripped
+ *     from the supplied subject, text and HTML (V13-PROC-022);
  *   - an HTML part with active content (script, frames, forms, inline event handlers, javascript:/vbscript:/data: URLs)
  *     is refused (ACTIVE_CONTENT_IN_EXPORT; charter §12 SEC "HTML injection, unsafe URLs");
  *   - for a version that was never sent, rendered text that affirms it was sent or delivered is refused
@@ -25,6 +27,7 @@
  */
 import "server-only";
 import { createHash } from "node:crypto";
+import { stripControls } from "@/lib/notifications/render/escape";
 
 export interface ExportLabel {
   readonly code: string;
@@ -243,13 +246,17 @@ export function buildExportEml({
   }
   const label = labelFor(status);
   if (!rendered || typeof rendered !== "object") throw new ExportError("RENDERED_REQUIRED");
-  const { subject, text, html } = rendered;
-  if (typeof subject !== "string" || !subject.trim() || subject.length > 400)
+  const { subject: subject0, text: text0, html } = rendered;
+  if (typeof subject0 !== "string" || !subject0.trim() || subject0.length > 400)
     throw new ExportError("INVALID_SUBJECT");
-  if (/[\r\n]/.test(subject)) throw new ExportError("HEADER_INJECTION", { header: "Subject" });
-  if (typeof text !== "string" || !text.trim()) throw new ExportError("TEXT_PART_REQUIRED"); // the text twin is mandatory
+  if (/[\r\n]/.test(subject0)) throw new ExportError("HEADER_INJECTION", { header: "Subject" });
+  if (typeof text0 !== "string" || !text0.trim()) throw new ExportError("TEXT_PART_REQUIRED"); // the text twin is mandatory
   if (html !== undefined && html !== null && typeof html !== "string") throw new ExportError("INVALID_HTML");
-  const htmlText = typeof html === "string" ? html : null;
+  // V13-PROC-022: controls, bidi embeddings/overrides/isolates and marks, zero-width and BOM never reach the export,
+  // whatever the caller supplies (defence in depth: the renderer already strips them, as renderEmail does)
+  const subject = stripControls(subject0);
+  const text = stripControls(text0);
+  const htmlText = typeof html === "string" ? stripControls(html) : null;
   if (htmlText && ACTIVE_HTML.some((re) => re.test(htmlText)))
     throw new ExportError("ACTIVE_CONTENT_IN_EXPORT");
   if ((NEVER_SENT_STATES as readonly unknown[]).includes(status)) {

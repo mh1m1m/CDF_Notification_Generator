@@ -14,6 +14,7 @@ import { deepFreeze, type DeepReadonly } from "@/lib/notifications/lifecycle/uti
 import { createEvidenceStore } from "@/lib/notifications/lifecycle/evidence";
 import {
   createNotificationLifecycle,
+  RENDERER_PROVENANCE_PORT,
   type DraftInput,
   type LifecycleDeps,
   type NotificationTypeInput,
@@ -290,6 +291,18 @@ export const FIXTURE_PROJECTION_PORT = Object.freeze({
 });
 
 /**
+ * The fixture world's rendering port (V13-PROC-022, OI-053). The lifecycle's default port accepts only a renderer
+ * output made from the very model being exported; the lifecycle unit tests hand the export renderedFor() placeholders
+ * with stand-in models, so this port accepts any rendering only together with a stand-in model (one that
+ * projectedModel() made, which no real projection can be) and applies the real check to every other model.
+ */
+export const FIXTURE_RENDERING_PORT = Object.freeze({
+  isRenderingOf: (r: unknown, m: unknown): boolean =>
+    (typeof m === "object" && m !== null && FIXTURE_MODELS.has(m)) ||
+    RENDERER_PROVENANCE_PORT.isRenderingOf(r, m),
+});
+
+/**
  * Stand-in for a model returned by W-D2's project() (charter §5): `_disclosure_applied: true` and `_disclosure_log`
  * (field → {outcome, basis}). Display values are placeholders; no names, no addresses. It passes only the fixture
  * world's FIXTURE_PROJECTION_PORT, never the lifecycle's default port.
@@ -425,6 +438,7 @@ export function createWorld(opts: WorldOptions = {}) {
     procedural,
     authority,
     projection: FIXTURE_PROJECTION_PORT,
+    rendering: FIXTURE_RENDERING_PORT,
     types: opts.types ?? NOTIFICATION_TYPES,
     clock,
     ids,

@@ -94,10 +94,12 @@ import type {
   Payload,
   ProceduralReadModelPort,
   ProjectionPort,
+  RenderingPort,
   RecipientResolutionPort,
   ResolvedRecipient,
 } from "./ports";
 import { isProjected as disclosureIsProjected } from "@/lib/disclosure";
+import { isRenderingOf as rendererIsRenderingOf } from "@/lib/notifications/render/provenance";
 
 /**
  * The default projection port is W-D2's own brand check (SEC review of #45, LOW: fail closed). Without it the VALIDATED
@@ -106,6 +108,15 @@ import { isProjected as disclosureIsProjected } from "@/lib/disclosure";
  */
 export const DISCLOSURE_PROJECTION_PORT: ProjectionPort = Object.freeze({
   isProjected: (m: unknown) => disclosureIsProjected(m),
+});
+
+/**
+ * The default rendering port (V13-PROC-022, OI-053): the export accepts a rendering only when W-D2's renderer made it
+ * from the very model the export validated and it is unchanged since. Without it, a rendering of another notification
+ * (another case) would export under this record's label and model hash. Passing `rendering: null` keeps this port.
+ */
+export const RENDERER_PROVENANCE_PORT: RenderingPort = Object.freeze({
+  isRenderingOf: (r: unknown, m: unknown) => rendererIsRenderingOf(r, m),
 });
 
 export const NOTIFICATION_STATUSES = Object.freeze([
@@ -535,6 +546,8 @@ export interface LineageView {
  *   authority                  { check({action_id, actor, object, case_id}) → {result, reason} } — W-D2 check() wrapper
  *   projection                 { isProjected(model) } — W-D2 brand check, applied in addition to isProjectedModel;
  *                              defaults to DISCLOSURE_PROJECTION_PORT (lib/disclosure isProjected), never to "accept"
+ *   rendering                  { isRenderingOf(rendered, model) } — W-D2 rendering provenance for exportEml (OI-053);
+ *                              defaults to RENDERER_PROVENANCE_PORT, never to "accept"
  *   types                      { [type_code]: {template_code, template_version?, channels?, approval?, allowed_trigger_types?,
  *                                journey_capacities?, key_occurrence?} } — synthetic configuration (catalogue in production)
  *   rules, validate, deadlineRules, retryPolicy, clock, ids
@@ -550,6 +563,7 @@ export interface LifecycleDeps {
   procedural?: ProceduralReadModelPort | null;
   authority?: AuthorityPort | null;
   projection?: ProjectionPort | null;
+  rendering?: RenderingPort | null;
   types?: Readonly<Record<string, NotificationTypeInput | null | undefined>> | null;
   rules?: readonly ConsistencyRule[];
   validate?: (ctx: ConsistencyContext, rules: readonly ConsistencyRule[]) => DeepReadonly<ValidationResult>;
@@ -609,6 +623,7 @@ export function createNotificationLifecycle(deps: LifecycleDeps = {}): Notificat
     sender = null,
     authority = null,
     projection: projectionIn = null,
+    rendering: renderingIn = null,
     types: rawTypes = {},
     rules = RULES,
     validate = engineValidate,
@@ -663,6 +678,7 @@ export function createNotificationLifecycle(deps: LifecycleDeps = {}): Notificat
   const projection = projectionIn ?? DISCLOSURE_PROJECTION_PORT;
   const isProjected = (m: unknown): m is ProjectedModel =>
     isProjectedModel(m) && projection.isProjected(m) === true;
+  const rendering = renderingIn ?? RENDERER_PROVENANCE_PORT;
 
   function requireActor(actor: unknown, field = "actor"): Actor {
     const a = pickActor(actor);
@@ -1896,6 +1912,16 @@ export function createNotificationLifecycle(deps: LifecycleDeps = {}): Notificat
       throw denied("MODEL_CHANGED_SINCE_VALIDATION", {
         command: "notification_export",
         outcome: "MODEL_CHANGED",
+        action: "VALIDATION_REJECTED",
+        rec,
+        actor: who,
+      });
+    }
+    // OI-053: the rendering must come from the validated model (bound to this record by the hash above), unchanged
+    if (rendered && typeof rendered === "object" && rendering.isRenderingOf(rendered, model) !== true) {
+      throw denied("RENDERING_NOT_FROM_MODEL", {
+        command: "notification_export",
+        outcome: "RENDERING_NOT_FROM_MODEL",
         action: "VALIDATION_REJECTED",
         rec,
         actor: who,
