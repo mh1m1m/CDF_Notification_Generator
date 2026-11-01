@@ -33,6 +33,9 @@ export class CaseRecordsMismatchError extends Error {
   readonly code = "CASE_RECORDS_MISMATCH";
 }
 
+/** The statuses case_my_open_tasks_page answers (migration 0014; the overview's "open" filter). */
+const OPEN_TASK_STATUSES: ReadonlySet<string> = new Set(["OPEN", "IN_PROGRESS", "BLOCKED"]);
+
 /** Every row must belong to the case asked for (defence in depth over the database's own filter). */
 export function sameCase<T extends { case_id: string }>(caseId: CaseId, rows: readonly T[]): readonly T[] {
   if (rows.some((r) => r.case_id !== caseId)) throw new CaseRecordsMismatchError("CASE_RECORDS_MISMATCH");
@@ -167,6 +170,38 @@ export function createV13ProceduralRecordsReader(run: RequestContextRunner): Pro
                                                             ${limit}::integer) t`,
           ),
         ({ page_cursor: _cursor, ...row }) => rowToCaseTask(row),
+        (t) => t.id,
+      );
+    },
+
+    // V13-FE-014: the verified persona's open tasks of one case (case_my_open_tasks_page; DB-022 migration 0014).
+    async listMyOpenTasksPage(
+      identity: RequestIdentity,
+      caseId: CaseId,
+      page: CaseRecordsPageRequest,
+    ): Promise<CaseRecordsPage<CaseTask>> {
+      return readCaseListPage(
+        "myOpenTasks",
+        caseId,
+        page,
+        (after, limit) =>
+          run(
+            identity,
+            (tx) =>
+              tx<(TaskRow & { page_cursor: string })[]>`
+              select t.id, t.case_id, t.task_code, t.title_ar, t.title_en, t.assignee_capacity, t.is_mine, t.status,
+                     t.due_date, t.row_version, t.status_event_id, t.page_cursor
+                from cdf_notifications_v13.case_my_open_tasks_page(${caseId}::uuid, ${after.at}::text,
+                                                                    ${after.id}::uuid, ${limit}::integer) t`,
+          ),
+        ({ page_cursor: _cursor, ...row }) => {
+          const task = rowToCaseTask(row);
+          // The database answers only the caller's open tasks; anything else refuses the page (fail closed).
+          if (!task.is_mine || !OPEN_TASK_STATUSES.has(task.status)) {
+            throw new CaseRecordsMismatchError("CASE_RECORDS_MISMATCH");
+          }
+          return task;
+        },
         (t) => t.id,
       );
     },
