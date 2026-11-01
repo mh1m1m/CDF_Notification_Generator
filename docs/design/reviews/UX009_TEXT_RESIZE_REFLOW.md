@@ -109,6 +109,40 @@ forms, pager, preview text and table-link styles keep the reflow, resize and tex
 
   With spacing at 320 px, the notification reference `NTF-DEMO-…` breaks at its hyphen. That wrap is needed there, and
   nothing is lost.
-- **Not covered:** the Next Action Card. FE-015 (#141), which places it on the Overview, is still open. The card's own
-  rules (`max-inline-size: 100%`, `overflow-wrap: anywhere`) are pinned in its unit spec. This check runs on the page
-  once #141 merges.
+- **Next Action Card:** checked after #141 merged; see §6.
+
+## 6. Next Action Card on the Overview (V13-UX-017)
+
+FE-015 (#141) placed the card first on the Case Workspace Overview. QA's browser test (#150) checks that the card
+causes no inline scroll at 320 px in ar and en. This check adds the other conditions: 200% zoom and 1.4.12 text spacing.
+
+### Method
+
+- **Build:** `develop` at `0a0c955`, as a production build on a local PostgreSQL after `pnpm db:reset`. No extra data
+  was created.
+- **Personas and cases:** cards found by visiting every seeded case each persona can open.
+  - Secretary Alpha has a card on cases 0001, 0003, 0004, 0007 and 0008. Case 0001 was measured: "Schedule
+    interview" / "جدولة المقابلة", status open, due in 9 days.
+  - Investigator Beta has a card on 0001, 0003, 0005, 0006 and 0009. Case 0001 was measured: "Collect documents",
+    a recorded "In progress" badge, due in 4 days.
+- **Locales:** ar and en.
+- **Conditions:** 640 × 450 (200%), 320 × 256, and the 1.4.12 spacing stylesheet at 1280 × 900 and at 320 × 256. Each
+  320 px condition ran in four fonts: the default, Carlito, Liberation Sans and DejaVu Sans.
+- **Checks:** a temporary Playwright capture (not committed) ran §4 checks 1, 3 and 4 on the page and on every element
+  inside the card, and took a screenshot of the card. 40 captures.
+
+### Results
+
+- **No defect.**
+- **Page:** the page never scrolls inline. `scrollWidth` equals `clientWidth` in all 40 captures.
+- **Card box:** the card stays inside the content column.
+  - At 320 px: 16 to 304 px (288 px wide).
+  - At 640 px: 608 px wide.
+  - At 1,280 px: 1,008 px wide.
+- **Clipping:** no element in the card is clipped or scrolls inline. The one hidden span is the badge's
+  `.v13-sr-only` "recorded" text, which is hidden on purpose and is skipped by §4 check 3.
+- **Title:** it wraps instead of overflowing. "Collect documents" takes two lines at 320 px with spacing in DejaVu
+  Sans. The card grows to fit it (287–292 px tall).
+- **Status and due date:** the rows wrap under their labels. The day count stays on its own line.
+- **Spacing gap:** with the spacing stylesheet, the 2em paragraph spacing adds a gap under the title. That is the
+  override's own effect, and nothing overlaps.
