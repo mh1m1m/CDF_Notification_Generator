@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 1 Nov 2026 · Branch: `security/V13-SEC-012-surface-build-required` · `develop` now at `a0bf765`
+Updated: 1 Nov 2026 · Branch: `security/V13-SEC-013-export-isolation` · `develop` now at `b396062`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -77,7 +77,12 @@ Updated: 1 Nov 2026 · Branch: `security/V13-SEC-012-surface-build-required` · 
   LOW: an event with no `case_id` passed) then ACCEPT `93a489e` (JI-07); #99 PROC-017 ACCEPT `7f14954`, `a847241`,
   `8dd4e4b` (REQ-JRN-007 COMPLETE checked on QG-02)
 - V13-SEC-012 — SEC-APP-13's bundle scan fails, not skips, when `.next/static` is missing and any `requiredBy()` signal
-  is set (QA's and ARCH's follow-up on #88); SEC-APP-22 — IN_REVIEW
+  is set (QA's and ARCH's follow-up on #88); SEC-APP-22 — COMPLETE, merged #103 (`4bf455d`)
+- Reviews 1 Nov (morning): #95 PROC-018 ACCEPT `93a489e`; #101 DB-018 ACCEPT `c6f83cb`, `434c1c7`; #102 PROC-019 ACCEPT
+  `82b1467`; #105 ARCH-002 ACCEPT `d801f86`
+- V13-SEC-013 — export isolation (REQ-SEC-020, "export" clause), SEC-APP-23, reviewer PROC — IN_REVIEW. Two findings
+  reported to ARCH, not pinned: the export does not bind `rendered` to the validated model, and it does not strip bidi
+  or zero-width characters from caller-supplied subject and text
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
@@ -95,6 +100,7 @@ Updated: 1 Nov 2026 · Branch: `security/V13-SEC-012-surface-build-required` · 
 | Local, V13-SEC-010 on `develop` `25a1c48`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; `CI=true vitest --project integration tests/security/db` with the DB up; then the DB stopped: `CI=true` and `CI` unset on `case-matrix` | lint 0, typecheck 0, **3/3** (full unit **1987/1987**, 78 files); DB up **101/101** (5 files); DB stopped + `CI=true`: the file **fails** with `[security/db] case-matrix: the local cluster does not answer …`; DB stopped + `CI` unset: 18 skipped with a warning | 3 + 101 | SEC-010 head |
 | Local, V13-SEC-011 on `develop` `b22f153`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; each of the three signals deleted in turn; the DB stopped with `CI=false V13_DB_TESTS_REQUIRED=1` and with all three unset on `case-matrix`; `CI=true` security DB suites after `pnpm db:reset` | unit **1989/1989**, SEC-APP-21 **5/5**; each deleted signal fails 2 tests; DB stopped: the file **fails** with `CI=false V13_DB_TESTS_REQUIRED=1`, 18 skipped with none set; DB up **101/101** | 5 + 101 | SEC-011 head |
 | Local, V13-SEC-012 on `develop` `a0bf765`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; the `requireBuildWhenSignalled` call removed from `surface.spec.ts`; the leak-suite guard over the 15 suites; `CI=true` Playwright `tests/security/e2e/surface.spec.ts` after `pnpm db:reset` | lint 0, typecheck 0, unit **2026/2026** (SEC-APP-22 4/4); with the call removed 1 test fails; guard `[]`; surface **12/12**, the bundle scan ran (not skipped). A first surface run with the local DB stopped had 1 flaky sign-in test; re-run with the DB up 12/12 | 4 + 12 | SEC-012 head |
+| Local, V13-SEC-013 on `develop` `b396062`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; eleven mutations of `lib/notifications` / `lib/disclosure`, one at a time, then restored | lint 0, typecheck 0, unit **2032/2032** (82 files; SEC-APP-23 6/6); every mutation fails at least one SEC-APP-23 test (model-hash check, export projection gate, revision check, unknown-version fallback, render suppression, renderer bidi strip, `X-Unsent`, an added `To:`, projection keeping a withheld field, renderer showing withheld fields, SECURITY denial not written) | 6 | SEC-013 head |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.
