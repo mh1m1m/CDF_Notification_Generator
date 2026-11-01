@@ -22,13 +22,15 @@
 // app, as playwright.config.ts says; CI resets in the e2e job.
 // FE-011: the preview's plain-text version opens under the frame as text in the notice's language, with no page
 // scroll at 320 px.
+// FE-016 (UXB-19): at 320 px, in Arabic and English, the selected template's code is shown whole under the select
+// and follows the selection.
 // FE-013: one bounded page; a tampered or forged cursor shows the empty state with a link to the first page,
 // never an error.
 // SYNTHETIC personas only.
 import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { createTranslator } from "@/lib/i18n";
+import { createTranslator, LOCALE_COOKIE } from "@/lib/i18n";
 import { ar as RENDER_AR } from "@/lib/i18n/notificationRender/ar";
 import { en as RENDER_EN } from "@/lib/i18n/notificationRender/en";
 import { signInAs } from "../fixtures/personas";
@@ -268,6 +270,49 @@ test.describe("Scenario E — notification draft", () => {
       expect(scrollWidth, `case ${i}`).toBe(clientWidth);
     }
   });
+
+  // V13-FE-016 (UXB-19): a closed native select cannot wrap, so the start of a long code is cut at 320 px in Arabic.
+  for (const locale of ["ar", "en"] as const) {
+    test(`${locale} at 320 px: the selected template's code is shown whole under the select and follows the selection`, async ({
+      page,
+      context,
+      baseURL,
+    }) => {
+      await context.addCookies([{ name: LOCALE_COOKIE, value: locale, url: baseURL! }]);
+      await page.setViewportSize({ width: 320, height: 800 });
+      await signInAs(page, "secretary-alpha");
+      await page.goto(`/cases/${C(1)}/notifications`);
+      await expect(page.locator("html")).toHaveAttribute("lang", locale);
+      const select = page.getByTestId("draft-template");
+      const code = page.getByTestId("draft-template-code-value");
+      await expect(select).toHaveAttribute("aria-describedby", "draft-template-code");
+      await expect(page.getByTestId("draft-template-code")).toHaveAttribute("id", "draft-template-code");
+      await expect(code).toHaveAttribute("dir", "ltr");
+      const selectedCode = () =>
+        select.evaluate((el) => (el as HTMLSelectElement).selectedOptions[0]?.dataset.templateCode ?? "");
+      await expect(code).toHaveText(await selectedCode());
+      for (const value of ["1f000000-0000-4000-8000-000000000003", "1f000000-0000-4000-8000-000000000001"]) {
+        await select.selectOption(value);
+        const expected = await selectedCode();
+        expect(expected).toMatch(value.endsWith("3") ? /^CF-24_/ : /^CF-20_/);
+        await expect(code).toHaveText(expected);
+        // whole: inside the viewport, nothing clipped, and no page scroll
+        const box = await code.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const p = el.parentElement!;
+          return { left: r.left, right: r.right, clipped: p.scrollWidth > p.clientWidth };
+        });
+        expect(box.left, value).toBeGreaterThanOrEqual(0);
+        expect(box.right, value).toBeLessThanOrEqual(320);
+        expect(box.clipped, value).toBe(false);
+        const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+        }));
+        expect(scrollWidth, value).toBe(clientWidth);
+      }
+    });
+  }
 
   test("Governance Officer Delta sees the tab but no draft form", async ({ page }) => {
     await signInAs(page, "governance-officer-delta");

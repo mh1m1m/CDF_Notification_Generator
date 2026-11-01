@@ -129,7 +129,7 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 - QA-004: Truth Inspector on the case pages with a DB event oracle (local/CI database only); DB half of the Sentinel.
 - QA-005 (rest): five-screen audit, screenshot library; QA-006 staging Gate J (OI-008).
 - Local note: the local PostgreSQL cluster can stop between runs; `pnpm db:local start` before `pnpm db:reset`.
-- V13-QA-014 — branch test/V13-QA-014-screenshot-library — IN_REVIEW: screenshot library without baselines (design
+- V13-QA-014 — #140, merged into develop as 6401c45 — COMPLETE: screenshot library without baselines (design
   §2–§4); ARCH hunk `.env.example` (`V13_E2E_VISUAL`); the CI visual job (§8) is ARCH's.
 - V13-QA-015 — branch test/V13-QA-015-visual-baselines (stacked on V13-QA-014) — IN_REVIEW: visual baselines (36,
   committed only from the CI visual job's candidates) and guard G7 (`updateSnapshots` pinned, no update flag in
@@ -137,6 +137,9 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   typecheck clean; local baseline probes (missing → 9 fail + 36 candidates; candidates in place → 9/9 on three fresh
   databases; swapped image → fail with diff); library 244/244, identical to V13-QA-014's 3a75a42 in two runs. No ARCH hunk; the CI visual job (`V13_E2E_VISUAL=baseline`, upload
   `test-results/baseline-candidates/` and the Playwright output) is ARCH's.
+- V13-QA-021 — #148, merged into develop as d399987 — COMPLETE: Server
+  Action forms with JavaScript off (sign-in, workspace switch), same-origin `Origin` pinned; fails on `no-referrer`
+  (2 tests, `Origin: "null"`), passes on the fix; the no-JS sign-in observation from the FE-016 review is closed by it.
 
 ## Unresolved defects
 - none open from QA

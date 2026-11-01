@@ -4,7 +4,7 @@
 plus the readiness of the synthetic staging environment. It is not a readiness claim. Production promotion is BLOCKED
 by design (QG-13), and nothing here approves a deployment. Requirement: REQ-DOC-008 (task V13-ARCH-011).
 
-Last updated: **1 Nov 2026 04:47 UTC** (Chief Architect), `develop` `0bc2542`. Facts are taken from
+Last updated: **1 Nov 2026 07:53 UTC** (Chief Architect), `develop` `d399987`. Facts are taken from
 `docs/DEPLOYMENT_STATUS.md`, `docs/OPEN_ISSUES.md` and `docs/IMPLEMENTATION_STATUS.md`, each with its own check time.
 
 ## 1. Production promotion gate (ADR-005, QG-13)
@@ -38,7 +38,7 @@ Staging is the `develop` preview behind the staging alias, with synthetic data o
 | No protection bypass on the staging alias | OPEN | OI-052: one shareable link, taken to be left by the Vercel connector's authenticated fetch, lets its holder past Vercel Authentication until 1 Nov 23:00:52 UTC; its token is not recorded anywhere | Owner |
 | A deployment for every `develop` merge | BLOCKED (intermittent) | OI-038: the free plan's daily limit refuses some builds, so the staging alias can lag `develop` | Owner (plan) |
 | Hosted schema: `0000`–`0005` applied, every per-step check PASS | COMPLETE | `docs/DEPLOYMENT_STATUS.md` §2; `docs/TEST_EVIDENCE.md` §2–§2.1 (fingerprint unchanged, isolation 27 checks, 0 breaches) | — |
-| Hosted schema: `0006`–`0010` and the seed | BLOCKED | OI-034: waits for the owner to answer the Supabase connector's confirmation for statements that drop objects; never worked around | Owner ("ready"), then ARCH |
+| Hosted schema: `0006`–`0014` and the seed | BLOCKED | OI-034: waits for the owner to answer the Supabase connector's confirmation for statements that drop objects; never worked around | Owner ("ready"), then ARCH |
 | Database login for the app | BLOCKED | OI-045: the owner runs `database/hosted/owner_set_app_login.sql` and sets `V13_DATABASE_URL` and `V13_SESSION_SECRET` as sensitive Vercel variables (`docs/hosted/OWNER_STEP_APP_LOGIN.md`). Claude never generates, reads, prints or passes these values | Owner, then ARCH |
 | Pooler host for the app login confirmed from a live connection | NOT_STARTED | OI-007: read from the deployed health endpoint after OI-045 | ARCH |
 | `/api/health` and `/api/health/isolation` PASS from the deployed preview | NOT_STARTED | Last read on 1 Nov at 01:32 UTC on `286eb93`: HTTP 503 `DB_NOT_CONFIGURED` (`docs/DEPLOYMENT_STATUS.md` §3) | ARCH (V13-ARCH-003) |

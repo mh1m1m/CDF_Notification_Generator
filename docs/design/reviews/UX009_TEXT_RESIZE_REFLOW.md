@@ -65,3 +65,50 @@ One spec, Arabic and English, personas as in §1, after `pnpm db:reset`:
 5. Focus the skip link (first Tab) at 320 × 256 with spacing: its box lies inside the viewport.
 6. Open the switcher (Governance Officer Delta) at 320 × 256 with spacing: the menu's box lies inside the viewport;
    Escape closes it.
+
+## 5. Re-check after M1 changes (V13-UX-016)
+
+Pages that changed after this review were re-measured with the §1 conditions. The question was whether the newer
+forms, pager, preview text and table-link styles keep the reflow, resize and text-spacing results of §2.
+
+### Method
+
+- **Build:** `develop` at `cfb82be` (after #128 UX-014, #131's base, #135 UX-015 and FE-013's pager), as a production
+  build on a local PostgreSQL after `pnpm db:reset`. 26 extra synthetic drafts were created through the page, so that
+  case `CDF-DEMO-2026-0001` has a second Notifications page.
+- **Persona and locales:** Secretary Alpha, in ar and en.
+- **Conditions:** 640 × 450 (200%), 320 × 256, and the 1.4.12 spacing stylesheet at 1280 × 900 and at 320 × 256.
+- **Font probe:** each 320 px condition was run in the default font and again with Carlito, Liberation Sans and
+  DejaVu Sans forced, as QA-010 does. The 1-px R-05 overflow only showed in one font.
+- **States:**
+  - Case Workspace: Overview, Recorded events, Tasks, and Notifications pages 1 and 2 (the `ListPager`, with the
+    draft form).
+  - The plain-text details of a notification preview.
+  - The Notification Operations Center, with filters.
+  - Case Portfolio, with filters.
+  - My Work, with a task's status form open.
+- **Checks:** §4 checks 1, 3 and 4 were run in a temporary Playwright capture (not committed), plus a screenshot of
+  every state at 320 px. A closed `<select>` whose option text is wider than its box was also flagged, then checked by
+  eye.
+
+### Results
+
+- **No new defect.** The page never scrolls inline. No text is clipped outside a labelled scroll region. Every
+  element that scrolls inline is a labelled, focusable region. This holds on every state, locale, condition and font
+  above.
+- **Draft form template select.** At 320 px in Arabic, the closed select cuts the start of its Latin code. This is
+  UXB-19, which was already known. V13-FE-016 (#131) shows the selected code as text under the select. Its UX browser
+  check at `7c604f0` (ar and en; 320 px with and without spacing; all four fonts; 1280 px) found no page scroll and no
+  clipping, with the code wrapping inside `<bdi dir="ltr">` (UX review ACCEPT on #131).
+- **My Work status select.** It was flagged by the select heuristic. That was a false positive: a select is as wide as
+  its widest option, and the screenshots show its text fits.
+- **Preview plain text.** The `<pre>` wraps inside its box at every width:
+  - 286 px at 320;
+  - 606 px at 640;
+  - 1,006 px at 1,280.
+
+  With spacing at 320 px, the notification reference `NTF-DEMO-…` breaks at its hyphen. That wrap is needed there, and
+  nothing is lost.
+- **Not covered:** the Next Action Card. FE-015 (#141), which places it on the Overview, is still open. The card's own
+  rules (`max-inline-size: 100%`, `overflow-wrap: anywhere`) are pinned in its unit spec. This check runs on the page
+  once #141 merges.

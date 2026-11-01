@@ -6,6 +6,8 @@
 // V13-FE-013 (OI-026): the Events, Tasks and Notifications tabs read one bounded page (DB-019's case_*_page), only
 // after the route's case passed the pre-check; no count or total is read. A tampered or foreign cursor gives the
 // tab's empty state (with a link to the first page), never an error.
+// V13-FE-015 (REQ-IA-009): the overview's Next Action Card is PROC-026's nextActionForCase over the FIRST page of the
+// persona's own open tasks (ARCH ruling, 1 Nov), whatever page of that list the URL shows.
 import "server-only";
 import {
   CASE_RECORDS_PAGE_SIZE,
@@ -21,7 +23,9 @@ import {
   type NotificationRecordsReader,
   type ProceduralRecordsReader,
 } from "@/lib/contracts";
+import { nextActionForCase } from "@/lib/domain/next-action";
 import { listPaging, FIRST_PAGE, type ListPaging, type ParsedListPage } from "./case-list-paging";
+import { deadlineOf, riyadhToday } from "./my-work";
 import { getCaseForRoute } from "./cases";
 import type { RequestContext } from "./context";
 import { toUserError } from "./errors";
@@ -46,9 +50,23 @@ export interface CaseWorkspaceDeps {
   readonly preview?: NotificationPreviewReader;
   /** The raw `?n=` value (notifications tab only); undefined when absent. */
   readonly previewId?: string;
+  /** The clock for the Next Action Card's day count (Asia/Riyadh, as My Work); default the system clock. */
+  readonly now?: () => Date;
   /** The parsed `after` / `back` paging state (the overview's own open tasks and the paged tabs); default the first page. */
   readonly page?: ParsedListPage;
 }
+
+/** The card's task, as the overview's own open tasks list carries it, with its due day count and its link. */
+export interface CaseNextActionView {
+  readonly task: CaseTask;
+  /** The recorded due date and the days to it from today in Asia/Riyadh (deadlineOf); null when none is recorded. */
+  readonly due: { readonly date: string; readonly days: number } | null;
+  /** The overview, first page (no paging parameters), at the task's row anchor. Built from the task id only. */
+  readonly href: string;
+}
+
+/** The overview URL with no paging parameters, at a task row's anchor (ARCH ruling on FE-015, 1 Nov). */
+export const nextActionHref = (caseId: string, taskId: string): string => `/cases/${caseId}#task-${taskId}`;
 
 interface Frame {
   readonly summary: CaseSummary;
@@ -62,6 +80,8 @@ export type CaseWorkspaceView =
       readonly myTasks: readonly CaseTask[];
       /** Paging of the own open tasks (V13-FE-014); the last five events are not paged. */
       readonly paging: ListPaging;
+      /** The Next Action Card (V13-FE-015); null when nextActionForCase answered NONE. */
+      readonly nextAction: CaseNextActionView | null;
     })
   | (Frame & { readonly tab: "events"; readonly events: readonly CaseEvent[]; readonly paging: ListPaging })
   | (Frame & { readonly tab: "tasks"; readonly tasks: readonly CaseTask[]; readonly paging: ListPaging })
@@ -101,6 +121,37 @@ async function onePage<T>(
   }
 }
 
+/**
+ * PROC-026's answer as the card shows it. Exactly the four CaseHeader fields nextActionForCase's strict schema takes
+ * (SEC INFO on #130); NONE, or a task that is not on the page given, gives no card.
+ */
+function nextActionView(
+  summary: CaseSummary,
+  capacity: CaseCapacity | null,
+  firstPage: readonly CaseTask[],
+  today: string,
+): CaseNextActionView | null {
+  const action = nextActionForCase({
+    case: {
+      case_id: summary.case_id,
+      is_restricted: summary.is_restricted,
+      records_state: summary.records_state,
+      my_capacity: capacity,
+    },
+    capacity,
+    records: { tasks: firstPage },
+  });
+  if (action.kind !== "TASK") return null;
+  const task = firstPage.find((t) => t.id === action.task_id);
+  if (!task) return null;
+  const deadline = deadlineOf(action.deadlines[0]?.date ?? null, today);
+  return {
+    task,
+    due: deadline.kind === "none" ? null : { date: deadline.date, days: deadline.days },
+    href: nextActionHref(summary.case_id, task.id),
+  };
+}
+
 /** Loads one tab of one case. Throws AppError("NOT_FOUND") for anything the persona may not see. */
 export async function loadCaseWorkspace(
   {
@@ -113,6 +164,7 @@ export async function loadCaseWorkspace(
     preview,
     previewId,
     page = FIRST_PAGE,
+    now = () => new Date(),
   }: CaseWorkspaceDeps,
   rawCaseId: unknown,
   tab: CaseTab,
@@ -128,7 +180,15 @@ export async function loadCaseWorkspace(
       const { items: myTasks, paging } = await onePage(`/cases/${caseId}`, page, (request) =>
         procedural.listMyOpenTasksPage(ctx.identity, caseId, request),
       );
-      return { ...frame, tab, events: events.items, myTasks, paging };
+      // The card's input is always the first page: on the first page the rows already read, on any other page (or a
+      // refused one) one more read of the first page (ARCH ruling on FE-015).
+      const firstPage =
+        page.ok && page.query.after === undefined
+          ? myTasks
+          : (await procedural.listMyOpenTasksPage(ctx.identity, caseId, { limit: CASE_RECORDS_PAGE_SIZE }))
+              .items;
+      const nextAction = nextActionView(summary, capacity, firstPage, riyadhToday(now()));
+      return { ...frame, tab, events: events.items, myTasks, paging, nextAction };
     }
     case "events": {
       const { items, paging } = await onePage(`/cases/${caseId}/events`, page, (request) =>

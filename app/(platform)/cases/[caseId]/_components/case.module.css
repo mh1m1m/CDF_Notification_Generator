@@ -38,6 +38,18 @@
   max-inline-size: 100%;
 }
 
+/* V13-FE-016 (UXB-19): the selected template's code on its own line under the select, wrapped so nothing is cut at
+   320 px (WCAG 1.4.10). */
+.selectedCode {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--cdf-text-secondary);
+}
+
+.selectedCode > bdi {
+  overflow-wrap: anywhere;
+}
+
 /* V13-FE-013: previous / next under a paged list, as the portfolio's. */
 .pagination {
   display: flex;

@@ -159,6 +159,13 @@ new session secret on a database holding the previous run's key refuses every re
 first step times out at the draft form's template select. Run `pnpm db:reset` before each local run that starts a new
 app (`playwright.config.ts`); CI resets in the e2e job.
 
+**No JavaScript (V13-QA-021, OI-056).** `tests/e2e/no-js-server-actions.spec.ts` runs with `javaScriptEnabled: false`:
+persona sign-in reaches My Work with the session cookie set, and Governance Officer Delta switches workspace on
+`/workspaces`. Each form POST must carry the app's own `Origin` (never `null`) and get no server error. A control test
+proves no script ran (the TopBar's workspace `<details>` stays open after a click outside, which its client script would
+close; it fails with JavaScript on). With develop's former `Referrer-Policy: no-referrer` both form tests fail with
+`Origin: "null"`; with V13-ARCH-013's `same-origin` they pass.
+
 ## 7. Case Context Sentinel (QG-02, Gate B)
 
 Library `tests/sentinel/sentinel.ts`. Where each rule runs today (ARCH and SEC review of #84; the design aim is every
