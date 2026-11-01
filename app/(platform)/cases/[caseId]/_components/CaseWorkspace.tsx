@@ -468,7 +468,6 @@ export function NotificationPreviewSection({
             title={t("case.preview.frameTitle", {
               title: preview.eventTitle ?? t("case.preview.untitled"),
             })}
-            lang={preview.lang}
             testId="case-notification-preview"
           />
         </div>
