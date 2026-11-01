@@ -21,6 +21,7 @@ import { createTranslator } from "@/lib/i18n";
 import { ar as RENDER_AR } from "@/lib/i18n/notificationRender/ar";
 import { en as RENDER_EN } from "@/lib/i18n/notificationRender/en";
 import { signInAs } from "../fixtures/personas";
+import { allowServerModules } from "../fixtures/server-module";
 
 const C = (i: number) => `0c000000-0000-4000-8000-0000000000${String(i).padStart(2, "0")}`;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -58,6 +59,7 @@ interface PolicyFile {
  * channel-exact 1; ties go to the more restrictive outcome). Independent of lib/disclosure.
  */
 function witnessOracle(): {
+  outcomes: Record<string, string>;
   withheld: string[];
   kept: string[];
   generalized: Record<string, { ar: string; en: string }>;
@@ -81,16 +83,18 @@ function witnessOracle(): {
     }
     return best?.outcome ?? "PROHIBITED";
   };
+  const outcomes: Record<string, string> = {};
   const withheld: string[] = [];
   const kept: string[] = [];
   const generalized: Record<string, { ar: string; en: string }> = {};
   for (const field of Object.keys(MODEL_FIELDS)) {
     const o = outcome(field);
+    outcomes[field] = o;
     if (o === "ALLOWED") kept.push(field);
     else if (o === "GENERALIZED") generalized[field] = policy.generalized_texts[field]!.WITNESS!;
     else withheld.push(field);
   }
-  return { withheld, kept, generalized };
+  return { outcomes, withheld, kept, generalized };
 }
 
 /** A document or RSC body with HTML-attribute and JSON-string escaping undone, so markers match in either. */
@@ -379,7 +383,17 @@ test.describe("Scenario E — notification preview", () => {
     test(`disclosure (${notice.lang} notice): the fields withheld from WITNESS are absent from the frame, its names and every payload`, async ({
       page,
     }) => {
-      const { withheld, kept, generalized } = witnessOracle();
+      const { outcomes, withheld, kept, generalized } = witnessOracle();
+      // The app's own decision (lib/disclosure, the board's oracle) equals the policy-file derivation, field by field,
+      // so a drift in either names the field.
+      allowServerModules();
+      const { decide, loadPolicy } = await import("@/lib/disclosure/project");
+      const policy = loadPolicy();
+      for (const field of Object.keys(MODEL_FIELDS))
+        expect(
+          decide(policy, { recipient: "WITNESS", field, channel: "IN_APP", context: "CASE_PUBLIC" }).outcome,
+          `lib/disclosure and the policy file disagree on WITNESS ${field}`,
+        ).toBe(outcomes[field]);
       // the oracle is not vacuous: the fields ARCH named for QA-009 are where the policy puts them
       expect(withheld).toEqual(
         expect.arrayContaining([
