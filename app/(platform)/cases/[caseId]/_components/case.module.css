@@ -37,3 +37,12 @@
   min-inline-size: 0;
   max-inline-size: 100%;
 }
+
+/* V13-FE-013: previous / next under a paged list, as the portfolio's. */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cdf-space-3);
+  align-items: center;
+  margin-block: var(--cdf-space-4);
+}

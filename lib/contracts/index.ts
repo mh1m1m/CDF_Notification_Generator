@@ -4,6 +4,7 @@ export * from "./workspaces";
 export * from "./identity";
 export * from "./case-summary";
 export * from "./cursor";
+export * from "./case-records-page";
 export * from "./procedural-records";
 export * from "./notification-records";
 export * from "./notification-center";

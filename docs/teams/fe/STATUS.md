@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 02:54 UTC · Branch: fix/V13-FE-010-notification-tables-caption (develop a0bf765 merged in; #82 merged) · Head: see PR
+Updated: 2026-11-01 04:21 UTC · Branch: feature/V13-FE-013-case-lists-paged (from develop 937cff3; FE-012 is #112, FE-011 is #116) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -86,6 +86,13 @@ Updated: 2026-11-01 02:54 UTC · Branch: fix/V13-FE-010-notification-tables-capt
   as in the Center; UXB-02) and the version is Latin in `<bdi>` (UXB-04, D10); the unused `dateTimeFormat` helper is
   removed. ARCH 02:42: the draft form's template option shows the version as Latin digits, never grouped (D10; an
   `<option>` holds text only, so no `<bdi>`) — IN_REVIEW (QA).
+- V13-FE-013 Paged case lists (OI-026; DB-019 migration 0011) — the Events, Tasks and Notifications tabs read one
+  page of 25 through `listEventsPage` / `listTasksPage` / `listForCasePage` (new port methods, `lib/contracts` hunk for
+  ARCH + SEC), only after the route's case passed the pre-check; no count or total. Opaque cursor
+  `lib/adapters/case-list/cursor.ts` (page_cursor text verbatim + row id + list), limit + 1 read. URL state as the
+  portfolio (`after` + bounded `back`), previous / next links. A tampered URL or a refused cursor shows the empty
+  state with a link to the first page, never an error. The overview reads one page of five events; own open tasks
+  still read the case's task list (known limit). Preview links and close keep the page — IN_REVIEW (QA, SEC).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -187,6 +194,7 @@ Updated: 2026-11-01 02:54 UTC · Branch: fix/V13-FE-010-notification-tables-capt
 | FE-010 + UXB-02/UXB-04 (case tab dates and version) after merging develop 11fad34: unit pins in ar and en for the month-in-words created time (equals `formatDateTime`, no `/`) and the Latin `<bdi>` version; restoring the numeric date or `numberFormat` version fails them (checked). Commands as above | pass | 79 files, 2018 / 468 / 235 of 235 | FE-010 head |
 | FE-010 + draft option version (D10) after merging develop 68a42b9: unit pin in ar and en with version 1234 ("الإصدار 1234" / "version 1234", no Arabic-Indic digits, no grouping); numberFormat output fails it (checked). Commands as above | pass | 80 files, 2026 / 468 / 235 of 235 | FE-010 head |
 | FE-010 after merging develop a0bf765 (#99, QA's leak-suite guard): commands as above | pass | 80 files, 2026 / 468 / 312 of 312 | FE-010 head |
+| FE-013 on develop 937cff3: lint, typecheck, format:check / `pnpm test` (case-list-adapter 29: cursor round trip per list, cross-list refusal, malformed shapes, limit + 1 and next cursor, refusals before any read, foreign-case row and bad page_cursor refuse the page; case-list-paging 33: URL parse and tampered forms, links and trail bound, 60-row walk per tab, tampered URL reads nothing, refused cursor → empty state, other failures propagate, hidden case NOT_FOUND before any read, overview one page of five, pager markup without counts, preview / close keep the page) / `pnpm db:reset` + `pnpm test:db` (FE integration case-records-paged 9: every page with limits 1, 2, 25 equals the unpaged read; another case's cursor, another list's cursor, forged and malformed cursors, unknown / hidden / restricted / other-workspace cases) / `pnpm db:reset` + `pnpm test:e2e` (Scenario E: no pager on one page, six tampered or forged cursors show the empty state, first-page link). Mutation: next cursor from the extra row fails 1 integration + 1 unit; dropping the cursor fallback fails 4 unit; dropping the tampered-URL guard fails 3 unit | pass | 86 files, 2117 / 494 / 313 of 313 | FE-013 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden

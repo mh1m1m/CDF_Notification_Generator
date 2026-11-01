@@ -27,6 +27,8 @@ import {
   caseTaskId,
   createFakeNotificationRecords,
   createFakeProceduralRecords,
+  withNotificationPages,
+  withPages,
 } from "./support/fake-records";
 import {
   CORRELATION,
@@ -75,7 +77,7 @@ describe("loadCaseWorkspace", () => {
   it("overview shows at most five events and only own tasks that are still open", async () => {
     const many = createFakeProceduralRecords();
     const base = await many.listEvents(SECRETARY, caseIdOf(1));
-    const records: ProceduralRecordsReader = {
+    const records: ProceduralRecordsReader = withPages({
       listEvents: async () =>
         Array.from({ length: 7 }, (_, k) => ({ ...base[0]!, id: caseEventId(1, 10 + k) })),
       listTasks: async () => {
@@ -87,7 +89,7 @@ describe("loadCaseWorkspace", () => {
           lead!,
         ];
       },
-    };
+    });
     const v = await loadCaseWorkspace(deps(SECRETARY, records), caseIdOf(1), "overview");
     if (v.tab !== "overview") throw new Error("wrong tab");
     expect(v.events).toHaveLength(5);
@@ -96,10 +98,11 @@ describe("loadCaseWorkspace", () => {
 
   it("reads the header once through the case source, then only the tab's own records", async () => {
     for (const [tab, reads] of [
-      ["overview", ["listEvents", "listTasks"]],
-      ["events", ["listEvents"]],
-      ["tasks", ["listTasks"]],
-      ["notifications", ["listForCase"]],
+      // V13-FE-013: the overview reads one page of five events; the list tabs one page of 25 (no count, no total).
+      ["overview", ["listEventsPage:5:", "listTasks"]],
+      ["events", ["listEventsPage:25:"]],
+      ["tasks", ["listTasksPage:25:"]],
+      ["notifications", ["listForCasePage:25:"]],
     ] as const) {
       const procedural = createFakeProceduralRecords();
       const notifications = createFakeNotificationRecords();
@@ -149,7 +152,10 @@ describe("loadCaseWorkspace", () => {
   });
 
   it("a records failure is not hidden: it propagates from the loader", async () => {
-    const records = { ...createFakeProceduralRecords(), listTasks: () => Promise.reject(new Error("boom")) };
+    const records = {
+      ...createFakeProceduralRecords(),
+      listTasksPage: () => Promise.reject(new Error("boom")),
+    };
     await expect(loadCaseWorkspace(deps(SECRETARY, records), caseIdOf(1), "tasks")).rejects.toThrow("boom");
   });
 });
@@ -170,7 +176,7 @@ describe("resolveCaseWorkspace", () => {
     logServerError.mockClear();
     const records = {
       ...createFakeProceduralRecords(),
-      listEvents: () => Promise.reject(new Error("relation case_event does not exist")),
+      listEventsPage: () => Promise.reject(new Error("relation case_event does not exist")),
     };
     const r = await resolveCaseWorkspace(deps(SECRETARY, records), caseIdOf(1), "events");
     expect(r).toEqual({ kind: "error", correlationId: CORRELATION });
@@ -354,8 +360,8 @@ describe("Case Workspace markup", () => {
   );
 
   it("empty tabs say so", async () => {
-    const records: ProceduralRecordsReader = { listEvents: async () => [], listTasks: async () => [] };
-    const none: NotificationRecordsReader = { listForCase: async () => [] };
+    const records = withPages({ listEvents: async () => [], listTasks: async () => [] });
+    const none = withNotificationPages({ listForCase: async () => [] });
     for (const [tab, testId] of [
       ["events", "case-events-empty"],
       ["tasks", "case-tasks-empty"],
@@ -383,7 +389,10 @@ describe("Case Workspace markup", () => {
   it("an unknown event code is shown as the code itself", async () => {
     const base = createFakeProceduralRecords();
     const [first] = await base.listEvents(SECRETARY, caseIdOf(1));
-    const records = { ...base, listEvents: async () => [{ ...first!, event_code: "SOMETHING_NEW" }] };
+    const records = withPages({
+      ...base,
+      listEvents: async () => [{ ...first!, event_code: "SOMETHING_NEW" }],
+    });
     const v = await loadCaseWorkspace(deps(SECRETARY, records), caseIdOf(1), "events");
     expect(html(v)).toContain("SOMETHING_NEW");
   });
