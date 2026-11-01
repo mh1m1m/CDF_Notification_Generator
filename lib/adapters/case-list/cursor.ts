@@ -6,15 +6,17 @@
 // a stale one give an empty page.
 import { InvalidCursorError, UuidSchema } from "@/lib/contracts";
 
-export type CaseListKind = "events" | "tasks" | "notifications";
+export type CaseListKind = "events" | "tasks" | "myOpenTasks" | "notifications";
 
 const CURSOR_VERSION = 1;
 const BASE64URL = /^[A-Za-z0-9_-]{1,512}$/;
 const INSTANT = String.raw`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z`;
-/** page_cursor as migration 0011 formats it, per list (and the only shapes the functions accept). */
+/** page_cursor as migrations 0011 and 0014 format it, per list (and the only shapes the functions accept). */
 export const PAGE_CURSOR: Readonly<Record<CaseListKind, RegExp>> = Object.freeze({
   events: new RegExp(`^${INSTANT}\\|${INSTANT}$`),
   tasks: /^(\d{4}-\d{2}-\d{2}|-)\|[A-Z][A-Z0-9_]{1,63}$/,
+  // V13-FE-014: case_my_open_tasks_page uses case_tasks_page's format; the kind keeps the two lists' cursors apart.
+  myOpenTasks: /^(\d{4}-\d{2}-\d{2}|-)\|[A-Z][A-Z0-9_]{1,63}$/,
   notifications: new RegExp(`^${INSTANT}$`),
 });
 

@@ -631,6 +631,7 @@ export function CaseTabContent({
             emptyText={t("case.overview.noMyTasks")}
             testId="case-my-tasks"
           />
+          <ListPager t={t} paging={view.paging} testId="case-my-tasks" />
           <h2>{t("case.overview.lastEvents")}</h2>
           <CaseTimeline
             t={t}

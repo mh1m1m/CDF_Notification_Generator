@@ -14,7 +14,7 @@
     "dev": "next dev --port 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . --max-warnings=0 && node scripts/ci/check-logical-css.mjs && node scripts/ci/check-env-example.mjs",
+    "lint": "eslint . --max-warnings=0 && node scripts/ci/check-logical-css.mjs && node scripts/ci/check-env-example.mjs && node scripts/ci/release-notes.mjs --check",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

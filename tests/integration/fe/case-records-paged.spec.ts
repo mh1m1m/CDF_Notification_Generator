@@ -2,7 +2,8 @@
 // the V13 adapters) against the local primary cluster as cdf_v13_app → cdf_v13_user. Walking every page with small
 // limits gives exactly the unpaged read, in the same order. Negatives: another case's cursor, another list's cursor, a
 // forged or malformed cursor, an unknown case, a case the persona may not see, another workspace (all empty or
-// refused before any read; never another case's rows). M1 seed, synthetic only.
+// refused before any read; never another case's rows). V13-FE-014 adds DB-022's case_my_open_tasks_page (the
+// overview's own open tasks), which must equal the old filter of the unpaged task list. M1 seed, synthetic only.
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -34,11 +35,15 @@ const GAMMA = who(3, "INVESTIGATIONS", "INVESTIGATOR");
 const DELTA_GOV = who(4, "GOVERNANCE", "GOVERNANCE_OFFICER");
 const caseId = (i: number) => `0c000000-0000-4000-8000-0000000000${String(i).padStart(2, "0")}` as CaseId;
 const UNKNOWN = "0c000000-0000-4000-8000-000000000099" as CaseId;
-/** A case Alpha sees with more than one row of the list (the seed has two notifications on 0003, one on 0001). */
-const MULTI = (kind: string) => (kind === "notifications" ? caseId(3) : caseId(1));
+/**
+ * A case Alpha sees with more than one row of the list (the seed has two notifications on 0003, one on 0001; two of
+ * Alpha's own open tasks on 0007, one on 0001).
+ */
+const MULTI = (kind: string) =>
+  kind === "notifications" ? caseId(3) : kind === "myOpenTasks" ? caseId(7) : caseId(1);
 
 type Lister = {
-  kind: "events" | "tasks" | "notifications";
+  kind: "events" | "tasks" | "myOpenTasks" | "notifications";
   all: (i: RequestIdentity, c: CaseId) => Promise<readonly { case_id: string }[]>;
   page: (
     i: RequestIdentity,
@@ -66,6 +71,15 @@ describe.skipIf(!available)("V13 paged case records on the primary cluster (FE-0
         kind: "tasks",
         all: (i, c) => procedural.listTasks(i, c),
         page: (i, c, p) => procedural.listTasksPage(i, c, p),
+      },
+      {
+        // V13-FE-014 (DB-022 migration 0014): the overview's own open tasks equal the old filter of the whole list.
+        kind: "myOpenTasks",
+        all: async (i, c) =>
+          (await procedural.listTasks(i, c)).filter(
+            (t) => t.is_mine && ["OPEN", "IN_PROGRESS", "BLOCKED"].includes(t.status),
+          ),
+        page: (i, c, p) => procedural.listMyOpenTasksPage(i, c, p),
       },
       {
         kind: "notifications",
@@ -110,6 +124,24 @@ describe.skipIf(!available)("V13 paged case records on the primary cluster (FE-0
       }
   });
 
+  it("FE-014: own open tasks are the caller's only; another persona's open tasks on the same case never appear", async () => {
+    const mine = lists.find((l) => l.kind === "myOpenTasks")!;
+    const tasks = lists.find((l) => l.kind === "tasks")!;
+    type Task = { readonly id: string; readonly is_mine: boolean; readonly status: string };
+    let othersSeen = 0;
+    for (const identity of [ALPHA, GAMMA, DELTA_GOV])
+      for (let i = 1; i <= 10; i++) {
+        const all = (await tasks.all(identity, caseId(i))) as unknown as readonly Task[];
+        const open = all.filter((t) => ["OPEN", "IN_PROGRESS", "BLOCKED"].includes(t.status));
+        othersSeen += open.filter((t) => !t.is_mine).length;
+        const rows = (await walk(mine, identity, caseId(i), 25)).rows as unknown as readonly Task[];
+        expect(rows.map((t) => t.id)).toEqual(open.filter((t) => t.is_mine).map((t) => t.id));
+        expect(rows.every((t) => t.is_mine)).toBe(true);
+      }
+    // the negative is real: the seed has open tasks of other personas on cases these personas see
+    expect(othersSeen).toBeGreaterThan(0);
+  });
+
   it("a list with rows actually pages (more than one seeded row)", async () => {
     for (const l of lists) {
       const all = await l.all(ALPHA, MULTI(l.kind));
@@ -151,6 +183,10 @@ describe.skipIf(!available)("V13 paged case records on the primary cluster (FE-0
         at: "-|INTAKE_REVIEW",
         id: "0d000000-0000-4000-8000-0000000000ff",
       }),
+      myOpenTasks: encodeCaseListCursor("myOpenTasks", {
+        at: "-|INTAKE_REVIEW",
+        id: "0d000000-0000-4000-8000-0000000000ff",
+      }),
       notifications: encodeCaseListCursor("notifications", {
         at: "2026-01-01T00:00:00.000000Z",
         id: "0f000000-0000-4000-8000-0000000000ff",
@@ -177,7 +213,7 @@ describe.skipIf(!available)("V13 paged case records on the primary cluster (FE-0
     async (_n, identity, c) => {
       for (const l of lists) {
         expect(await l.page(identity, c, { limit: 25 }), l.kind).toEqual({ items: [], next_cursor: null });
-        const { cursors } = await walk(l, ALPHA, caseId(1), 1);
+        const { cursors } = await walk(l, ALPHA, MULTI(l.kind), 1);
         expect(await l.page(identity, c, { limit: 25, cursor: cursors[0]! }), l.kind).toEqual({
           items: [],
           next_cursor: null,

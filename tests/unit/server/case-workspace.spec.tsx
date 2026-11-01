@@ -99,7 +99,8 @@ describe("loadCaseWorkspace", () => {
   it("reads the header once through the case source, then only the tab's own records", async () => {
     for (const [tab, reads] of [
       // V13-FE-013: the overview reads one page of five events; the list tabs one page of 25 (no count, no total).
-      ["overview", ["listEventsPage:5:", "listTasks"]],
+      // V13-FE-014: the overview's own open tasks are one page of 25 of their own read, never the whole task list.
+      ["overview", ["listEventsPage:5:", "listMyOpenTasksPage:25:"]],
       ["events", ["listEventsPage:25:"]],
       ["tasks", ["listTasksPage:25:"]],
       ["notifications", ["listForCasePage:25:"]],
