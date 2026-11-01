@@ -50,8 +50,7 @@ transaction.
 
   Contract change: the commands return a row whose `refusal` column holds the code, and their other columns are null.
   The adapters (`lib/adapters/my-work`, `lib/adapters/notification-records`) and `lib/server/workspace.ts` map that
-  column exactly as they now map the SQLSTATE, so the answer the user sees does not change. Those files belong to other
-  teams; the change goes through ARCH.
+  column exactly as they now map the SQLSTATE, so the answer the user sees does not change (§6).
 - **(A) The BFF reports the refusal in a second transaction.** After a command raises, `lib/db` opens a new
   `withRequestContext` transaction (new transaction id, new MAC) and calls `api_record_refusal(p_command, p_refusal)`.
   This is a definer function granted to `cdf_v13_user` that takes only two allow-listed codes. It is weaker:
@@ -157,10 +156,32 @@ Tests:
 - The request role still cannot read the ledger or `refusal_window`.
 - The answers the BFF sees are unchanged (the adapters' unit tests and e2e).
 
-## 6. Questions
+## 6. Adapters and the transaction boundary (Chief Architect, 1 Nov, on #120)
+
+Under C the adapter and server edits land **in the migration PR**, as a separate commit:
+- `lib/adapters/my-work`;
+- `lib/adapters/notification-records`;
+- `lib/server/workspace.ts`.
+
+FE gives the path-owner ACCEPT for those hunks, and SEC reviews them with the migration. They cannot land separately:
+`develop` must never hold a database that returns a refusal row while the adapters read it as a result.
+
+Conditions:
+- Each adapter checks `refusal` before reading any other column, and maps each code exactly as it maps the SQLSTATE
+  today.
+- **The refusal is mapped after the transaction commits, never inside it.** Under C the transaction must commit for
+  the REFUSED row to persist. An adapter that threw inside the `withRequestContext` callback would roll the row back.
+  Today's adapters already read the rows the transaction returned and throw after `run(...)` resolves; the edit keeps
+  that shape.
+- Each BFF transaction runs exactly one command. Under C a refused command no longer aborts its transaction, so a later
+  statement in the same transaction would run after the refusal. SEC is asked to confirm this holds for every caller,
+  and a test pins it for the three commands.
+- Negative tests per command and code show that a refused command never reports success, and that the user sees the
+  same answer as now.
+- One mutation must fail a test: an adapter that ignores `refusal`.
+
+## 7. Questions
 
 1. For SEC: write path **C** (recommended) or A?
 2. For SEC: the window bound in §4.5 (one row per persona, command and code per 60 s, with a suppressed count)?
-3. For ARCH: under C, the return-shape change touches `lib/adapters/my-work`, `lib/adapters/notification-records` and
-   `lib/server/workspace.ts`. Should DB propose those edits in the same PR for the owning teams to review, or should
-   each team make its own?
+3. Decided (§6): DB proposes the adapter and server edits in the migration PR.
