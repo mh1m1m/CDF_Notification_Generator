@@ -78,6 +78,8 @@ export const en: Record<keyof typeof ar, string> = {
   "notifications.previewLink": "Preview",
   "notifications.previewLinkLabel": "Preview {template} for {recipient}",
   "preview.heading": "Notification preview",
+  "preview.frameTitle": "{title} — design preview",
+  "preview.untitled": "Notification",
   "preview.close": "Close preview",
   "preview.unmapped":
     "No preview: this recipient class has no approved disclosure mapping yet, so nothing is shown for it. This is an open owner decision.",

@@ -68,7 +68,9 @@ Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
   marker per entry, same on Overview and Events) (M1-09). Notification Operations Center: the table keeps a 48rem
   minimum and scrolls in its region, never the page (M1-15); template codes and the version never break (M1-16); the
   version is Latin in `<bdi>` after a translated label (M1-17, D10); dates, times and counts through
-  `components/format.ts` (M1-18) — IN_REVIEW (QA).
+  `components/format.ts` (M1-18). UX finding on #74: the preview frame's accessible name is a UI string (disclosed event
+  title + عرض تجريبي / design preview; generic word when withheld); the renderer's document title and DESIGN_PREVIEW
+  marking stay inside the frame — IN_REVIEW (QA).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -161,6 +163,7 @@ Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
 | FE-006 part 2 after merging develop 65a251d (#51; records.ts keeps both bindings, contracts index keeps both exports): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 69 files, 1860 / 28 files, 447 / 150 | FE-006 part 2 head |
 | FE-006 part 3, QA CHANGES 982bd76: preview link accessible name from the template name and the class label (never raw codes, pinned in e2e by `toHaveAccessibleName`); OI-037 notice shows the class label with the code in `<bdi>`: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 75 files, 1947 / 456 / 179 | FE-006 part 3 head |
 | FE-009 on fix/V13-FE-009-overview-and-center-polish: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (new: Center at 360 and 768 px in ar and en — no page scroll, region scrolls at 360, codes on one line, Latin version, month in words; the four fail on the old Center markup, checked) | pass | — / 73 files, 1910 / 447 / 177 | FE-009 head |
+| FE-009 after merging develop a93fa61 (#74) + the frame title (unit: ar/en titles, withheld title, no raw marking; e2e: Scenario E frame name ends in عرض تجريبي): format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 76 files, 1968 / 456 / 204 | FE-009 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden

@@ -459,7 +459,9 @@ export function NotificationPreviewSection({
           <NotificationPreviewFrame
             t={t}
             rendered={{ html: preview.html }}
-            title={preview.title}
+            title={t("case.preview.frameTitle", {
+              title: preview.eventTitle ?? t("case.preview.untitled"),
+            })}
             lang={preview.lang}
             testId="case-notification-preview"
           />

@@ -50,7 +50,12 @@ export type NotificationPreviewView =
       readonly kind: "preview";
       readonly notificationId: string;
       readonly html: string;
-      readonly title: string;
+      /**
+       * The disclosed event title in the notice's language, or null when the projection withholds it. The frame's
+       * accessible name is a UI string built from it (UX finding on #74); the renderer's own document title and its
+       * DESIGN_PREVIEW marking stay inside the frame unchanged.
+       */
+      readonly eventTitle: string | null;
       readonly lang: "ar" | "en";
     }
   | { readonly kind: "unmapped"; readonly notificationId: string; readonly recipientClass: string }
@@ -113,6 +118,16 @@ function recordSetOf(
   };
 }
 
+/** A projected title field as text: a string, or the notice language's side of a {ar, en} pair; otherwise null. */
+function disclosedTitle(value: unknown, lang: "ar" | "en"): string | null {
+  if (typeof value === "string") return value.trim() === "" ? null : value;
+  if (value !== null && typeof value === "object" && Object.prototype.hasOwnProperty.call(value, lang)) {
+    const side = (value as Record<string, unknown>)[lang];
+    return typeof side === "string" && side.trim() !== "" ? side : null;
+  }
+  return null;
+}
+
 /**
  * The preview for `?n=` on an already authorised case. Never throws for a binding or read failure: those become the
  * generic "unavailable" state. NOT_FOUND / UNAUTHENTICATED from the readers are re-thrown for the page.
@@ -153,7 +168,7 @@ export async function loadNotificationPreview(
       kind: "preview",
       notificationId: n.notification_id,
       html: rendered.html,
-      title: rendered.title,
+      eventTitle: disclosedTitle(projected.fields.event_title, n.language),
       lang: n.language,
     };
   } catch (error) {

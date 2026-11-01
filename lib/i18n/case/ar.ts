@@ -78,6 +78,8 @@ export const ar = {
   "notifications.previewLink": "معاينة",
   "notifications.previewLinkLabel": "معاينة {template} للفئة {recipient}",
   "preview.heading": "معاينة الإشعار",
+  "preview.frameTitle": "{title} — عرض تجريبي",
+  "preview.untitled": "إشعار",
   "preview.close": "إغلاق المعاينة",
   "preview.unmapped":
     "لا توجد معاينة: لم يُعتمد بعد ربط إفصاح لفئة المستلم هذه، لذا لا يُعرض لها شيء. هذا قرار مفتوح لدى المالك.",

@@ -114,7 +114,10 @@ describe("loadNotificationPreview", () => {
     expect(v.html).toContain('data-marking="DESIGN_PREVIEW"');
     expect(v.html).toContain('<html lang="en" dir="ltr">');
     expect(v.html).not.toMatch(/<script|javascript:|\son[a-z]+=/i);
-    expect(v.title).toContain("DESIGN_PREVIEW");
+    // The renderer's own document title keeps PROC's marking inside the frame; the view carries the disclosed event
+    // title only, for the UI's frame name (UX finding on #74).
+    expect(v.html).toMatch(/<title>[^<]*— DESIGN_PREVIEW<\/title>/);
+    expect(v.eventTitle).toBe(WITNESS_1.template_name.en);
     // the renderer received exactly what projectForRecipient returned
     expect(spies.render).toHaveBeenCalledTimes(1);
     expect(spies.render.mock.calls[0]?.[0]).toBe(spies.project.mock.results[0]?.value);
@@ -340,6 +343,27 @@ describe("NotificationPreviewSection states", () => {
       );
       expect(out).toContain('<bdi dir="ltr" data-testid="case-preview-unmapped-code">NEW_CLASS</bdi>');
     }
+  });
+
+  it("the frame's accessible name is a UI string: event title + the localised preview word, no raw marking", () => {
+    const base = {
+      kind: "preview" as const,
+      notificationId: WITNESS_1.notification_id,
+      html: '<!DOCTYPE html><html><body><p class="marking" data-marking="DESIGN_PREVIEW">DESIGN_PREVIEW</p></body></html>',
+      lang: "en" as const,
+    };
+    const titleOf = (out: string) => out.match(/<iframe[^>]*\stitle="([^"]*)"/)?.[1];
+    expect(titleOf(section({ ...base, eventTitle: "Investigation assigned" }, "en"))).toBe(
+      "Investigation assigned — design preview",
+    );
+    expect(titleOf(section({ ...base, eventTitle: "إسناد التحقيق" }, "ar"))).toBe(
+      "إسناد التحقيق — عرض تجريبي",
+    );
+    // withheld title: a generic word, never empty and never the raw code
+    expect(titleOf(section({ ...base, eventTitle: null }, "ar"))).toBe("إشعار — عرض تجريبي");
+    expect(titleOf(section({ ...base, eventTitle: null }, "en"))).toBe("Notification — design preview");
+    for (const locale of ["ar", "en"] as const)
+      expect(titleOf(section({ ...base, eventTitle: "x" }, locale))).not.toContain("DESIGN_PREVIEW");
   });
 
   it("unavailable shows one generic alert with the correlation id and nothing about the notification", () => {
