@@ -4,7 +4,7 @@
 plus the readiness of the synthetic staging environment. It is not a readiness claim. Production promotion is BLOCKED
 by design (QG-13), and nothing here approves a deployment. Requirement: REQ-DOC-008 (task V13-ARCH-011).
 
-Last updated: **1 Nov 2026 00:32 UTC** (Chief Architect), `develop` `e9cd74d`. Facts are taken from
+Last updated: **1 Nov 2026 01:36 UTC** (Chief Architect), `develop` `25a1c48`. Facts are taken from
 `docs/DEPLOYMENT_STATUS.md`, `docs/OPEN_ISSUES.md` and `docs/IMPLEMENTATION_STATUS.md`, each with its own check time.
 
 ## 1. Production promotion gate (ADR-005, QG-13)
@@ -40,7 +40,7 @@ Staging is the `develop` preview behind the staging alias, with synthetic data o
 | Hosted schema: `0006`–`0010` and the seed | BLOCKED | OI-034: waits for the owner to answer the Supabase connector's confirmation for statements that drop objects; never worked around | Owner ("ready"), then ARCH |
 | Database login for the app | BLOCKED | OI-045: the owner runs `database/hosted/owner_set_app_login.sql` and sets `V13_DATABASE_URL` and `V13_SESSION_SECRET` as sensitive Vercel variables (`docs/hosted/OWNER_STEP_APP_LOGIN.md`). Claude never generates, reads, prints or passes these values | Owner, then ARCH |
 | Pooler host for the app login confirmed from a live connection | NOT_STARTED | OI-007: read from the deployed health endpoint after OI-045 | ARCH |
-| `/api/health` and `/api/health/isolation` PASS from the deployed preview | NOT_STARTED | Last read on 1 Nov at 00:32 UTC on `e9cd74d`: HTTP 503 `DB_NOT_CONFIGURED` (`docs/DEPLOYMENT_STATUS.md` §3) | ARCH (V13-ARCH-003) |
+| `/api/health` and `/api/health/isolation` PASS from the deployed preview | NOT_STARTED | Last read on 1 Nov at 01:32 UTC on `286eb93`: HTTP 503 `DB_NOT_CONFIGURED` (`docs/DEPLOYMENT_STATUS.md` §3) | ARCH (V13-ARCH-003) |
 | Staging verification: smoke, case isolation, Scenarios A–E with deployment id and commit | NOT_STARTED | V13-QA-006, after the two owner steps above | QA and ARCH |
 | Branch protection on `main` and `develop` | OPEN | OI-016: none; the GitHub connector cannot set it | Owner |
 | Repository visibility | OPEN | OI-006 and E01 Q3: public, read from the GitHub API on 31 Oct at 23:31 UTC | Owner |
