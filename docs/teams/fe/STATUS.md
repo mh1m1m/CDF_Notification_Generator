@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 02:10 UTC · Branch: fix/V13-FE-009-overview-and-center-polish (develop f11e65a merged in; #74, #81 and #90 merged) · Head: see PR
+Updated: 2026-11-01 02:35 UTC · Branch: fix/V13-FE-010-notification-tables-caption (from develop 961197e; #82 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -76,7 +76,13 @@ Updated: 2026-11-01 02:10 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
   version is Latin in `<bdi>` after a translated label (M1-17, D10); dates, times and counts through
   `components/format.ts` (M1-18). UX finding on #74: the preview frame's accessible name is a UI string (disclosed event
   title + عرض تجريبي / design preview; generic word when withheld); the renderer's document title and DESIGN_PREVIEW
-  marking stay inside the frame — IN_REVIEW (QA).
+  marking stay inside the frame — COMPLETE (merged by ARCH, #82 → 961197e).
+- V13-FE-010 (UX-009 R-04, UXB-08) — the case Notifications tab is now the shared DataTable (scope case: every row
+  carries data-case-id/data-case-ref; test ids, labels, per-row preview link and aria-current kept), so its caption is
+  DataTable's sticky caption. The Notification Operations Center keeps its own table and takes DataTable's caption
+  pattern (size-container region `v13-scroll-region`, caption text `v13-table-caption-text`). At 320 px (= 400% zoom)
+  both captions stay inside the region and wrap, also after scrolling to the far end. Unused case.module.css table
+  rules removed — IN_REVIEW (QA).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -174,6 +180,7 @@ Updated: 2026-11-01 02:10 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
 | FE-009 after merging develop a93fa61 (#74) + the frame title (unit: ar/en titles, withheld title, no raw marking; e2e: Scenario E frame name ends in عرض تجريبي): format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 76 files, 1968 / 456 / 204 | FE-009 head |
 | FE-009, SEC CHANGES 61d2853 + develop 286eb93 (#81) merged: loader-level frame-title tests on the real projection with event_title stubbed as the projector's outcomes (absent / null = PROHIBITED or REDACTED → generic word; SAFE_REFERENCE → null, token and label never in the name; GENERALIZED → the generic text; malformed → null); returning the token for an object fails the SAFE_REFERENCE test (checked). QA nit on #81: /workspaces role lines in `confirmed-role.spec.ts`. Commands: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e`. The full e2e run had 1 failure in QA's Sentinel self-test `planted-leak.spec.ts` "(o) … fetching the same GET again" (30 s timeout; its fixture page loads no application file); re-run of that spec + the edited spec after `db:reset`: 27/27 | pass (see note) | — / 77 files, 1994 / 468 / 230 of 231, re-run 27/27 | FE-009 head |
 | FE-009 after merging develop f11e65a (#90 UX-008(c), SEC-009 #87): conflicts in CaseWorkspace.tsx and case.module.css resolved to develop's version (FE caption + timeline hunks dropped), frame title re-applied, M1-09 unit tests moved to the DataTable caption markup. Commands: lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 78 files, 2008 / 468 / 231 of 231 | FE-009 head |
+| FE-010 on develop 961197e: new unit pins (case tab DataTable markup, sticky caption, row ids and ADR-013 attributes, ar/en; Center caption span + size-container region; removing either Center class fails the pin, checked) and e2e at 320 px (Center + case tab, ar/en, caption inside the region before and after scrolling; all 4 fail on develop's markup, checked). Commands: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 78 files, 2011 / 468 / 235 of 235 | FE-010 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden

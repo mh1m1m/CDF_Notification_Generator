@@ -295,6 +295,20 @@ describe("NotificationCenterView markup", () => {
     }
   });
 
+  it("FE-010 (UX-009 R-04): the caption text sticks to the region's inline start at the visible width", async () => {
+    for (const locale of ["ar", "en"] as const) {
+      const html = render(locale, await load());
+      // DataTable's caption pattern: the region is a size container (v13-scroll-region) and the caption text is the
+      // sticky, 100cqi-wide span, so a long caption wraps instead of being cut at the region's edge.
+      expect(html).toMatch(
+        /<div class="v13-scroll-region [^"]+" tabindex="0" role="region" aria-labelledby="notifications-table-caption" data-scroll-region="">/,
+      );
+      expect(html).toMatch(
+        /<caption id="notifications-table-caption"><span class="v13-table-caption-text" data-testid="notifications-table-caption">[^<]+<\/span><\/caption>/,
+      );
+    }
+  });
+
   it("every row names its case (ADR-013 attributes, number link by UUID, title); the count equals the rows", async () => {
     const view = await load();
     const html = render("en", view);

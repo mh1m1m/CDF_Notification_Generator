@@ -308,6 +308,40 @@ describe("Case Workspace markup", () => {
     expect(markup).toContain('data-language="ar"');
   });
 
+  it.each(["ar", "en"] as const)(
+    "FE-010 (%s): the Notifications tab is a DataTable; its caption stays in view and wraps (UX-009 R-04)",
+    async (locale) => {
+      const v = await view("notifications");
+      const markup = html(v, locale);
+      const label = createTranslator(locale)("case.notifications.caption");
+      // DataTable's sticky caption inside the container-sized region (never cut at 320 px / 200% zoom).
+      expect(markup).toContain(
+        `<caption id="case-notifications-caption"><span class="v13-table-caption-text">${label}</span></caption>`,
+      );
+      expect(markup).toMatch(
+        /<div class="v13-scroll-region" role="region" aria-labelledby="case-notifications-caption" tabindex="0"><table class="v13-table" data-testid="case-notifications" data-count="1">/,
+      );
+      // Rows keep their ids and carry the case identity (ADR-013); the preview link stays per row.
+      if (v.tab !== "notifications") throw new Error("expected the notifications tab");
+      const [n] = v.notifications;
+      expect(markup).toContain(
+        `data-testid="case-notification-${n!.notification_id}" data-notification-id="${n!.notification_id}" data-case-id="${caseIdOf(1)}" data-case-ref="CDF-DEMO-2026-0001"`,
+      );
+      expect(markup).toContain(`data-testid="case-notification-preview-link-${n!.notification_id}"`);
+      expect(markup).toContain(`href="/cases/${caseIdOf(1)}/notifications?n=${n!.notification_id}"`);
+      for (const id of [
+        "case-notification-template-name",
+        "case-notification-template-code",
+        "case-notification-language",
+        "case-notification-recipient",
+        "case-notification-status",
+      ]) {
+        expect(markup).toContain(`data-testid="${id}"`);
+      }
+      expect(markup).toMatch(/<th scope="row"><span data-testid="case-notification-template-name">/);
+    },
+  );
+
   it("empty tabs say so", async () => {
     const records: ProceduralRecordsReader = { listEvents: async () => [], listTasks: async () => [] };
     const none: NotificationRecordsReader = { listForCase: async () => [] };
