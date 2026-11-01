@@ -241,6 +241,16 @@ const REGISTRY: Record<string, Probe[]> = {
         tx`select * from cdf_notifications_v13.api_create_notification_draft(${ALL_CASES[n - 1]!}, ${TEMPLATE_VERSION(1)}, 'CASE_TEAM', ${KEY})`,
       nobody: refusedWith("V1401"),
     })),
+  // V13-DB-023 (migration 0015): every hostile context is refused, on a visible, a restricted and an unknown case;
+  // case-access-audit.spec.ts shows each refusal leaves one id-less row. A verified persona whose workspace is unusable
+  // gets V1404 (it is someone, but sees no case); every other hostile context gets V1401.
+  "api_record_access(p_kind text, p_case_id uuid, p_notification_id uuid)": [1, 9, 11].map((n) => ({
+    label: `api_record_access case ${n}`,
+    call: (tx) =>
+      tx`select * from cdf_notifications_v13.api_record_access('CASE', ${n === 11 ? UNKNOWN_CASE : ALL_CASES[n - 1]!}, null)`,
+    nobody: (o: Outcome) =>
+      !o.ok && (o.code === "V1401" || o.code === "V1404") ? null : refusedWith("V1401")(o),
+  })),
   "api_switch_workspace(p_workspace_id uuid)": Object.values(WORKSPACE).map((w) => ({
     label: `api_switch_workspace ${w.slice(-2)}`,
     // A verified persona may switch to a workspace it belongs to (that is the way out of a bad workspace claim).
@@ -324,6 +334,15 @@ describe.skipIf(!present)(
         [
           "_api_switch_workspace_impl",
           (tx) => tx`select * from ${tx(SCHEMA)}._api_switch_workspace_impl(${WORKSPACE.SECRETARIAT})`,
+        ],
+        [
+          "_api_record_access_impl",
+          (tx) => tx`select ${tx(SCHEMA)}._api_record_access_impl('CASE', ${ALL_CASES[0]!}, null)`,
+        ],
+        [
+          "_record_access_row",
+          (tx) =>
+            tx`select ${tx(SCHEMA)}._record_access_row('CASE_OPENED', 'case', ${ALL_CASES[0]!}, ${ALL_CASES[0]!})`,
         ],
         [
           "_api_install_claims_key_impl",
