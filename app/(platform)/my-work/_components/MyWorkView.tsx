@@ -3,13 +3,15 @@
 // authorised row); an untouched OPEN task carries no epistemic claim (ARCH, 31 Oct). Counts are plain text with
 // data-count, never badges. The update form offers only the transitions the database accepts and sends row_version.
 import Link from "next/link";
+import { DataTable } from "@/components/data/DataTable";
+import { DeadlineText } from "@/components/data/DeadlineText";
+import { StatusBadge, type Tone } from "@/components/data/StatusBadge";
 import type { MyWorkTask } from "@/lib/contracts";
 import { toBadgeEpistemic } from "@/lib/domain";
 import type { Locale, MessageKey, Translator } from "@/lib/i18n";
 import type { Deadline, MyWorkFilter, MyWorkRow, MyWorkView as View } from "@/lib/server/my-work";
-import { ScrollRegion } from "../../_components/ScrollRegion";
 import { updateTaskStatus } from "../actions";
-import { dateFormat, numberFormat, TASK_STATUS_KEYS } from "../../cases/[caseId]/_components/labels";
+import { numberFormat, TASK_STATUS_KEYS } from "../../cases/[caseId]/_components/labels";
 import styles from "./my-work.module.css";
 
 const FILTER_KEYS: Readonly<Record<Exclude<MyWorkFilter, "all">, MessageKey>> = {
@@ -62,28 +64,21 @@ function CountStrip({
   );
 }
 
-function DeadlineText({ t, locale, deadline }: { t: Translator; locale: Locale; deadline: Deadline }) {
-  if (deadline.kind === "none") return <span data-deadline="none">{t("myWork.deadline.none")}</span>;
-  const relative = new Intl.RelativeTimeFormat(locale === "ar" ? "ar-u-nu-arab" : "en-u-nu-latn", {
-    numeric: "always",
-  }).format(deadline.days, "day");
-  const text =
-    deadline.kind === "overdue"
-      ? t("myWork.deadline.overdue", { relative })
-      : deadline.kind === "today"
-        ? t("myWork.deadline.today")
-        : t("myWork.deadline.upcoming", { relative });
-  return (
-    <span data-deadline={deadline.kind} className={deadline.kind === "overdue" ? styles.overdue : undefined}>
-      {text}
-      <time className={styles.secondLine} dateTime={deadline.date}>
-        {dateFormat(locale).format(new Date(`${deadline.date}T00:00:00Z`))}
-      </time>
-    </span>
-  );
+function DueCell({ t, locale, deadline }: { t: Translator; locale: Locale; deadline: Deadline }) {
+  if (deadline.kind === "none") return <span>{t("myWork.deadline.none")}</span>;
+  return <DeadlineText t={t} locale={locale} date={deadline.date} days={deadline.days} />;
 }
 
-function StatusBadge({ t, task }: { t: Translator; task: MyWorkTask }) {
+/** Task tones for the recorded badge; the glyph comes from StatusBadge (Layer A codes, else neutral). */
+const TASK_TONE: Readonly<Record<MyWorkTask["status"], Tone>> = {
+  OPEN: "neutral",
+  IN_PROGRESS: "info",
+  BLOCKED: "warning",
+  DONE: "success",
+  CANCELLED: "neutral",
+};
+
+function TaskStatus({ t, locale, task }: { t: Translator; locale: Locale; task: MyWorkTask }) {
   const label = t(TASK_STATUS_KEYS[task.status]);
   if (task.status_event_id === null) {
     return (
@@ -93,17 +88,21 @@ function StatusBadge({ t, task }: { t: Translator; task: MyWorkTask }) {
     );
   }
   const badge = toBadgeEpistemic({ epistemic: "RECORDED_FACT", event_id: task.status_event_id });
+  if (badge.value !== "recorded") return null;
+  // No status time on the My Work read: the badge says "recorded" without a time (ARCH, 1 Nov).
   return (
-    <span
-      data-testid="my-work-task-status"
-      data-task-status={task.status}
-      data-epistemic={badge.value}
-      data-status-kind="task"
-      data-status={task.status}
-      data-event-id={badge.event_id}
-    >
-      {label}
-    </span>
+    <StatusBadge
+      t={t}
+      locale={locale}
+      testId="my-work-task-status"
+      data={{ "data-task-status": task.status }}
+      epistemic="recorded"
+      statusKind="task"
+      status={task.status}
+      label={label}
+      tone={TASK_TONE[task.status]}
+      evidence={{ eventId: badge.event_id }}
+    />
   );
 }
 
@@ -161,51 +160,56 @@ export function MyWorkTable({
           {view.filter === "all" ? t("myWork.empty") : t("myWork.emptyFilter")}
         </p>
       ) : (
-        <ScrollRegion className={styles.scroll} labelledBy="my-work-table-caption">
-          <table className={styles.table} data-testid="my-work-table" data-count={view.rows.length}>
-            <caption id="my-work-table-caption">{t("myWork.table.caption")}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{t("myWork.column.case")}</th>
-                <th scope="col">{t("myWork.column.task")}</th>
-                <th scope="col">{t("myWork.column.due")}</th>
-                <th scope="col">{t("myWork.column.status")}</th>
-                <th scope="col">{t("myWork.column.action")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {view.rows.map((row) => (
-                <tr
-                  key={row.task.task_id}
-                  data-testid={`my-work-row-${row.task.task_id}`}
-                  data-case-id={row.task.case_id}
-                  data-case-ref={row.task.case_number}
-                  data-task-code={row.task.task_code}
-                >
-                  <th scope="row">
-                    <Link
-                      href={`/cases/${row.task.case_id}/tasks`}
-                      data-testid={`my-work-case-${row.task.task_id}`}
-                    >
-                      {row.task.case_number}
-                    </Link>
-                    <span className={styles.secondLine}>{row.task.case_title[locale]}</span>
-                  </th>
-                  <td>{row.task.title[locale]}</td>
-                  <td>
-                    <DeadlineText t={t} locale={locale} deadline={row.deadline} />
-                  </td>
-                  <td>
-                    <StatusBadge t={t} task={row.task} />
-                  </td>
-                  <td>
-                    <UpdateForm t={t} row={row} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </ScrollRegion>
+        <DataTable<MyWorkRow>
+          t={t}
+          scope="case"
+          testId="my-work-table"
+          tableData={{ "data-count": view.rows.length }}
+          captionId="my-work-table-caption"
+          caption={t("myWork.table.caption")}
+          rows={view.rows}
+          rowKey={(row) => row.task.task_id}
+          rowTestId={(row) => `my-work-row-${row.task.task_id}`}
+          rowData={(row) => ({ "data-task-code": row.task.task_code })}
+          rowCaseId={(row) => row.task.case_id}
+          rowCaseRef={(row) => row.task.case_number}
+          empty={null}
+          columns={[
+            {
+              key: "case",
+              header: t("myWork.column.case"),
+              rowHeader: true,
+              cell: (row) => (
+                <>
+                  <Link
+                    href={`/cases/${row.task.case_id}/tasks`}
+                    data-testid={`my-work-case-${row.task.task_id}`}
+                  >
+                    <bdi dir="ltr">{row.task.case_number}</bdi>
+                  </Link>
+                  <span className="v13-second-line">{row.task.case_title[locale]}</span>
+                </>
+              ),
+            },
+            { key: "task", header: t("myWork.column.task"), cell: (row) => row.task.title[locale] },
+            {
+              key: "due",
+              header: t("myWork.column.due"),
+              cellData: (row) => ({ "data-deadline": row.deadline.kind }),
+              cell: (row) => <DueCell t={t} locale={locale} deadline={row.deadline} />,
+            },
+            {
+              key: "status",
+              header: t("myWork.column.status"),
+              cell: (row) => <TaskStatus t={t} locale={locale} task={row.task} />,
+            },
+            {
+              key: "action",
+              header: t("myWork.column.action"),
+              cell: (row) => <UpdateForm t={t} row={row} />,
+            },
+          ]}
+        />
       )}
     </>
   );

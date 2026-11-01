@@ -409,6 +409,10 @@ describe("MyWorkTable markup", () => {
     expect(row(5)).toContain('data-epistemic="recorded"');
     expect(row(5)).toContain(`data-event-id="${taskEventIdOf(5)}"`);
     expect(row(5)).toContain('data-status-kind="task"');
+    expect(row(5)).toMatch(
+      /data-task-status="[A-Z_]+" data-testid="my-work-task-status" data-epistemic="recorded"/,
+    );
+    expect(row(5)).not.toMatch(/<time[^>]*data-event-id/); // no status time on My Work (ARCH, 1 Nov)
     expect(row(2)).toContain('data-task-status="OPEN"');
     expect(row(2)).not.toContain("data-epistemic");
     expect(row(2)).not.toContain("data-event-id");
@@ -437,8 +441,10 @@ describe("MyWorkTable markup", () => {
     expect(ar).toContain('dateTime="2026-11-03"');
     expect(ar).toMatch(/[٠-٩]/);
     const en = await render(await viewFor(), "en");
-    expect(en).toContain("Overdue (was due 6 days ago)");
-    expect(en).toContain("Due in 1 day");
+    // UX-008: the shared DeadlineText words (common.deadline.*) and the long-month date (DESIGN_SYSTEM §4).
+    expect(en).toContain("Overdue by 6 days");
+    expect(en).toContain("In 1 day");
+    expect(en).toContain("3 November 2026");
   });
 
   it("filter marks the current count and offers 'show all'; an empty filter has its own text", async () => {
