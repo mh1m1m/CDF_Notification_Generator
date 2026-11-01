@@ -280,6 +280,12 @@ recipient classes in 0004), which only re-applying that migration restores; synt
 reload; plus rows written at run time by commands (audit events, task status changes, notification drafts, workspace
 switches), which nothing can reload. Function, policy and index changes hold no data.
 
+What the access-policy fingerprint does not cover (SEC INFO 1 on #119): `_policy_fingerprint()` and P10 are
+schema-level only. Role memberships, role attributes (such as BYPASSRLS) and default ACLs are outside them; the
+bootstrap lint (`db:lint`) and the hosted isolation checks (`database/hosted/isolation_checks.sql`, P08 and P09 of
+`post_apply_checks.sql`) cover those. A migration that records a new `policy_version` row therefore proves nothing about
+roles, and P10 passing is not evidence about them.
+
 ### 0000_bootstrap.sql
 
 - **Creates:** `role cdf_v13_owner`, `role cdf_v13_user`, `role cdf_v13_app`, `schema cdf_notifications_v13`,
