@@ -11,7 +11,8 @@
 //   3. one case_record object, built from the authorised case row, goes to buildModelFromRecords AND to
 //      projectForRecipient (ARCH ruling, 31 Oct); access_list is never passed, so a restricted case fails closed
 //      (NO_ACCESS_LIST_RESULT) until a read returns the server's access-list result;
-//   4. only the projected model is rendered (renderPlatform), and only its HTML reaches UX-006's sandboxed frame.
+//   4. only the projected model is rendered (renderPlatform); its HTML reaches UX-006's sandboxed frame and its
+//      plain-text twin (V13-FE-011) is shown on the page as escaped text, never as markup.
 // Any binding or read error shows one generic state with the correlation id; the log carries the error code only.
 //
 // PRODUCTION_SUBSTITUTION_REQUIRED: the records come from the prototype's `cdf_notifications_v13` tables; production
@@ -50,6 +51,11 @@ export type NotificationPreviewView =
       readonly kind: "preview";
       readonly notificationId: string;
       readonly html: string;
+      /**
+       * The plain-text twin of the same rendering (V13-FE-011, REQ-NOTIF-011; PROC-021): built by renderPlatform from
+       * the same projected model, so it holds exactly what the frame shows. The page shows it as escaped text only.
+       */
+      readonly text: string;
       /**
        * The disclosed event title in the notice's language, or null when the projection withholds it. The frame's
        * accessible name is a UI string built from it (UX finding on #74); the renderer's own document title and its
@@ -168,6 +174,7 @@ export async function loadNotificationPreview(
       kind: "preview",
       notificationId: n.notification_id,
       html: rendered.html,
+      text: rendered.text,
       eventTitle: disclosedTitle(projected.fields.event_title, n.language),
       lang: n.language,
     };
