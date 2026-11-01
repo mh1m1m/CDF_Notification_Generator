@@ -1085,9 +1085,10 @@ export function resolveLevel2_3(
       ignored.push({ event_id: e.event_id ?? null, reason: "OBJECT_MISMATCH" });
       return;
     }
-    // REQ-JRN-007 (V13-PROC-018): an event recorded under another case never counts for this case, whether it names
-    // this case's object as its own object or in its payload. (The reference checked the object path only.)
-    if ((objHit || payHit) && po && po.case_id && e.case_id && e.case_id !== po.case_id) {
+    // REQ-JRN-007 (V13-PROC-018): an event recorded under another case, or under no case, never counts for a case's
+    // object, whether it names that object as its own object or in its payload. (The reference checked only the
+    // object path, and only when the event carried a case_id.)
+    if ((objHit || payHit) && po && po.case_id && e.case_id !== po.case_id) {
       ignored.push({ event_id: e.event_id ?? null, reason: "CASE_MISMATCH" });
       return;
     }

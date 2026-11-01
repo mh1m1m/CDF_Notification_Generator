@@ -79,6 +79,7 @@ So two cases are two instances. Nothing a case's journey depends on can come fro
 | JI-04 | Interleaved calls for A, B, A, and B with the event order reversed give identical results. The events and the catalogue are unchanged. |
 | JI-05 | Level 1 comes from each case's own record only. |
 | JI-06 | Each case's progress view cites only its own event ids and never the other case's id. |
+| JI-07 | An event with no `case_id` that names this case's object, as its object or in its payload, is refused with `CASE_MISMATCH`. **Fails without the rule.** |
 
 ### Catalogue version change
 
@@ -88,14 +89,14 @@ Pinning and the "never reinterpret history" check belong to REQ-JRN-008 and REQ-
 
 ## 4. The fix
 
-`lib/journeys/resolve.ts`, in the event-scope filter: the case check now applies to an event that reaches this procedural object through its payload (`subject_object_id`, `object_id`, `target`, `related`), not only through `object`.
+`lib/journeys/resolve.ts`, in the event-scope filter. **Rule:** when the procedural object belongs to a case, an event that names that object counts only if it carries the same `case_id`. This holds whether the event names the object as its `object` or in its payload (`subject_object_id`, `object_id`, `target`, `related`). An event of another case, or with no `case_id` at all, is refused as `CASE_MISMATCH`.
 
-- The reference (`src/journeys/resolve.js`) checked only the object path. This is a fail-closed narrowing.
-- All 22 shipped scenarios and JR-01..JR-24 are unchanged: 87 of 87 journey tests pass.
+- The reference (`src/journeys/resolve.js`) checked only the object path, and only when the event carried a `case_id`. This is a fail-closed narrowing.
+- Refusing an event with no `case_id` is ARCH's ruling on SEC's LOW on #95. `procedural_event.case_id` is NOT NULL, so only a future `CaseSourceAdapter` feed could send such an event, and refusing it is the safe default (JI-07).
+- All 22 shipped scenarios and JR-01..JR-24 are unchanged: 88 of 88 journey tests pass.
 
-Limits of the fix:
+The one case the rule does not cover:
 
-- An event with no `case_id` is still judged by object only, as in the reference. Every `procedural_event` row has `case_id NOT NULL`, so an event read from V13's database always has one.
 - A procedural object with no `case_id`, such as the NOCASE scenario, has no case to check against.
 
 ## 5. Answers (CLAUDE.md §7)

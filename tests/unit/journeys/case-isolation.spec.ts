@@ -121,6 +121,31 @@ describe("REQ-JRN-007: each case has its own journey instance", () => {
     );
   });
 
+  it("JI-07 an event with no case_id that names this case's object, as its object or in its payload, is refused with CASE_MISMATCH", () => {
+    const issued = ev("evt-A-70", "DECISION_NOTICE_ISSUED", CASE_A, proc(OBJ_A));
+    const noCase = (e: JourneyEvent): JourneyEvent => {
+      const { case_id: _drop, ...rest } = e;
+      void _drop;
+      return rest as JourneyEvent;
+    };
+    const viaObject = noCase(ev("evt-X-70", "DECISION_NOTICE_DELIVERED", CASE_A, proc(OBJ_A)));
+    const viaPayload = noCase(
+      ev(
+        "evt-X-71",
+        "DECISION_NOTICE_DELIVERED",
+        CASE_A,
+        { type: "NOTIFICATION", id: NOTICE_B },
+        { subject_object_id: OBJ_A },
+      ),
+    );
+    for (const caseless of [viaObject, viaPayload, { ...viaObject, event_id: "evt-X-72", case_id: null }]) {
+      const r = resolve(CASE_A, OBJ_A, [issued, caseless]);
+      expect(r.ignored_events).toEqual([{ event_id: caseless.event_id, reason: "CASE_MISMATCH" }]);
+      expect(r.actual.find((x) => x.step_id === `${J}/1/1`)?.state).toBe("IN_PROGRESS");
+      expect(evidence(r)).not.toContain(caseless.event_id);
+    }
+  });
+
   it("JI-04 resolving one case leaves no state behind: interleaved calls give identical results, inputs unchanged", () => {
     const before = plain(MIXED);
     const catalogueBefore = JSON.stringify(CATALOGUE_V13);
