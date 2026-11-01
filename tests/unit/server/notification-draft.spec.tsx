@@ -560,6 +560,13 @@ describe("Notifications tab markup", () => {
     expect(css).toMatch(/\.selectedCode > bdi \{[^}]*overflow-wrap: anywhere;/);
   });
 
+  it("FE-018: every select in the draft form clips its own content (WebKit reflow at 320 px, case.module.css)", () => {
+    const css = readFileSync("app/(platform)/cases/[caseId]/_components/case.module.css", "utf8");
+    expect(css).toMatch(/\.form > select \{[^}]*overflow: hidden;/);
+    // never clip the form itself: that would cut the controls' focus rings
+    expect(css).not.toMatch(/\.form \{[^}]*overflow/);
+  });
+
   it("FE-010 (D10): a template option's version is Latin digits in both languages, never grouped", async () => {
     const [first] = FAKE_DRAFT_OPTIONS.templates;
     const drafts = createFakeNotificationDrafts({

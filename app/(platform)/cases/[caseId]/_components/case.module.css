@@ -38,6 +38,15 @@
   max-inline-size: 100%;
 }
 
+/* V13-FE-018 (WCAG 1.4.10, QA cross-browser run 41292116619): WebKit adds a select's text at its max-content width
+   (the longest option) to the form's scrollable overflow even when the select's box is clamped above, so the page
+   scrolls sideways at 320 px in Safari. A select that clips its own content keeps that text inside its box. The box,
+   the focus ring (an outline, outside the box) and the selected text shown are unchanged; the full template code is
+   the line under the select (V13-FE-016). */
+.form > select {
+  overflow: hidden;
+}
+
 /* V13-FE-016 (UXB-19): the selected template's code on its own line under the select, wrapped so nothing is cut at
    320 px (WCAG 1.4.10). */
 .selectedCode {
