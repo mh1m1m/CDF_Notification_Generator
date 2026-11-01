@@ -4,7 +4,7 @@
 through the connected integrations at the time given. Nothing here is a plan presented as a fact. Production is blocked
 by the hosting gate (ADR-005); staging holds synthetic data only.
 
-Last checked: **31 Oct 2026 23:28 UTC** by the Chief Architect (§1 GitHub and §3 Vercel deployments; §2 Supabase: see its own times).
+Last checked: **1 Nov 2026 00:02 UTC** by the Chief Architect (§1 GitHub and §3 Vercel deployments; §2 Supabase: see its own times).
 
 ## 1. GitHub
 
@@ -13,9 +13,9 @@ Last checked: **31 Oct 2026 23:28 UTC** by the Chief Architect (§1 GitHub and �
 | Repository | [`mh1m1m/CDF_Notification_Generator`](https://github.com/mh1m1m/CDF_Notification_Generator) (existing; no other repository created) | 01:29 |
 | Visibility | public (OPEN_ISSUES OI-006) | E01 §1.2 |
 | Default branch | `main` at `9f1edaf` (README and .gitignore only); unchanged: only the owner merges `develop` → `main` | 31 Oct 19:56 |
-| Integration branch | `develop` at `f069850` (merge of #69, V13-UX-007); 66 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1; migrations `0000`–`0010` in Git | 31 Oct 23:28 |
+| Integration branch | `develop` at `63d1271` (merge of #63, V13-FE-007); 73 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1; migrations `0000`–`0010` in Git | 1 Nov 00:00 |
 | Branch protection | **none on `main` or `develop`** (`protected: false`); the GitHub connector cannot set protection rules (OI-016) | 31 Oct 19:08 |
-| CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Since #36 (V13-ARCH-008) the Playwright job runs the app against a PostgreSQL 17 service built by `pnpm db:reset`. Latest `develop` push run [41251928026](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41251928026) on `f069850`: success | 31 Oct 23:28 |
+| CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Since #36 (V13-ARCH-008) the Playwright job runs the app against a PostgreSQL 17 service built by `pnpm db:reset`. Latest `develop` push run [41254619502](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41254619502) on `63d1271`: success | 1 Nov 00:02 |
 
 ## 2. Supabase (database)
 
@@ -50,14 +50,16 @@ Deployments:
 | `dpl_CAY2ZqUCvHquz5yMfTqvE4YG16kv` | `develop` `47ce691` | production (Vercel's choice for the first build, OI-011) | ERROR | `NEXT_NO_VERSION`: no Next.js app yet (28 Oct) |
 | `dpl_3bZoHdySGtoh9JLqxYpwU1FBF4er` | `develop` `3512507` | preview | ERROR | `NEXT_NO_VERSION`: no Next.js app yet (28 Oct) |
 | every `develop` merge since #6 (V13-ARCH-001) | — | preview | READY | the five most recent, read 31 Oct 19:05: `b193a1c`, `f431b98`, `558d4ae`, `50850a4`, `b5ee5f4` |
-| `dpl_cZWKWPdPL9suLcPBtJCnnKMMRBpG` | `develop` `b5ee5f4` | preview, behind the staging alias | READY | the alias pointed here at 19:05; the push of `a6c224a` builds the next one |
+| `dpl_cZWKWPdPL9suLcPBtJCnnKMMRBpG` | `develop` `b5ee5f4` | preview | READY | the alias pointed here at 19:05; the push of `a6c224a` builds the next one |
 | `dpl_5exSSyLjcmg7fMPDiBUEjM7A78gN` | `develop` `d694ff8` (#32) | preview | READY | still the newest `develop` deployment at 22:00 (created 20:47 UTC). No deployment exists for the fourteen later merges (`267944a` … `b5d810c`): the account's daily deployment limit refuses them (OI-038), so the staging alias lags `develop` until the limit resets |
 | `dpl_8EmseVV6PbaYTEX2mXeDRQP2pVPu` | `develop` `dabc11f` (#64) | preview | READY | created 22:16 UTC; the merges between `d694ff8` and `dabc11f` have no deployment (OI-038) |
 | `dpl_D4bipFNReuGFu81KoYVpPrrYtjjh` | `develop` `9290778` (#61) | preview | READY | the newest `develop` deployment at 23:28 (created 23:10 UTC); `9787419` and `4cc72ec` have none (OI-038). The staging alias was not re-read at 23:28 |
+| `dpl_D8oLwP43MfU9Awe1RKj31u4Y6S8K` | `develop` `63d1271` (#63) | preview, behind the staging alias | READY | created 23:57 UTC; the staging alias pointed here when read through the Vercel connector on 1 Nov at 00:00 UTC. The seven merges between `9290778` and `63d1271` (`f069850` … `5153388`) have no deployment (OI-038) |
 
-Staging alias check, 31 Oct 2026 19:05:36 UTC (through the Vercel connector's authenticated fetch; Vercel
+Staging alias check, 1 Nov 2026 00:00:55 UTC (through the Vercel connector's authenticated fetch; Vercel
 Authentication stays on): `GET /api/health` → **HTTP 503**
-`{"status":"degraded","app":"v13-enterprise","commit":"b5ee5f4…","db":{"status":"DB_NOT_CONFIGURED"}}`. That is the
+`{"status":"degraded","app":"v13-enterprise","commit":"63d1271…","db":{"status":"DB_NOT_CONFIGURED"}}`, the same answer
+as the first check on 31 Oct at 19:05:36 UTC on `b5ee5f4`. That is the
 expected answer while `V13_DATABASE_URL` is unset (owner step), and the app serves no case data without it. The response
 carried the resource Content-Security-Policy (`default-src 'none'`), `Cache-Control: no-store`, HSTS, `X-Frame-Options:
 DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, COOP/CORP `same-origin`, the
