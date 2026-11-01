@@ -13,9 +13,11 @@ export const ConfirmedMembershipSchema = z.strictObject({
 export type ConfirmedMembership = z.infer<typeof ConfirmedMembershipSchema>;
 
 /**
- * V13's read of the current persona's active memberships. RLS inside every call (membership_select_own,
- * workspace_select_member): an inactive persona, an expired or future membership and an inactive workspace give no
- * row. A row with a code outside the closed sets refuses the whole result.
+ * The current persona's memberships that hold now. Every implementation guarantees: only the requesting persona's own
+ * memberships; none at all for an inactive persona; only memberships whose window contains now() (no expired, no
+ * future one); only memberships in an active workspace. The claimed active workspace never adds or removes a row. A
+ * value outside the closed workspace and role sets refuses the whole result. How an implementation enforces this is its
+ * own concern (V13: lib/adapters/identity/v13-memberships.ts).
  */
 export interface MembershipReader {
   confirmedMemberships(identity: RequestIdentity): Promise<readonly ConfirmedMembership[]>;

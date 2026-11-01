@@ -96,7 +96,7 @@ describe("workspaceOptions: role words come only from confirmed memberships", ()
 
 describe("confirmedRolesIn and loadConfirmedMemberships", () => {
   const m = (workspace: string, role: string) => ({ workspace, role }) as ConfirmedMembership;
-  it("keeps one workspace's roles, sorted and without duplicates", () => {
+  it("keeps one workspace's roles, in the closed set's order and without duplicates", () => {
     expect(
       confirmedRolesIn(
         [
@@ -109,6 +109,19 @@ describe("confirmedRolesIn and loadConfirmedMemberships", () => {
       ),
     ).toEqual(["COMMITTEE_SECRETARY", "INVESTIGATOR"]);
     expect(confirmedRolesIn([], "SECRETARIAT")).toEqual([]);
+  });
+
+  it("orders roles as the closed set does, not alphabetically (GOVERNANCE_OFFICER after INVESTIGATOR)", () => {
+    expect(
+      confirmedRolesIn(
+        [
+          m("SECRETARIAT", "GOVERNANCE_OFFICER"),
+          m("SECRETARIAT", "INVESTIGATOR"),
+          m("SECRETARIAT", "COMMITTEE_SECRETARY"),
+        ],
+        "SECRETARIAT",
+      ),
+    ).toEqual(["COMMITTEE_SECRETARY", "INVESTIGATOR", "GOVERNANCE_OFFICER"]);
   });
 
   it("returns the reader's rows for this request's identity", async () => {

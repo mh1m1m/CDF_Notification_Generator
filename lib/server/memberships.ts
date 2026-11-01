@@ -4,7 +4,13 @@
 // and the database confirms nothing. Any read failure also confirms nothing (fail closed: no role is shown), logged by
 // code and correlation id only. This never grants or widens anything: it decides only which role words appear.
 import "server-only";
-import type { ConfirmedMembership, MembershipReader, RoleCode, WorkspaceCode } from "@/lib/contracts";
+import {
+  ROLE_CODES,
+  type ConfirmedMembership,
+  type MembershipReader,
+  type RoleCode,
+  type WorkspaceCode,
+} from "@/lib/contracts";
 import type { RequestContext } from "./context";
 import { toUserError } from "./errors";
 
@@ -31,5 +37,7 @@ export function confirmedRolesIn(
   memberships: readonly ConfirmedMembership[],
   workspace: WorkspaceCode,
 ): RoleCode[] {
-  return [...new Set(memberships.filter((m) => m.workspace === workspace).map((m) => m.role))].sort();
+  return [...new Set(memberships.filter((m) => m.workspace === workspace).map((m) => m.role))].sort(
+    (a, b) => ROLE_CODES.indexOf(a) - ROLE_CODES.indexOf(b),
+  );
 }

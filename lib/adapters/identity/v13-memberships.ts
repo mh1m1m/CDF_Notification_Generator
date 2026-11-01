@@ -1,8 +1,9 @@
 // MembershipReader over V13's own-membership read (migration 0001): persona_workspace_membership (RLS
 // membership_select_own) joined to workspace (RLS workspace_select_member) and role, inside the request security
-// context, explicit columns, strict rows. current_persona_id() is NULL for an inactive persona, so it gets no row; the
-// window check drops expired and future memberships. Nothing here grants anything: the switch command and every read
-// re-check the membership themselves.
+// context, explicit columns, strict rows. RLS limits rows to the persona's own (current_persona_id(), NULL for an
+// inactive persona, so it gets no row). RLS does not check the membership's window or workspace.is_active: this
+// query's WHERE clause drops expired and future memberships and inactive workspaces (pinned by negative integration
+// tests). Nothing here grants anything: the switch command and every read re-check the membership themselves.
 //
 // PRODUCTION_SUBSTITUTION_REQUIRED: production derives memberships from the CDF corporate IdP's groups.
 import "server-only";
