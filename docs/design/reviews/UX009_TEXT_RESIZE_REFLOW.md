@@ -47,6 +47,7 @@ through ARCH).
 | R-03 | Every page (skip link) | ar, en | all | The focused skip link had no width limit; it fitted in every condition, but nothing kept it so for longer strings. | LOW | `styles/globals.css` (`.v13-skip-link`) | FIXED (preventive): `max-inline-size: calc(100vw - 2 × space-3)`. Pinned in `reflow.spec.ts` |
 | R-04 | Notification Operations Center; case Notifications tab | ar, en | 320 px; 640 px | The table caption is inside the scrolling table, so its second line is cut at the region edge (same as M1-15). Content is reachable by scrolling the region, so 1.4.10 passes; it is a visible defect. | LOW | `app/(platform)/notifications/_components/*`, case Notifications table | FIXED in V13-FE-010 (#98, `21dbbaa`): the case tab is a `DataTable` and the Center uses its caption pattern; re-checked V13-UX-013 (caption box = region box at 320 and 640 px, ar and en) |
 | R-05 | Notification Operations Center (current area link) | en | 320 px + spacing | Found by QA-010's browser checks (#104, CI run 41266729412): the bold current link "Notification operations centre" kept one line (`white-space: nowrap`) and measured 321 px in a Liberation Sans / Arial-metric font, so the page scrolled by 1 px. With Carlito (this review's capture) it measured 294 px, so the review missed it. | MEDIUM | `styles/globals.css` (`.v13-side-nav-link`) | FIXED in V13-UX-012: the link wraps its own text (`overflow-wrap: anywhere`, `max-inline-size: 100%`, no `nowrap`). Pinned in `reflow.spec.ts`; QA-010's checks pass |
+| R-06 | Case Workspace, Notifications tab (draft form) | ar, en | WebKit only: 320 px; 320 px + spacing; 640 px (en) | Found by QA's cross-browser run 41292116619 on #152: WebKit counts the template select's longest option label as scrollable overflow even though the select is clamped to the column, so the page scrolls inline. Chromium (this review's browser) clips a select's content by default, so §1 – §6 could not see it. | MEDIUM | `styles/globals.css` (`select.v13-control`) | FIXED in V13-UX-018 (UXB-20): `appearance: none` and `overflow: clip` on the shared select rule (QA, #154: neither passes alone), with a drawn chevron (inline end, `currentColor`) and the native arrow in forced colours. Pinned in `controls.spec.ts`; QA's WebKit run on #154 is the browser proof |
 
 ## 4. Spec for QA's a11y e2e check (QA owns `tests/a11y`)
 
@@ -113,8 +114,9 @@ forms, pager, preview text and table-link styles keep the reflow, resize and tex
 
 ## 6. Next Action Card on the Overview (V13-UX-017)
 
-FE-015 (#141) placed the card first on the Case Workspace Overview. QA's browser test (#150) checks that the card
-causes no inline scroll at 320 px in ar and en. This check adds the other conditions: 200% zoom and 1.4.12 text spacing.
+FE-015 (#141) placed the card first on the Case Workspace Overview. QA's browser test (#150, merged as `8536e7e`)
+checks that the card is first in the overview, before the stage card, and that it causes no inline scroll at 320 px in
+ar and en. This check adds the other conditions: 200% zoom and 1.4.12 text spacing.
 
 ### Method
 

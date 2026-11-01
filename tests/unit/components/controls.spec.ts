@@ -63,6 +63,37 @@ describe("form controls: one shared rule (UXB-17)", () => {
     expect(control).not.toMatch(/(margin|padding)-(left|right|top|bottom)/);
   });
 
+  it("a v13-control select has no native menulist and clips its label, so WebKit does not count its options as page overflow (UXB-20, SC 1.4.10)", () => {
+    const select = rules("select.v13-control");
+    expect(select).toMatch(/(^|[\s;])appearance:\s*none/);
+    expect(select).toMatch(/overflow:\s*clip/);
+    expect(select).not.toMatch(/(^|[^-])(width|inline-size|flex)\s*:/);
+  });
+
+  it("the select draws its own chevron at the inline end, in the text colour, with room for it (SC 1.4.11)", () => {
+    const select = rules("select.v13-control");
+    expect(select).toMatch(
+      /background-image:[^;]*linear-gradient\(45deg,[^)]*currentColor[^;]*linear-gradient\(135deg,[^)]*currentColor/,
+    );
+    expect(select).toMatch(
+      /background-position:\s*calc\(100% - [\d.]+rem\) 50%,\s*calc\(100% - [\d.]+rem\) 50%/,
+    );
+    expect(select).toMatch(/background-repeat:\s*no-repeat/);
+    const end = /padding-inline-end:\s*([\d.]+)rem/.exec(select);
+    expect(end, "padding-inline-end in rem").not.toBeNull();
+    expect(Number(end![1])).toBeGreaterThanOrEqual(1.5);
+    expect(rules('[dir="rtl"] select.v13-control')).toMatch(
+      /background-position:\s*[\d.]+rem 50%,\s*[\d.]+rem 50%/,
+    );
+  });
+
+  it("forced colours get the native arrow back and drop the drawn chevron", () => {
+    const block =
+      /@media \(forced-colors: active\)\s*\{\s*select\.v13-control\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(block).toMatch(/appearance:\s*auto/);
+    expect(block).toMatch(/background-image:\s*none/);
+  });
+
   it.each(SOURCES)("every field in %s uses v13-control", (path) => {
     const source = readFileSync(path, "utf8");
     const fields = [

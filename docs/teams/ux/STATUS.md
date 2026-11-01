@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `docs/V13-UX-017-next-action-reflow` · Base: `develop` `0a0c955`
+Updated: 2026-11-01 · Branch: `fix/V13-UX-018-select-overflow` · Base: `develop` `6be1802`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -213,16 +213,32 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Written up in `UX009_TEXT_RESIZE_REFLOW.md` §5; UX_BACKLOG.md source row added, UXB-19 IN_REVIEW. Docs only.
 - The Next Action Card on the page was checked separately (V13-UX-017), after #141 merged.
 
-## V13-UX-017: Next Action Card reflow on the Overview (REQ-A11Y-010, REQ-IA-009). IN_REVIEW once its PR is open; QA
+## V13-UX-017: Next Action Card reflow on the Overview (REQ-A11Y-010, REQ-IA-009). PR #151, QA ACCEPT `eccafd5`, CI 41287565306, merged as `7fd4a69`
 - On `develop` `0a0c955`, ar and en: 640 × 450, 320 × 256, 1.4.12 spacing at 1280 and 320, with the four-font probe.
   Personas Secretary Alpha and Investigator Beta, case 0001. 40 captures.
 - Result: no defect. No page scroll. The card stays inside the column, the title wraps, and nothing is clipped (only
   the badge's sr-only text). This complements QA's #150, which covers 320 px only.
 - Written up in `UX009_TEXT_RESIZE_REFLOW.md` §6, with a UX_BACKLOG.md source row. Docs only.
 
+## V13-UX-018: WebKit select overflow (UXB-20, UX-009 R-06; WCAG 1.4.10). IN_REVIEW once its PR is open; QA (UI, cross-browser label)
+- QA's cross-browser run 41292116619 on #152: in WebKit only, the draft form's template select added its longest
+  option label to the page's scrollable width (320 px ar/en, with and without spacing; 640 × 450 en).
+- Cause (QA's WebKit runs 41294868940 and 41297056455 on #154): WebKit counts the native menulist's longest option
+  label (553 px ar, 618 px en) as the form's scrollable overflow. `overflow: clip` alone (`e77bee8`) and
+  `appearance: none` alone (`e318e48`, run 41299673688: 6 of 12 cells fail) are not enough; both together pass all 12.
+- Fix: `select.v13-control { appearance: none; overflow: clip; }` with a chevron drawn in `currentColor` at the inline end (two
+  gradients; `[dir="rtl"]` moves it), `padding-inline-end: 1.75rem`, and `appearance: auto` with no image under
+  `forced-colors: active`.
+- Chromium check, ar and en, 320 and 1280 px, light, dark and forced colours: page 320/1280, form 288/288 at 320, focus
+  outline solid 3 px, ArrowDown still changes the value, FE-016 code line intact. Chevron is the text colour
+  (`#101820` on white, white on `#19212B` in dark: well above 3:1).
+- Test: `controls.spec.ts` pins `appearance: none`, the chevron and its room, the RTL position and the forced-colours
+  block (each mutation fails a test). The WebKit proof is QA's run on #154.
+- Docs: UXB-20 and R-06 added; UXB-19 DONE (`f93e8e2`); §6 cites #150 (`8536e7e`) for the card's position.
+
 ## Unresolved defects
-- UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is IN_REVIEW in #131 (V13-FE-016, UX ACCEPT
-  `7c604f0`). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
+- UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is DONE (`f93e8e2`, #131). UXB-20
+  (MEDIUM, WebKit select overflow) is IN_REVIEW in V13-UX-018. Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once

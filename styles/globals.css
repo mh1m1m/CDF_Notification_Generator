@@ -1311,6 +1311,42 @@
     font: inherit;
   }
 
+  /* WCAG 1.4.10 (V13-UX-018, UXB-20): WebKit adds a native menulist's longest option label to its container's
+     scrollable overflow, so the page scrolled sideways at 320 px even though the select is clamped to the column.
+     QA's WebKit runs on #154 (41294868940, 41297056455, 41299673688) show both declarations are needed:
+     appearance: none makes the select an ordinary box, and overflow: clip (not hidden, so it is no scroll container)
+     stops its label spilling into the form's scrollable overflow. Neither alone passes. The native arrow goes, so the
+     select draws its own chevron at the inline end, in the text colour (currentColor: >= 3:1 on the control surface
+     in both themes, SC 1.4.11), with room kept for it. */
+  select.v13-control {
+    appearance: none;
+    overflow: clip;
+    padding-inline-end: 1.75rem;
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+      calc(100% - 1.125rem) 50%,
+      calc(100% - 0.8125rem) 50%;
+    background-size: 0.3125rem 0.3125rem;
+    background-repeat: no-repeat;
+  }
+
+  [dir="rtl"] select.v13-control {
+    background-position:
+      0.5rem 50%,
+      0.8125rem 50%;
+  }
+
+  /* Forced colours repaint backgrounds; give the select its native arrow back there (WebKit has no forced-colours
+     mode, so the 1.4.10 fix above still holds where it is needed). */
+  @media (forced-colors: active) {
+    select.v13-control {
+      appearance: auto;
+      background-image: none;
+    }
+  }
+
   .v13-control:disabled {
     background-color: var(--cdf-disabled-bg);
     color: var(--cdf-disabled-text);
