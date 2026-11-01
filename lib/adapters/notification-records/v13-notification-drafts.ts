@@ -70,7 +70,11 @@ export const rowToDraftRecipientClass = (r: RecipientClassRow) => {
   return DraftRecipientClassSchema.parse({ code: r.code, name: { ar: r.name_ar, en: r.name_en } });
 };
 
-/** The command's SQLSTATEs (migration 0004). Anything else is an unexpected failure and propagates unchanged. */
+/**
+ * The command's refusal codes (migration 0004), returned in its `refusal` column since migration 0013 (V13-DB-021).
+ * Any other value, V1500 included, is an unexpected failure and throws a plain Error; any other database error
+ * propagates unchanged.
+ */
 const REFUSALS: Readonly<Record<string, NotificationCommandRefusal>> = {
   V1401: "NO_CONTEXT",
   V1404: "NOT_FOUND",
@@ -78,6 +82,20 @@ const REFUSALS: Readonly<Record<string, NotificationCommandRefusal>> = {
   V1422: "INVALID_INPUT",
   V1423: "CASE_CLOSED",
 };
+
+interface CommandRow {
+  notification_id: string | null;
+  case_id: string | null;
+  lifecycle_status: string | null;
+  row_version: number | null;
+  refusal: string | null;
+}
+
+function refusalOf(code: string): NotificationCommandRefusal {
+  const refusal = Object.hasOwn(REFUSALS, code) ? REFUSALS[code] : undefined;
+  if (!refusal) throw new Error("api_create_notification_draft: unknown refusal");
+  return refusal;
+}
 
 export function createV13NotificationDrafts(run: RequestContextRunner): NotificationDraftPort {
   return {
@@ -105,25 +123,22 @@ export function createV13NotificationDrafts(run: RequestContextRunner): Notifica
       command: CreateNotificationDraftCommand,
     ): Promise<NotificationDraftCreated> {
       const c = CreateNotificationDraftCommandSchema.parse(command);
-      let rows: readonly unknown[];
-      try {
-        rows = await run(
-          identity,
-          (tx) =>
-            tx<{ notification_id: string; case_id: string; lifecycle_status: string; row_version: number }[]>`
-            select r.notification_id, r.case_id, r.lifecycle_status, r.row_version
-              from cdf_notifications_v13.api_create_notification_draft(
-                     ${c.case_id}::uuid, ${c.template_version_id}::uuid, ${c.recipient_class},
-                     ${c.idempotency_key}) r`,
-        );
-      } catch (error) {
-        const code = (error as { code?: unknown } | null)?.code;
-        const refusal = typeof code === "string" ? REFUSALS[code] : undefined;
-        if (refusal) throw new NotificationCommandRefusedError(refusal);
-        throw error;
-      }
+      // One command per transaction (R1). The refusal is mapped only after run(...) has resolved, so the transaction
+      // that holds the database's COMMAND_REFUSED audit row (migration 0013) has committed (DB-021 §6).
+      const rows = await run(
+        identity,
+        (tx) =>
+          tx<CommandRow[]>`
+          select r.notification_id, r.case_id, r.lifecycle_status, r.row_version, r.refusal
+            from cdf_notifications_v13.api_create_notification_draft(
+                   ${c.case_id}::uuid, ${c.template_version_id}::uuid, ${c.recipient_class},
+                   ${c.idempotency_key}) r`,
+      );
       if (rows.length !== 1) throw new Error("api_create_notification_draft: expected one row");
-      const created = NotificationDraftCreatedSchema.parse(rows[0]);
+      const { refusal, ...answer } = rows[0] as CommandRow;
+      // The refusal column is read before any other column (fail closed on an unknown code).
+      if (refusal !== null) throw new NotificationCommandRefusedError(refusalOf(refusal));
+      const created = NotificationDraftCreatedSchema.parse(answer);
       // The database must answer for the case asked for (fail closed otherwise).
       if (created.case_id !== c.case_id) {
         throw new Error("api_create_notification_draft: answer does not match the command");
