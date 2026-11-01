@@ -23,6 +23,7 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-019]` | `feature/V13-DB-019-keyset-paged-reads` | REQ-PERF-003, OI-026: migration 0011, keyset-paged per-case reads | COMPLETE — #110 merged (800ab8a), CI 41269347309 6/6 |
 | `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note (#115 merged 937cff3, ACCEPT c35d6c1), then migration 0012 on `feature/V13-DB-020-audit-outcome-policy-version` | IN_PROGRESS — 0012 PR open, SEC review pending |
 | `[V13-DB-021]` | `feature/V13-DB-021-refusal-audit`, stacked on DB-020's 0012 branch | REQ-AUD-005: refused commands audited (design note #120, ACCEPTED); migration 0013, adapters and `lib/server` (FE path-owner), SEC suites, `post_apply_checks.sql` P03 (ARCH path) | IN_PROGRESS — DRAFT PR, waits for #119 |
+| `[V13-DB-022]` | `feature/V13-DB-022-my-open-case-tasks`, stacked on DB-021 (#127) | REQ-PERF-003, OI-054: migration 0014, `case_my_open_tasks_page` (the caller's open tasks on one case, paged) | IN_PROGRESS — DRAFT PR stacked on #127, SEC review |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -203,8 +204,19 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 - Evidence (local, 1 Nov): unit 2154/2154, test:db 584/584 (33 files), lint, typecheck, prettier, db:lint clean,
   rollback register 0 findings, shared-database rehearsal PASS.
 
+## In progress: V13-DB-022 (REQ-PERF-003, OI-054, "My open tasks in this case")
+- Migration 0014: `case_my_open_tasks_page(case, cursor, id, limit)`, SQL, stable, invoker, `search_path ''`, EXECUTE to
+  `cdf_v13_user` only. Rows = `case_tasks` filtered by `is_mine` and OPEN / IN_PROGRESS / BLOCKED; order due date
+  nulls last, `task_code collate "C"`, id (ARCH); `case_tasks_page`'s columns and cursor; partial index
+  `task_case_assignee_open_idx`; `V13-ACCESS-0014` as the last statement. DATA_MODEL §4 and §9 entries.
+- Tests: `tests/integration/case-my-open-tasks.spec.ts` (16); `context-forgery` registry entry (SEC path, separate
+  commit); policy register and hosted resume extended to 0014.
+- Evidence (local, 1 Nov): unit 2159/2159, test:db 599/599 (34 files) before the collation pin test (spec now 16/16),
+  lint, typecheck, prettier, db:lint clean, rollback register 0 findings, shared-database rehearsal PASS.
+- Lands after #127 (migrations in number order). The FE switch to the new read is V13-FE-014.
+
 ## Next
-- Next free migration: 0014. Next task: V13-DB-022 (filtered, paged "My open tasks" read, OI-054).
+- Next free migration: 0015.
 
 ## Review given
 - #29 `[V13-SEC-002]`: `REVIEW: ACCEPT ede6f46`, re-confirmed `ACCEPT bc89156` after the develop merge (294/294).

@@ -110,6 +110,7 @@ erDiagram
 | `case_notifications(uuid)` | invoker | yes | notification history of one case |
 | `notifications_page(...)`, `notifications_count(...)` (migration 0010, V13-DB-015) | invoker | yes | Notification Operations Center (UX S4, FE-006): notifications across every case the caller may see, with exactly the access of `case_notifications` (RLS before filters, order, limit, count and summaries). Rows: case id, number and titles, template code, names, version and language, recipient class, lifecycle status, `created_at`, `created_at_cursor`, `last_event_at`, `row_version`; no person. Filters (identical for page and count): lifecycle status, template code, case display number (after authorisation, never a key), created range `[from, before)`. Keyset on (`created_at` desc, id desc): pass `created_at_cursor` (text, `YYYY-MM-DDTHH:MI:SS.ffffffZ`) and the id of the last row, or neither; half a cursor or another text form matches nothing. Limit 1..100 |
 | `case_events_page(...)`, `case_tasks_page(...)`, `case_notifications_page(...)` (migration 0011, V13-DB-019, OI-026) | invoker | yes | the three per-case reads one bounded page at a time: same rows, order and columns as `case_events` / `case_tasks` / `case_notifications`, plus `page_cursor`. Arguments `(p_case_id, p_after_cursor, p_after_id, p_limit)`: pass `page_cursor` and the id of the last row, or neither. The cursor row must be visible in the same case and carry exactly that `page_cursor`; the keyset then uses its stored values. A half, malformed, stale or foreign cursor returns no rows, the same answer as an unknown or unauthorised case. Limit 1..100 (default 25); any other value, NULL included, is refused with 22023, never clamped. Index `task_case_page_idx` serves the task order; the events and notifications orders use the 0003 and 0004 case indexes. The unpaged reads are unchanged |
+| `case_my_open_tasks_page(...)` (migration 0014, V13-DB-022, OI-054) | invoker | yes | the verified persona's open tasks (OPEN, IN_PROGRESS, BLOCKED) on one case for the overview's "My open tasks in this case": exactly the rows of `case_tasks` with `is_mine` and an open status, `case_tasks_page`'s columns, one page at a time. Order due date nulls last, then `task_code collate "C"` (code point order, the same on every server; ARCH on #124), then id; the cursor is `case_tasks_page`'s and need not still be open or the caller's. Index `task_case_assignee_open_idx`. Same limit and cursor rules as 0011 |
 | `_page_limit(integer)` (migration 0011) | immutable, no table access | yes | returns the page limit if it is 1..100, else raises 22023 |
 | `api_update_task_status(uuid, text, int)` | definer command | yes | §6; since 0013 returns a `refusal` column |
 | `api_create_notification_draft(uuid, uuid, text, text)` | definer command | yes | §6; since 0013 returns a `refusal` column |
@@ -490,3 +491,13 @@ roles, and P10 passing is not evidence about them.
 - **Local:** `pnpm db:reset`.
 - **Hosted:** a forward-fix migration that drops and re-creates the wrappers (the connector's DROP confirmation, ADR-012)
   and records a new `policy_version` row; never a ledger rewrite.
+
+### 0014_case_my_open_tasks_page.sql
+
+- **Creates:** `index task_case_assignee_open_idx`, `function case_my_open_tasks_page`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** none (a read function and an index hold no data).
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that corrects or drops the read and records a new `policy_version` row.
