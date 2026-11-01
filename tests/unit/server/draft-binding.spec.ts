@@ -17,7 +17,7 @@ import {
   type DraftBindingSubject,
 } from "@/lib/server/draft-binding";
 import { caseIdOf } from "./support/fake-case-source";
-import { GOVERNANCE_AT_SECRETARIAT, INVESTIGATOR_BETA, SECRETARY } from "./support/identities";
+import { GOVERNANCE, GOVERNANCE_AT_SECRETARIAT, INVESTIGATOR_BETA, SECRETARY } from "./support/identities";
 
 const ENV = { V13_SESSION_SECRET: base64url.encode(new Uint8Array(32).fill(7)) };
 const KEY = draftBindingKey(ENV);
@@ -81,7 +81,20 @@ describe("sign and verify", () => {
     ["another posted case", () => verify(sign(), subject(), caseIdOf(1))],
     ["another posted idempotency key", () => verify(sign(), subject(), CASE, "f".repeat(64))],
     ["another persona (Beta)", () => verify(sign(), subject(INVESTIGATOR_BETA))],
-    ["the same persona in another workspace", () => verify(sign(), subject(GOVERNANCE_AT_SECRETARIAT))],
+    [
+      "another persona in another workspace (Delta in Secretariat)",
+      () => verify(sign(), subject(GOVERNANCE_AT_SECRETARIAT)),
+    ],
+    // SEC CHANGES 8c07746: only the workspace differs (same persona, session, case and key), so the workspace check
+    // alone must refuse it.
+    [
+      "the same persona in another workspace (Delta: signed in Governance, posted in Secretariat)",
+      () => verify(sign(subject(GOVERNANCE)), subject(GOVERNANCE_AT_SECRETARIAT)),
+    ],
+    [
+      "the same persona in another workspace (Alpha: signed in Governance, posted in Secretariat)",
+      () => verify(sign(subject({ ...SECRETARY, active_workspace: "GOVERNANCE" })), subject(SECRETARY)),
+    ],
     ["another session (a later issued-at)", () => verify(sign(), subject(SECRETARY, IAT + 1))],
     ["a session that ends earlier than the binding", () => verify(sign(), subject(SECRETARY, IAT, EXP - 1))],
     ["an expired binding (now = exp)", () => verify(sign(), subject(), CASE, IDEM, EXP)],
@@ -134,6 +147,7 @@ describe("sign and verify", () => {
     ["another purpose", fields({ 0: "notification-dispatch" })],
     ["a persona id in upper case", fields({ 1: SECRETARY.persona_id.toUpperCase() })],
     ["a workspace code instead of its id", fields({ 2: SECRETARY.active_workspace })],
+    ["another workspace's id (Governance) for the same persona", fields({ 2: WORKSPACE_IDS.GOVERNANCE })],
     ["a case id in upper case", fields({ 3: CASE.toUpperCase() })],
     ["a non-integer issued-at", fields({ 5: IAT + 0.5 })],
     ["an issued-at as a string", fields({ 5: String(IAT) })],
@@ -146,6 +160,9 @@ describe("sign and verify", () => {
 
   it("a correctly MAC'd payload with the right fields verifies (the crafted control)", () => {
     expect(verify(craft(fields()))).toBe(CASE);
+    // and the same persona, signed in another workspace, verifies when posted from that workspace
+    const elsewhere = { ...SECRETARY, active_workspace: "GOVERNANCE" as const };
+    expect(verify(sign(subject(elsewhere)), subject(elsewhere))).toBe(CASE);
     expect(verify(craft(fields(), KEY, "v2"))).toBeNull();
   });
 });

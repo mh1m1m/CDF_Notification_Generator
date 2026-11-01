@@ -305,7 +305,11 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
     it.each([
       ["no binding", null],
       ["a binding issued to Beta", bindingFor(BETA)],
-      ["a binding issued in another workspace (Delta, Governance)", bindingFor(DELTA_GOV)],
+      ["a binding issued to another persona in another workspace (Delta, Governance)", bindingFor(DELTA_GOV)],
+      [
+        "a binding issued to Alpha in another workspace (Governance)",
+        bindingFor({ ...ALPHA, active_workspace: "GOVERNANCE" }),
+      ],
       ["a binding for another case (0001)", bindingFor(ALPHA, CASE(1))],
       ["a binding for another idempotency key", bindingFor(ALPHA, CASE(4), "b".repeat(64))],
       ["a binding from another session (earlier issued-at)", bindingFor(ALPHA, CASE(4), KEY, iat - 3600)],

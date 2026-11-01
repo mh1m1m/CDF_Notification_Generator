@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 03:38 UTC · Branch: security/V13-FE-012-draft-bound-to-route-case (develop 2bcd183 merged in; #82, #98 merged) · Head: see PR
+Updated: 2026-11-01 04:04 UTC · Branch: security/V13-FE-012-draft-bound-to-route-case (develop 2bcd183 merged in; #82, #98 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -196,6 +196,7 @@ Updated: 2026-11-01 03:38 UTC · Branch: security/V13-FE-012-draft-bound-to-rout
 | FE-010 + draft option version (D10) after merging develop 68a42b9: unit pin in ar and en with version 1234 ("الإصدار 1234" / "version 1234", no Arabic-Indic digits, no grouping); numberFormat output fails it (checked). Commands as above | pass | 80 files, 2026 / 468 / 235 of 235 | FE-010 head |
 | FE-010 after merging develop a0bf765 (#99, QA's leak-suite guard): commands as above | pass | 80 files, 2026 / 468 / 312 of 312 | FE-010 head |
 | FE-012 after merging develop 2bcd183: lint, typecheck, prettier, db:lint / `pnpm test` (draft-binding 24 new; notification-draft 60, of which binding, expiry, session and replay cases new) / `pnpm db:reset` + `pnpm test:db` (FE integration 27: posted id edited ×4, foreign bindings ×6, all with no command call and nothing written) / `pnpm db:reset` + `pnpm test:e2e` (Scenario E tamper test new). Mutation: without the verify call 9 integration and 12 unit tests fail; deleting any of the 12 guards in `verifyDraftBinding` fails a unit test | pass except QA's Sentinel :124 (expected, pins OI-049) | 85 files, 2099 / 479 / 312 passed + 1 failed | FE-012 head |
+| FE-012 after SEC CHANGES 8c07746 (workspace-only binding: Delta signed in Governance / Alpha signed in Governance, posted in Secretariat; crafted payload with another workspace's id; FE integration Alpha in Governance) and QA's P3 hunk 7971547: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e`. Mutation: without the workspace comparison 4 unit and 1 integration tests fail | pass | 85 files, 2103 / 480 / 313 of 313 | FE-012 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden

@@ -229,17 +229,23 @@ describe("createNotificationDraft", () => {
     ["an empty binding", { case_binding: "" }],
     ["a forged binding", { case_binding: "A".repeat(43) }],
     ["the binding of another persona (Beta) for the same case and key", "BETA"],
-    ["the binding of the same persona in another workspace", "OTHER_WORKSPACE"],
+    ["the binding of another persona in another workspace (Delta in Secretariat)", "OTHER_PERSONA_WORKSPACE"],
+    ["the binding of the same persona in another workspace (Alpha in Governance)", "OTHER_WORKSPACE"],
     ["the binding for another key", "OTHER_KEY"],
   ] as const)("%s: refused before the pre-check, nothing written", async (_n, how) => {
     const raw =
       how === "BETA"
         ? { ...form(), case_binding: bindingFor(INVESTIGATOR_BETA, caseIdOf(1), KEY) }
-        : how === "OTHER_WORKSPACE"
+        : how === "OTHER_PERSONA_WORKSPACE"
           ? { ...form(), case_binding: bindingFor(GOVERNANCE_AT_SECRETARIAT, caseIdOf(1), KEY) }
-          : how === "OTHER_KEY"
-            ? { ...form(), case_binding: bindingFor(SECRETARY, caseIdOf(1), "b".repeat(64)) }
-            : { ...form(), ...how };
+          : how === "OTHER_WORKSPACE"
+            ? {
+                ...form(),
+                case_binding: bindingFor({ ...SECRETARY, active_workspace: "GOVERNANCE" }, caseIdOf(1), KEY),
+              }
+            : how === "OTHER_KEY"
+              ? { ...form(), case_binding: bindingFor(SECRETARY, caseIdOf(1), "b".repeat(64)) }
+              : { ...form(), ...how };
     const { outcome, drafts } = await run(SECRETARY, raw);
     expect(outcome).toEqual(REFUSED);
     expect(drafts.calls).toEqual([]);
