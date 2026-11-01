@@ -61,6 +61,11 @@ function e2eDatabaseUrl(env: Readonly<Record<string, string | undefined>>): stri
 }
 const chromiumPath = process.env.PW_CHROMIUM_PATH?.trim();
 const isCI = process.env.CI === "true";
+// The screenshot library (V13-QA-014, docs/qa/M1_OPEN_QA_ROWS_DESIGN.md §2): about 200 images, so it runs only when
+// asked for, in its own project (the CI visual job; `--project=visual-library` locally), never in every e2e run.
+const visualLibrary = process.env.V13_E2E_VISUAL === "library";
+const LIBRARY_SPEC = "visual/library.spec.ts";
+const chromiumLaunch = chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {};
 
 export default defineConfig({
   testDir: "tests",
@@ -88,15 +93,36 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
+  ...(visualLibrary ? { globalTeardown: "./tests/visual/library-teardown.ts" } : {}),
   projects: [
     {
       name: "desktop-ar",
+      testIgnore: LIBRARY_SPEC,
       use: {
         ...devices["Desktop Chrome"],
         locale: "ar-SA",
-        ...(chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {}),
+        ...chromiumLaunch,
       },
     },
+    ...(visualLibrary
+      ? [
+          {
+            name: "visual-library",
+            testMatch: LIBRARY_SPEC,
+            use: {
+              ...devices["Desktop Chrome"],
+              deviceScaleFactor: 1,
+              locale: "ar-SA",
+              // A failed data check writes no image (§4): no failure screenshot, trace or video in this project, so
+              // nothing the check refused reaches the artifact, and no session cookie either (SEC on #132).
+              screenshot: "off" as const,
+              trace: "off" as const,
+              video: "off" as const,
+              ...chromiumLaunch,
+            },
+          },
+        ]
+      : []),
   ],
   webServer: externalBaseUrl
     ? undefined

@@ -324,6 +324,20 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   listed as "not applicable", never staged. The plan for the library, visual baselines and their review, the manual
   accessibility checklist and audit, Firefox and WebKit, and the PR quality report is in
   `docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` (V13-QA-013).
+- **Library built (V13-QA-014, design §2–§4)**: `tests/visual/library-plan.ts` is the one table of rows (screen, state,
+  persona, route, state marker, masks) and "not applicable" cells; `library.spec.ts` captures each row in 3 viewports ×
+  ar/en × light/dark (244 images) in the `visual-library` project (`V13_E2E_VISUAL=library`, never in a plain e2e run);
+  `library-teardown.ts` writes `manifest.json` (commit, fonts from `dpkg-query`, masks with counts, where it was made);
+  `docs/qa/SCREENSHOT_LIBRARY.md` is generated from the plan and `library-index.spec.ts` fails when it differs. Before
+  each capture the state's own marker must be visible and the data check (`data-check.ts`, V1 seeded case numbers only,
+  V2 `@example.test` only, V3 no `cdf.gov.sa`, V4 synthetic persona names, V5 no cookie value or session secret) must
+  pass on the page and every frame; a finding fails with no image, and the project writes no failure screenshot, trace
+  or video. Decisions made while building: the preview's data state is a WITNESS draft the run makes as Investigator
+  Beta on 0005 (the seeded drafts' recipient classes have no disclosure mapping yet, captured as `no-mapping`; 0005 is
+  visible to no other captured persona, so the draft cannot change another row); server-clock text is masked (deadline
+  words and My Work's overdue and this-week counts, D1); the masked correlation id gets a fixed width during the
+  capture only, because its glyph width changes with the id. Two runs on two fresh databases gave 244/244 identical
+  images in the sandbox.
 
 ## 11. Evidence and reporting
 
