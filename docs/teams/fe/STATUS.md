@@ -4,6 +4,9 @@ Updated: 2026-11-01 04:42 UTC · Branch: feature/V13-FE-013-case-lists-paged (de
 Updated: 2026-11-01 06:37 UTC · Branch: feature/V13-FE-015-next-action-card (develop 00fac16 merged in; #138 FE-014 merged) · Head: see PR
 Updated: 2026-11-01 05:43 UTC · Branch: feature/V13-FE-016-template-code-wraps (develop 772e26d merged in; #121 FE-013 and #128 UX-014 merged) · Head: see PR
 Updated: 2026-11-01 07:34 UTC · Branch: feature/V13-FE-016-template-code-wraps (develop 818b51c merged in; #141 FE-015 merged; FE-017 is #147) · Head: see PR
+Updated: 2026-11-01 05:56 UTC · Branch: feature/V13-FE-014-overview-open-tasks (from develop c3ccac6; #121 FE-013 and #129 DB-022 merged; FE-016 is #131) · Head: see PR
+Updated: 2026-11-01 07:07 UTC · Branch: feature/V13-FE-017-case-access-audit (stacked on #142 DB-023 b231e28, develop 00fac16 merged in; FE-015 is #141, FE-016 is #131) · Head: see PR
+Updated: 2026-11-01 08:53 UTC · Branch: feature/V13-FE-017-case-access-audit (develop 43552f7 merged in; #142 DB-023 merged, base now develop; #131 FE-016 merged) · Head: see PR
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
 - V13-FE-001 (part 1) — `lib/authz` pre-check, `lib/server` (errors, request context, case read services, case source
@@ -125,7 +128,17 @@ Updated: 2026-11-01 07:34 UTC · Branch: feature/V13-FE-016-template-code-wraps 
   Arabic at 320 px the start of a long template code was cut. The selected template's code is now shown as text on
   its own line under the select (`draft.templateCode` label + `<bdi dir="ltr">`, wraps anywhere), describes the select
   (`aria-describedby`), and follows the selection; without JavaScript it shows the first template, the default
-  selection — IN_REVIEW (QA ACCEPT and UX ACCEPT on 7c604f0).
+  selection — COMPLETE: merged into develop as f93e8e2 (#131).
+- V13-FE-017 Case-access audit through DB-023 (migration 0015) — opening a case route and a notification preview write
+  their access record in the read's own transaction. New port methods (`lib/contracts` hunk for ARCH + SEC):
+  `CaseSourceAdapter.openCase` (api_record_access('CASE') first, then case_header, one transaction; a refusal V1401 /
+  V1404 / V1422 answers null and reads nothing → NOT_FOUND; anything else, V1500 included, throws → generic error with
+  the correlation id) and `NotificationPreviewReader.getForCaseRecorded` (api_record_access('NOTIFICATION_PREVIEW'),
+  then the preview read; a refusal → "unavailable"). getCaseForRoute is openCase's only caller; the preview loader uses
+  only the recorded read; the draft command's transaction never calls it. Found on a production build and fixed: the
+  case tab's document title was built from the case, and Next.js resolves metadata on every link prefetch (7 rows from
+  the portfolio alone) and apart from the page (2 rows per page). The title now names the tab only ("Case · Overview",
+  new key `case.documentTitle`); the case number stays on the page — IN_REVIEW (DB, SEC, ARCH).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -164,6 +177,13 @@ Updated: 2026-11-01 07:34 UTC · Branch: feature/V13-FE-016-template-code-wraps 
   specs, tests/unit/server/support/fake-records.ts, tests/integration/fe/case-records-paged.spec.ts
 - FE-016: app/(platform)/cases/[caseId]/notifications/_components/DraftForm.tsx, app/(platform)/cases/[caseId]/_components/{CaseWorkspace.tsx,case.module.css},
   lib/i18n/case/{ar,en}.ts, tests/unit/server/notification-draft.spec.tsx, tests/e2e/scenario-e-notification-draft.spec.ts
+- FE-017: lib/contracts/{ports,notification-preview}.ts (port methods, ARCH + SEC), lib/adapters/case-source/
+  {access-record,v13-records}.ts, lib/adapters/notification-records/v13-notification-preview.ts,
+  lib/server/{cases,notification-preview}.ts, app/(platform)/cases/[caseId]/_components/render.tsx,
+  lib/i18n/case/{ar,en}.ts, tests/unit/server/{case-access-record,case-metadata}.spec.ts(x) (new),
+  tests/unit/server/{cases,case-workspace,notification-preview}.spec, tests/unit/server/support/{fake-case-source,
+  fake-notification-preview}.ts, tests/unit/contracts.spec.ts (the in-memory adapter gains openCase; ARCH path, with
+  the contract hunk), tests/integration/fe/{case-access-audit.spec.ts (new),notification-preview.spec.ts}
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -249,6 +269,8 @@ Updated: 2026-11-01 07:34 UTC · Branch: feature/V13-FE-016-template-code-wraps 
 | FE-016 on develop 4f94b07: lint, typecheck, format:check / `pnpm test` (notification-draft 2 new: code line markup in ar + en, order and aria-describedby; CSS pins own row + wrap anywhere) / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (Scenario E: ar and en at 320 px, code shown whole, follows the selection CF-24 ↔ CF-20, no page scroll). Mutation: without the change handler both 320 px tests fail | pass | 88 files, 2184 / 540 / 338 of 338 | FE-016 head |
 | FE-016 after merging develop 772e26d (#128 UX-014; DraftForm's template `<select>` keeps UX's `v13-control` class with FE-016's ref, `aria-describedby` and change handler; Scenario E imports merged): commands as above | pass | 89 files, 2342 / 593 / 338 of 338 | FE-016 head |
 | FE-016 after merging develop 818b51c (#141 FE-015; conflict in STATUS.md only, both sides kept; FE-016's code lines identical to 7c604f0, the select keeps `v13-control`): lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 93 files, 2413 / 610 / 365 of 365 | FE-016 head |
+| FE-017 on #142 b231e28 + develop 00fac16: lint, typecheck, format:check / `pnpm test` (case-access-record 29: record first then read in ONE transaction with bound kind/case/notification; V1401/V1404/V1422 → null with no read; V1500, unknown code, no row, two rows, extra column throw; route uses openCase only; preview uses getForCaseRecorded only; case-metadata 9: the title reads nothing, same title for any id) / `pnpm db:reset` + `pnpm test:db` (FE integration case-access-audit 14: one CASE_OPENED row per request on every tab, ids only, metadata {}; second open in the window adds no row and counts; paged request; restricted 0009 one RESTRICTED_CASE_OPENED per request; preview CASE_OPENED + NOTIFICATION_PREVIEW_OPENED; unknown / other-workspace / restricted-unassigned → NOT_FOUND with one id-less COMMAND_REFUSED V1404 and no access row; another case's notification → unavailable, no preview row; malformed ?n= no command; draft transaction writes no access row) / `pnpm db:reset` + `pnpm test:e2e`. Production build (`pnpm build`, `next start`, Playwright, ledger read by the administrator): portfolio + my-work with 7 case links in view and hovered → 0 rows (before the title fix: 7); full load of a case → 1 row, access_window suppressed 0 (before: 2 opens); restricted 0009 full load → 1 row (before: 2); raw requests: document 1, RSC navigation 1, prefetch 0, segment tree 0, segment page 0 (no content); back / forward re-request the page (each counted in the window, no new row). Mutation: openCase without the record fails 13 integration + 4 unit; the preview on the unrecorded read fails 2 integration + 4 unit; the route on getCase fails 13 integration + 6 unit; the title calling the load fails 9 unit | pass | 94 files, 2439 / 649 / 363 of 363 | FE-017 head |
+| FE-017 after merging develop 43552f7 (#142 DB-023, #131 FE-016, #141 FE-015 and others; conflict in STATUS.md only, both sides kept; FE-017's changed lines unchanged): lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 95 files, 2452 / 649 / 418 of 418 | FE-017 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
@@ -285,6 +307,11 @@ Updated: 2026-11-01 07:34 UTC · Branch: feature/V13-FE-016-template-code-wraps 
 - FE-006 part 2 known gaps: the template filter is a code text field (no template catalogue read for the Center yet);
   status and recipient labels live in `notifications.status.*` / `notifications.recipient.*` until PROC's catalogue
   (OI-029); rows link to the case's Notifications tab until the in-case preview (part 3, after #51 and UX #54).
+
+- FE-017: a refused case URL (unknown, hidden, malformed) now answers 404 with the not-found page but the title "Case ·
+  <tab>" instead of the unknown route's title, because the title no longer reads the case. Unknown and unauthorised
+  cases still look identical to each other. Closing the gap needs a case read in metadata (it would run on every
+  prefetch); left for SEC / UX to rule on.
 
 ## Dependencies and requests
 - DB-010 (my_work_tasks columns, migration 0008): merged on develop b5ee5f4; FE-005 reads it.

@@ -14,7 +14,9 @@ import {
   type NotificationPreviewRecord,
   type RequestIdentity,
 } from "@/lib/contracts";
+import { recordAccess } from "@/lib/adapters/case-source/access-record";
 import type { RequestContextRunner } from "@/lib/adapters/case-source/v13-records";
+import type { Tx } from "@/lib/db/security-context";
 
 export interface PreviewRow {
   notification_id: string;
@@ -56,6 +58,26 @@ export function rowToPreviewRecord(r: PreviewRow): NotificationPreviewRecord {
   });
 }
 
+/** The preview row of `notificationId` on `caseId` in `tx` (RLS); null when there is none. */
+async function readPreview(
+  tx: Tx,
+  caseId: CaseId,
+  notificationId: string,
+): Promise<NotificationPreviewRecord | null> {
+  const rows = await tx<PreviewRow[]>`
+    select n.notification_id, n.case_id, n.template_code, n.template_version, n.language, n.recipient_class,
+           n.lifecycle_status, n.created_at, n.row_version, t.name_ar, t.name_en
+      from cdf_notifications_v13.case_notifications(${caseId}::uuid) n
+      join cdf_notifications_v13.notification_template t on t.code = n.template_code
+     where n.notification_id = ${notificationId}::uuid`;
+  if (rows.length === 0) return null;
+  if (rows.length > 1) throw new Error("notification preview: more than one row");
+  const record = rowToPreviewRecord(rows[0] as PreviewRow);
+  if (record.case_id !== caseId || record.notification_id !== notificationId)
+    throw new Error("notification preview: a row of another case or notification");
+  return record;
+}
+
 export function createV13NotificationPreviewReader(run: RequestContextRunner): NotificationPreviewReader {
   return {
     async getForCase(
@@ -65,22 +87,21 @@ export function createV13NotificationPreviewReader(run: RequestContextRunner): N
     ): Promise<NotificationPreviewRecord | null> {
       // Never send a malformed id to the database: the caller treats null as "not available".
       if (!PreviewNotificationIdSchema.safeParse(notificationId).success) return null;
-      const rows = await run(
-        identity,
-        (tx) =>
-          tx<PreviewRow[]>`
-          select n.notification_id, n.case_id, n.template_code, n.template_version, n.language, n.recipient_class,
-                 n.lifecycle_status, n.created_at, n.row_version, t.name_ar, t.name_en
-            from cdf_notifications_v13.case_notifications(${caseId}::uuid) n
-            join cdf_notifications_v13.notification_template t on t.code = n.template_code
-           where n.notification_id = ${notificationId}::uuid`,
+      return run(identity, (tx) => readPreview(tx, caseId, notificationId));
+    },
+
+    // V13-FE-017 (DB-023): the access record first, then the read, in one transaction. A refusal reads nothing.
+    async getForCaseRecorded(
+      identity: RequestIdentity,
+      caseId: CaseId,
+      notificationId: string,
+    ): Promise<NotificationPreviewRecord | null> {
+      if (!PreviewNotificationIdSchema.safeParse(notificationId).success) return null;
+      return run(identity, async (tx) =>
+        (await recordAccess(tx, { kind: "NOTIFICATION_PREVIEW", caseId, notificationId }))
+          ? readPreview(tx, caseId, notificationId)
+          : null,
       );
-      if (rows.length === 0) return null;
-      if (rows.length > 1) throw new Error("notification preview: more than one row");
-      const record = rowToPreviewRecord(rows[0] as PreviewRow);
-      if (record.case_id !== caseId || record.notification_id !== notificationId)
-        throw new Error("notification preview: a row of another case or notification");
-      return record;
     },
   };
 }

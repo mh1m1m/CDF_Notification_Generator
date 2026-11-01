@@ -1,5 +1,6 @@
 // BFF read services for cases (FE-001). Order of every call: request context → lib/authz pre-check → adapter inside
-// the database security context. Unknown, malformed, unauthorised, other-workspace and restricted ids all end in the
+// the database security context. The route's case is opened with CaseSourceAdapter.openCase (V13-FE-017): its access
+// record and the header read commit together; this is the only caller. Unknown, malformed, unauthorised, other-workspace and restricted ids all end in the
 // same AppError("NOT_FOUND"); pages turn it into notFound(), the same page as an unknown route.
 import "server-only";
 import {
@@ -26,7 +27,8 @@ export async function getCaseForRoute(
 ): Promise<CaseHeader> {
   const caseId = parseCaseId(rawCaseId);
   if (!caseId || !precheck(ctx.identity, "case.read", { caseId }).allow) throw new AppError("NOT_FOUND");
-  const found = await source.getCase(ctx.identity, caseId);
+  // V13-FE-017 (DB-023): opening the route's case writes its access record with the header read (one transaction).
+  const found = await source.openCase(ctx.identity, caseId);
   // Defence in depth: the adapter must return the case asked for, or nothing.
   if (!found || found.case_id !== caseId) throw new AppError("NOT_FOUND");
   return found;
