@@ -7,6 +7,7 @@ import type postgres from "postgres";
 import type { WorkspaceCode } from "@/lib/contracts";
 import type { Tx } from "@/lib/db/security-context";
 import { clusterAvailable, errorCodeOf, PRIMARY_ADMIN_URL } from "../../integration/support/clusters";
+import { readinessVerdict } from "./readiness";
 import {
   adminClient,
   appClient,
@@ -35,20 +36,23 @@ export const CLOSED_CASE = CASE(10);
 export const ACTIVE_PERSONAS = ["alpha", "beta", "gamma", "delta", "epsilon"] as const;
 export const WORKSPACES = Object.keys(WORKSPACE) as WorkspaceCode[];
 
-/** True when the cluster answers and migrations 0001–0006 plus the seed are present. */
+/**
+ * True when the cluster answers and migrations 0001–0006 plus the seed are present. Otherwise false locally (the suite
+ * skips with a warning) and an error in CI, where test:db resets the database first (V13-SEC-010, readiness.ts).
+ */
 export async function databaseReady(label: string): Promise<boolean> {
-  if (!(await clusterAvailable("primary", PRIMARY_ADMIN_URL))) return false;
+  if (!(await clusterAvailable("primary", PRIMARY_ADMIN_URL)))
+    return readinessVerdict(label, false, "the local cluster does not answer");
   const admin = adminClient();
   try {
     const [row] = await admin<{ present: boolean; cases: number }[]>`
       select pg_catalog.to_regprocedure('cdf_notifications_v13.case_tasks(uuid)') is not null as present,
              (select count(*)::int from cdf_notifications_v13.case_record) as cases`;
     const ok = Boolean(row?.present) && (row?.cases ?? 0) >= 10;
-    if (!ok) console.warn(`[security/db] skipping ${label}: migration 0006 or the cases seed is missing`);
-    return ok;
-  } catch {
-    console.warn(`[security/db] skipping ${label}: schema not present`);
-    return false;
+    return readinessVerdict(label, ok, "migration 0006 or the cases seed is missing");
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("[security/db]")) throw error;
+    return readinessVerdict(label, false, "schema not present");
   } finally {
     await admin.end({ timeout: 5 });
   }
