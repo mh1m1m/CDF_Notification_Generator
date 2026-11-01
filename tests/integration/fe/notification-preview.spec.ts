@@ -6,7 +6,13 @@
 // classes (OI-037) never render; restricted case 0009 fails closed (no access-list result). Synthetic data only.
 import postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { RequestIdentitySchema, type CaseId, type CaseSummary, type RequestIdentity } from "@/lib/contracts";
+import {
+  RequestIdentitySchema,
+  type CaseId,
+  type CaseSummary,
+  type NotificationPreviewReader,
+  type RequestIdentity,
+} from "@/lib/contracts";
 import { createV13RecordsCaseSource } from "@/lib/adapters/case-source/v13-records";
 import { createV13NotificationDrafts } from "@/lib/adapters/notification-records/v13-notification-drafts";
 import { createV13NotificationPreviewReader } from "@/lib/adapters/notification-records/v13-notification-preview";
@@ -35,6 +41,11 @@ const caseId = (i: number) => `0c000000-0000-4000-8000-0000000000${String(i).pad
 const NTF = (n: number) => `2f000000-0000-4000-8000-0000000000${String(n).padStart(2, "0")}`;
 const TV = (n: number) => `1f000000-0000-4000-8000-00000000000${n}`;
 const CORRELATION = "5e000000-0000-4000-8000-0000000000f7";
+
+const unrecorded = (r: NotificationPreviewReader): NotificationPreviewReader => ({
+  ...r,
+  getForCaseRecorded: (i, c, n) => r.getForCase(i, c, n),
+});
 
 class Rollback extends Error {
   constructor(readonly value: unknown) {
@@ -124,7 +135,9 @@ describe.skipIf(!available)("V13 notification preview on the primary cluster (FE
           const view = await loadNotificationPreview(
             {
               ctx: { identity, correlationId: CORRELATION as never } as never,
-              reader: createV13NotificationPreviewReader(run),
+              // V13-FE-017: the draft command took this transaction's one api_* slot, so the recorded read would get
+              // V1500; the render path is under test here, the access record in case-access-audit.spec.ts.
+              reader: unrecorded(createV13NotificationPreviewReader(run)),
               procedural: createV13ProceduralRecordsReader(run),
             },
             summary as CaseSummary,
