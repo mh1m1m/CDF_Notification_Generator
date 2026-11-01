@@ -223,9 +223,17 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 ## V13-UX-018: WebKit select overflow (UXB-20, UX-009 R-06; WCAG 1.4.10). IN_REVIEW once its PR is open; QA (UI, cross-browser label)
 - QA's cross-browser run 41292116619 on #152: in WebKit only, the draft form's template select added its longest
   option label to the page's scrollable width (320 px ar/en, with and without spacing; 640 × 450 en).
-- Fix: `select.v13-control { overflow: clip; }` in `styles/globals.css` (Chromium's own default for a select), kept in
-  the one shared control rule (UXB-17). No `flex` or width change, so the desktop row of selects is unchanged.
-- Test: `controls.spec.ts` pins the rule (fails with the rule removed). The WebKit proof is QA's cross-browser run.
+- Cause (QA's WebKit runs 41294868940 and 41297056455 on #154): WebKit counts the native menulist's longest option
+  label (553 px ar, 618 px en) as the form's scrollable overflow. `overflow: clip` (first head `e77bee8`) changed
+  nothing; of 15 candidates only `appearance: none` passed all 12 WebKit cells.
+- Fix: `select.v13-control { appearance: none; }` with a chevron drawn in `currentColor` at the inline end (two
+  gradients; `[dir="rtl"]` moves it), `padding-inline-end: 1.75rem`, and `appearance: auto` with no image under
+  `forced-colors: active`.
+- Chromium check, ar and en, 320 and 1280 px, light, dark and forced colours: page 320/1280, form 288/288 at 320, focus
+  outline solid 3 px, ArrowDown still changes the value, FE-016 code line intact. Chevron is the text colour
+  (`#101820` on white, white on `#19212B` in dark: well above 3:1).
+- Test: `controls.spec.ts` pins `appearance: none`, the chevron and its room, the RTL position and the forced-colours
+  block (each mutation fails a test). The WebKit proof is QA's run on #154.
 - Docs: UXB-20 and R-06 added; UXB-19 DONE (`f93e8e2`); §6 cites #150 (`8536e7e`) for the card's position.
 
 ## Unresolved defects
