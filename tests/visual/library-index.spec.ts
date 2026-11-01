@@ -43,11 +43,13 @@ test.describe("screenshot library: plan and index", () => {
 });
 
 test.describe("screenshot library: data check (V1–V5) refuses planted faults", () => {
-  const SECRET = "planted-session-cookie-value-0123456789";
+  const PLANTED_VALUE = "planted-value-for-v5-0123456789";
   const clean = "<p>CDF-DEMO-2026-0001 · witness.gamma@example.test · CDF-DEMO-2026-0010</p>";
   const name = [...SYNTHETIC_PERSONA_NAMES][0]!;
   const run = (text: string, personaNames: string[] = [name]) =>
-    checkSynthetic([{ where: "planted", text }], { personaNames, secrets: [SECRET] }).map((f) => f.rule);
+    checkSynthetic([{ where: "planted", text }], { personaNames, secrets: [PLANTED_VALUE] }).map(
+      (f) => f.rule,
+    );
 
   test("a clean synthetic page passes", () => {
     expect(run(clean)).toEqual([]);
@@ -63,7 +65,7 @@ test.describe("screenshot library: data check (V1–V5) refuses planted faults",
     ["V2", "x@example.test.evil.org", undefined, "@example.test as a subdomain only"],
     ["V3", "see https://www.cdf.gov.sa/", undefined, "the real domain without an address"],
     ["V4", clean, ["Real Person"], "a persona name outside the synthetic list"],
-    ["V5", `<input type="hidden" value="${SECRET}">`, undefined, "a session cookie value in markup"],
+    ["V5", `<input type="hidden" value="${PLANTED_VALUE}">`, undefined, "a session cookie value in markup"],
   ];
   for (const [rule, text, names, why] of planted) {
     test(`${rule}: ${why}`, () => {
