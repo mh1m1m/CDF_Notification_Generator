@@ -16,9 +16,18 @@ catalogue in `docs/security/AUTHORIZATION_MATRIX.md` §6 and the threats in `doc
 | `tests/security/e2e/case-pages.spec.ts` (V13-SEC-006) | Playwright | SEC-APP-01, -02, -09 (GET), -11 | TM-I1, TM-I2, TM-I3, TM-S7, TM-T6 |
 | `tests/security/app/repo-scans.spec.ts` + `tests/security/repo-scan.ts` (V13-SEC-008) | Vitest `unit` | SEC-APP-19, -20 | TM-I8 |
 | `tests/security/e2e/notification-center.spec.ts` (V13-SEC-007) | Playwright | SEC-APP-02, -07, -10 on `/notifications` | TM-I3, TM-I4, TM-I10 |
+| `tests/security/app/db-readiness.spec.ts` + `tests/security/db/readiness.ts` (V13-SEC-010) | Vitest `unit` | SEC-APP-21 (+ V13-SEC-011) | — (harness integrity) |
 
 What each suite proves:
 
+- **Database suites never skip silently in CI (V13-SEC-010)**: SEC-APP-21 pins the readiness verdict that every
+  database-security suite (`case-matrix`, `catalog-hardening`, `commands`, `context-forgery`) calls through
+  `databaseReady()`: ready → run; not ready with `CI` set (`true`, `1`, `yes`, any case) → the suite **fails** with the
+  suite name and the reason; not ready locally (`CI` unset, empty, `0`, `false`) → skip with a warning. V13-SEC-011
+  adds two more signals, each enough on its own, so `CI=false` alone cannot turn the requirement off:
+  `V13_DB_TESTS_REQUIRED=1` (set on CI's test:db job) and `GITHUB_ACTIONS=true`; the error names the signals. So the
+  `describe.skipIf` allowance in QA's leak-suite guard (V13-QA-008) is enforced, not only written: a CI job that loses
+  its database cannot report the security suites as green.
 - **Repository scans (V13-SEC-008)**: SEC-APP-19 scans every file Git tracks (`git ls-files`; binary files and
   symbolic links skipped, nothing outside the repository read) for credential shapes: private-key blocks, connection
   strings with a password, signed tokens, GitHub/AWS/Slack/provider/Google key prefixes and literal secret
