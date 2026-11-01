@@ -130,6 +130,7 @@ function Filters({ t, query }: { t: Translator; query: PortfolioQuery }) {
         <label htmlFor="portfolio-q">{t("portfolio.filters.search")}</label>
         <input
           id="portfolio-q"
+          className="v13-control"
           name="q"
           type="search"
           maxLength={100}
@@ -141,6 +142,7 @@ function Filters({ t, query }: { t: Translator; query: PortfolioQuery }) {
         <label htmlFor="portfolio-stage">{t("portfolio.filters.stage")}</label>
         <select
           id="portfolio-stage"
+          className="v13-control"
           name="stage"
           defaultValue={query.stage ?? ""}
           data-testid="portfolio-stage"
@@ -157,6 +159,7 @@ function Filters({ t, query }: { t: Translator; query: PortfolioQuery }) {
         <label htmlFor="portfolio-state">{t("portfolio.filters.state")}</label>
         <select
           id="portfolio-state"
+          className="v13-control"
           name="state"
           defaultValue={query.state ?? ""}
           data-testid="portfolio-state"

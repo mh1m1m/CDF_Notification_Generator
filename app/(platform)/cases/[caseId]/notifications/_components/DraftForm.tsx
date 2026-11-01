@@ -54,7 +54,13 @@ export function DraftForm({ caseId, idempotencyKey, binding, templates, recipien
         <input type="hidden" name="idempotency_key" value={idempotencyKey} />
         <input type="hidden" name="case_binding" value={binding} />
         <label htmlFor="draft-template">{text.template}</label>
-        <select id="draft-template" name="template_version_id" required data-testid="draft-template">
+        <select
+          id="draft-template"
+          name="template_version_id"
+          required
+          className="v13-control"
+          data-testid="draft-template"
+        >
           {templates.map((o) => (
             <option key={o.value} value={o.value} data-template-code={o.code}>
               {o.label}
@@ -62,14 +68,26 @@ export function DraftForm({ caseId, idempotencyKey, binding, templates, recipien
           ))}
         </select>
         <label htmlFor="draft-recipient">{text.recipient}</label>
-        <select id="draft-recipient" name="recipient_class" required data-testid="draft-recipient">
+        <select
+          id="draft-recipient"
+          name="recipient_class"
+          required
+          className="v13-control"
+          data-testid="draft-recipient"
+        >
           {recipients.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
         </select>
-        <button type="submit" disabled={pending} aria-disabled={pending} data-testid="draft-submit">
+        <button
+          type="submit"
+          disabled={pending}
+          aria-disabled={pending}
+          className="v13-btn v13-btn-primary"
+          data-testid="draft-submit"
+        >
           {text.submit}
         </button>
       </form>
