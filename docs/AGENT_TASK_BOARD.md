@@ -52,7 +52,7 @@ required), persistent records in the database, the five foundational screens wor
 case isolation, all on the staging deployment.
 
 Phase B runs since V13-ARCH-001 was merged into `develop` (28 Oct 2026, `f0a7220`). Phase C closes the milestone.
-Statuses as of 1 Nov 2026 01:45 UTC, `develop` `b22f153`.
+Statuses as of 1 Nov 2026 01:52 UTC, `develop` `b22f153`.
 
 ### Phase A — foundation
 
@@ -133,6 +133,7 @@ Statuses as of 1 Nov 2026 01:45 UTC, `develop` `b22f153`.
 | V13-SEC-008 | Repository scans in the unit job (ARCH's six conditions, 31 Oct): SEC-APP-19, nine credential rules over every tracked file (REQ-SEC-002), and SEC-APP-20, EVS-01's seven personal-data rules over seeds, fixtures and test inputs, pinned to EVS-01's text (REQ-GOV-001) | SEC | SEC-001 | a finding carries rule, file and line only; planted samples built at runtime; each ALLOW entry names one file, one rule and a reason, and an unused one fails; no new dependency or workflow change; 0 findings on today's tree; DB reviews | DONE (#72, `afa6684`; DB ACCEPT `0082185`; CI 41249715821; combined unit 1899, test:db 447, e2e 168). DB's non-blocking suggestion, adding `database/migrations/` and `database/hosted/` to the personal-data scope, is SEC's to take (taken in V13-SEC-009, #87) |
 | V13-SEC-009 | SEC-APP-20's personal-data scan also covers `database/migrations/` and `database/hosted/` (DB's suggestion on #72), with a test that pins the scope | SEC | SEC-008 | no finding on the DB-owned files; a planted address in a migration is found; DB ACCEPT | DONE (#87, `25a1c48`; DB ACCEPT `87d9ab6`; CI 41260251493; combined unit 1,984, test:db 468, e2e 227) |
 | V13-SEC-010 | The database-security suites fail in CI, not skip, when the database is not ready (ARCH's suggestion on #88), so the reason QA-008's allow-list gives for `case-matrix.spec.ts` is enforced | SEC | SEC-009, QA-008 | ready: the suite runs; not ready with `CI` set: it fails with the suite's name and the reason; locally: it skips with a warning; SEC-APP-21 pins all three; DB ACCEPT | DONE (#91, `b22f153`; DB ACCEPT `8bf777c`; CI 41261731296; combined unit 1,987, test:db 468, e2e 227). DB's non-blocking suggestion (also honour `V13_DB_TESTS_REQUIRED=1` and `GITHUB_ACTIONS=true`) is V13-SEC-011 |
+| V13-SEC-011 | A database-security suite whose database is not ready also fails when `V13_DB_TESTS_REQUIRED=1` or `GITHUB_ACTIONS=true` is set, not only with a truthy `CI` (DB's suggestion on #91), and the error names the signals that were set | SEC | SEC-010 | any one of the three signals makes a not-ready suite fail; `CI=false` alone cannot turn that off; with no signal set it skips with a warning; SEC-APP-21 pins each signal; DB ACCEPT | IN_REVIEW (#92 at `38ecdef`: DB ACCEPT `38ecdef`; CI 41262513652; ARCH's combined check before the merge) |
 
 ### Phase C — integration and milestone
 
