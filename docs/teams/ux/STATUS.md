@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `feature/V13-UX-015-next-action-card` · Base: `develop` `772e26d`
+Updated: 2026-11-01 · Branch: `docs/V13-UX-017-next-action-reflow` · Base: `develop` `0a0c955`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -197,7 +197,7 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Split out: UXB-19 (LOW), the closed template select's code clip at 320 px in Arabic; not fixable in CSS. ARCH ruled
   option (b): FE shows the selected code under the select in `<bdi>` (V13-FE-016).
 
-## V13-UX-015: Next Action Card design (REQ-IA-009) on PROC's contract (#124). IN_REVIEW once its PR is open; QA
+## V13-UX-015: Next Action Card design (REQ-IA-009) on PROC's contract (#124). PR #135, QA ACCEPT `1a6d68f`, merged as `cfb82be`
 - `components/data/NextActionCard.tsx`: NONE renders nothing; a TASK shows the recorded title as an underlined link in
   `<bdi>`, the status FE renders (existing labels and badge) and, only when recorded, the due date with `DeadlineText`.
 - Strings `common.nextAction.heading|status|dueDate` (ar, en). Styles `.v13-next-action*` in `styles/globals.css`.
@@ -205,9 +205,24 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Tests: `tests/unit/components/next-action-card.spec.tsx` (14). FE wires the card (calls `nextActionForCase`, passes
   status, day count and an in-page `#task-<id>` link to the overview row, ARCH ruling); QA checks it on the page then.
 
+## V13-UX-016: reflow re-check of the changed pages (REQ-A11Y-010). PR #146, QA ACCEPT `dc4189b`, CI 41282929950, merged as `0a0c955`
+- UX-009's conditions (640 × 450, 320 × 256, 1.4.12 spacing at 1280 and 320) with a four-font probe (default,
+  Carlito, Liberation Sans, DejaVu Sans), ar and en, on `develop` `cfb82be`: draft form, Notifications pager pages 1
+  and 2, preview plain text, Center, Portfolio, My Work status form, Overview, events, tasks.
+- Result: no new defect. UXB-19 confirmed; its fix #131 (V13-FE-016) checked in the browser, UX ACCEPT `7c604f0`.
+- Written up in `UX009_TEXT_RESIZE_REFLOW.md` §5; UX_BACKLOG.md source row added, UXB-19 IN_REVIEW. Docs only.
+- The Next Action Card on the page was checked separately (V13-UX-017), after #141 merged.
+
+## V13-UX-017: Next Action Card reflow on the Overview (REQ-A11Y-010, REQ-IA-009). IN_REVIEW once its PR is open; QA
+- On `develop` `0a0c955`, ar and en: 640 × 450, 320 × 256, 1.4.12 spacing at 1280 and 320, with the four-font probe.
+  Personas Secretary Alpha and Investigator Beta, case 0001. 40 captures.
+- Result: no defect. No page scroll. The card stays inside the column, the title wraps, and nothing is clipped (only
+  the badge's sr-only text). This complements QA's #150, which covers 320 px only.
+- Written up in `UX009_TEXT_RESIZE_REFLOW.md` §6, with a UX_BACKLOG.md source row. Docs only.
+
 ## Unresolved defects
-- UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is OPEN, owned by FE as V13-FE-016
-  (ARCH ruling). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
+- UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is IN_REVIEW in #131 (V13-FE-016, UX ACCEPT
+  `7c604f0`). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once

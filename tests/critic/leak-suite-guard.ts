@@ -33,7 +33,7 @@
 import ts from "typescript";
 
 export interface GuardViolation {
-  rule: "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "L1";
+  rule: "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "G7" | "L1";
   file: string;
   line: number;
   detail: string;
@@ -566,4 +566,104 @@ export function checkListing(
       if (!seen.has(line)) hit(file, line, "a test( call the runner does not register");
   }
   return out.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+}
+
+// G7 (V13-QA-015; REQ-VIS-012; docs/qa/M1_OPEN_QA_ROWS_DESIGN.md §5.2, D2): visual baselines are never approved by the
+// runner, in CI or locally. playwright.config.ts holds exactly one updateSnapshots, the defineConfig object's own
+// property, with the value "none" written as a plain string (Playwright's default is "missing", so a missing key would
+// write baselines; a local "missing" wrote sandbox images into tests/visual/__screenshots__/, ARCH B2 on #145; the
+// baseline spec writes candidates itself, to test-results/baseline-candidates/); no other mention of the name, no computed key and no element access with a built
+// name could set it otherwise. No workflow line and no package script passes --update-snapshots (or -u) to the runner.
+
+const UPDATE_SNAPSHOTS = "updateSnapshots";
+
+/** True for exactly the string literal "none": no run, in CI or locally, writes a baseline (ARCH B2 on #145). */
+function isPinnedUpdateSnapshots(node: ts.Expression): boolean {
+  return ts.isStringLiteral(node) && node.text === "none";
+}
+
+/** G7 over playwright.config.ts. */
+export function checkSnapshotConfig(file: string, src: string): GuardViolation[] {
+  const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const out: GuardViolation[] = [];
+  const hit = (node: ts.Node, detail: string) =>
+    out.push({
+      rule: "G7",
+      file,
+      line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1,
+      detail,
+    });
+  // Inside [ ] only a written string or number can be read: an identifier there is a variable.
+  const isPlainLiteral = (n: ts.Node): boolean => ts.isStringLiteralLike(n) || ts.isNumericLiteral(n);
+
+  // The defineConfig({...}) object.
+  let configObject: ts.ObjectLiteralExpression | undefined;
+  const visitConfig = (n: ts.Node) => {
+    if (
+      ts.isCallExpression(n) &&
+      ts.isIdentifier(n.expression) &&
+      n.expression.text === "defineConfig" &&
+      n.arguments[0] &&
+      ts.isObjectLiteralExpression(n.arguments[0])
+    )
+      configObject ??= n.arguments[0];
+    ts.forEachChild(n, visitConfig);
+  };
+  visitConfig(sf);
+  if (!configObject) {
+    hit(sf, "no defineConfig({ … }) object to hold updateSnapshots");
+    return out;
+  }
+
+  // A spread into the config whose object cannot be read could carry updateSnapshots: only object literals (directly or
+  // as the branches of a condition) may be spread there.
+  const readableSpread = (e: ts.Expression): boolean => {
+    while (ts.isParenthesizedExpression(e)) e = e.expression;
+    if (ts.isObjectLiteralExpression(e)) return true;
+    return ts.isConditionalExpression(e) && readableSpread(e.whenTrue) && readableSpread(e.whenFalse);
+  };
+  for (const p of configObject.properties)
+    if (ts.isSpreadAssignment(p) && !readableSpread(p.expression))
+      hit(p, "a spread into the config that is not an object literal (it could set updateSnapshots)");
+
+  let pinned = 0;
+  const visit = (n: ts.Node) => {
+    // Every mention of the name: an identifier, a property name or a string anywhere.
+    if ((ts.isIdentifier(n) || ts.isStringLiteralLike(n)) && n.text === UPDATE_SNAPSHOTS) {
+      const prop = n.parent;
+      const isConfigOwn = ts.isPropertyAssignment(prop) && prop.name === n && prop.parent === configObject;
+      if (isConfigOwn && isPinnedUpdateSnapshots((prop as ts.PropertyAssignment).initializer)) pinned += 1;
+      else if (isConfigOwn) hit(n, 'updateSnapshots must be exactly "none"');
+      else hit(n, "updateSnapshots is set or named outside the config's own property");
+    }
+    // A key or an element access whose name is built cannot be read; it could be updateSnapshots.
+    if (ts.isComputedPropertyName(n) && !isPlainLiteral(n.expression))
+      hit(n, "a computed key that is not a plain literal (it could set updateSnapshots)");
+    if (ts.isElementAccessExpression(n) && !isPlainLiteral(n.argumentExpression))
+      hit(n, "an element access with a built name (it could set updateSnapshots)");
+    ts.forEachChild(n, visit);
+  };
+  visit(sf);
+  if (pinned !== 1 && !out.some((v) => v.detail.startsWith("updateSnapshots must")))
+    hit(configObject, 'the config has no updateSnapshots: "none" (the default writes baselines)');
+  return out;
+}
+
+const UPDATE_FLAG = /--update-snapshots|--update-source-snapshots/;
+const SHORT_UPDATE = /(?:^|\s)-u(?:=\S*)?(?=\s|$|["'])/;
+const RUNS_PLAYWRIGHT = /playwright|test:e2e|test:visual/;
+
+/** G7 over workflow files and package.json scripts: no line hands the runner an update flag. */
+export function checkSnapshotFlags(file: string, text: string): GuardViolation[] {
+  const out: GuardViolation[] = [];
+  text.split("\n").forEach((line, i) => {
+    if (UPDATE_FLAG.test(line) || (RUNS_PLAYWRIGHT.test(line) && SHORT_UPDATE.test(line)))
+      out.push({
+        rule: "G7",
+        file,
+        line: i + 1,
+        detail: "a runner update flag: baselines are never written by CI",
+      });
+  });
+  return out;
 }

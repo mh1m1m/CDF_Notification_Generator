@@ -131,8 +131,9 @@ The full library (§2.4) is about 200 images per run: too many to commit and rev
 
 ### 5.2 Never auto-approved
 
-- `playwright.config.ts` sets `updateSnapshots: process.env.CI ? "none" : "missing"`, and no workflow passes
-  `--update-snapshots`.
+- `playwright.config.ts` sets `updateSnapshots: "none"` for every run, in CI and locally (changed from
+  `process.env.CI ? "none" : "missing"` by ARCH B2 on #145: a local run wrote sandbox images as baselines), and no
+  workflow passes `--update-snapshots`. A missing baseline's candidate is written by the spec itself.
 - `tests/sentinel/leak-suite-guard.spec.ts` gains a rule G7 that fails on any other `updateSnapshots` value in CI and
   on `--update-snapshots` in a workflow, with a planted negative for each form, as G1–G6 have.
 - A baseline changes only in a PR that says so in its body and lists each changed file. The reviewer's verdict names
@@ -265,7 +266,7 @@ Each PR run gets one Markdown report, built from what the jobs already write. No
   the server, a high-risk surface for a screenshot gain. Each mask stays listed in the manifest (§3, §3.1).
 - **D2 Baselines: agreed.** The about-30-image subset is committed; the full library is an artifact; baselines are
   made only in the CI visual job; font package names and versions go into the manifest;
-  `updateSnapshots: process.env.CI ? "none" : "missing"` with G7 (§5).
+  `updateSnapshots: "none"` with G7 (§5; first `process.env.CI ? "none" : "missing"`, tightened by ARCH B2 on #145).
 - **D3 Cross-browser: changed** for GitHub's trigger rules: `cross-browser.yml` on every push to `develop` and on PRs
   labelled `cross-browser`; required after five green `develop` runs in a row; the visual library and before/after
   run on the labels `visual-library` and `visual-before-after`; schedule and dispatch revisited after M1 (§8, §9.3).

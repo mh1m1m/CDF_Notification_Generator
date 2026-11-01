@@ -61,6 +61,23 @@ function e2eDatabaseUrl(env: Readonly<Record<string, string | undefined>>): stri
 }
 const chromiumPath = process.env.PW_CHROMIUM_PATH?.trim();
 const isCI = process.env.CI === "true";
+// The screenshot library (V13-QA-014, docs/qa/M1_OPEN_QA_ROWS_DESIGN.md §2): about 200 images, so it runs only when
+// asked for, in its own project (the CI visual job; `--project=visual-library` locally), never in every e2e run.
+const visualLibrary = process.env.V13_E2E_VISUAL === "library";
+const LIBRARY_SPEC = "visual/library.spec.ts";
+// The committed visual baselines (V13-QA-015, §5): the `visual-baseline` project, only with V13_E2E_VISUAL=baseline.
+const visualBaseline = process.env.V13_E2E_VISUAL === "baseline";
+const BASELINE_SPEC = "visual/baseline.spec.ts";
+/** The visual projects write no failure screenshot, trace or video: nothing the data check refused, and no cookie. */
+const visualUse = {
+  ...devices["Desktop Chrome"],
+  deviceScaleFactor: 1,
+  locale: "ar-SA",
+  screenshot: "off" as const,
+  trace: "off" as const,
+  video: "off" as const,
+};
+const chromiumLaunch = chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {};
 
 export default defineConfig({
   testDir: "tests",
@@ -80,6 +97,10 @@ export default defineConfig({
   // A test that fails and then passes on its retry fails the CI run: a leak that shows once is never a green "flaky"
   // (V13-QA-008, TEST_ARCHITECTURE.md §7.1; pinned in tests/sentinel/leak-suite-guard.spec.ts).
   failOnFlakyTests: isCI,
+  // The runner never writes a baseline, in CI or locally (V13-QA-015, design §5.2, D2; ARCH B2 on #145): a missing or
+  // changed one fails; the baseline spec writes a missing one's candidate to test-results/baseline-candidates/, and
+  // Playwright writes a changed one's actual and diff images. Pinned by G7 in tests/sentinel/leak-suite-guard.spec.ts.
+  updateSnapshots: "none",
   reporter: isCI
     ? [["list"], ["junit", { outputFile: "test-results/e2e-junit.xml" }], ["html", { open: "never" }]]
     : [["list"]],
@@ -88,15 +109,38 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
+  ...(visualLibrary ? { globalTeardown: "./tests/visual/library-teardown.ts" } : {}),
   projects: [
     {
       name: "desktop-ar",
+      testIgnore: [LIBRARY_SPEC, BASELINE_SPEC],
       use: {
         ...devices["Desktop Chrome"],
         locale: "ar-SA",
-        ...(chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {}),
+        ...chromiumLaunch,
       },
     },
+    ...(visualLibrary
+      ? [
+          {
+            name: "visual-library",
+            testMatch: LIBRARY_SPEC,
+            // A failed data check writes no image (§4), and no session cookie reaches the artifact (SEC on #132).
+            use: { ...visualUse, ...chromiumLaunch },
+          },
+        ]
+      : []),
+    ...(visualBaseline
+      ? [
+          {
+            name: "visual-baseline",
+            testMatch: BASELINE_SPEC,
+            // One Linux image set, committed: no browser or platform suffix in the file name (§3, §5.1).
+            snapshotPathTemplate: "{testDir}/visual/__screenshots__/{arg}{ext}",
+            use: { ...visualUse, ...chromiumLaunch },
+          },
+        ]
+      : []),
   ],
   webServer: externalBaseUrl
     ? undefined

@@ -2,7 +2,7 @@
 // Scenario E draft form (V13-FE-006). A client component only for useActionState: a refusal is shown in place with
 // its reference, on the page the persona is on. It receives plain, already-localised strings and ids from the server
 // component; it imports nothing from lib/server, lib/disclosure or lib/authority (DESIGN §12, unit-tested).
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createDraft, type DraftActionState } from "../actions";
 import styles from "../../_components/case.module.css";
 
@@ -10,6 +10,8 @@ export interface DraftFormText {
   readonly heading: string;
   readonly hint: string;
   readonly template: string;
+  /** The label before the selected template's code, shown under the select (V13-FE-016). */
+  readonly templateCode: string;
   readonly recipient: string;
   readonly submit: string;
   readonly error: string;
@@ -34,6 +36,18 @@ export function DraftForm({ caseId, idempotencyKey, binding, templates, recipien
   useEffect(() => {
     if (state) errorRef.current?.focus();
   }, [state]);
+  // V13-FE-016 (UXB-19): a closed native select cannot wrap, so at 320 px in Arabic the start of a long template code
+  // is cut. The selected template's code is repeated as text under the select, where it wraps. Without JavaScript it
+  // shows the first template, which is the default selection.
+  const templateRef = useRef<HTMLSelectElement>(null);
+  const codeOf = (value: string | undefined) =>
+    templates.find((o) => o.value === value)?.code ?? templates[0]?.code;
+  const [selectedCode, setSelectedCode] = useState(() => codeOf(undefined));
+  // A browser that restores the form (back / forward) restores the select without a change event.
+  useEffect(() => {
+    setSelectedCode(codeOf(templateRef.current?.value));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, after hydration
+  }, []);
   return (
     <section aria-labelledby="draft-heading" data-testid="draft-section">
       <h2 id="draft-heading">{text.heading}</h2>
@@ -49,16 +63,25 @@ export function DraftForm({ caseId, idempotencyKey, binding, templates, recipien
           </p>
         </div>
       ) : null}
-      <form action={action} className={styles.form} data-testid="draft-form">
+      <form
+        action={action}
+        // React resets the form after the action; the select returns to the first template.
+        onReset={() => setSelectedCode(codeOf(undefined))}
+        className={styles.form}
+        data-testid="draft-form"
+      >
         <input type="hidden" name="case_id" value={caseId} />
         <input type="hidden" name="idempotency_key" value={idempotencyKey} />
         <input type="hidden" name="case_binding" value={binding} />
         <label htmlFor="draft-template">{text.template}</label>
         <select
+          ref={templateRef}
           id="draft-template"
           name="template_version_id"
           required
           className="v13-control"
+          aria-describedby={selectedCode ? "draft-template-code" : undefined}
+          onChange={(e) => setSelectedCode(codeOf(e.currentTarget.value))}
           data-testid="draft-template"
         >
           {templates.map((o) => (
@@ -67,6 +90,14 @@ export function DraftForm({ caseId, idempotencyKey, binding, templates, recipien
             </option>
           ))}
         </select>
+        {selectedCode ? (
+          <p id="draft-template-code" className={styles.selectedCode} data-testid="draft-template-code">
+            <span>{text.templateCode}</span>{" "}
+            <bdi dir="ltr" data-testid="draft-template-code-value">
+              {selectedCode}
+            </bdi>
+          </p>
+        ) : null}
         <label htmlFor="draft-recipient">{text.recipient}</label>
         <select
           id="draft-recipient"

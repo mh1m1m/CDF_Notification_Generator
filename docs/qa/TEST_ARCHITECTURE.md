@@ -159,6 +159,25 @@ new session secret on a database holding the previous run's key refuses every re
 first step times out at the draft form's template select. Run `pnpm db:reset` before each local run that starts a new
 app (`playwright.config.ts`); CI resets in the e2e job.
 
+**Next Action Card (V13-QA-020, V13-FE-015).** `tests/e2e/next-action-card.spec.ts` runs as Investigator Beta in ar
+and en at 320 px. The oracle is `case_my_open_tasks_page` (DB-022), called read-only in Beta's own security context:
+on every active case with an own open task the card is the overview's first element and comes before the stage card
+(SCREENS S3), it names one of those tasks, its link is `/cases/<id>#task-<id>`, and
+following it makes that row of the overview the `:target`; on every active case with none, nothing renders (no card,
+no heading); and on the page after the first task (the seed holds at most two own open tasks per case, so "another
+page" is opened with the cursor the app would write for the first row, which the database accepts only for that row)
+the card keeps the first page's task and its link leads back to page 1. No page scrolls sideways at 320 px. Mutations
+caught: the card computed from the current page (page-2 test fails), the row anchors removed (both link tests fail),
+a heading rendered for NONE (NONE test fails), the card moved below the stage card (both card tests fail on the
+order check).
+
+**No JavaScript (V13-QA-021, OI-056).** `tests/e2e/no-js-server-actions.spec.ts` runs with `javaScriptEnabled: false`:
+persona sign-in reaches My Work with the session cookie set, and Governance Officer Delta switches workspace on
+`/workspaces`. Each form POST must carry the app's own `Origin` (never `null`) and get no server error. A control test
+proves no script ran (the TopBar's workspace `<details>` stays open after a click outside, which its client script would
+close; it fails with JavaScript on). With develop's former `Referrer-Policy: no-referrer` both form tests fail with
+`Origin: "null"`; with V13-ARCH-013's `same-origin` they pass.
+
 ## 7. Case Context Sentinel (QG-02, Gate B)
 
 Library `tests/sentinel/sentinel.ts`. Where each rule runs today (ARCH and SEC review of #84; the design aim is every
@@ -271,6 +290,15 @@ or a conditional `test.skip(({ browserName }) => …)` at file level) lists as e
 out of L1's reach (ARCH R1 on #136, probed with Playwright 1.63); review covers that. And `vitest list` leaves skipped suites out, so the
 Vitest suite `case-matrix.spec.ts` stays outside L1; for it the per-file scan and review apply.
 
+**G7** (V13-QA-015, design §5.2, D2) keeps visual baselines from being written by the runner, in CI or locally. In
+`playwright.config.ts` the `defineConfig` object holds exactly one `updateSnapshots`, its own property, written as the
+plain string `"none"` (Playwright's default is `"missing"`, so a missing key would write baselines; the earlier
+`process.env.CI ? "none" : "missing"` let a local run write sandbox images, ARCH B2 on #145). Any other mention of the name (a project-level key, a string key, a shorthand, an assignment), a computed
+key or element access whose name is not a written string or number, and a spread into the config that is not an object
+literal all fail G7. No line of a workflow or of `package.json` may hand the runner `--update-snapshots`,
+`--update-source-snapshots` or `-u`. Each form is planted into a synthetic config or workflow line in the guard spec,
+and a mutation of the real config (`updateSnapshots: "missing"`) fails at its line.
+
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 
 Library `tests/truth/inspector.ts`.
@@ -336,6 +364,46 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   listed as "not applicable", never staged. The plan for the library, visual baselines and their review, the manual
   accessibility checklist and audit, Firefox and WebKit, and the PR quality report is in
   `docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` (V13-QA-013).
+- **Library built (V13-QA-014, design §2–§4)**: `tests/visual/library-plan.ts` is the one table of rows (screen, state,
+  persona, route, state marker, masks) and "not applicable" cells; `library.spec.ts` captures each row in 3 viewports ×
+  ar/en × light/dark (244 images) in the `visual-library` project (`V13_E2E_VISUAL=library`, never in a plain e2e run);
+  `library-teardown.ts` writes `manifest.json` (commit, fonts from `dpkg-query`, masks with counts, where it was made);
+  `docs/qa/SCREENSHOT_LIBRARY.md` is generated from the plan and `library-index.spec.ts` fails when it differs. Before
+  each capture the state's own marker must be visible and the data check (`data-check.ts`, V1 seeded case numbers only,
+  V2 `@example.test` only, V3 no `cdf.gov.sa`, V4 synthetic persona names, V5 no cookie value or session secret) must
+  pass on the page and every frame; a finding fails with no image, and the project writes no failure screenshot, trace
+  or video. Decisions made while building: the preview's data state is a WITNESS draft the run makes as Investigator
+  Beta on 0005 (the seeded drafts' recipient classes have no disclosure mapping yet, captured as `no-mapping`; 0005 is
+  visible to no other captured persona, so the draft cannot change another row); server-clock text is masked (deadline
+  words and My Work's overdue and this-week counts, D1); the masked correlation id gets a fixed width during the
+  capture only, because its glyph width changes with the id; the run-made draft's masked created time likewise
+  (`DRAFT_TIME_STYLE`), because its width moved the table's columns. Frames (ARCH CHANGES on #140, `frames.ts`): before
+  the data check and the capture each frame is brought into view and must show non-empty content with its fonts loaded
+  (Chromium left the preview frame below a mobile viewport unpainted, so every mobile preview was an empty box, and a
+  data check that read the frame before it loaded could pass on an empty document); the page stays scrolled to the
+  frame, because back at the top Chromium again left it unpainted. The capture is taken to memory and written only
+  after a check that each frame's area of it holds at least 8 distinct colours (an empty frame has one), and mask
+  counts are taken before the capture; a mask inside a frame must cover its element. Chromium can still, rarely, leave a
+  frame that is in view and loaded unpainted (1 cell in 2 full runs on ARCH's machine): the capture is then retaken
+  after settling the frames again, at most 3 times (`captureWithPaintedFrames`), and the last attempt's check fails the
+  test; `captureAttempts` goes to the manifest. Planted tests in `library-index.spec.ts` prove the retake, the failure
+  after the last attempt and the control. Ten runs on fresh databases gave 244/244 identical images in the sandbox
+  (the last six on this code, with no retake needed).
+- **Baselines (V13-QA-015, design §5)**: `baseline.spec.ts` compares the committed subset (`BASELINE_ROWS`: each
+  screen's data state and the open workspace switcher, desktop and mobile, ar and en, light; 36 images) with
+  `tests/visual/__screenshots__/` through `toMatchSnapshot` on the image the library's own capture path makes
+  (`captureCell`; threshold 0.2, `maxDiffPixels: 0`), in the
+  `visual-baseline` project (`V13_E2E_VISUAL=baseline`). Each cell is opened and proven exactly as the library does
+  (`capture.ts`, shared by both specs: status, language, state marker, frames in view and loaded, data check V1–V5), with the same masks and
+  capture style. No run writes a baseline (`updateSnapshots: "none"`, pinned by G7): a changed one fails with the
+  expected, actual and diff images; a missing one fails too, and because Playwright then writes no image, the spec
+  writes the candidate to `test-results/baseline-candidates/` with the same options. A new or changed baseline is a
+  candidate from the CI visual job, committed in a PR that lists each file; none is made in a sandbox (fonts). Probed
+  locally: with no baselines all 9 rows fail and 36 candidates are written; with those candidates in place a fresh
+  database gives 9/9 at zero differing pixels (three runs a minute apart); a swapped image fails with 52,635 differing
+  pixels. `toHaveScreenshot` was dropped because it captured the run-made draft's row without the capture style (its
+  time kept its own 174 px instead of 146 px), which made the preview's comparison depend on the clock. The PR that adds this
+  ships no images; the first CI visual job produces the candidates.
 
 ## 11. Evidence and reporting
 

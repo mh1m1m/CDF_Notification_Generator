@@ -96,6 +96,7 @@ export const ar = {
   "draft.hint":
     "تُنشأ المسودة لهذه القضية فقط، ولا يُرسل شيء. تحتفظ المسودة بالقالب وفئة المستلم، ولا تحمل نص الإشعار.",
   "draft.template": "القالب",
+  "draft.templateCode": "رمز القالب:",
   "draft.templateOption": "{name} — {code} — الإصدار {version} — {language}",
   "draft.recipient": "فئة المستلم",
   "draft.submit": "إنشاء المسودة",

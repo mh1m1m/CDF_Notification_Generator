@@ -526,6 +526,40 @@ describe("Notifications tab markup", () => {
     }
   });
 
+  it("FE-016 (UXB-19): the selected template's code is text under the select, isolated LTR, and describes the select", async () => {
+    const first = FAKE_DRAFT_OPTIONS.templates[0]!;
+    for (const locale of ["ar", "en"] as const) {
+      const markup = html(await tab(), locale);
+      const label = locale === "ar" ? "رمز القالب:" : "Template code:";
+      expect(markup).toMatch(
+        new RegExp(
+          `<p id="draft-template-code" class="[^"]*selectedCode[^"]*" data-testid="draft-template-code"><span>${label}</span> ` +
+            `<bdi dir="ltr" data-testid="draft-template-code-value">${first.template_code}</bdi></p>`,
+        ),
+      );
+      expect(markup).toMatch(
+        /<select[^>]*aria-describedby="draft-template-code"[^>]*data-testid="draft-template"/,
+      );
+      // order: the template select, its code, then the recipient field
+      const at = (needle: string) => markup.indexOf(needle);
+      expect(at('data-testid="draft-template"')).toBeLessThan(at('data-testid="draft-template-code"'));
+      expect(at('data-testid="draft-template-code"')).toBeLessThan(at('for="draft-recipient"'));
+      // the code is the first option's, which is the select's default selection
+      expect(markup).toMatch(
+        new RegExp(
+          `<select[^>]*data-testid="draft-template"><option value="[^"]+" data-template-code="${first.template_code}"`,
+        ),
+      );
+      expect(markup.match(/data-testid="draft-template-code-value"/g)).toHaveLength(1);
+    }
+  });
+
+  it("FE-016: the code line takes its own row and wraps anywhere (case.module.css)", () => {
+    const css = readFileSync("app/(platform)/cases/[caseId]/_components/case.module.css", "utf8");
+    expect(css).toMatch(/\.selectedCode \{[^}]*flex-basis: 100%;/);
+    expect(css).toMatch(/\.selectedCode > bdi \{[^}]*overflow-wrap: anywhere;/);
+  });
+
   it("FE-010 (D10): a template option's version is Latin digits in both languages, never grouped", async () => {
     const [first] = FAKE_DRAFT_OPTIONS.templates;
     const drafts = createFakeNotificationDrafts({

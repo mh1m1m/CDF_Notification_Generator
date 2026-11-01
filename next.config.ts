@@ -9,12 +9,18 @@ import { RESOURCE_CONTENT_SECURITY_POLICY, RESOURCE_PATHS } from "./lib/http/csp
  * response carries exactly one policy (lib/http/csp.ts).
  * PRODUCTION_SUBSTITUTION_REQUIRED: in production the CDF gateway (Alibaba Cloud WAF / SLB) terminates TLS and owns
  * HSTS (including any preload decision); these headers stay as defence in depth.
+ *
+ * Referrer-Policy is `same-origin` (V13-ARCH-013): no request to another origin carries a referrer, and a same-origin
+ * form POST carries its real `Origin`. Under `no-referrer` a browser sends `Origin: null` on every POST that is not a
+ * CORS-mode fetch (Fetch standard, "append a request `Origin` header"), so with JavaScript off each Server Action form
+ * submission was refused by Next's origin check. That check is never widened: there is no
+ * `experimental.serverActions.allowedOrigins`, and `null` is never an accepted origin.
  */
 export function securityHeaders(): { key: string; value: string }[] {
   return [
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "X-Frame-Options", value: "DENY" },
-    { key: "Referrer-Policy", value: "no-referrer" },
+    { key: "Referrer-Policy", value: "same-origin" },
     { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
     // Browsers ignore HSTS on plain-HTTP responses, so local runs over http://127.0.0.1 are unaffected.
     { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },

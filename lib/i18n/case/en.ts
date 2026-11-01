@@ -96,6 +96,7 @@ export const en: Record<keyof typeof ar, string> = {
   "draft.hint":
     "The draft is created for this case only, and nothing is sent. It records the template and the recipient class, not the notice text.",
   "draft.template": "Template",
+  "draft.templateCode": "Template code:",
   "draft.templateOption": "{name} — {code} — version {version} — {language}",
   "draft.recipient": "Recipient class",
   "draft.submit": "Create draft",
