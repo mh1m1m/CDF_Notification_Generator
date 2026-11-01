@@ -287,7 +287,10 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   `scrollWidth` cannot see); (2) every `nav-*` and `case-tab-*` link inside the viewport at 320 px; (3) no clipped
   text outside scroll regions; (4) every inline scroller a named, focusable `region`; (5) the focused skip link inside
   the viewport; (6) the open switcher menu inside the viewport, closed by Escape. Each of checks 1–4 is planted into a
-  real page first; reverting UX-009's R-01 makes checks 2 and 4 fail.
+  real page first; reverting UX-009's R-01 makes checks 2 and 4 fail. A marked scroll region is measured itself (a
+  region that lost its role, name or tabindex fails check 4, planted); only the content inside it is exempt. Limit:
+  check 3 sees text cut off by `overflow: hidden` or `clip`, not text that overlaps other text or spills out of a box
+  with `overflow: visible`; those are left to the screenshot review.
 - **Screenshot library (UXQA-05)**: the five M1 screens × {desktop, tablet, mobile} × {ar, en} × the states the
   screens actually support (data, empty, error, restricted, loading only where it can be captured deterministically).
   Files under `test-results/library/` with an index in `docs/qa/SCREENSHOT_LIBRARY.md`; states that do not exist are

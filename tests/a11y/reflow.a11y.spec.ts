@@ -71,7 +71,10 @@ async function measure(page: Page, edges: boolean): Promise<Finding[]> {
     }
     for (const el of document.querySelectorAll("body *")) {
       if (!(el instanceof HTMLElement) || el.getClientRects().length === 0) continue;
-      if (el.closest("[data-scroll-region], .v13-scroll-region, .v13-sr-only")) continue;
+      // Content inside a marked scroll region may lie past the edges (it scrolls there); the region itself is still
+      // measured, so a region that lost its role, name or tabindex is reported by check 4 (ARCH R1 on #104).
+      if (el.parentElement?.closest("[data-scroll-region], .v13-scroll-region") || el.closest(".v13-sr-only"))
+        continue;
       const style = getComputedStyle(el);
       if (style.visibility === "hidden") continue;
       const isRegion =
@@ -191,7 +194,12 @@ for (const locale of LOCALES) {
 }
 
 test.describe("each check sees its fault (planted into a real page)", () => {
-  const plants: [string, 1 | 2 | 3 | 4, (doc: Document) => void][] = [
+  // Arabic, set explicitly: the RTL plant must not depend on the default locale (ARCH INFO 1 on #104).
+  test.beforeEach(async ({ context, baseURL }) => {
+    await context.addCookies([{ name: LOCALE_COOKIE, value: "ar", url: baseURL! }]);
+  });
+  // [what, check, plant, page (default /portfolio)]
+  const plants: [string, 1 | 2 | 3 | 4, (doc: Document) => void, string?][] = [
     [
       "a block wider than the viewport",
       1,
@@ -241,6 +249,32 @@ test.describe("each check sees its fault (planted into a real page)", () => {
       },
     ],
     [
+      "a ScrollRegion (data-scroll-region) that lost its tabindex",
+      4,
+      (doc) => {
+        const region = doc.querySelector<HTMLElement>("[data-scroll-region]")!;
+        region.removeAttribute("tabindex");
+        const wide = doc.createElement("div");
+        wide.style.inlineSize = "900px";
+        wide.textContent = "wide content";
+        region.append(wide);
+      },
+      "/notifications",
+    ],
+    [
+      "a DataTable scroll region (.v13-scroll-region) that lost its name",
+      4,
+      (doc) => {
+        const region = doc.querySelector<HTMLElement>(".v13-scroll-region")!;
+        region.removeAttribute("aria-labelledby");
+        region.removeAttribute("aria-label");
+        const wide = doc.createElement("div");
+        wide.style.inlineSize = "900px";
+        wide.textContent = "wide content";
+        region.append(wide);
+      },
+    ],
+    [
       "a block pushed past the inline start in RTL (invisible to scrollWidth)",
       1,
       (doc) => {
@@ -251,11 +285,12 @@ test.describe("each check sees its fault (planted into a real page)", () => {
       },
     ],
   ];
-  for (const [what, check, plant] of plants) {
+  for (const [what, check, plant, path = "/portfolio"] of plants) {
     test(`check ${check}: ${what}`, async ({ page }) => {
       await signInAs(page, "secretary-alpha");
       await page.setViewportSize({ width: 320, height: 256 });
-      await open(page, "/portfolio", true);
+      await open(page, path, true);
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
       expect(await measure(page, true), "the page is clean before the plant").toEqual([]);
       await page.evaluate(`(${plant.toString()})(document)`);
       const f = await measure(page, true);
