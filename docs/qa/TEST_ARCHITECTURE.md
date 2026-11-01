@@ -27,7 +27,7 @@ tests/fixtures/            personas.ts, seed-facts.ts, db.ts, signin.ts, evidenc
 tests/e2e/                 smoke.spec.ts, scenario-a…e.spec.ts
 tests/sentinel/            sentinel.ts (library), ui.spec.ts, api.spec.ts, db.spec.ts, planted-leak.spec.ts
 tests/truth/               inspector.ts (library), truth.spec.ts, planted-badge.spec.ts
-tests/a11y/                axe.spec.ts, keyboard.spec.ts
+tests/a11y/                axe.spec.ts, keyboard.spec.ts, reflow.a11y.spec.ts
 tests/visual/              rtl.spec.ts, responsive.spec.ts, library.spec.ts (screenshot library, UXQA-05)
 tests/critic/              (M2; harness for the UX Design Critic)
 docs/qa/                   this file, SCENARIOS.md, SCREENSHOT_LIBRARY.md, reports per run
@@ -249,6 +249,15 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   icons with direction mirror; case numbers and dates render as the i18n layer formats them; long Arabic titles
   truncate with an accessible full name.
 - **Responsive**: 360, 768, 1280, 1920 px; no horizontal scroll; navigation reachable on mobile.
+- **Text resize, reflow, text spacing** (V13-QA-010; REQ-A11Y-010; WCAG 1.4.4, 1.4.10, 1.4.12;
+  `tests/a11y/reflow.a11y.spec.ts`): the six checks of `docs/design/reviews/UX009_TEXT_RESIZE_REFLOW.md` §4 in ar and
+  en on Portfolio, My Work, the four Case Workspace tabs, the Operations Center and Workspaces, at 640 × 450 (200%),
+  320 × 256 (400%), and 1280 × 900 and 320 × 256 with the 1.4.12 spacing stylesheet: (1) no page-level inline scroll
+  and no element outside a scroll region past either edge (the box check also catches RTL start overflow, which
+  `scrollWidth` cannot see); (2) every `nav-*` and `case-tab-*` link inside the viewport at 320 px; (3) no clipped
+  text outside scroll regions; (4) every inline scroller a named, focusable `region`; (5) the focused skip link inside
+  the viewport; (6) the open switcher menu inside the viewport, closed by Escape. Each of checks 1–4 is planted into a
+  real page first; reverting UX-009's R-01 makes checks 2 and 4 fail.
 - **Screenshot library (UXQA-05)**: the five M1 screens × {desktop, tablet, mobile} × {ar, en} × the states the
   screens actually support (data, empty, error, restricted, loading only where it can be captured deterministically).
   Files under `test-results/library/` with an index in `docs/qa/SCREENSHOT_LIBRARY.md`; states that do not exist are
