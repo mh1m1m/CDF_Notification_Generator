@@ -1,7 +1,7 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
 Updated: 2026-11-01 04:42 UTC · Branch: feature/V13-FE-013-case-lists-paged (develop abdd885 merged in; #112 FE-012 merged; FE-011 is #116) · Head: see PR
-Updated: 2026-11-01 04:55 UTC · Branch: feature/V13-FE-013-case-lists-paged (develop 61b57cf merged in; #116 FE-011 and #112 FE-012 merged) · Head: see PR
+Updated: 2026-11-01 05:24 UTC · Branch: feature/V13-FE-016-template-code-wraps (from develop 4f94b07; #121 FE-013 merged) · Head: see PR
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
 - V13-FE-001 (part 1) — `lib/authz` pre-check, `lib/server` (errors, request context, case read services, case source
@@ -104,7 +104,12 @@ Updated: 2026-11-01 04:55 UTC · Branch: feature/V13-FE-013-case-lists-paged (de
   `lib/adapters/case-list/cursor.ts` (page_cursor text verbatim + row id + list), limit + 1 read. URL state as the
   portfolio (`after` + bounded `back`), previous / next links. A tampered URL or a refused cursor shows the empty
   state with a link to the first page, never an error. The overview reads one page of five events; own open tasks
-  still read the case's task list (known limit). Preview links and close keep the page — IN_REVIEW (QA, SEC).
+  still read the case's task list (known limit). Preview links and close keep the page — COMPLETE: merged into develop as 4f94b07 (#121).
+- V13-FE-016 Draft form template code at 320 px (UXB-19; WCAG 1.4.10) — a closed native select cannot wrap, so in
+  Arabic at 320 px the start of a long template code was cut. The selected template's code is now shown as text on
+  its own line under the select (`draft.templateCode` label + `<bdi dir="ltr">`, wraps anywhere), describes the select
+  (`aria-describedby`), and follows the selection; without JavaScript it shows the first template, the default
+  selection — IN_REVIEW (QA, UX visual).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -137,6 +142,8 @@ Updated: 2026-11-01 04:55 UTC · Branch: feature/V13-FE-013-case-lists-paged (de
   tests/unit/server/{notification-center.spec.tsx,v13-notification-center-adapter.spec.ts,
   support/fake-notification-center.ts}, tests/integration/fe/notification-center.spec.ts,
   tests/e2e/notification-center.spec.ts (FE-committed, for QA's review, as agreed for Scenario E on #51)
+- FE-016: app/(platform)/cases/[caseId]/notifications/_components/DraftForm.tsx, app/(platform)/cases/[caseId]/_components/{CaseWorkspace.tsx,case.module.css},
+  lib/i18n/case/{ar,en}.ts, tests/unit/server/notification-draft.spec.tsx, tests/e2e/scenario-e-notification-draft.spec.ts
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -216,6 +223,7 @@ Updated: 2026-11-01 04:55 UTC · Branch: feature/V13-FE-013-case-lists-paged (de
 | FE-013 after merging develop abdd885 (#112): commands as above | pass | 88 files, 2172 / 506 / 333 of 333 | FE-013 head |
 | FE-013 after SEC CHANGES 5254893 (the cursor must re-encode to exactly what was passed: keys reordered, whitespace, an escaped character are refused; ARCH's listEventsPage wording): commands as above. Mutation: without the canonical check the 3 new tests fail | pass | 88 files, 2175 / 506 / 333 of 333 | FE-013 head |
 | FE-013 after merging develop 61b57cf (#116 FE-011; conflicts in case.module.css, case i18n, Scenario E and STATUS kept both sides): commands as above | pass | 88 files, 2182 / 540 / 336 of 336 | FE-013 head |
+| FE-016 on develop 4f94b07: lint, typecheck, format:check / `pnpm test` (notification-draft 2 new: code line markup in ar + en, order and aria-describedby; CSS pins own row + wrap anywhere) / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (Scenario E: ar and en at 320 px, code shown whole, follows the selection CF-24 ↔ CF-20, no page scroll). Mutation: without the change handler both 320 px tests fail | pass | 88 files, 2184 / 540 / 338 of 338 | FE-016 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
