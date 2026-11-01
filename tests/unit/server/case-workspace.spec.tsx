@@ -3,6 +3,7 @@
 // statuses name their event, nothing from another case). Fake adapters; the SQL adapter is covered in
 // v13-case-records-adapter.spec.ts and, against the database, in tests/integration/fe.
 import { renderToStaticMarkup } from "react-dom/server";
+import { formatDateTime } from "@/components/format";
 import { describe, expect, it, vi } from "vitest";
 import type { NotificationRecordsReader, ProceduralRecordsReader } from "@/lib/contracts";
 import { createTranslator, type Locale } from "@/lib/i18n";
@@ -339,6 +340,16 @@ describe("Case Workspace markup", () => {
         expect(markup).toContain(`data-testid="${id}"`);
       }
       expect(markup).toMatch(/<th scope="row"><span data-testid="case-notification-template-name">/);
+      // UXB-04 (D10): the version is an identifier, Latin in <bdi> in both languages.
+      expect(markup).toContain(
+        `<bdi dir="ltr" data-testid="case-notification-version">${n!.template_version}</bdi>`,
+      );
+      // UXB-02: the created time has the month in words (the Center's format), never a numeric d/m/y date.
+      const created = markup.match(new RegExp(`<time dateTime="${n!.created_at}"[^>]*>([^<]+)</time>`))?.[1];
+      expect(created).toBe(formatDateTime(locale, n!.created_at));
+      expect(created).not.toContain("/");
+      // A month word: Arabic letters in Arabic, a capitalised English month name in English.
+      expect(created).toMatch(locale === "ar" ? /[\u0621-\u064A]{3,}/ : /\b[A-Z][a-z]{2,} \d{4}\b/);
     },
   );
 

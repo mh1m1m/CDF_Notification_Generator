@@ -15,7 +15,7 @@ import { DraftForm } from "../notifications/_components/DraftForm";
 import { DataTable } from "@/components/data/DataTable";
 import { StatusBadge, type Tone } from "@/components/data/StatusBadge";
 import { Timeline as UxTimeline } from "@/components/data/Timeline";
-import { formatDate } from "@/components/format";
+import { formatDate, formatDateTime } from "@/components/format";
 import { Breadcrumbs } from "@/components/shell/Breadcrumbs";
 import { CaseHeader } from "@/components/shell/CaseHeader";
 import { CaseTabs } from "@/components/shell/CaseTabs";
@@ -23,7 +23,6 @@ import { CaseWorkspace as UxCaseWorkspace } from "@/components/shell/CaseWorkspa
 import styles from "./case.module.css";
 import {
   CAPACITY_KEYS,
-  dateTimeFormat,
   eventLabel,
   notificationStatusLabel,
   numberFormat,
@@ -334,8 +333,6 @@ export function NotificationTable({
       </p>
     );
   }
-  const when = dateTimeFormat(locale);
-  const num = numberFormat(locale);
   // FE-010 (UXB-08, UX-009 R-04): the shared DataTable, so the caption stays in view and wraps to the visible width
   // at 320 px and 200% zoom instead of being cut at the scroll region's edge.
   return (
@@ -381,7 +378,12 @@ export function NotificationTable({
         {
           key: "version",
           header: t("case.notifications.column.version"),
-          cell: (n) => num.format(n.template_version),
+          // Template versions are identifiers: Latin in <bdi> in both languages (DESIGN_SYSTEM §6 D10; UXB-04).
+          cell: (n) => (
+            <bdi dir="ltr" data-testid="case-notification-version">
+              {n.template_version}
+            </bdi>
+          ),
         },
         {
           key: "recipient",
@@ -410,7 +412,8 @@ export function NotificationTable({
           header: t("case.notifications.column.created"),
           cell: (n) => (
             <time dateTime={n.created_at} className="v13-nowrap">
-              {when.format(new Date(n.created_at))}
+              {/* The month in words, as in the Center (UXB-02). */}
+              {formatDateTime(locale, n.created_at)}
             </time>
           ),
         },
