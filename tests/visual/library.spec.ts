@@ -37,7 +37,7 @@ for (const c of CAPTURES) {
           const file = captureFile(c, lang, viewport, theme);
           const path = join(LIBRARY_DIR, file);
           // To memory first: an empty frame or a frame mask with no element never yields an image (capture.ts).
-          const { png, maskCounts } = await captureCell(page, c, draft);
+          const { png, maskCounts, attempts } = await captureCell(page, c, draft);
           mkdirSync(dirname(path), { recursive: true });
           writeFileSync(path, png);
           entries.push({
@@ -50,6 +50,7 @@ for (const c of CAPTURES) {
             viewport,
             theme,
             element: c.element ?? null,
+            captureAttempts: attempts,
             masks: c.masks.map((m, i) => ({
               name: m,
               selector: withDraft(MASKS[m].selector, draft),

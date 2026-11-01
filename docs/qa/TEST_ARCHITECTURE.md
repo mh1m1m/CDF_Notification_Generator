@@ -364,8 +364,12 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   data check that read the frame before it loaded could pass on an empty document); the page stays scrolled to the
   frame, because back at the top Chromium again left it unpainted. The capture is taken to memory and written only
   after a check that each frame's area of it holds at least 8 distinct colours (an empty frame has one), and mask
-  counts are taken before the capture; a mask inside a frame must cover its element. Four runs on four fresh databases
-  gave 244/244 identical images in the sandbox.
+  counts are taken before the capture; a mask inside a frame must cover its element. Chromium can still, rarely, leave a
+  frame that is in view and loaded unpainted (1 cell in 2 full runs on ARCH's machine): the capture is then retaken
+  after settling the frames again, at most 3 times (`captureWithPaintedFrames`), and the last attempt's check fails the
+  test; `captureAttempts` goes to the manifest. Planted tests in `library-index.spec.ts` prove the retake, the failure
+  after the last attempt and the control. Ten runs on fresh databases gave 244/244 identical images in the sandbox
+  (the last six on this code, with no retake needed).
 - **Baselines (V13-QA-015, design §5)**: `baseline.spec.ts` compares the committed subset (`BASELINE_ROWS`: each
   screen's data state and the open workspace switcher, desktop and mobile, ar and en, light; 36 images) with
   `tests/visual/__screenshots__/` through `toMatchSnapshot` on the image the library's own capture path makes

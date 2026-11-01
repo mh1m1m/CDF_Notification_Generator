@@ -5,7 +5,7 @@ import { expect, type BrowserContext, type Locator, type Page } from "@playwrigh
 import { LOCALE_COOKIE } from "@/lib/i18n";
 import { mintSession, persona, signInAs } from "../fixtures/personas";
 import { checkSynthetic, formatFindings, type DataInput } from "./data-check";
-import { expectFramesPainted, frameBoxes, settleFrames } from "./frames";
+import { captureWithPaintedFrames, settleFrames } from "./frames";
 import {
   BROWSER_TIME,
   captureStyle,
@@ -137,9 +137,12 @@ export async function captureCell(page: Page, c: Capture, draft: string | null) 
     if ((MASKS[m] as { frame?: string }).frame)
       expect(maskCounts[i], `mask ${m} covers its element in the frame`).toBeGreaterThan(0);
   });
-  if (c.element) return { png: await page.locator(c.element).screenshot(options), maskCounts };
-  const boxes = await frameBoxes(page);
-  const png = await page.screenshot({ ...options, fullPage: true });
-  await expectFramesPainted(page, png, boxes, MASK_COLOR);
-  return { png, maskCounts };
+  if (c.element) return { png: await page.locator(c.element).screenshot(options), maskCounts, attempts: 1 };
+  // Retaken at most MAX_CAPTURE_ATTEMPTS times while a frame is unpainted; the last attempt's check fails (frames.ts).
+  const { png, attempts } = await captureWithPaintedFrames(
+    page,
+    () => page.screenshot({ ...options, fullPage: true }),
+    MASK_COLOR,
+  );
+  return { png, maskCounts, attempts };
 }
