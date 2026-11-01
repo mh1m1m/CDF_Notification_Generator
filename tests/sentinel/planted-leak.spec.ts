@@ -271,6 +271,9 @@ test.describe("payloads the browser does not hand over", () => {
       expect(formatViolations(p)).toContain("(fetched again)");
       expect(await payloads.summary()).toEqual({ browser: 0, refetch: 2, unreadable: 0 });
     } finally {
+      // OI-051: close() alone waits for every open socket, and a socket Chromium opened ahead of need carries no
+      // request, so Node does not count it idle; the test then hung until its timeout after every assertion passed.
+      server.closeAllConnections();
       await new Promise((resolve) => server.close(resolve));
     }
   });
