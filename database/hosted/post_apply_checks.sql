@@ -52,6 +52,8 @@ fn as (
    where p.pronamespace = (select oid from v13)),
 -- P03 allow-list: every SECURITY DEFINER function of the V13 migrations, by name.
 definer_allow (name) as (values
+  ('_api_create_notification_draft_impl'), ('_api_install_claims_key_impl'), ('_api_switch_workspace_impl'),
+  ('_api_update_task_status_impl'), ('_append_audit_refused'),
   ('_append_audit'), ('_case_owning_visibility'), ('_claim_uuid'), ('_claims_hmac'), ('_is_colleague'),
   ('_verified_claims'), ('api_create_notification_draft'), ('api_install_claims_key'), ('api_switch_workspace'),
   ('api_update_task_status'), ('can_access_case'), ('claims_key_state'), ('current_correlation_id'),
