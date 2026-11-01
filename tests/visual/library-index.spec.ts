@@ -11,8 +11,13 @@ import { PERSONAS } from "@/lib/contracts";
 import { checkSynthetic, SYNTHETIC_PERSONA_NAMES } from "./data-check";
 import { captureWithPaintedFrames, MAX_CAPTURE_ATTEMPTS, settleFrames } from "./frames";
 import {
+  BASELINE_ROWS,
+  BASELINE_VIEWPORTS,
+  baselineCount,
+  baselineFile,
   CAPTURES,
   imageCount,
+  LANGUAGES,
   MASK_COLOR,
   MASKS,
   NOT_APPLICABLE,
@@ -49,6 +54,22 @@ test.describe("screenshot library: plan and index", () => {
     }
     for (const n of NOT_APPLICABLE) expect(n.reason.trim()).not.toBe("");
     expect(imageCount()).toBeGreaterThan(100);
+  });
+
+  test("the baseline subset (V13-QA-015): each data screen and the switcher, unique dash-only names, about 30 images", () => {
+    expect(BASELINE_ROWS.map((c) => c.screen)).toEqual(
+      CAPTURES.filter((c) => c.state === "data" && c.screen !== "mobile-navigation").map((c) => c.screen),
+    );
+    expect(BASELINE_ROWS.map((c) => c.screen)).toContain("workspace-switcher");
+    const names = BASELINE_ROWS.flatMap((c) =>
+      LANGUAGES.flatMap((l) => BASELINE_VIEWPORTS.map((v) => baselineFile(c, l, v))),
+    );
+    expect(new Set(names).size).toBe(names.length);
+    // Playwright turns a dot before the extension into a dash: the name must already be the file's own
+    for (const n of names) expect(n).toMatch(/^[a-z0-9-]+\.png$/);
+    expect(names.length).toBe(baselineCount());
+    expect(baselineCount()).toBeGreaterThanOrEqual(30);
+    expect(baselineCount()).toBeLessThanOrEqual(40);
   });
 });
 
