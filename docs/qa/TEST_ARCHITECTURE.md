@@ -135,8 +135,8 @@ Detail and step tables go in `docs/qa/SCENARIOS.md` once the screens exist. Outl
 **E, disclosure to the recipient** (V13-QA-009, REQ-NOTIF-011). For a WITNESS draft previewed in an Arabic and an
 English template, the oracle is the policy file read directly (`lib/disclosure/policy_v13.json`, WITNESS rows, the
 policy's own precedence and restrictiveness order), not `lib/disclosure`, so a projector that drifts from the policy is
-caught; and for every field the app's own `decide()` (loaded through `tests/fixtures/server-module.ts`, which stubs
-`server-only` in the test process only) must give the same outcome, so a drift on either side names the field. Every field the policy withholds (today `case_number`, `card_content`, `preheader`, `subject_detail`,
+caught; and for every field the app's own `decide()` (loaded through `tests/fixtures/server-module.ts`, which runs it in a child
+Node process with `server-only` stubbed, so the Playwright worker's module loading is untouched) must give the same outcome, so a drift on either side names the field. Every field the policy withholds (today `case_number`, `card_content`, `preheader`, `subject_detail`,
 `delivery_status`) must leave no marker in the frame's document, its text, its accessible names (ARIA snapshot), the
 frame's title, or the frame document inside any document or RSC payload; field names and the projector's log never
 appear in a payload at all. The GENERALIZED `classification_marking` shows the class-safe wording only. Control: the

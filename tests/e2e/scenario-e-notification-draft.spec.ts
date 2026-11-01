@@ -21,7 +21,7 @@ import { createTranslator } from "@/lib/i18n";
 import { ar as RENDER_AR } from "@/lib/i18n/notificationRender/ar";
 import { en as RENDER_EN } from "@/lib/i18n/notificationRender/en";
 import { signInAs } from "../fixtures/personas";
-import { allowServerModules } from "../fixtures/server-module";
+import { runServerScript } from "../fixtures/server-module";
 
 const C = (i: number) => `0c000000-0000-4000-8000-0000000000${String(i).padStart(2, "0")}`;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -386,14 +386,18 @@ test.describe("Scenario E — notification preview", () => {
       const { outcomes, withheld, kept, generalized } = witnessOracle();
       // The app's own decision (lib/disclosure, the board's oracle) equals the policy-file derivation, field by field,
       // so a drift in either names the field.
-      allowServerModules();
-      const { decide, loadPolicy } = await import("@/lib/disclosure/project");
-      const policy = loadPolicy();
+      const decided = runServerScript<Record<string, string>>(`
+        const { decide, loadPolicy } = await import("@/lib/disclosure/project");
+        const policy = loadPolicy();
+        const out = {};
+        for (const field of ${JSON.stringify(Object.keys(MODEL_FIELDS))})
+          out[field] = decide(policy, { recipient: "WITNESS", field, channel: "IN_APP", context: "CASE_PUBLIC" }).outcome;
+        console.log(JSON.stringify(out));
+      `);
       for (const field of Object.keys(MODEL_FIELDS))
-        expect(
-          decide(policy, { recipient: "WITNESS", field, channel: "IN_APP", context: "CASE_PUBLIC" }).outcome,
-          `lib/disclosure and the policy file disagree on WITNESS ${field}`,
-        ).toBe(outcomes[field]);
+        expect(decided[field], `lib/disclosure and the policy file disagree on WITNESS ${field}`).toBe(
+          outcomes[field],
+        );
       // the oracle is not vacuous: the fields ARCH named for QA-009 are where the policy puts them
       expect(withheld).toEqual(
         expect.arrayContaining([
