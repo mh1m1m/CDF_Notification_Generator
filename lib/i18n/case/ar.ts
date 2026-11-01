@@ -19,6 +19,7 @@ export const ar = {
   "tab.events": "الأحداث المسجلة",
   "tab.tasks": "المهام",
   "tab.notifications": "الإشعارات",
+  documentTitle: "القضية · {tab}",
   "header.stage": "المرحلة",
   "header.records": "حالة السجل",
   capacity: "صفتك: {capacity}",

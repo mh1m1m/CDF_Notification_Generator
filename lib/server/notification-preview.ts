@@ -152,7 +152,8 @@ export async function loadNotificationPreview(
   const id = PreviewNotificationIdSchema.safeParse(rawNotificationId);
   if (!id.success) return unavailable;
   try {
-    const n = await reader.getForCase(ctx.identity, summary.case_id, id.data);
+    // V13-FE-017 (DB-023): the preview's access record and its read commit together; a refusal is null.
+    const n = await reader.getForCaseRecorded(ctx.identity, summary.case_id, id.data);
     if (n === null) return unavailable;
     const events = await procedural.listEvents(ctx.identity, summary.case_id);
     const caseRecord = caseRecordOf(summary);

@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `docs/V13-UX-017-next-action-reflow` · Base: `develop` `0a0c955`
+Updated: 2026-11-01 · Branch: `fix/V13-UX-018-select-overflow` · Base: `develop` `6be1802`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -213,16 +213,24 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Written up in `UX009_TEXT_RESIZE_REFLOW.md` §5; UX_BACKLOG.md source row added, UXB-19 IN_REVIEW. Docs only.
 - The Next Action Card on the page was checked separately (V13-UX-017), after #141 merged.
 
-## V13-UX-017: Next Action Card reflow on the Overview (REQ-A11Y-010, REQ-IA-009). IN_REVIEW once its PR is open; QA
+## V13-UX-017: Next Action Card reflow on the Overview (REQ-A11Y-010, REQ-IA-009). PR #151, QA ACCEPT `eccafd5`, CI 41287565306, merged as `7fd4a69`
 - On `develop` `0a0c955`, ar and en: 640 × 450, 320 × 256, 1.4.12 spacing at 1280 and 320, with the four-font probe.
   Personas Secretary Alpha and Investigator Beta, case 0001. 40 captures.
 - Result: no defect. No page scroll. The card stays inside the column, the title wraps, and nothing is clipped (only
   the badge's sr-only text). This complements QA's #150, which covers 320 px only.
 - Written up in `UX009_TEXT_RESIZE_REFLOW.md` §6, with a UX_BACKLOG.md source row. Docs only.
 
+## V13-UX-018: WebKit select overflow (UXB-20, UX-009 R-06; WCAG 1.4.10). IN_REVIEW once its PR is open; QA (UI, cross-browser label)
+- QA's cross-browser run 41292116619 on #152: in WebKit only, the draft form's template select added its longest
+  option label to the page's scrollable width (320 px ar/en, with and without spacing; 640 × 450 en).
+- Fix: `select.v13-control { overflow: clip; }` in `styles/globals.css` (Chromium's own default for a select), kept in
+  the one shared control rule (UXB-17). No `flex` or width change, so the desktop row of selects is unchanged.
+- Test: `controls.spec.ts` pins the rule (fails with the rule removed). The WebKit proof is QA's cross-browser run.
+- Docs: UXB-20 and R-06 added; UXB-19 DONE (`f93e8e2`); §6 cites #150 (`8536e7e`) for the card's position.
+
 ## Unresolved defects
-- UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is IN_REVIEW in #131 (V13-FE-016, UX ACCEPT
-  `7c604f0`). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
+- UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is DONE (`f93e8e2`, #131). UXB-20
+  (MEDIUM, WebKit select overflow) is IN_REVIEW in V13-UX-018. Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once

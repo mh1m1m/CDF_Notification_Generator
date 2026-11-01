@@ -1311,6 +1311,13 @@
     font: inherit;
   }
 
+  /* WCAG 1.4.10 (V13-UX-018, UXB-20): WebKit adds a select's max-content width (its longest option label) to the
+     container's scrollable overflow even when the select is clamped by max-inline-size, so the page scrolled sideways
+     at 320 px. Chromium already computes overflow: clip on a select; this makes every engine do the same. */
+  select.v13-control {
+    overflow: clip;
+  }
+
   .v13-control:disabled {
     background-color: var(--cdf-disabled-bg);
     color: var(--cdf-disabled-text);

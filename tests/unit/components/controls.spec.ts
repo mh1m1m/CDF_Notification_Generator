@@ -63,6 +63,12 @@ describe("form controls: one shared rule (UXB-17)", () => {
     expect(control).not.toMatch(/(margin|padding)-(left|right|top|bottom)/);
   });
 
+  it("a v13-control select clips its option text, so WebKit does not count it as page overflow (UXB-20, SC 1.4.10)", () => {
+    const select = rules("select.v13-control");
+    expect(select).toMatch(/overflow:\s*clip/);
+    expect(select).not.toMatch(/(^|[^-])(width|inline-size|flex)\s*:/);
+  });
+
   it.each(SOURCES)("every field in %s uses v13-control", (path) => {
     const source = readFileSync(path, "utf8");
     const fields = [

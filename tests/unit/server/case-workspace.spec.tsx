@@ -110,7 +110,7 @@ describe("loadCaseWorkspace", () => {
       const d = deps(SECRETARY, procedural, notifications);
       const v = await loadCaseWorkspace(d, caseIdOf(1), tab);
       expect(v.tab).toBe(tab);
-      expect(d.source.calls).toEqual(["getCase"]);
+      expect(d.source.calls).toEqual(["openCase"]);
       expect([...procedural.calls, ...notifications.calls]).toEqual(reads);
     }
   });
