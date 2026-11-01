@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 · Branch: `feature/V13-UX-008-shell-frame` · Base: `develop` `f069850`
+Updated: 2026-11-01 · Branch: `feature/V13-UX-008-lists` · Base: `develop` `e9cd74d`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -107,16 +107,33 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Evidence: temporary local Playwright capture (not committed), 64 page captures plus 4 open-menu captures, every page
   200, no page-level horizontal scroll, every Tab stop with a visible focus ring.
 
-## V13-UX-008(a): platform frame (IN_REVIEW once its PR is open; FE ACCEPTs its paths, QA reviews, QA ACCEPTs the smoke hunk)
+## V13-UX-008(a): platform frame. PR #76, merged into `develop` as `e9cd74d`
 - `app/(platform)/layout.tsx` uses the AppShell frame form: TopBar (WorkspaceSwitcher, PersonaMenu with sign-out) and
   the role-aware SideNav with `aria-current="page"` (client `SideNavAuto`, `usePathname`; case pages mark no area).
 - Case pages use the shell Breadcrumbs (mirrored separator, `aria-current`), keeping `case-crumb-portfolio`.
 - Closes M1-08 and M1-10; the interim `.v13-nav-list` styles (M1-01) are removed. S4 rows M1-15 to M1-19 registered.
 - ARCH agreement (31 Oct 23:19): one line in `tests/e2e/smoke.spec.ts` opens the persona menu before sign-out.
-- Next: UX-008(b) Portfolio and My Work, then (c) Case Workspace.
+
+## V13-UX-008(b): Portfolio and My Work on the shared components (IN_REVIEW once its PR is open; FE ACCEPTs `app/**`, QA reviews)
+- Both tables on `DataTable` (case scope: `data-case-id`/`data-case-ref` per row, new `captionId`, `rowTestId`,
+  `rowData`, `tableData`, per-column `cellData`; only `data-*` attributes pass, checked at render). Every e2e test id kept.
+- Dates through `components/format.ts` (long month, Riyadh). My Work due dates on `DeadlineText`, which now also takes
+  the server's `{date, days}` (no client clock).
+- My Work task status (ARCH ruling, 1 Nov): an event-backed status is the `StatusBadge` recorded variant
+  (`data-epistemic="recorded"`, `data-event-id`, `data-task-status` kept); an untouched OPEN task stays a plain span with
+  no epistemic claim. `StatusBadge` `evidence.recordedAt` is optional: without it the badge says "recorded" and shows no
+  time. `StatusBadge` takes extra `data-*` attributes that never override its own.
+- Layout: table minimum 40rem inside the scroll region, sticky caption at the region's visible width, case numbers and
+  glyph + word cells `nowrap`, scroll region is the containing block for screen-reader text (it had widened the page at
+  360 px). Closes M1-04, M1-05, M1-13; M1-06 and M1-11 partly (Case Workspace in (c)).
+- Tests: unit 1,925/1,925 (new: undated recorded badge in ar and en; data passthrough and refusal), lint, typecheck,
+  e2e 194/194 locally. Visual check at 360/768/1280 in ar and en with a scratch spec (deleted): no page scroll, caption
+  inside the region, no broken case numbers.
+- Next: UX-008(c) Case Workspace.
 
 ## Unresolved defects
-- None known.
+- QA nit from #74: the preview frame title reads "إسناد التحقيق — DESIGN_PREVIEW". The raw code is in PROC's renderer
+  (`lib/notifications/render/platform.ts` title), not a UX path; raised with ARCH.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once
