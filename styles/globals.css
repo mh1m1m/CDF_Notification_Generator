@@ -912,6 +912,10 @@
   }
 
   .v13-scroll-region {
+    /* The containing block of absolutely positioned descendants (e.g. a badge's screen-reader text), so they scroll
+       with the table and never widen the page. */
+    position: relative;
+    container-type: inline-size;
     max-inline-size: 100%;
     overflow-x: auto;
   }
@@ -927,6 +931,32 @@
     padding-block-end: var(--cdf-space-2);
     text-align: start;
     font-weight: 700;
+  }
+
+  /* V13-UX-008 (M1-04, M1-05, M1-15): a table keeps a readable width and scrolls inside its region instead of
+     squeezing every column to the viewport; the caption stays at the region's inline start and wraps to the visible
+     width, so it is never cut mid-word. Identifiers (case numbers, codes) never break. */
+  .v13-scroll-region > .v13-table {
+    min-inline-size: 40rem;
+  }
+
+  .v13-table-caption-text {
+    position: sticky;
+    inset-inline-start: 0;
+    display: block;
+    /* The visible width of the scroll region, so the caption never scrolls out of view (QA, 360 px). */
+    max-inline-size: 100cqi;
+  }
+
+  .v13-nowrap,
+  .v13-table bdi[dir="ltr"] {
+    white-space: nowrap;
+  }
+
+  .v13-second-line {
+    display: block;
+    color: var(--cdf-text-secondary);
+    font-weight: 400;
   }
 
   .v13-table thead th {

@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 ~00:30 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` d5b61b0
+Updated: 2026-11-01 ~01:00 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` d26ada9
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -23,7 +23,8 @@ Updated: 2026-11-01 ~00:30 UTC · Branch: `claude/project-thread-94r9g5` · Base
 | V13-PROC-010 QG-01 source integrity ledger | COMPLETE | PR #64 merged into `develop` dabc11f (31 Oct; SEC-F-064-1 fixed in 30f325a; CI 41247147551); `scripts/integrity/source-ledger.mjs` (capture / verify: path, size, sha256 per file, sorted; reads only under `/mnt/project-files/notifications/`, refuses any other root, a root that is, is inside or contains the excluded upload, a ledger path under the base and a ledger folder that does not exist (nothing is created; SEC-F-064-1 fixed); never follows a link; never overwrites a ledger); SL-01..19 on temporary fixtures; ledgers kept outside Git in `/mnt/project-files/v13-enterprise/integrity/` (no file name in Git): first capture 16 roots, 2,215 files, 693,421,471 bytes; ARCH scope ruling 31 Oct 21:45 added eml, generator-v8, previews (v13_enterprise left out): `_r2` ledger 19 roots, 2,544 files, 707,615,739 bytes, sha256 8fb85a8f…514e, verify PASS |
 | V13-PROC-011 data-epistemic vocabulary for QA's Truth Inspector | COMPLETE | PR #67 merged into `develop` 4cc72ec (31 Oct; CI 41247592963); `lib/notifications/data-epistemic.ts` (plain data, no `server-only`): `DATA_EPISTEMIC_VALUES` = the charter's seven classes + GENERALIZED, `isDataEpistemic`, `dataEpistemicFor`; EventSummary (the only `data-epistemic` writer) now writes only vocabulary values, an unknown declared class falls back to UNVERIFIED_INFORMATION (never a recorded-fact label); DE-01..05; reference equivalence 516/516 |
 | V13-PROC-012 M1 status pass of the requirements register (V13-ARCH-004) | COMPLETE | PR #71 merged into `develop` a2be337 (31 Oct; ARCH ACCEPT and SEC ACCEPT 94fefc3, 33 of 33 security rows; CI 41253402064): Implementation_Status, Test_ID, Evidence and Open_Issue on the 280 M1 rows (68 COMPLETE, 171 IN_PROGRESS of which 51 review-enforced standing rules, 16 BLOCKED, 1 PRODUCTION_SUBSTITUTION_REQUIRED, 24 NOT_STARTED); traceability §3.1 by status, owner team and gate |
-| V13-PROC-013 second M1 register pass (merges 4cc72ec..d5b61b0: #61, #63, #68, #69, #73) | IN_REVIEW | 26 M1 rows gain evidence; REQ-QA-013 → IN_PROGRESS with OI-048 (Sentinel database half #68; recipient and request-body checks open, SEC CHANGES 2fde455); REQ-VIS-006, VIS-007, QA-024, RTL-006, A11Y-011, DS-016 → IN_PROGRESS (#69); REQ-PORT-004 loses OI-025 and OI-043 (resolved); IA-007 stays IN_PROGRESS (open: #74, #76, UX-008b/c, FE-009; Evidence wording from UX via ARCH). Totals 68 COMPLETE, 178 IN_PROGRESS, 16 BLOCKED, 1 PSR, 17 NOT_STARTED; #70, #74, #76 and #78 go to the next register pass (the IA-007 pass, assigned by ARCH when the M1 screens land) |
+| V13-PROC-013 second M1 register pass (merges 4cc72ec..d5b61b0: #61, #63, #68, #69, #73) | COMPLETE | #80 merged `d26ada9` (SEC CHANGES 2fde455, then ACCEPT 59e7613; CI on 59e7613 green). 26 M1 rows gain evidence; REQ-QA-013 IN_PROGRESS with OI-048 (recipient and request-body checks open); REQ-VIS-006, VIS-007, QA-024, RTL-006, A11Y-011, DS-016 → IN_PROGRESS (#69); REQ-PORT-004 loses OI-025 and OI-043 (resolved); IA-007 Evidence in UX's wording. Totals 68 COMPLETE, 178 IN_PROGRESS, 16 BLOCKED, 1 PSR, 17 NOT_STARTED |
+| V13-PROC-014 third M1 register pass (merges d5b61b0..d26ada9: #78, #70, #76, #83) | IN_REVIEW | 24 M1 rows gain evidence, no status changes; REQ-CASE-014 is recorded as a review-enforced standing rule (§7.1 leak triage, #78; COMPLETE when V13-QA-008 merges); REQ-IA-007's open list loses #76 (M1-08/M1-10 FIXED). Totals unchanged: 68 COMPLETE, 178 IN_PROGRESS (52 standing rules, 44 document-only), 16 BLOCKED, 1 PSR, 17 NOT_STARTED |
 
 ## Changed files
 - PR #3: `docs/teams/proc/PORT_PLAN.md`, `docs/teams/proc/STATUS.md`
@@ -40,6 +41,7 @@ Updated: 2026-11-01 ~00:30 UTC · Branch: `claude/project-thread-94r9g5` · Base
   `tests/unit/disclosure/{disclosure,projected-brand}.spec.ts`, `tests/unit/authority/data-boundary.spec.ts` (BND-05/06),
   this file
 - PROC-013: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #61, #63, #68, #69, #73), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
+- PROC-014: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #78, #70, #76, #83), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
 - PROC-012: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows: status, test, evidence, open issue), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
 - PROC-011: `lib/notifications/data-epistemic.ts` (new), `lib/notifications/render/components.ts` (EventSummary), `tests/unit/notifications/data-epistemic.spec.ts` (new), this file
 - PROC-010: `scripts/integrity/source-ledger.mjs` (new), `tests/unit/integrity/source-ledger.spec.ts` (new), this file

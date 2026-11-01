@@ -40,6 +40,7 @@ export const ar = {
   "empty.generic": "لا توجد بيانات لعرضها",
   unsaved: "لديك تغييرات غير محفوظة",
   "epistemic.recordedAria": "تم تسجيله في {time}",
+  "epistemic.recordedAriaUndated": "تم تسجيله",
   "epistemic.expectedSuffix": "(متوقع)",
   "epistemic.expectedAria": "لم يحدث بعد",
   "epistemic.conditionalPrefix": "مشروط:",

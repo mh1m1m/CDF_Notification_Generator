@@ -28,33 +28,16 @@
   font-weight: 600;
 }
 
-.scroll {
-  overflow-x: auto;
-  max-inline-size: 100%;
-}
-
-.table {
-  border-collapse: collapse;
-  inline-size: 100%;
-}
-
-.table caption {
-  text-align: start;
-  padding-block-end: var(--cdf-space-2);
-}
-
-.table th,
-.table td {
-  text-align: start;
-  padding-block: var(--cdf-space-2);
-  padding-inline: var(--cdf-space-3);
-  border-block-end: 1px solid var(--cdf-border);
-  vertical-align: top;
-}
-
 .glyph {
-  vertical-align: middle;
-  margin-inline-end: var(--cdf-space-1);
+  flex: none;
+}
+
+/* Glyph and word stay on one line (M1-13). */
+.withGlyph {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cdf-space-1);
+  white-space: nowrap;
 }
 
 .flag {
@@ -64,6 +47,14 @@
   color: var(--cdf-indicator-text);
   border-radius: 0;
   padding-inline: var(--cdf-space-1);
+  gap: var(--cdf-space-1);
+  white-space: nowrap;
+}
+
+/* A case title wraps by phrase, not word by word, when the table scrolls (360–768 px). */
+.title {
+  display: block;
+  min-inline-size: 12rem;
 }
 
 .pagination {

@@ -79,8 +79,11 @@ interface BadgeCore {
 
 export interface RecordedBadge extends BadgeCore {
   epistemic: "recorded";
-  /** The recorded event that set this status, in the same case. */
-  evidence: { eventId: string; recordedAt: string };
+  /**
+   * The recorded event that set this status, in the same case. `recordedAt` is optional: without it the badge says
+   * "recorded" and never invents or approximates a time (ARCH, 1 Nov).
+   */
+  evidence: { eventId: string; recordedAt?: string };
   /** Domain tone from the status kind's registry; Layer A states have a default, unknown codes are neutral. */
   tone?: Tone;
 }
@@ -100,7 +103,14 @@ export interface AwaitingApprovalBadge extends BadgeCore {
 
 export type StatusBadgeVariant = RecordedBadge | ExpectedBadge | ConditionalBadge | AwaitingApprovalBadge;
 export type ProjectedBadge = ExpectedBadge | ConditionalBadge | AwaitingApprovalBadge;
-export type StatusBadgeProps = StatusBadgeVariant & { t: Translator; locale: Locale; testId?: string };
+/** Extra data-* attributes for the page's own tests (e.g. data-task-status); they never override the badge's own. */
+export type BadgeData = Readonly<Record<`data-${string}`, string | number | undefined>>;
+export type StatusBadgeProps = StatusBadgeVariant & {
+  t: Translator;
+  locale: Locale;
+  testId?: string;
+  data?: BadgeData;
+};
 
 const ARABIC_MARKS = /[ً-ْٰـ]/g;
 /** Words that state a completed fact (V13 LAYER_B_FORBIDDEN_WORDS, plus their English counterparts). */
@@ -125,8 +135,11 @@ function isLayerA(status: string): status is LayerAState {
 }
 
 export function StatusBadge(props: StatusBadgeProps) {
-  const { t, locale, statusKind, status, label, testId } = props;
+  const { t, locale, statusKind, status, label, testId, data } = props;
+  for (const name of Object.keys(data ?? {}))
+    if (!/^data-[a-z0-9-]+$/.test(name)) throw new Error("StatusBadge: data accepts data-* attributes only");
   const common = {
+    ...data,
     "data-testid": testId,
     "data-epistemic": props.epistemic,
     "data-status-kind": statusKind,
@@ -150,7 +163,11 @@ export function StatusBadge(props: StatusBadgeProps) {
         <span>{label}</span>
         <span className="v13-sr-only">
           {aside(
-            t("common.epistemic.recordedAria", { time: formatDateTime(locale, props.evidence.recordedAt) }),
+            props.evidence.recordedAt
+              ? t("common.epistemic.recordedAria", {
+                  time: formatDateTime(locale, props.evidence.recordedAt),
+                })
+              : t("common.epistemic.recordedAriaUndated"),
           )}
         </span>
       </span>

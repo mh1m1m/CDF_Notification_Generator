@@ -5,11 +5,14 @@
 //   D2  a child row is readable while its parent is not (task event → task, notification event → notification,
 //       superseding notification → superseded one)
 //   D3  a child row's case_id differs from its parent's
+//   D4  a notification names a recipient persona who was not on that case's team when it was created (an assignment
+//       of the same case, any capacity, whose window holds created_at); the detail says whether the persona is on
+//       another case's team instead (V13-QA-007, OI-048, REQ-QA-013)
 // Pure functions, so the planted-fault self-test runs them on a copy of a real snapshot. SYNTHETIC data only.
 import type { PersonaSnapshot } from "../fixtures/db-snapshot";
 
 export interface DbViolation {
-  rule: "D1" | "D2" | "D3";
+  rule: "D1" | "D2" | "D3" | "D4";
   detail: string;
 }
 
@@ -56,6 +59,29 @@ export function dbSentinelViolations(s: PersonaSnapshot): DbViolation[] {
         rule: "D3",
         detail: `notification ${n.id} is on case ${n.case_id}, the one it supersedes on ${prev.case_id}`,
       });
+  }
+  for (const n of s.notifications) {
+    if (n.recipient_persona_id === null) continue;
+    // Fixed-width UTC timestamps with microseconds (db-snapshot.ts), so string order is time order, without the
+    // millisecond rounding of Date.
+    const at = n.created_at;
+    const held = s.assignments.filter((a) => a.persona_id === n.recipient_persona_id);
+    const onTeam = held.some(
+      (a) => a.case_id === n.case_id && a.valid_from <= at && (a.valid_to === null || a.valid_to > at),
+    );
+    if (onTeam) continue;
+    const elsewhere = [...new Set(held.filter((a) => a.case_id !== n.case_id).map((a) => a.case_id))];
+    const sameCaseOutsideWindow = held.some((a) => a.case_id === n.case_id);
+    out.push({
+      rule: "D4",
+      detail:
+        `notification ${n.id} on case ${n.case_id} is addressed to persona ${n.recipient_persona_id}, ` +
+        (sameCaseOutsideWindow
+          ? "whose assignment to that case did not hold when it was created"
+          : elsewhere.length
+            ? `who is on the team of case ${elsewhere.join(", ")} instead`
+            : "who is on no case team the persona can read"),
+    });
   }
   return out;
 }

@@ -2,6 +2,8 @@
 // the URL holds the whole view and the page works without scripts. Every row carries ADR-013's data-case-id and
 // data-case-ref; the counts carry data-count. The view model comes from lib/server/portfolio (authorised data only).
 import Link from "next/link";
+import { DataTable } from "@/components/data/DataTable";
+import { formatDate } from "@/components/format";
 import type { CaseSummary, RecordsState } from "@/lib/contracts";
 import { translateKey, type Locale, type MessageKey, type Translator } from "@/lib/i18n";
 import type { PortfolioView as View } from "@/lib/server/portfolio";
@@ -13,7 +15,6 @@ import {
   PORTFOLIO_STAGES,
   type PortfolioQuery,
 } from "@/lib/server/portfolio-query";
-import { ScrollRegion } from "../../_components/ScrollRegion";
 import styles from "./portfolio.module.css";
 
 const STAGE_KEYS: Readonly<Record<(typeof PORTFOLIO_STAGES)[number], MessageKey>> = {
@@ -54,17 +55,6 @@ const RESULT_KEYS: Readonly<Record<Intl.LDMLPluralRule, MessageKey>> = {
 /** Arabic UI text uses Arabic-Indic digits, English Latin (DESIGN_SYSTEM.md §5), whatever the runtime's CLDR default. */
 function numberFormat(locale: Locale): Intl.NumberFormat {
   return new Intl.NumberFormat(locale === "ar" ? "ar-u-nu-arab" : "en-u-nu-latn");
-}
-
-/**
- * Recorded-event dates: calendar date in the CDF time zone (Asia/Riyadh), Arabic-Indic digits in Arabic. The exact
- * instant stays in the <time dateTime> attribute.
- */
-function dateFormat(locale: Locale): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-u-nu-arab" : "en-GB-u-nu-latn", {
-    dateStyle: "medium",
-    timeZone: "Asia/Riyadh",
-  });
 }
 
 function resultLine(t: Translator, locale: Locale, total: number): string {
@@ -299,74 +289,92 @@ function Results({
         )
       ) : (
         <>
-          <ScrollRegion className={styles.scroll} labelledBy="portfolio-table-caption">
-            <table className={styles.table} data-testid="portfolio-table">
-              <caption id="portfolio-table-caption">{captionOf(t, locale, query)}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{t("portfolio.column.number")}</th>
-                  <th scope="col">{t("portfolio.column.title")}</th>
-                  <th scope="col">{t("portfolio.column.stage")}</th>
-                  <th scope="col">{t("portfolio.column.state")}</th>
-                  <th scope="col">{t("portfolio.column.indicators")}</th>
-                  <th scope="col">{t("portfolio.column.lastEvent")}</th>
-                  <th scope="col">{t("portfolio.column.myOpenTasks")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {page.items.map((c) => (
-                  <tr
-                    key={c.case_id}
-                    data-testid={`portfolio-row-${c.case_id}`}
-                    data-case-id={c.case_id}
-                    data-case-ref={c.case_number}
-                  >
-                    <th scope="row" className={styles.nowrap}>
-                      <Link href={`/cases/${c.case_id}`} data-testid={`portfolio-open-${c.case_id}`}>
-                        <bdi dir="ltr">{c.case_number}</bdi>
-                      </Link>
-                    </th>
-                    <td>{titleOf(locale, c)}</td>
-                    <td data-testid="portfolio-stage-cell" data-stage={c.lifecycle_stage}>
-                      {stageLabel(t, c.lifecycle_stage)}
-                    </td>
-                    <td
-                      className={styles.nowrap}
-                      data-testid="portfolio-records-state"
-                      data-records-state={c.records_state}
+          <DataTable<(typeof page.items)[number]>
+            t={t}
+            scope="case"
+            testId="portfolio-table"
+            captionId="portfolio-table-caption"
+            caption={captionOf(t, locale, query)}
+            rows={page.items}
+            rowKey={(c) => c.case_id}
+            rowTestId={(c) => `portfolio-row-${c.case_id}`}
+            rowCaseId={(c) => c.case_id}
+            rowCaseRef={(c) => c.case_number}
+            empty={null}
+            columns={[
+              {
+                key: "number",
+                header: t("portfolio.column.number"),
+                rowHeader: true,
+                cell: (c) => (
+                  <Link href={`/cases/${c.case_id}`} data-testid={`portfolio-open-${c.case_id}`}>
+                    <bdi dir="ltr">{c.case_number}</bdi>
+                  </Link>
+                ),
+              },
+              {
+                key: "title",
+                header: t("portfolio.column.title"),
+                cell: (c) => <span className={styles.title}>{titleOf(locale, c)}</span>,
+              },
+              {
+                key: "stage",
+                header: t("portfolio.column.stage"),
+                cellData: (c) => ({ "data-testid": "portfolio-stage-cell", "data-stage": c.lifecycle_stage }),
+                cell: (c) => stageLabel(t, c.lifecycle_stage),
+              },
+              {
+                key: "state",
+                header: t("portfolio.column.state"),
+                cellData: (c) => ({
+                  "data-testid": "portfolio-records-state",
+                  "data-records-state": c.records_state,
+                }),
+                cell: (c) => (
+                  <span className={styles.withGlyph}>
+                    {c.records_state === "CLOSED" ? <LockGlyph /> : null}
+                    {t(RECORDS_KEYS[c.records_state])}
+                  </span>
+                ),
+              },
+              {
+                key: "indicators",
+                header: t("portfolio.column.indicators"),
+                cell: (c) =>
+                  c.is_restricted ? (
+                    <span className={styles.flag} data-testid="portfolio-restricted">
+                      <KeyGlyph />
+                      {t("case.restricted")}
+                    </span>
+                  ) : null,
+              },
+              {
+                key: "last-event",
+                header: t("portfolio.column.lastEvent"),
+                cell: (c) =>
+                  c.last_event_id !== null && c.last_event_at !== null ? (
+                    <time
+                      dateTime={c.last_event_at}
+                      data-testid="portfolio-last-event"
+                      data-event-id={c.last_event_id}
                     >
-                      {c.records_state === "CLOSED" ? <LockGlyph /> : null}
-                      {t(RECORDS_KEYS[c.records_state])}
-                    </td>
-                    <td>
-                      {c.is_restricted ? (
-                        <span className={styles.flag} data-testid="portfolio-restricted">
-                          <KeyGlyph />
-                          {t("case.restricted")}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td>
-                      {c.last_event_id !== null && c.last_event_at !== null ? (
-                        <time
-                          dateTime={c.last_event_at}
-                          data-testid="portfolio-last-event"
-                          data-event-id={c.last_event_id}
-                        >
-                          {dateFormat(locale).format(new Date(c.last_event_at))}
-                        </time>
-                      ) : (
-                        <span data-testid="portfolio-no-event">{t("portfolio.noEvent")}</span>
-                      )}
-                    </td>
-                    <td data-testid="portfolio-my-open-tasks" data-count={c.my_open_task_count}>
-                      {fmt.format(c.my_open_task_count)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </ScrollRegion>
+                      {formatDate(locale, c.last_event_at)}
+                    </time>
+                  ) : (
+                    <span data-testid="portfolio-no-event">{t("portfolio.noEvent")}</span>
+                  ),
+              },
+              {
+                key: "my-open-tasks",
+                header: t("portfolio.column.myOpenTasks"),
+                cellData: (c) => ({
+                  "data-testid": "portfolio-my-open-tasks",
+                  "data-count": c.my_open_task_count,
+                }),
+                cell: (c) => fmt.format(c.my_open_task_count),
+              },
+            ]}
+          />
           <nav aria-label={t("portfolio.pagination.label")} className={styles.pagination}>
             {view.from > 0 ? (
               <p data-testid="count-portfolio-total" data-count={page.total}>

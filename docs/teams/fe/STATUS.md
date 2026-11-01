@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-polish (develop a93fa61 merged in; #74 FE-006 part 3 merged) · Head: see PR
+Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-polish (develop 286eb93 merged in; #74 and #81 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -63,6 +63,11 @@ Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
   AppShell as a section (no second `<main>`, no second `id="main"`), same visible text, `data-testid` and title as the
   root not-found page; OI-043: the Portfolio filter form is keyed on its filter values (`filterFormKey`), so Clear,
   Back and other client-side navigations remount it with the URL's values — COMPLETE (#63, merged into develop 63d1271).
+- V13-FE-008 (OI-044) — the workspace switcher and My Work show a role only from a membership the database confirms
+  in the request's security context (`MembershipReader`, proposed contract `lib/contracts/memberships.ts`, adapter
+  `lib/adapters/identity/v13-memberships.ts`: own persona via `current_persona_id()`, active workspace, valid now).
+  Session roles are never shown; no confirmed role gives an empty switcher role and "No role confirmed in this
+  workspace" on My Work; a read failure shows no role (fail closed). COMPLETE (#81, merged into develop 286eb93 by ARCH). ARCH pre-review folded in: the port states its guarantees, roles in the closed set's order, planted-row negatives for a future window and an inactive workspace. The Workspaces page also uses confirmed roles. Empty-role e2e `tests/e2e/confirmed-role.spec.ts` (ARCH request, for QA review).
 - V13-FE-009 (M1 design review) — Case Workspace overview: "My open tasks in this case" shown once (the heading; the
   caption stays for assistive technology and still names the scroll region), the events list styled (rail and
   marker per entry, same on Overview and Events) (M1-09). Notification Operations Center: the table keeps a 48rem
@@ -162,6 +167,8 @@ Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
 | FE-006 part 1: committed `tests/e2e/scenario-e-notification-draft.spec.ts` (ARCH: rides #51, QA reviews; SEC condition 2 with relative counts): `pnpm db:reset` + `pnpm test:e2e`; then `db:reset` + the spec with `--repeat-each=2 --workers=1` (second pass on a database the first wrote to). A second server start without `db:reset` fails every e2e suite with CLAIMS_KEY_MISMATCH (migration 0007, known local constraint), not this spec | pass | 103 / 4 | FE-006 head |
 | FE-006 part 2 after merging develop 65a251d (#51; records.ts keeps both bindings, contracts index keeps both exports): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 69 files, 1860 / 28 files, 447 / 150 | FE-006 part 2 head |
 | FE-006 part 3, QA CHANGES 982bd76: preview link accessible name from the template name and the class label (never raw codes, pinned in e2e by `toHaveAccessibleName`); OI-037 notice shows the class label with the code in `<bdi>`: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 75 files, 1947 / 456 / 179 | FE-006 part 3 head |
+| FE-008 after merging develop e9cd74d (#76): the Epsilon and Zeta negatives, session roles ignored, another workspace never filling this one, strict rows, a read failure giving none, and planted rows rolled back (future window, inactive workspace, positive control; each negative fails when its predicate is deleted). Empty-role e2e: Epsilon, Zeta, Alpha control. Commands: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (memberships integration 9) / `pnpm db:reset` + `pnpm test:e2e`. (Correction: the earlier 456/179 reported for fad4803 came from the FE-006 tree; fad4803's own run is not recorded.) | pass | — / 75 files, 1939 / 456 / 197 | 466ea5d |
+| FE-008, ARCH CHANGES 466ea5d (end of the window): planted negatives for an ended membership (valid_to = now() − 1 h) and the exact exclusive end (valid_to = now()), plus a positive control (+1 h); deleting the valid_to predicate fails 2 tests, `>` → `>=` fails the exact-end test. Commands: format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (memberships integration 12) / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 75 files, 1939 / 459 / 197 | FE-008 head |
 | FE-009 on fix/V13-FE-009-overview-and-center-polish: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (new: Center at 360 and 768 px in ar and en — no page scroll, region scrolls at 360, codes on one line, Latin version, month in words; the four fail on the old Center markup, checked) | pass | — / 73 files, 1910 / 447 / 177 | FE-009 head |
 | FE-009 after merging develop a93fa61 (#74) + the frame title (unit: ar/en titles, withheld title, no raw marking; e2e: Scenario E frame name ends in عرض تجريبي): format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 76 files, 1968 / 456 / 204 | FE-009 head |
 
