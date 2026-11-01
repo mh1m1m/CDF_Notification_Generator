@@ -32,6 +32,7 @@ import {
   createFakeNotificationPreview,
   previewNotificationIdOf,
   previewRecord,
+  unrecordedPreviewRead,
 } from "./support/fake-notification-preview";
 import { CORRELATION, ctxFor, INVESTIGATOR_BETA, SECRETARY } from "./support/identities";
 
@@ -194,7 +195,8 @@ describe("loadNotificationPreview", () => {
 
   it("negative: a reader row of another case is refused by the binding (CASE_MISMATCH), generic state", async () => {
     const rogue: NotificationPreviewReader = {
-      getForCase: async () => previewRecord(3, 1),
+      getForCase: unrecordedPreviewRead,
+      getForCaseRecorded: async () => previewRecord(3, 1),
     };
     expect(await load(WITNESS_1.notification_id, 1, SECRETARY, rogue)).toEqual({
       kind: "unavailable",
@@ -217,7 +219,8 @@ describe("loadNotificationPreview", () => {
 
   it("negative: a read failure is generic and logged by code only; NOT_FOUND and UNAUTHENTICATED go to the page", async () => {
     const failing = (e: unknown): NotificationPreviewReader => ({
-      getForCase: async () => {
+      getForCase: unrecordedPreviewRead,
+      getForCaseRecorded: async () => {
         throw e;
       },
     });

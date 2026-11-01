@@ -24,4 +24,14 @@ export interface NotificationPreviewReader {
     caseId: CaseId,
     notificationId: string,
   ): Promise<NotificationPreviewRecord | null>;
+  /**
+   * The preview's read (V13-FE-017, DB-023): records that the identity opened this notification's preview, then reads
+   * it as `getForCase` does, both in one transaction. A refused record (unknown, another case's or an unauthorised
+   * notification) returns null and reads nothing; a record that cannot be written throws.
+   */
+  getForCaseRecorded(
+    identity: RequestIdentity,
+    caseId: CaseId,
+    notificationId: string,
+  ): Promise<NotificationPreviewRecord | null>;
 }

@@ -112,10 +112,24 @@ export function createFakeCaseSource(): CaseSourceAdapter & { calls: string[] } 
     },
     async getCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
       calls.push("getCase");
-      const found = visibleTo(identity).find((c) => c.case_id === caseId);
-      if (!found) return null;
-      const assigned = (ASSIGNED[identity.persona_id] ?? []).includes(Number(found.case_number.slice(-4)));
-      return { ...found, my_capacity: assigned ? (CAPACITY[identity.persona_id] ?? null) : null };
+      return headerFor(identity, caseId);
+    },
+    // V13-FE-017: the fake records the open as a call; the database's row is pinned by the integration tests.
+    async openCase(identity: RequestIdentity, caseId: CaseId): Promise<CaseHeader | null> {
+      calls.push("openCase");
+      return headerFor(identity, caseId);
     },
   };
 }
+
+function headerFor(identity: RequestIdentity, caseId: CaseId): CaseHeader | null {
+  const found = visibleTo(identity).find((c) => c.case_id === caseId);
+  if (!found) return null;
+  const assigned = (ASSIGNED[identity.persona_id] ?? []).includes(Number(found.case_number.slice(-4)));
+  return { ...found, my_capacity: assigned ? (CAPACITY[identity.persona_id] ?? null) : null };
+}
+
+/** For inline adapters in tests: the unrecorded read, which the route must never use (V13-FE-017). */
+export const unrecordedCaseRead = async (): Promise<never> => {
+  throw new Error("the route must open the case with openCase (recorded read)");
+};
