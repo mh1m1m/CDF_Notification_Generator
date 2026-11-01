@@ -1,0 +1,69 @@
+# Release for CDF V13 Enterprise — SYNTHETIC-DATA REFERENCE IMPLEMENTATION, not CDF production.
+#
+# REQ-CICD-006 (V13-ARCH-012): every release is tagged and keeps its notes. A release is the owner's milestone merge of
+# `develop` into `main` (CLAUDE.md §6), and only the owner merges into `main`, so this workflow runs only after that
+# merge. It reads the version from package.json and that version's section from CHANGELOG.md
+# (scripts/ci/release-notes.mjs --release). It then tags the pushed commit `v<version>` and publishes a GitHub release
+# with those notes. A tag is never moved: when `v<version>` already names another commit, the job fails. So a merge into
+# `main` without a version bump and a changelog section is reported, not silently re-tagged. A re-run on the same commit
+# changes nothing, apart from publishing the release if only its tag was created.
+#
+# Least privilege: `contents: write` for this job only, to create the tag and the release through the GitHub API with
+# the job's own token. The checkout keeps no credentials, the only actions are the pinned ones CI already uses, and no
+# repository secret is read.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag the release and publish its notes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version-file: .nvmrc
+      - id: notes
+        name: Read the version and its changelog section
+        run: node scripts/ci/release-notes.mjs --release "$RUNNER_TEMP/release-notes.md" >> "$GITHUB_OUTPUT"
+      - name: Tag the commit and publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.notes.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}"
+          if target=$(git rev-parse -q --verify "refs/tags/${tag}^{commit}"); then
+            if [ "$target" != "$GITHUB_SHA" ]; then
+              echo "::error::${tag} already tags ${target}. A released tag is never moved: the milestone PR must raise package.json's version and add its CHANGELOG.md section."
+              exit 1
+            fi
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              echo "${tag} already tags ${GITHUB_SHA} and has its release; nothing to do."
+              exit 0
+            fi
+            # the tag exists on this commit without a release: publish the notes on the existing tag
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$tag" \
+              --notes-file "$RUNNER_TEMP/release-notes.md"
+            echo "Released ${tag} at ${GITHUB_SHA} (existing tag)."
+            exit 0
+          fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$tag" \
+            --notes-file "$RUNNER_TEMP/release-notes.md"
+          echo "Released ${tag} at ${GITHUB_SHA}."

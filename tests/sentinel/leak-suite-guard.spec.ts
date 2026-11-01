@@ -2,18 +2,24 @@
 // carry no pin, no focus and no skip outside the allow-list, so a leak can never be waived in CI. Runs without a
 // browser in the e2e job, before the suites it guards matter. Each forbidden form is planted into a synthetic source
 // first, so a guard that cannot see it fails here before it is trusted. SYNTHETIC data only.
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { expect, test } from "@playwright/test";
 import ts from "typescript";
 import {
+  checkListing,
   codeOnly,
   formatGuardViolations,
   guardLeakSuites,
+  isPlaywrightSuite,
   LEAK_SUITES,
+  listedTests,
+  type ListedTest,
   scanSuite,
   SKIP_ALLOWANCES,
   type SkipAllowance,
+  testCallLines,
 } from "../critic/leak-suite-guard";
 
 const ROOT = process.cwd();
@@ -205,6 +211,73 @@ test.describe("planted negatives are refused", () => {
       `test("t", async () => {\n  test.info().annotations.push({ type: "skip" });\n});`,
       "G6",
     ],
+    // V13-QA-011 (SEC's INFO on #88): an annotation the parser cannot read as plain literals is refused, whatever it
+    // would evaluate to, so a type built at run time ("sk" + "ip") cannot hide a skip
+    [
+      "an annotation type built by concatenation",
+      `test("t", { annotation: { type: "sk" + "ip" } }, async () => {});`,
+      "G6",
+    ],
+    [
+      "an annotation type from a variable",
+      `const k = "fixme";\ntest("t", { annotation: { type: k } }, async () => {});`,
+      "G6",
+    ],
+    [
+      "an annotation type in a template with a substitution",
+      'const f = "fa";\ntest("t", { annotation: [{ type: `${f}il` }] }, async () => {});',
+      "G6",
+    ],
+    [
+      "an annotation option from a variable",
+      `const a = { type: "issue" };\ntest("t", { annotation: a }, async () => {});`,
+      "G6",
+    ],
+    [
+      "an annotation option as a shorthand",
+      `const annotation = { type: "issue" };\ntest("t", { annotation }, async () => {});`,
+      "G6",
+    ],
+    [
+      "an annotation array holding a variable",
+      `const a = { type: "issue" };\ntest("t", { annotation: [a] }, async () => {});`,
+      "G6",
+    ],
+    [
+      "a spread inside an annotation",
+      `const a = { type: "issue" };\ntest("t", { annotation: { ...a } }, async () => {});`,
+      "G6",
+    ],
+    [
+      "a computed key inside an annotation",
+      `const k = "type";\ntest("t", { annotation: { [k]: "skip" } }, async () => {});`,
+      "G6",
+    ],
+    [
+      "an annotation pushed from a variable",
+      `test("t", async () => {\n  const a = { type: "issue" };\n  test.info().annotations.push(a);\n});`,
+      "G6",
+    ],
+    [
+      "a pushed annotation with a built type",
+      `test("t", async () => {\n  test.info().annotations.push({ type: ["sk", "ip"].join("") });\n});`,
+      "G6",
+    ],
+    [
+      "annotations reached by unshift",
+      `test("t", async () => {\n  test.info().annotations.unshift({ type: "issue" });\n});`,
+      "G6",
+    ],
+    [
+      "annotations held in a variable",
+      `test("t", async () => {\n  const list = test.info().annotations;\n  list.push({ type: "issue" });\n});`,
+      "G6",
+    ],
+    [
+      "annotations reached by element access and splice",
+      `test("t", async ({}, testInfo) => {\n  testInfo["annotations"].splice(0, 0, { type: "issue" });\n});`,
+      "G6",
+    ],
   ];
   for (const [form, body, rule] of cases)
     test(`${form} → ${rule}`, () => {
@@ -282,6 +355,18 @@ test.describe("what is not a pin, focus or skip", () => {
     expect(scanSuite(FILE, src, [])).toEqual([]);
   });
 
+  test("plain literal annotations, declared or pushed, are not hits (the control for the V13-QA-011 forms)", () => {
+    const src = wrap(
+      [
+        'test("a", { annotation: [{ type: "issue", description: "OI-049" }, { type: `perf` }] }, async () => {});',
+        'test("b", async () => {\n  test.info().annotations.push({ type: "issue", description: `x ${1}` });\n});',
+        "const other = { type: someValue() };",
+        "function someValue() {\n  return 1;\n}",
+      ].join("\n"),
+    );
+    expect(scanSuite(FILE, src, [])).toEqual([]);
+  });
+
   test("an unescaped regular expression that names the forms is not a hit", () => {
     // `test.only` and `it.skip(` here would match G2 and G3 if regex literals were left as code (ARCH, bf063a9)
     expect(scanSuite(FILE, wrap(`const r = /test.only|it.skip()/;\nexpect(r).toBeTruthy();`), [])).toEqual(
@@ -293,5 +378,117 @@ test.describe("what is not a pin, focus or skip", () => {
     expect(
       scanSuite(FILE, wrap(`const r = /test\\.only\\(|it\\.skip\\(|"/;\nexpect(r).toBeTruthy();`), []),
     ).toEqual([]);
+  });
+});
+
+// L1 (V13-QA-011): the runner's own listing against the files' own test calls, which closes the per-file scan's
+// limit (a helper defined in another file). `--list` loads the files without a browser or a server.
+const PLAYWRIGHT_CLI = join(ROOT, "node_modules", "@playwright", "test", "cli.js");
+function playwrightList(args: readonly string[]): { suites: Parameters<typeof listedTests>[0]["suites"] } {
+  const out = execFileSync(process.execPath, [PLAYWRIGHT_CLI, "test", "--list", "--reporter=json", ...args], {
+    cwd: ROOT,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: 120_000,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  return JSON.parse(out) as { suites: Parameters<typeof listedTests>[0]["suites"] };
+}
+
+test.describe("L1: what the runner registers is exactly each suite's own test calls", () => {
+  test("every Playwright leak suite: each listed test comes from one of its own test( calls, each call is listed, all expected to pass", () => {
+    const suites = LEAK_SUITES.filter((f) => isPlaywrightSuite(read(f)!));
+    expect(suites.length, "the Playwright leak suites").toBeGreaterThanOrEqual(14);
+    const listing = listedTests(playwrightList(suites));
+    for (const f of suites) expect(listing.get(f)?.length ?? 0, `${f} registers tests`).toBeGreaterThan(0);
+    const v = checkListing(listing, read, suites);
+    expect(v, formatGuardViolations(v)).toEqual([]);
+  });
+
+  const SRC = wrap(
+    [
+      'test("a", async () => {});',
+      'for (const l of ["ar", "en"]) test(`b ${l}`, async () => {});',
+      'test.describe("d", () => {\n  test("c", async () => {});\n});',
+    ].join("\n"),
+  );
+  const ok = (line: number, title = "t"): ListedTest => ({
+    file: FILE,
+    line,
+    title,
+    expectedStatus: "passed",
+    annotations: [],
+  });
+  const clean = [ok(2), ok(3), ok(3), ok(5)];
+  const reader = (src: string) => (f: string) => (f === FILE ? src : null);
+  const l1 = (tests: ListedTest[], src = SRC) => checkListing(new Map([[FILE, tests]]), reader(src), [FILE]);
+
+  test("the static side: the lines of the file's own test( calls", () => {
+    expect([...testCallLines(SRC)].sort((a, b) => a - b)).toEqual([2, 3, 5]);
+  });
+
+  test("a listing that matches the calls is clean (the control)", () => {
+    expect(l1(clean)).toEqual([]);
+  });
+
+  const planted: [string, ListedTest[]][] = [
+    [
+      "a test declared by a helper in another file",
+      [...clean, { ...ok(2), file: "tests/fixtures/helper.ts" }],
+    ],
+    ["a test on a line that is not one of the file's test( calls", [...clean, ok(4)]],
+    ["a test( call the runner does not register (a condition or dead code)", [ok(2), ok(3), ok(3)]],
+    ["a suite that registers nothing", []],
+    [
+      "a test registered as expected to be skipped",
+      [ok(2), ok(3), ok(3), { ...ok(5), expectedStatus: "skipped" }],
+    ],
+    ["a test registered as expected to fail", [ok(2), ok(3), ok(3), { ...ok(5), expectedStatus: "failed" }]],
+    [
+      "a fixme annotation from a helper",
+      [ok(2), ok(3), ok(3), { ...ok(5), annotations: [{ type: "fixme" }] }],
+    ],
+    ["a skip annotation", [ok(2), ok(3), ok(3), { ...ok(5), annotations: [{ type: "skip" }] }]],
+  ];
+  for (const [form, tests] of planted)
+    test(`${form} → L1`, () => {
+      const v = l1(tests);
+      expect(rulesOf(v), formatGuardViolations(v)).toEqual(["L1"]);
+    });
+
+  test("an unrelated annotation is not a hit", () => {
+    expect(
+      l1([ok(2), ok(3), ok(3), { ...ok(5), annotations: [{ type: "issue" }, { type: "serial" }] }]),
+    ).toEqual([]);
+  });
+
+  test("end to end: a helper in another file that pins a test passes the per-file scan and is caught by L1", () => {
+    const dir = mkdtempSync(join(ROOT, "test-results", "guard-l1-"));
+    try {
+      writeFileSync(
+        join(dir, "helper.ts"),
+        'import { test } from "@playwright/test";\nexport function leakCheck(name: string, body: () => Promise<void>) {\n  test.fixme(name, body);\n}\n',
+      );
+      const suite = wrap(
+        'import { leakCheck } from "./helper";\ntest("visible", async () => {});\nleakCheck("hidden", async () => {});',
+      );
+      writeFileSync(join(dir, "planted.spec.ts"), suite);
+      writeFileSync(
+        join(dir, "pw.config.ts"),
+        'import { defineConfig } from "@playwright/test";\nexport default defineConfig({ testDir: ".", testMatch: "*.spec.ts" });\n',
+      );
+      const file = relative(ROOT, join(dir, "planted.spec.ts"));
+      // the per-file scan sees nothing: the pin is in the helper
+      expect(scanSuite(file, suite, [])).toEqual([]);
+      const listing = listedTests(
+        playwrightList(["--config", join(dir, "pw.config.ts")]),
+        `${relative(ROOT, dir)}/`,
+      );
+      const v = checkListing(listing, (f) => (f === file ? suite : null), [file]);
+      expect(rulesOf(v), formatGuardViolations(v)).toEqual(["L1"]);
+      expect(v.map((x) => x.detail).join("\n")).toMatch(/declared in another file|fixme|skipped/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -298,6 +298,66 @@
     margin-block-start: auto;
   }
 
+  /* Next Action Card (V13-UX-015, REQ-IA-009): the one task the persona can act on next, first on the case Overview.
+     Prominent by position, a start-side bar and the title's weight, not by colour alone; it wraps at 320 px. */
+  .v13-next-action {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cdf-space-2);
+    max-inline-size: 100%;
+    margin-block: 0 var(--cdf-space-6);
+    padding: var(--cdf-space-4);
+    background-color: var(--cdf-surface);
+    border: var(--cdf-border-hairline) solid var(--cdf-border-control);
+    border-inline-start: 4px solid var(--cdf-primary);
+    border-radius: var(--cdf-radius-control);
+    overflow-wrap: anywhere;
+  }
+
+  .v13-next-action-heading {
+    margin: 0;
+    font-size: var(--cdf-text-body1);
+    font-weight: 600;
+    color: var(--cdf-text-secondary);
+  }
+
+  .v13-next-action-title {
+    margin: 0;
+    font-size: var(--cdf-text-h2);
+    line-height: var(--cdf-text-h2-lh);
+    font-weight: 700;
+  }
+
+  .v13-next-action-title a {
+    text-decoration-line: underline;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.2em;
+  }
+
+  .v13-next-action-facts {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: var(--cdf-space-6);
+    row-gap: var(--cdf-space-2);
+    margin: 0;
+  }
+
+  .v13-next-action-facts > div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--cdf-space-2);
+    min-inline-size: 0;
+  }
+
+  .v13-next-action-facts dt {
+    color: var(--cdf-text-secondary);
+  }
+
+  .v13-next-action-facts dd {
+    margin: 0;
+  }
+
   /* ---- V13-UX-002 shell ---------------------------------------------------------------------------------------- */
 
   .v13-icon {

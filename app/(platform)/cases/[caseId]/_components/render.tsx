@@ -71,7 +71,7 @@ export async function caseTabMetadata(props: CaseRouteProps, tab: CaseTab): Prom
     tab,
     await noticeKeyOf(props, tab),
     await previewKeyOf(props, tab),
-    await pageKeyOf(props, tab),
+    await pageKeyOf(props),
   );
   if (result.kind === "error") return { title: t("case.error.title") };
   return { title: `${result.view.summary.case_number} · ${t(TAB_KEYS[tab])}` };
@@ -83,9 +83,9 @@ const noticeKeyOf = async (props: CaseRouteProps, tab: CaseTab): Promise<string>
   return notice ? JSON.stringify(notice) : "";
 };
 
-// V13-FE-013: the paged tabs only; the overview reads no list page from the URL.
-const pageKeyOf = async (props: CaseRouteProps, tab: CaseTab): Promise<string> =>
-  tab === "overview" || !props.searchParams ? "" : JSON.stringify(parseListPage(await props.searchParams));
+// V13-FE-013: the paged tabs; V13-FE-014: the overview's own open tasks too (its last five events are not paged).
+const pageKeyOf = async (props: CaseRouteProps): Promise<string> =>
+  !props.searchParams ? "" : JSON.stringify(parseListPage(await props.searchParams));
 
 const previewKeyOf = async (props: CaseRouteProps, tab: CaseTab): Promise<string | undefined> =>
   tab === "notifications" && props.searchParams ? previewParamOf(await props.searchParams) : undefined;
@@ -99,7 +99,7 @@ export async function CaseTabPage(props: CaseRouteProps & { tab: CaseTab }) {
     tab,
     await noticeKeyOf(props, tab),
     await previewKeyOf(props, tab),
-    await pageKeyOf(props, tab),
+    await pageKeyOf(props),
   );
   if (result.kind === "error") return <CaseErrorState t={t} correlationId={result.correlationId} />;
   return <CaseWorkspace t={t} locale={locale} view={result.view} />;
