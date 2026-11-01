@@ -21,6 +21,12 @@ for (const slug of ["secretary-epsilon", "persona-zeta"]) {
     await expect(switcher).toBeVisible();
     await expect(switcher).not.toContainText(AS_WORD);
     await expect(switcher).not.toContainText(ar["persona.role.committeeSecretary"]);
+    // QA nit on #81: the Workspaces page names no role either.
+    expect((await page.goto("/workspaces"))?.status()).toBe(200);
+    await expect(page.locator('[data-testid^="workspace-role-"]')).toHaveCount(0);
+    await expect(page.getByTestId("workspaces-page")).not.toContainText(
+      ar["persona.role.committeeSecretary"],
+    );
   });
 }
 
@@ -33,4 +39,8 @@ test("positive control: Secretary Alpha's confirmed role shows in My Work and th
   await expect(page.getByTestId("my-work-roles")).toHaveText(role);
   await expect(page.getByTestId("persona-menu-role")).toHaveText(role);
   await expect(page.getByTestId("workspace-switcher")).toContainText(`${AS_WORD} ${role}`);
+  await page.goto("/workspaces");
+  await expect(page.getByTestId("workspace-role-SECRETARIAT")).toHaveText(
+    ar["workspaces.page.roleHeld"].replace("{role}", role),
+  );
 });

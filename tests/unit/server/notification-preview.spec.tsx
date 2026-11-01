@@ -313,6 +313,111 @@ describe("Case Workspace notifications tab with the preview", () => {
   });
 });
 
+// SEC CHANGES 61d2853: the frame's accessible name takes only what the projection discloses for event_title. The
+// projector's outcomes (lib/disclosure/project.ts) are stubbed on the real projection of WITNESS_1, and the renderer is
+// stubbed so that it does not judge the stub; the loader's eventTitle and the frame name built from it are checked.
+describe("frame title from the projection's event_title (withheld, safe reference, generalized)", () => {
+  const ORIGINAL = WITNESS_1.template_name.en;
+  const TOKEN = "SR-7f3a9c";
+  const RENDERED = {
+    html: '<!DOCTYPE html><html><body><p class="marking" data-marking="DESIGN_PREVIEW">DESIGN_PREVIEW</p></body></html>',
+    text: "",
+    components: [],
+    title: `${ORIGINAL} — DESIGN_PREVIEW`,
+  };
+  type Fields = Record<string, unknown>;
+  function withEventTitle(edit: (fields: Fields) => void) {
+    const actual = spies.project.getMockImplementation()!;
+    spies.project.mockImplementationOnce((...args: Parameters<typeof actual>) => {
+      const real = actual(...args) as unknown as { fields: Fields };
+      const fields: Fields = { ...real.fields };
+      edit(fields);
+      return { ...real, fields } as unknown as ReturnType<typeof actual>;
+    });
+    spies.render.mockImplementationOnce(() => RENDERED as never);
+  }
+  const frameName = (eventTitle: string | null, locale: Locale) =>
+    renderToStaticMarkup(
+      <NotificationPreviewSection
+        t={createTranslator(locale)}
+        caseId={caseIdOf(1)}
+        preview={{
+          kind: "preview",
+          notificationId: WITNESS_1.notification_id,
+          html: RENDERED.html,
+          eventTitle,
+          lang: "en",
+        }}
+      />,
+    ).match(/<iframe[^>]*\stitle="([^"]*)"/)?.[1];
+
+  it("control: the real projection discloses the title (ALLOWED)", async () => {
+    const v = await load(WITNESS_1.notification_id);
+    expect(v.kind === "preview" && v.eventTitle).toBe(ORIGINAL);
+  });
+
+  it("PROHIBITED / REDACTED (field absent): null, the frame says the generic word", async () => {
+    withEventTitle((f) => {
+      delete f.event_title;
+    });
+    const v = await load(WITNESS_1.notification_id);
+    expect(v.kind).toBe("preview");
+    if (v.kind !== "preview") return;
+    expect(v.eventTitle).toBeNull();
+    expect(frameName(v.eventTitle, "en")).toBe("Notification — design preview");
+    expect(frameName(v.eventTitle, "ar")).toBe("إشعار — عرض تجريبي");
+    for (const locale of ["ar", "en"] as const)
+      expect(frameName(v.eventTitle, locale)).not.toContain(ORIGINAL);
+  });
+
+  it("an explicit null is withheld too", async () => {
+    withEventTitle((f) => {
+      f.event_title = null;
+    });
+    const v = await load(WITNESS_1.notification_id);
+    expect(v.kind === "preview" && v.eventTitle).toBeNull();
+  });
+
+  it("SAFE_REFERENCE: null; neither the token nor its label reaches the frame name", async () => {
+    withEventTitle((f) => {
+      f.event_title = { safe_reference: true, token: TOKEN, label: "Reference" };
+    });
+    const v = await load(WITNESS_1.notification_id);
+    expect(v.kind).toBe("preview");
+    if (v.kind !== "preview") return;
+    expect(v.eventTitle).toBeNull();
+    for (const locale of ["ar", "en"] as const) {
+      const name = frameName(v.eventTitle, locale)!;
+      expect(name).not.toContain(TOKEN);
+      expect(name).not.toContain("Reference");
+      expect(name).not.toContain(ORIGINAL);
+    }
+  });
+
+  it("GENERALIZED: the class-safe generic text in the notice's language, never the original title", async () => {
+    withEventTitle((f) => {
+      f.event_title = { generalized: true, ar: "إشعار إجرائي", en: "Procedural notice" };
+    });
+    const v = await load(WITNESS_1.notification_id);
+    expect(v.kind).toBe("preview");
+    if (v.kind !== "preview") return;
+    expect(v.eventTitle).toBe("Procedural notice");
+    expect(frameName(v.eventTitle, "ar")).toBe("Procedural notice — عرض تجريبي");
+    for (const locale of ["ar", "en"] as const)
+      expect(frameName(v.eventTitle, locale)).not.toContain(ORIGINAL);
+  });
+
+  it("anything else (blank string, a pair without the notice's language, a number) is withheld", async () => {
+    for (const value of ["   ", { ar: "عنوان" }, 42, { en: "" }]) {
+      withEventTitle((f) => {
+        f.event_title = value;
+      });
+      const v = await load(WITNESS_1.notification_id);
+      expect(v.kind === "preview" && v.eventTitle, JSON.stringify(value)).toBeNull();
+    }
+  });
+});
+
 describe("NotificationPreviewSection states", () => {
   const section = (preview: NotificationPreviewView, locale: Locale = "en") =>
     renderToStaticMarkup(
