@@ -14,8 +14,9 @@ export interface WorkspaceOption {
   code: WorkspaceCode;
   /** Localised workspace name. */
   name: string;
-  /** Localised name of the role held there. */
-  role: string;
+  /** Localised name of the role held there. Absent or empty when no active membership is confirmed (FE-008, OI-044):
+   * then no role line is shown, never an empty "as …". */
+  role?: string;
 }
 
 export interface WorkspaceSwitcherProps {
@@ -39,7 +40,9 @@ export function WorkspaceSwitcher({ t, current, options, action, pageHref }: Wor
       <p className="v13-workspace-single" data-testid="workspace-switcher" data-workspace-code={active.code}>
         <span className="v13-sr-only">{t("shell.workspace.label")}</span>
         <span>{active.name}</span>
-        <span className="v13-muted">{t("shell.workspace.roleHeld", { role: active.role })}</span>
+        {active.role ? (
+          <span className="v13-muted">{t("shell.workspace.roleHeld", { role: active.role })}</span>
+        ) : null}
       </p>
     );
   }
@@ -69,7 +72,9 @@ export function WorkspaceSwitcher({ t, current, options, action, pageHref }: Wor
               <CheckIcon />
               <span className="v13-menu-text">
                 <span>{option.name}</span>
-                <span className="v13-muted">{t("shell.workspace.roleHeld", { role: option.role })}</span>
+                {option.role ? (
+                  <span className="v13-muted">{t("shell.workspace.roleHeld", { role: option.role })}</span>
+                ) : null}
               </span>
               <span className="v13-menu-tag">{t("shell.workspace.current")}</span>
             </li>
@@ -86,7 +91,11 @@ export function WorkspaceSwitcher({ t, current, options, action, pageHref }: Wor
                   <span className="v13-sr-only">{t("shell.workspace.switchTo", { name: option.name })}</span>
                   <span className="v13-menu-text">
                     <span>{option.name}</span>
-                    <span className="v13-muted">{t("shell.workspace.roleHeld", { role: option.role })}</span>
+                    {option.role ? (
+                      <span className="v13-muted">
+                        {t("shell.workspace.roleHeld", { role: option.role })}
+                      </span>
+                    ) : null}
                   </span>
                 </button>
               </form>

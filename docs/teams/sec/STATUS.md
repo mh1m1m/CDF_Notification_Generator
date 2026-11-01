@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 31 Oct 2026 20:50 UTC · Branch: `docs/V13-SEC-001-threat-model` · `develop` now at `3b43530`
+Updated: 31 Oct 2026 23:20 UTC · Branch: `docs/V13-SEC-007-matrix-surface` · `develop` now at `9290778`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -29,8 +29,34 @@ Updated: 31 Oct 2026 20:50 UTC · Branch: `docs/V13-SEC-001-threat-model` · `de
   merged #41 (`3b43530`), DB ACCEPT + ARCH ACCEPT `7529200`, CI run 41237017779 7/7; combined tree unit 1021,
   test:db 358, e2e 95
 
+- V13-SEC-006 — case pages suite (`tests/security/e2e/case-pages.spec.ts`: SEC-APP-01 hidden, unknown, malformed,
+  invalid-UTF-8 and upper-case ids on every tab for all four personas; SEC-APP-02 portfolio search by number;
+  SEC-APP-09 GET with forged workspace parameters; SEC-APP-11 forged switch fields) — COMPLETE, merged #49 (`2f25577`);
+  finding SEC-F-006-1 (OI-040) RESOLVED by ARCH-010 #59 (`b675e38`)
+- Reviews 31 Oct (afternoon and evening): #32 ACCEPT `29106d7`; #45 ACCEPT `48db0c4` (after CHANGES `8384efe`,
+  `59d420c`); #47 DB-014 ACCEPT `8c6f4f4` (after CHANGES `5c83f5c`); #48 PROC-007 ACCEPT `8f3c3fa`; #52 DB-015 ACCEPT
+  `fcd2db3` (after CHANGES `0bb7f09`, half cursor); #51 FE-006 part 1 ACCEPT `661b7e7`, re-confirmed `74176da` (after
+  CHANGES `150d54a`, `d13479d`); #54 UX-006 ACCEPT `8292db2` (sandbox/CSP part); #55 PROC-008 ACCEPT `8b32602`;
+  #56 DB-016 ACCEPT `54e1925` (LOW → OI-041); #57 ACCEPT `cf19670`; #59 ARCH-010 ACCEPT `3799d20`; #60 ACCEPT
+  `8604208`; #62 DB-017 ACCEPT `2fe462d` (OI-041 RESOLVED); #50 UX-005 SEC-APP-11 hunk ACCEPT `77d1268`; #61 FE-006
+  part 2 ACCEPT `dd9aa9c`, re-confirmed `7a729bc`; #65 ARCH-002 ACCEPT `a99454c`; #64 PROC-010 CHANGES `d16bbac`
+  (SEC-F-064-1 MEDIUM: ledger written under the read-only base through a linked ancestor; reproduced on a scratch
+  fixture) then ACCEPT `30f325a`; #67 PROC-011 ACCEPT `9c37ecd`
+- V13-SEC-007 — matrix and surface follow-ups: `—` in the `api_install_claims_key` row; a reads row for
+  `notifications_page` / `notifications_count` (0010); the SEC-APP-18 row given its own columns; an undecodable-path
+  surface row; `surface.spec.ts` ROUTES add `/notifications`, a hidden case and two undecodable paths (headers once,
+  no-store with a session); APP_ADVERSARIAL_TESTS records SEC-APP-17 as covered by FE's Center e2e and the draft action;
+  after #61, `tests/security/e2e/notification-center.spec.ts` (Alpha and Delta: rows name visible cases only, hidden
+  numbers answer like unknown ones, 11 forged cursors, forged trails and odd parameters refused with a reference) —
+  IN_REVIEW (#70)
+- V13-SEC-008 — repository scans: SEC-APP-19 credential shapes in every tracked file (REQ-SEC-002), SEC-APP-20
+  personal-data shapes in seeds, fixtures and test inputs (REQ-GOV-001); findings report rule, file and line only —
+  IN_REVIEW (#72)
+- Review #71 PROC-012: 31 of 33 security rows accepted; REQ-SEC-002 and REQ-GOV-001 back to IN_PROGRESS until #72
+
 ## Changed files
-- `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/teams/sec/STATUS.md`
+- `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
+  `tests/security/e2e/case-pages.spec.ts`, `tests/security/e2e/surface.spec.ts`, `docs/teams/sec/STATUS.md`
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -52,4 +78,8 @@ Updated: 31 Oct 2026 20:50 UTC · Branch: `docs/V13-SEC-001-threat-model` · `de
 - ARCH: SEC-REC-01..04 accepted (ADR-014); SEC-REC-04 checked by ARCH in ARCH-003. SEC reviews ARCH-001
   (`lib/auth/session.ts`, `lib/db/security-context.ts`, `proxy.ts`, `app/api/health/**`, CI workflow).
 - DB: confirm or correct THREAT_MODEL §6 assumptions 2–4 in DB-001/002; visibility matrix in DATA_MODEL §5.
-- FE/UX: ruling D6 (investigators: case Notifications tab only, no Notification Operations Center in M1).
+- FE/UX: ruling D6 (investigators: case Notifications tab only, no Notification Operations Center in M1) — built and
+  tested in #61.
+- FE: the preview frame (FE-006 part 3) — SEC reviews `sandbox=""`, no CSP violation, a planted script never runs,
+  one case record for model and projection.
+- PROC: V13-PROC-012 security-control rows (QG-02, QG-03, QG-05, SEC-owned) — SEC checks citations before COMPLETE.

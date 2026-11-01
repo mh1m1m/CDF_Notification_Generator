@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 · Branch: `fix/V13-UX-007-m1-design-review` · Base: `develop` `f5a8fba`
+Updated: 2026-10-31 · Branch: `feature/V13-UX-008-shell-frame` · Base: `develop` `f069850`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -106,6 +106,14 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Notification Operations Center (S4) waits for #61.
 - Evidence: temporary local Playwright capture (not committed), 64 page captures plus 4 open-menu captures, every page
   200, no page-level horizontal scroll, every Tab stop with a visible focus ring.
+
+## V13-UX-008(a): platform frame (IN_REVIEW once its PR is open; FE ACCEPTs its paths, QA reviews, QA ACCEPTs the smoke hunk)
+- `app/(platform)/layout.tsx` uses the AppShell frame form: TopBar (WorkspaceSwitcher, PersonaMenu with sign-out) and
+  the role-aware SideNav with `aria-current="page"` (client `SideNavAuto`, `usePathname`; case pages mark no area).
+- Case pages use the shell Breadcrumbs (mirrored separator, `aria-current`), keeping `case-crumb-portfolio`.
+- Closes M1-08 and M1-10; the interim `.v13-nav-list` styles (M1-01) are removed. S4 rows M1-15 to M1-19 registered.
+- ARCH agreement (31 Oct 23:19): one line in `tests/e2e/smoke.spec.ts` opens the persona menu before sign-out.
+- Next: UX-008(b) Portfolio and My Work, then (c) Case Workspace.
 
 ## Unresolved defects
 - None known.

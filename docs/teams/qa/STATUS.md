@@ -37,9 +37,9 @@ Updated: 2026-10-31 · Branch: docs/V13-QA-002-status-reviews (base develop b5d8
 | #23 FE-004 | CHANGES fdf2327 → ACCEPT d439d59 | table scroll wrappers not focusable at 375 px; 116 negative URLs 404 |
 | #32 FE-005 | ACCEPT 018b46e, 29106d7 | command, stale, 4 forged task ids, closed case |
 | #36 ARCH-008 | ACCEPT ca4fc1a | database-backed e2e; URL guard checked with 9 URLs |
-| #50 SEC (SEC-APP-11) | CHANGES → ACCEPT 77d1268 | locator picked the hidden menu form; scoped to `workspaces-page` |
+| #50 UX-005 (incl. SEC-APP-11) | CHANGES → ACCEPT 77d1268 | locator picked the hidden menu form; scoped to `workspaces-page` |
 | #51 FE-006 part 1 | CHANGES 661b7e7 → ACCEPT 74176da | draft form reflowed at 375 px; focus now moves to the refusal; assertions by row id |
-| #54 UX-006 | ACCEPT (merged 9d5fa72) | sandboxed srcdoc preview works under the page CSP; 343 px at 375 |
+| #54 UX-006 | ACCEPT 8292db2 (merged 9d5fa72) | sandboxed srcdoc preview works under the page CSP; 343 px at 375 |
 | #61 FE-006 Center | CHANGES dd9aa9c → ACCEPT 920e98a | Back restored stale filter values; fixed by form-level `autoComplete="off"` |
 | #63 FE-007 | CHANGES e1434b4 → ACCEPT ab52116 | OI-042 + OI-043; former pins 35/35 at repeat-each=5; mutation check |
 

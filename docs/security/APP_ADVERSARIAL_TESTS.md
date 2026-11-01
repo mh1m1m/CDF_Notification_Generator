@@ -15,6 +15,7 @@ catalogue in `docs/security/AUTHORIZATION_MATRIX.md` §6 and the threats in `doc
 | `tests/security/public-actions.ts`            | shared allow-list | SEC-APP-18                            | TM-E5                      |
 | `tests/security/e2e/case-pages.spec.ts` (V13-SEC-006) | Playwright | SEC-APP-01, -02, -09 (GET), -11 | TM-I1, TM-I2, TM-I3, TM-S7, TM-T6 |
 | `tests/security/app/repo-scans.spec.ts` + `tests/security/repo-scan.ts` (V13-SEC-008) | Vitest `unit` | SEC-APP-19, -20 | TM-I8 |
+| `tests/security/e2e/notification-center.spec.ts` (V13-SEC-007) | Playwright | SEC-APP-02, -07, -10 on `/notifications` | TM-I3, TM-I4, TM-I10 |
 
 What each suite proves:
 
@@ -27,6 +28,13 @@ What each suite proves:
   tooling carry the marker `not-a-secret` / `not-a-real-password`; anything else needs an ALLOW entry (one file, one
   rule, a reason; unused entries fail). Planted samples are assembled at runtime from fragments in a temporary Git
   repository, so no committed file holds a credential-shaped string.
+- **Notification Center (V13-SEC-007)**: for Alpha and Delta, every row names a case visible in the workspace and no
+  hidden case id or number appears in the HTML; a hidden number, also padded or lower-case, answers exactly like
+  CDF-DEMO-2026-0999 (no results, count 0), and fragments of it are refused as malformed; eleven forged cursors (not
+  JSON, wrong version, extra or missing key, millisecond instant, SQL in the instant, bad or upper-case id, wrong type,
+  `__proto__`), an over-long cursor, a forged trail, repeated parameters and impossible dates all give the generic
+  invalid state with a reference and no internals; a well-formed cursor the reader could have issued still pages only
+  visible cases.
 
 - **Session forgery**: algorithm and header confusion (HS384/HS512/none/RS256, missing alg, wrong typ, `crit`,
   `b64=false`, embedded `jwk`/`jku`/`kid`), malformed segments, claim type confusion and look-alike values
@@ -106,7 +114,12 @@ CI on the PR is the run of record.
   `server-actions.spec.ts`. SEC-APP-11 covers the workspace switch, the only session-bound command in the build; each
   new command action gets the same probe when it lands. SEC-APP-16 is a review checklist, applied by SEC on every
   `.github/**` change: pinned action SHAs, least `permissions`, no `pull_request_target` with checkout of the head, no
-  secret in a step that runs PR code, no new third-party action without a reason. SEC-APP-17 follows FE-006. With no session-bound action in the build yet, the "no session-bound action runs
-  without a session" probe has nothing to post; it covers every new action automatically.
+  secret in a step that runs PR code, no new third-party action without a reason. SEC-APP-17 is covered by FE's `tests/e2e/notification-center.spec.ts` (#61, SEC ACCEPT `7a729bc`): for Beta and
+  Gamma every URL of `/notifications` gives status 404 with the unknown route's text and title, and no navigation item.
+  The first session-bound command action besides the workspace switch is the notification draft (#51,
+  `app/(platform)/cases/[caseId]/notifications/actions.ts`). It reads four named form fields only (`case_id`,
+  `template_version_id`, `recipient_class`, `idempotency_key`); persona and workspace come from the session, and the
+  database decides access on the form's case id, which FE's integration and Scenario E tests tamper with (0002, 0005,
+  0009, 0010, unknown, malformed). `server-actions.spec.ts` takes it from the build's manifest like every other action.
 - Database adversarial tests are V13-SEC-002 (`tests/security/db`): see `docs/security/DB_ADVERSARIAL_TESTS.md`.
   `static-boundaries.spec.ts` also walks `instrumentation.ts` since V13-SEC-002.
