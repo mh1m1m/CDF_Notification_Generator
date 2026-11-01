@@ -1,6 +1,6 @@
 # QA status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: test/V13-QA-010-reflow (base develop 373f19c)
+Updated: 2026-11-01 · Branch: test/V13-QA-012-witness-twin-and-bodies (base develop 61b57cf)
 
 ## Completed
 - V13-QA-001 (design) — `docs/qa/TEST_ARCHITECTURE.md` — PR #1 — COMPLETE
@@ -42,12 +42,25 @@ Updated: 2026-11-01 · Branch: test/V13-QA-010-reflow (base develop 373f19c)
   objects, Vitest/Playwright retry options) with 19 planted negatives; SEC's notification-center and surface suites
   added (15 suites, 156 bodies planted). ARCH CHANGES on 488d93d: G6 (Vitest skip/only/todo/fails options,
   Playwright skip/fixme/fail annotations, any key form) and computed retry keys, one planted negative per form.
-- V13-QA-010 (register §4, WCAG 1.4.4 / 1.4.10 / 1.4.12) — PR #104 — this branch — IN_PROGRESS (review):
-  `tests/a11y/reflow.a11y.spec.ts`, 17 tests. Eight pages × ar/en × four conditions (640×450 = 200 % zoom,
-  320×256 = 400 %, text spacing at 1280 and at 320): no page scroll and no element past either inline edge (RTL
-  overflow past the start is invisible to `scrollWidth`, so boxes are measured), nav and case tabs in view, no
-  clipped text, every inline scroller a focusable named region; skip link first in tab order; workspace switcher
-  menu in view at 320 px and closes on Escape. Five planted faults (one per check) must be caught.
+- V13-QA-010 (register §4, WCAG 1.4.4 / 1.4.10 / 1.4.12) — PR #104 — merged (3d1376e) — COMPLETE:
+  `tests/a11y/reflow.a11y.spec.ts`, 19 tests. Eight pages × ar/en × four conditions (640×450 = 200 % zoom,
+  320×256 = 400 %, text spacing at 1280 and at 320): no page scroll and no element past either inline edge, nav and
+  case tabs in view, no clipped text, every inline scroller (`[data-scroll-region]`, `.v13-scroll-region`) a
+  focusable named region; skip link first in tab order; switcher menu in view at 320 px and closes on Escape. Seven
+  planted faults must be caught.
+- V13-QA-009 (REQ-NOTIF-011, REQ-QA-012 disclosure half) — PR #114 — merged (ac2499b) — COMPLETE: Scenario E WITNESS
+  preview in an ar and an en template; withheld fields absent from the frame, its names, its title and every payload;
+  the generalized classification only; allowed fields as the control; oracle from the policy file, cross-checked field
+  by field with `decide()` from `lib/disclosure` through `tests/fixtures/server-module.ts` (child Node process).
+- V13-QA-012 — this branch — IN_PROGRESS (review: ARCH + SEC):
+  (b) the plain-text version (FE-011) withholds the same fields: no withheld-field marker or field name, not the
+  notice's own marking; the class-safe wording, event title, issuer, notice reference and confidentiality notice in it
+  (control). (c) SEC INFO 1 on #114 was a real gap: the router aborts its RSC fetch once it has consumed the payload,
+  Chromium keeps no body for it, and `response.text()` gave "" for the click's payload. Bodies are now read in the test
+  through `page.route` + `route.fetch()`; an unreadable body fails, and the click's payload and the reload's document
+  must each carry the frame. (d) SEC INFO 2: the precondition is the claims key (ADR-014), not data; reproduced
+  (`CLAIMS_KEY_MISMATCH` after a restart with a new secret; the spec passes twice on one database, and across a
+  restart with the same secret); stated in the spec header and TEST_ARCHITECTURE §6.
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |
@@ -73,11 +86,16 @@ Updated: 2026-11-01 · Branch: test/V13-QA-010-reflow (base develop 373f19c)
 | #82 FE-009 | ACCEPT 830c26d (merged 961197e) | notes: mixed-language frame title (UXB-13); scenario-e literal → i18n key in QA-009 |
 | #96 | ACCEPT cb2c5ee (merged 68a42b9) | |
 | #97 | CHANGES c24b31a → CHANGES d7b7ad6 → ACCEPT 745acdd (merged 2bccba2) | |
-| #98 FE-010 | ACCEPT 7a5b987 | 3 personas × visible cases × ar/en × 320/1280 clean; mutation of the version pin fails 2/44 |
+| #98 FE-010 | ACCEPT 7a5b987, d05fcf4 | 3 personas × visible cases × ar/en × 320/1280 clean; mutation of the version pin fails 2/44 |
+| #107 UX-012 | ACCEPT a2cf6dc (merged aecd7ef) | reflow at 320 px: base overflows with Liberation Sans (321) and DejaVu Sans (333/367); #107 clean in all three fonts |
+| #112 FE-012 | ACCEPT 7971547, c2021cf (merged abdd885) | QA's P3 hunk: the tampered 0004→0001 post is refused, P3 still flags it |
+| #100 UX-011 | ACCEPT f748c53 (merged ca16cba) | frame named in the page language |
+| #116 FE-011 | ACCEPT 0934b80, 9bc6d52, 0bbc7c2 | twin text has no withheld-field markers; re-confirms after develop merges |
+| #121 FE-013 | ACCEPT 19cf34c | 55-row paging walk; mutating the look-ahead fails 2 tests |
 
 ## Changed files (this branch)
-- tests/a11y/reflow.a11y.spec.ts
-- docs/qa/TEST_ARCHITECTURE.md §2, §10; docs/teams/qa/STATUS.md
+- tests/e2e/scenario-e-notification-draft.spec.ts (header, disclosure tests)
+- docs/qa/TEST_ARCHITECTURE.md §6; docs/teams/qa/STATUS.md
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -88,15 +106,17 @@ Updated: 2026-11-01 · Branch: test/V13-QA-010-reflow (base develop 373f19c)
 | develop b5d810c + #63 ab52116: unit / e2e | pass | 1725 / 138 | review |
 | develop b5d810c + #61 920e98a: unit / e2e | pass | 1802 / 144 | review |
 | #98 7a5b987: unit / test:db / e2e (incl. reflow) | pass | 2026 / 468 / 252 | review |
+| QA-012 on develop 0bc2542 + #116 0bbc7c2 (tree = develop 61b57cf + QA-012): lint, typecheck, format:check; `pnpm db:reset && pnpm test:e2e` | pass | e2e 335/335 | QA-012 |
+| QA-012 mutations (build + start, `db:reset` each): RSC bodies dropped → "frame document in the click's payload"; RSC body unreadable → unread check; case number appended to the plain-text version → "case_number … in the plain-text version"; own marking appended → own-marking check; Scenario E twice on one database | fail ×4 as expected; 11/11 twice | | QA-012 |
 
 ## Waiting / next
 - After #61 merges: a Center Back step in Scenario D.
-- V13-QA-009: Scenario E WITNESS preview withheld-field assertions with a disclosure oracle (next).
 - After SEC-012 merges: update the reason of surface's `!existsSync(root)` allow-list entry.
 - V13-QA-011: plain-literal annotation type rule; `playwright test --list` count vs body count.
 - Harness: axe excludes sandboxed srcdoc frames and scans the srcdoc separately (axe hangs on them today);
   preview-frame rule set per the ARCH ruling once PROC-011 exports the renderer's values; P2 for Server Action POST
   bodies Chromium drops after a redirect.
+- Import a model-field list from `lib/notifications` into Scenario E once PROC exports one (ARCH INFO 1 on #114).
 - QA-004: Truth Inspector on the case pages with a DB event oracle (local/CI database only); DB half of the Sentinel.
 - QA-005 (rest): five-screen audit, screenshot library; QA-006 staging Gate J (OI-008).
 - Local note: the local PostgreSQL cluster can stop between runs; `pnpm db:local start` before `pnpm db:reset`.

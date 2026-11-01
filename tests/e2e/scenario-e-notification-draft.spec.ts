@@ -12,13 +12,20 @@
 // withholds from WITNESS are absent from the frame's document, from its accessible names and from every document and
 // RSC payload of the page; the generalized classification shows only the class-safe wording; the allowed fields are
 // there (control). The oracle is the policy file itself (lib/disclosure/policy_v13.json), read independently of the
-// projector, so a projector that drifts from the policy fails here.
+// projector, so a projector that drifts from the policy fails here. Every body searched is read in the test
+// (page.route), and the withheld fields are absent from the plain-text version too (V13-QA-012).
+// Database precondition (SEC INFO 2 on #114): the tests need no fresh data. They assert on their own rows by id, and
+// the whole spec passes twice in a row against one app on one database. What they need, like every database-backed
+// e2e test, is a database whose claims key is this app's (ADR-014): an app started with a new session secret on a
+// database that still holds the previous run's key refuses every request (CLAIMS_KEY_MISMATCH), the draft form never
+// renders and the first step times out at the template select. `pnpm db:reset` before each local run that starts a new
+// app, as playwright.config.ts says; CI resets in the e2e job.
 // FE-011: the preview's plain-text version opens under the frame as text in the notice's language, with no page
 // scroll at 320 px.
 // SYNTHETIC personas only.
 import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page, type Response } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { createTranslator } from "@/lib/i18n";
 import { ar as RENDER_AR } from "@/lib/i18n/notificationRender/ar";
 import { en as RENDER_EN } from "@/lib/i18n/notificationRender/en";
@@ -467,26 +474,51 @@ test.describe("Scenario E — notification preview", () => {
       const templateCode = await templateOption.getAttribute("data-template-code");
       expect(templateCode).toMatch(/^CF-\d+_[A-Z_]+$/);
 
-      // Every document and RSC body the page receives while the preview opens (link click) and on a reload.
-      const bodies: Promise<string>[] = [];
-      const collect = (r: Response) => {
-        const type = r.headers()["content-type"] ?? "";
-        if (
-          /text\/html|text\/x-component/.test(type) &&
-          r.url().includes(`/cases/${C(ALPHA_CASE)}/notifications`)
-        )
-          bodies.push(r.text().catch(() => ""));
-      };
-      page.on("response", collect);
+      // Every document and RSC body the server sends this case's notifications route while the preview opens (link
+      // click) and on a reload, prefetches included. The bodies are read in the test, through page.route and
+      // route.fetch(), and handed on to the page unchanged. Reading them from the browser afterwards (response.text())
+      // is not enough: the router aborts its RSC fetch once it has consumed the payload, Chromium keeps no body for an
+      // aborted request, and a body that cannot be read would pass every negative check as "" (SEC INFO 1 on #114; the
+      // click's payload was lost that way before V13-QA-012). A body the test cannot fetch is recorded, and there
+      // must be none.
+      const previewRoute = new RegExp(`/cases/${C(ALPHA_CASE)}/notifications(\\?|$)`);
+      const unread: string[] = [];
+      let step: string[] = [];
+      await page.route(previewRoute, async (route) => {
+        const kind = `${route.request().method()} ${route.request().resourceType()}`;
+        let response;
+        let body: string;
+        try {
+          response = await route.fetch();
+          body = await response.text();
+        } catch {
+          unread.push(kind);
+          return route.abort();
+        }
+        if (/text\/html|text\/x-component/.test(response.headers()["content-type"] ?? "")) step.push(body);
+        // the page may have dropped a prefetch meanwhile; the body was read either way
+        await route.fulfill({ response, body }).catch(() => undefined);
+      });
       await page.getByTestId(`case-notification-preview-link-${id}`).click();
       await expect(page.getByTestId("case-preview-ready")).toHaveAttribute("data-notification-id", id);
+      const onClick = step.map(unescapePayload);
+      step = [];
       await page.reload();
       await expect(page.getByTestId("case-preview-ready")).toHaveAttribute("data-notification-id", id);
-      page.off("response", collect);
-      const payloads = (await Promise.all(bodies)).map(unescapePayload);
+      const onReload = step.map(unescapePayload);
+      await page.unroute(previewRoute);
+      expect(unread, "document or RSC bodies the test could not read").toEqual([]);
+      const payloads = [...onClick, ...onReload];
       const frameDocs = payloads.flatMap(previewDocuments);
-      // at least the reload's document and the click's RSC payload carry the frame's document
-      expect(frameDocs.length).toBeGreaterThanOrEqual(2);
+      // the click's RSC payload and the reload's document each carry the frame's document
+      expect(
+        onClick.flatMap(previewDocuments).length,
+        "frame document in the click's payload",
+      ).toBeGreaterThanOrEqual(1);
+      expect(
+        onReload.flatMap(previewDocuments).length,
+        "frame document in the reload's document",
+      ).toBeGreaterThanOrEqual(1);
 
       const frame = page.getByTestId("case-notification-preview-frame");
       const srcdoc = (await frame.getAttribute("srcdoc")) ?? "";
@@ -566,6 +598,29 @@ test.describe("Scenario E — notification preview", () => {
       // renderer carries it in a metadata header only), so there is nothing to find in the frame: not a control here.
       expect(names).toContain(eventTitle);
       expect(title).toBe(createTranslator("ar")("case.preview.frameTitle", { title: eventTitle }));
+
+      // The plain-text version of the same rendering (V13-FE-011) withholds the same fields: no marker of a withheld
+      // field and not the notice's own classification marking; the class-safe wording and the allowed fields are in it
+      // (control). It is read from the page as it shows it, after opening it (V13-QA-012).
+      await page.getByTestId("case-preview-text-toggle").click();
+      const twinBody = page.getByTestId("case-preview-text-body");
+      await expect(twinBody).toBeVisible();
+      const twin = await twinBody.innerText();
+      for (const field of withheld) {
+        if (!(field in MODEL_FIELDS)) continue;
+        for (const m of leaks[field]!)
+          expect(twin, `${field}: ${m} in the plain-text version`).not.toContain(m);
+        expect(twin, `field name ${field} in the plain-text version`).not.toContain(field);
+      }
+      expect(twin).not.toContain(ownMarking);
+      expect(twin).toContain(generalized.classification_marking![notice.lang]);
+      expect(twin).toContain(eventTitle);
+      const reference = await inner.locator('[data-field="notice_reference"]').innerText();
+      expect(twin).toContain(reference);
+      const issuer = await inner.locator('[data-field="issuer"]').innerText();
+      expect(twin).toContain(issuer.trim());
+      const notice_ = await inner.locator('[data-field="confidentiality_notice"]').innerText();
+      expect(twin).toContain(notice_.trim().split("\n")[0]!.trim());
     });
   }
 
