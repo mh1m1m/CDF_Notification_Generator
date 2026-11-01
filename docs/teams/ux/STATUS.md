@@ -224,9 +224,9 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - QA's cross-browser run 41292116619 on #152: in WebKit only, the draft form's template select added its longest
   option label to the page's scrollable width (320 px ar/en, with and without spacing; 640 × 450 en).
 - Cause (QA's WebKit runs 41294868940 and 41297056455 on #154): WebKit counts the native menulist's longest option
-  label (553 px ar, 618 px en) as the form's scrollable overflow. `overflow: clip` (first head `e77bee8`) changed
-  nothing; of 15 candidates only `appearance: none` passed all 12 WebKit cells.
-- Fix: `select.v13-control { appearance: none; }` with a chevron drawn in `currentColor` at the inline end (two
+  label (553 px ar, 618 px en) as the form's scrollable overflow. `overflow: clip` alone (`e77bee8`) and
+  `appearance: none` alone (`e318e48`, run 41299673688: 6 of 12 cells fail) are not enough; both together pass all 12.
+- Fix: `select.v13-control { appearance: none; overflow: clip; }` with a chevron drawn in `currentColor` at the inline end (two
   gradients; `[dir="rtl"]` moves it), `padding-inline-end: 1.75rem`, and `appearance: auto` with no image under
   `forced-colors: active`.
 - Chromium check, ar and en, 320 and 1280 px, light, dark and forced colours: page 320/1280, form 288/288 at 320, focus
