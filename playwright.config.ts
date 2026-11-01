@@ -124,16 +124,21 @@ export default defineConfig({
         ...chromiumLaunch,
       },
     },
-    {
-      name: "access-audit",
-      testMatch: ACCESS_AUDIT_SPEC,
-      dependencies: ["desktop-ar"],
-      use: {
-        ...devices["Desktop Chrome"],
-        locale: "ar-SA",
-        ...chromiumLaunch,
-      },
-    },
+    // It reads the local ledger, so a run against an external deployment (staging) never lists it.
+    ...(externalBaseUrl
+      ? []
+      : [
+          {
+            name: "access-audit",
+            testMatch: ACCESS_AUDIT_SPEC,
+            dependencies: ["desktop-ar"],
+            use: {
+              ...devices["Desktop Chrome"],
+              locale: "ar-SA",
+              ...chromiumLaunch,
+            },
+          },
+        ]),
     ...(visualLibrary
       ? [
           {
