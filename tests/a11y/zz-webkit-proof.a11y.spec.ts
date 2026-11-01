@@ -10,11 +10,8 @@ const SPACING =
 
 const CANDIDATES: Record<string, string> = {
   "#153 as is": "",
-  "P + -webkit-appearance none": "select.v13-control { -webkit-appearance: none; }",
-  "Q no chevron, no padding":
-    "select.v13-control { background-image: none; padding-inline-end: var(--cdf-space-2); }",
-  "R K exact (unlayered)": "select.v13-control { appearance: none; -webkit-appearance: none; }",
-  "S appearance none unlayered only": "select.v13-control { appearance: none; }",
+  "T #153 + select overflow clip": "select.v13-control { overflow: clip; }",
+  "U #153 + select overflow hidden": "select.v13-control { overflow: hidden; }",
 };
 
 test("WebKit draft form: page width per candidate fix", async ({ page, browserName, baseURL, context }) => {
