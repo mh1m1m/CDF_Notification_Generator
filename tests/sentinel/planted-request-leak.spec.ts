@@ -106,6 +106,49 @@ test.describe("clean requests pass", () => {
     expect(r.count()).toBe(1);
     expect(r.violations(allow)).toEqual([]);
   });
+
+  test("a Server Action-shaped call naming its own case passes (the control for (q))", async ({ page }) => {
+    const r = await sendFrom(page, casePath, "", (p) =>
+      p.evaluate(async (c) => {
+        await fetch(location.pathname, {
+          method: "POST",
+          headers: { "Next-Action": "7f00aa", "content-type": "text/plain;charset=UTF-8" },
+          body: JSON.stringify([{ case_id: c.id, ref: c.ref }]),
+        });
+      }, c1),
+    );
+    expect(r.recorded()).toEqual([
+      expect.objectContaining({ kind: "server-action", method: "POST", contextCaseId: c1.id, read: true }),
+    ]);
+    expect(r.violations(allow)).toEqual([]);
+  });
+
+  test("each request kind is recorded and named: form-post, server-action, fetch, beacon", async ({
+    page,
+  }) => {
+    const r = await sendFrom(page, casePath, form({ case_id: c1.id }), async (p) => {
+      await p.evaluate(async () => {
+        await fetch("/a", { method: "PUT", body: "x" });
+        await fetch("/b", { method: "DELETE" });
+        await fetch("/c", { method: "PATCH", headers: { "Next-Action": "7f00bb" }, body: "[]" });
+        navigator.sendBeacon("/d", "y");
+      });
+      await p.getByTestId("send").click();
+    });
+    await page.waitForURL(`${FIXTURE_ORIGIN}${casePath}`);
+    const seen = r.recorded().map((x) => `${x.kind} ${x.method} ${new URL(x.url).pathname}`);
+    expect(seen).toEqual(
+      expect.arrayContaining([
+        "fetch PUT /a",
+        "fetch DELETE /b",
+        "server-action PATCH /c",
+        "fetch POST /d",
+        `form-post POST ${casePath}`,
+      ]),
+    );
+    expect(r.recorded().every((x) => x.read && x.contextCaseId === c1.id)).toBe(true);
+    expect(r.violations(allow)).toEqual([]);
+  });
 });
 
 test.describe("planted request leaks are detected", () => {

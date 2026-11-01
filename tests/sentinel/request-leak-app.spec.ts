@@ -45,6 +45,19 @@ test("Secretary Alpha's posts name only the page's own case (P3) and are all rea
   await page.getByTestId("locale-toggle").click();
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
   expect(requests.count(), "the draft and four locale posts were read").toBeGreaterThanOrEqual(5);
+  // The control ARCH asked for: the legitimate same-case Server Action was recorded, read and judged against 0004.
+  const draftPosts = requests
+    .recorded()
+    .filter(
+      (x) =>
+        x.kind === "server-action" && new URL(x.pageUrl).pathname === `/cases/${caseId("04")}/notifications`,
+    );
+  expect(draftPosts.length, "the draft Server Action was recorded").toBeGreaterThanOrEqual(1);
+  expect(draftPosts.every((x) => x.read && x.contextCaseId === caseId("04"))).toBe(true);
+  expect(
+    requests.recorded().some((x) => x.contextCaseId === null),
+    "a post off a case page was recorded too",
+  ).toBe(true);
   const v = requests.violations(allow);
   expect(v, formatViolations(v)).toEqual([]);
 });

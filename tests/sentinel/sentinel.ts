@@ -16,9 +16,9 @@
 //   S8 every child frame of the page could be read (evaluated, or parsed from its srcdoc); none passes silently
 //   P1 a payload (HTML, RSC flight, JSON) contains no case id or reference outside the allowed set
 //   P2 every recorded payload could be read (from the browser, or by fetching the same GET again); none passes silently
-//   P3 an outbound same-origin request with a body (form post, Server Action call, fetch) carries, in its URL or body,
-//      no case id or reference other than the case of the page that sent it (none at all off a case page, unless
-//      the test allows it) (V13-QA-007, OI-048)
+//   P3 an outbound same-origin POST/PUT/PATCH/DELETE (Server Action call, plain form post, fetch/XHR/beacon) carries,
+//      in its URL or body, no case id or reference other than the case of the page that sent it (none at all off a
+//      case page, unless the test allows it) (V13-QA-007, OI-048)
 //   P4 every such request body could be read; none passes silently
 import type { Page, Request, Response } from "@playwright/test";
 import { readChildFrames, type FramePage, type UnreadableFrame } from "./frames";
@@ -484,14 +484,44 @@ export function requestText(url: string, body: string, contentType: string): str
   return parts.join("\n");
 }
 
-type RequestRead =
-  { where: string; pageUrl: string; text: string } | { where: string; pageUrl: string; error: string };
+/**
+ * The kinds of request P3 covers, told apart for evidence:
+ *   server-action  a Next.js Server Action call (`Next-Action` header), with or without a form
+ *   form-post      a plain HTML form submission (a navigation request with a body)
+ *   fetch          any other request with a body the page sends (fetch, XHR, sendBeacon)
+ * GET requests (links, GET forms, RSC and prefetch fetches) carry no body; what they bring back is P1's.
+ */
+export type RequestKind = "server-action" | "form-post" | "fetch";
+
+/** One recorded request, for evidence (`recorded()`). */
+export interface RecordedRequest {
+  kind: RequestKind;
+  method: string;
+  url: string;
+  /** The page that sent it. */
+  pageUrl: string;
+  /** That page's case, or null off a case page. */
+  contextCaseId: string | null;
+  /** Whether its body could be read (false is P4). */
+  read: boolean;
+}
+
+type RequestRead = { where: string; pageUrl: string; meta: RecordedRequest } & (
+  { text: string } | { error: string }
+);
+
+const kindOf = (request: Request): RequestKind =>
+  request.headers()["next-action"] !== undefined
+    ? "server-action"
+    : request.isNavigationRequest()
+      ? "form-post"
+      : "fetch";
 
 const BODY_METHODS = /^(POST|PUT|PATCH|DELETE)$/;
 
 /**
- * Records every same-origin request with a body that the page sends (form posts, Server Action calls, fetch/XHR with
- * a body), with the URL of the page that sent it, for P3. Attach before the step under test; call `violations()`
+ * Records every same-origin POST, PUT, PATCH or DELETE the page sends — Server Action calls, plain form posts and
+ * fetch/XHR/beacon requests (`RequestKind`) — with the URL of the page that sent it, for P3. Attach before the step under test; call `violations()`
  * after it.
  *
  * Playwright hands over every body Chromium sends, also large ones (2 MB measured), and none for an empty body. A
@@ -510,19 +540,38 @@ export function recordRequests(page: Page, origin: string) {
     } catch {
       pageUrl = page.url(); // a request without a frame (service worker): judge it by the page
     }
-    const where = `${request.method()} ${url} (from ${pageUrl})`;
-    const headers = request.headers();
-    const type = headers["content-type"] ?? "";
+    const kind = kindOf(request);
+    const where = `${kind} ${request.method()} ${url} (from ${pageUrl})`;
+    const type = request.headers()["content-type"] ?? "";
+    const meta = (read: boolean): RecordedRequest => ({
+      kind,
+      method: request.method(),
+      url,
+      pageUrl,
+      contextCaseId: caseContextOf(pageUrl),
+      read,
+    });
     let body: Buffer | null;
     try {
       body = request.postDataBuffer();
     } catch (e) {
-      reads.push({ where, pageUrl, error: `body not readable (${firstLine(e)})` });
+      reads.push({ where, pageUrl, meta: meta(false), error: `body not readable (${firstLine(e)})` });
       return;
     }
     if (body === null && /^multipart\//i.test(type))
-      reads.push({ where, pageUrl, error: `a ${type.split(";")[0]} body was not handed over` });
-    else reads.push({ where, pageUrl, text: requestText(url, body?.toString("utf8") ?? "", type) });
+      reads.push({
+        where,
+        pageUrl,
+        meta: meta(false),
+        error: `a ${type.split(";")[0]} body was not handed over`,
+      });
+    else
+      reads.push({
+        where,
+        pageUrl,
+        meta: meta(true),
+        text: requestText(url, body?.toString("utf8") ?? "", type),
+      });
   };
   page.on("request", onRequest);
   return {
@@ -540,6 +589,10 @@ export function recordRequests(page: Page, origin: string) {
     /** Requests recorded (read or not), for evidence that the check is not vacuous. */
     count(): number {
       return reads.length;
+    },
+    /** Every recorded request with its kind and context, for evidence. */
+    recorded(): RecordedRequest[] {
+      return reads.map((r) => r.meta);
     },
     stop() {
       page.off("request", onRequest);

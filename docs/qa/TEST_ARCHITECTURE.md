@@ -144,13 +144,15 @@ Library `tests/sentinel/sentinel.ts`, called after every navigation in every sce
   context or, on list pages, a case the persona may see. Restricted case 0009's UUID and reference must never appear
   for an unassigned persona — not in HTML, not in RSC payloads, not in headers.
 - **Outbound requests** (V13-QA-007, OI-048; REQ-QA-013 "data submitted for the wrong case"). `recordRequests` records
-  every same-origin request with a body the page sends (form posts, Server Action calls, fetch), with the URL of the
-  page that sent it. **P3**: its URL and body (also percent-decoded, so Arabic-Indic digits in a form post are matched)
+  every same-origin POST, PUT, PATCH and DELETE the page sends, with the URL of the page that sent it, and names its
+  kind: `server-action` (a `Next-Action` header), `form-post` (a plain form submission) or `fetch` (fetch, XHR,
+  beacon). GET requests carry no body; what they bring back is P1's. **P3**: its URL and body (also percent-decoded, so Arabic-Indic digits in a form post are matched)
   name no case id or reference but that page's own case; off a case page, none unless the test allows it. **P4**: a
   body that was not handed over is never a pass. Playwright hands over every body Chromium sends (2 MB measured) and
   none for an empty one, so a request without a body is scanned by its URL alone, except a multipart request, which
   always has a body and is P4 without one. `planted-request-leak.spec.ts` plants (p)–(u) on fixture pages;
-  `request-leak-app.spec.ts` checks Secretary Alpha's draft (Server Action) and locale posts on the real app and
+  `request-leak-app.spec.ts` checks Secretary Alpha's draft (Server Action, the same-case control: recorded, read,
+  judged against its case, clean) and locale posts on the real app and
   catches a draft form tampered to name hidden case 0002 (the server refuses it with the generic state).
 - **DB layer (with SEC).** As `cdf_v13_user` with each persona's claims: every case-keyed table returns only rows of
   visible cases; no row of a task/notification/event has a `case_id` that disagrees with its parent; SEC owns the
