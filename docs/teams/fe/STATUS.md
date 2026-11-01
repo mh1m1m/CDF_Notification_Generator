@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 04:04 UTC · Branch: security/V13-FE-012-draft-bound-to-route-case (develop 2bcd183 merged in; #82, #98 merged) · Head: see PR
+Updated: 2026-11-01 03:57 UTC · Branch: security/V13-FE-012-draft-bound-to-route-case (develop 2bcd183 merged in; #82, #98 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
