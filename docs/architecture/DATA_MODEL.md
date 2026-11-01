@@ -209,13 +209,16 @@ Strategies, the same for every migration:
   A defect is corrected by a **forward-fix migration**: the next free number, through the plan §6 procedure (review
   ACCEPT, dry run, apply, fingerprint, isolation and post-apply checks), applied by the Chief Architect. Before the
   fix lands, access can be cut first (plan §7: remove `V13_DATABASE_URL` or set `cdf_v13_app` NOLOGIN). To restore an
-  earlier definition, the forward fix recreates it from Git history. The only way back further is
+  earlier definition, the forward fix recreates it from Git history. Grants, RLS enabling and policies are not
+  register items, so a forward fix that drops and recreates a table or function also restores its grants, RLS and
+  policies in the same migration (db:lint and `post_apply_checks.sql` check them). The only way back further is
   `database/hosted/rollback_v13.sql`, which removes the whole V13 schema and its three roles, and **only on the owner's
   explicit word** (plan §7). There are no per-migration reverse or DROP scripts. After a full removal, the schema is
   rebuilt by applying 0000 onwards again, then the seeds.
 
-What is lost: the data held in the objects a revert removes. In V13 that is synthetic seed data, which the seed bundles
-reload, plus rows written at run time by commands (audit events, task status changes, notification drafts, workspace
+What is lost: the data held in the objects a revert removes. In V13 that is reference data a migration inserts itself (roles in 0001,
+recipient classes in 0004), which only re-applying that migration restores; synthetic seed data, which the seed bundles
+reload; plus rows written at run time by commands (audit events, task status changes, notification drafts, workspace
 switches), which nothing can reload. Function, policy and index changes hold no data.
 
 ### 0000_bootstrap.sql
@@ -246,8 +249,8 @@ switches), which nothing can reload. Function, policy and index changes hold no 
 - **Replaces:** none
 - **Drops:** none
 - **Alters:** none
-- **Data lost on revert:** the identity seed (workspaces, roles, personas, memberships; reloaded by seed 0001), the
-  installed claims key (the app installs a new one at server start), and the **audit ledger**, whose run-time events
+- **Data lost on revert:** the role catalogue, which 0001 inserts itself and only re-applying 0001 restores; the
+  identity seed (workspaces, personas, memberships; reloaded by seed 0001); the installed claims key (the app installs a new one at server start), and the **audit ledger**, whose run-time events
   cannot be reloaded. 0002–0010 depend on these tables and functions.
 - **Local:** `pnpm db:reset`.
 - **Hosted:** a forward-fix migration (for example a corrected function or policy). The ledger is append-only and is
@@ -299,8 +302,8 @@ switches), which nothing can reload. Function, policy and index changes hold no 
 - **Replaces:** none
 - **Drops:** none
 - **Alters:** none
-- **Data lost on revert:** seeded recipient classes, templates, template versions and draft notifications (reloaded by
-  seed 0002), and notification drafts and events created at run time. The outbox holds no content. 0009 and 0010
+- **Data lost on revert:** the recipient classes, which 0004 inserts itself and only re-applying 0004 restores; the
+  seeded templates, template versions and draft notifications (reloaded by seed 0002); notification drafts and events created at run time. The outbox holds no content. 0009 and 0010
   depend on these tables.
 - **Local:** `pnpm db:reset`.
 - **Hosted:** a forward-fix migration. Template versions are immutable, so a wrong version is superseded by a new one,
