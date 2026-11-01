@@ -98,22 +98,30 @@ async function runChecks(
 const asOwner = (tx: Tx, statement: string) =>
   tx.unsafe(`set local role cdf_v13_owner; ${statement}; reset role`);
 
+/** P10 compares the live access-policy fingerprint with the recorded one (V13-DB-020): every planted change to a
+ *  policy, RLS flag, ACL, trigger state or function also changes the fingerprint, so those faults fail P10 too. A
+ *  default ACL and a role membership are not part of the fingerprint. */
+const P10 = "P10_policy_version_current";
+
 /** [check that must fail, label, plant, other checks the same fault legitimately also fails]. */
 const FAULTS: [string, string, (tx: Tx) => Promise<unknown>, string[]?][] = [
   [
     "P01_rls_enabled",
     "RLS disabled on task",
     (tx) => asOwner(tx, "alter table cdf_notifications_v13.task disable row level security"),
+    [P10],
   ],
   [
     "P02_no_table_writes",
     "INSERT on task granted to cdf_v13_user",
     (tx) => asOwner(tx, "grant insert on cdf_notifications_v13.task to cdf_v13_user"),
+    [P10],
   ],
   [
     "P02_no_table_writes",
     "DELETE on audit_event granted to cdf_v13_app",
     (tx) => asOwner(tx, "grant delete on cdf_notifications_v13.audit_event to cdf_v13_app"),
+    [P10],
   ],
   [
     "P03_definer_allow_list",
@@ -123,16 +131,19 @@ const FAULTS: [string, string, (tx: Tx) => Promise<unknown>, string[]?][] = [
         tx,
         "create function cdf_notifications_v13.planted_definer() returns int language sql security definer set search_path = '' as 'select 1'",
       ),
+    [P10],
   ],
   [
     "P03_definer_allow_list",
     "a listed definer switched to invoker",
     (tx) => asOwner(tx, "alter function cdf_notifications_v13.has_role(text) security invoker"),
+    [P10],
   ],
   [
     "P04_search_path_pinned",
     "search_path reset on case_header",
     (tx) => asOwner(tx, "alter function cdf_notifications_v13.case_header(uuid) reset search_path"),
+    [P10],
   ],
   [
     "P05_no_api_role_privileges",
@@ -141,7 +152,7 @@ const FAULTS: [string, string, (tx: Tx) => Promise<unknown>, string[]?][] = [
       await tx.unsafe("create role anon nologin");
       await asOwner(tx, "grant usage on schema cdf_notifications_v13 to anon");
     },
-    ["P09_acl_grantees_v13_only"],
+    ["P09_acl_grantees_v13_only", P10],
   ],
   [
     "P05_no_api_role_privileges",
@@ -151,7 +162,7 @@ const FAULTS: [string, string, (tx: Tx) => Promise<unknown>, string[]?][] = [
         tx,
         "grant execute on function cdf_notifications_v13.portfolio_count(text, text, text, boolean) to public",
       ),
-    ["P09_acl_grantees_v13_only"],
+    ["P09_acl_grantees_v13_only", P10],
   ],
   [
     "P09_acl_grantees_v13_only",
@@ -163,11 +174,13 @@ const FAULTS: [string, string, (tx: Tx) => Promise<unknown>, string[]?][] = [
         "grant select (display_number) on cdf_notifications_v13.case_record to authenticated",
       );
     },
+    [P10],
   ],
   [
     "P09_acl_grantees_v13_only",
     "a table grant to the predefined role pg_read_all_data",
     (tx) => asOwner(tx, "grant select on cdf_notifications_v13.task to pg_read_all_data"),
+    [P10],
   ],
   [
     "P09_acl_grantees_v13_only",
@@ -186,17 +199,19 @@ const FAULTS: [string, string, (tx: Tx) => Promise<unknown>, string[]?][] = [
       tx.unsafe(
         "create function cdf_notifications_v13.planted_public() returns int language sql set search_path = '' as 'select 1'",
       ),
-    ["P05_no_api_role_privileges"],
+    ["P05_no_api_role_privileges", P10],
   ],
   [
     "P06_claims_key_protected",
     "SELECT on claims_key granted to cdf_v13_app",
     (tx) => asOwner(tx, "grant select on cdf_notifications_v13.claims_key to cdf_v13_app"),
+    [P10],
   ],
   [
     "P06_claims_key_protected",
     "deny-all policy dropped",
     (tx) => asOwner(tx, "drop policy claims_key_deny_all on cdf_notifications_v13.claims_key"),
+    [P10],
   ],
   [
     "P07_audit_chain_valid",
@@ -208,6 +223,7 @@ const FAULTS: [string, string, (tx: Tx) => Promise<unknown>, string[]?][] = [
          update cdf_notifications_v13.audit_event set metadata = '{"tampered":true}'::jsonb
           where seq = (select min(seq) from cdf_notifications_v13.audit_event)`,
       ),
+    [P10],
   ],
   [
     "P08_memberships",
@@ -218,6 +234,16 @@ const FAULTS: [string, string, (tx: Tx) => Promise<unknown>, string[]?][] = [
     "P08_memberships",
     "cdf_v13_user made a member of pg_read_all_data",
     (tx) => tx.unsafe("grant pg_read_all_data to cdf_v13_user"),
+  ],
+  [
+    P10,
+    "one function body changed without a new policy_version row",
+    (tx) =>
+      asOwner(
+        tx,
+        `create or replace function cdf_notifications_v13._page_limit(p_limit integer) returns integer
+           language plpgsql immutable set search_path = '' as $fn$ begin return p_limit; end $fn$`,
+      ),
   ],
 ];
 
@@ -234,9 +260,9 @@ describe("SEC-004 post_apply_checks.sql shape", () => {
     expect(statements.some((s) => /^commit\b/i.test(s))).toBe(false);
     expect(block).toMatch(/^with\b/);
     expect(block.replace(/--[^\n]*/g, "")).not.toContain(";");
-    // Reads catalogue metadata only, apart from claims_key's row count and the chain verdict.
+    // Reads catalogue metadata only, apart from claims_key's row count, the chain verdict and the latest policy version.
     const tables = [...block.matchAll(/from\s+cdf_notifications_v13\.(\w+)/g)].map((m) => m[1]);
-    expect([...new Set(tables)].sort()).toEqual(["claims_key", "verify_audit_chain"]);
+    expect([...new Set(tables)].sort()).toEqual(["claims_key", "policy_version", "verify_audit_chain"]);
   });
 
   it("P03's allow-list equals the SECURITY DEFINER functions the migrations declare", () => {
@@ -276,6 +302,7 @@ describe.skipIf(!present)("SEC-004 post_apply_checks.sql against the local clust
       "P07_audit_chain_valid",
       "P08_memberships",
       "P09_acl_grantees_v13_only",
+      "P10_policy_version_current",
       "VERDICT",
     ]);
     for (const row of Object.values(result)) expect(row.breaches, `${row.check_id}: ${row.detail}`).toBe(0);
