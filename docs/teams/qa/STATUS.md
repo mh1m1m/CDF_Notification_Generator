@@ -113,7 +113,7 @@ Updated: 2026-11-01 · Branch: test/V13-QA-012-witness-twin-and-bodies (base dev
 
 ## Waiting / next
 - V13-QA-011 — branch test/V13-QA-011-guard-followups — IN_REVIEW (ARCH): G6 plain-literal annotation `type`;
-  L1 `playwright test --list` per guarded Playwright suite vs its own test calls (helpers in other files caught);
+  L1 `playwright test --list` per guarded Playwright suite vs its own test calls (helpers in other files caught at load time; run-time skips from helpers stay a stated limit, review covers them);
   surface allow-list reason updated after V13-SEC-012. TEST_ARCHITECTURE §7.1.
 - After #61 merges: a Center Back step in Scenario D.
 - Harness: axe excludes sandboxed srcdoc frames and scans the srcdoc separately (axe hangs on them today);

@@ -264,8 +264,11 @@ file, so since V13-QA-011 **L1** closes the gap for the Playwright suites: the s
 --reporter=json` over every guarded Playwright suite and fails when a listed test comes from another file or from a line
 that is not one of the suite's own plain `test(`/`it(` calls, when any listed test's expected status is not `passed` or
 it carries a `skip`, `fixme` or `fail` annotation, or when one of the suite's own test calls is not listed. A helper in
-another file that pins, skips or registers a test is therefore caught by what the runner registers, not by the source;
-a planted helper in a temporary directory proves it end to end. Limit: `vitest list` leaves skipped suites out, so the
+another file that pins, skips or registers a test **at load time** is therefore caught by what the runner registers,
+not by the source; a planted helper in a temporary directory proves it end to end. Limits: the listing is what the
+runner registers at load time, so a helper in another file that skips **at run time** (`test.skip()` inside a test body,
+or a conditional `test.skip(({ browserName }) => …)` at file level) lists as expected to pass with no annotation and is
+out of L1's reach (ARCH R1 on #136, probed with Playwright 1.63); review covers that. And `vitest list` leaves skipped suites out, so the
 Vitest suite `case-matrix.spec.ts` stays outside L1; for it the per-file scan and review apply.
 
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)

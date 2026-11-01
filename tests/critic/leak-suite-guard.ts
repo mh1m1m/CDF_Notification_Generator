@@ -26,7 +26,9 @@
 // are blanked before matching, so prose that names test.fail() is not a hit and a quote inside a regular expression
 // cannot hide the rest of a file. G5 and G6 work on the syntax tree. Limit: a helper defined in another file that pins or
 // skips is out of reach of a per-file scan (TEST_ARCHITECTURE.md §7.1); the listing check below (L1, V13-QA-011) closes
-// it for the Playwright suites by comparing what the runner registers with the file's own test calls.
+// it for the Playwright suites at load time, by comparing what the runner registers with the file's own test calls.
+// A skip a helper makes at run time (test.skip() inside a body, or a conditional test.skip(fn) at file level) is not
+// visible at load time and stays out of reach; review covers that.
 // Pure functions over source text: the planted-negative self-test feeds them synthetic sources. SYNTHETIC only.
 import ts from "typescript";
 
@@ -463,6 +465,10 @@ export const formatGuardViolations = (vs: readonly GuardViolation[]) =>
 //   - every registered test is expected to pass, with no skip, fixme or fail annotation.
 // The Vitest suite (SEC's case matrix) is out of L1's reach: `vitest list` leaves out a skipped suite instead of
 // reporting it, so it is guarded by G1–G6 and SEC's own fail-in-CI rule (V13-SEC-010/011).
+// Limit (ARCH R1 on #136): the listing is what the runner registers at load time. A helper in another file that calls
+// test.skip() inside a test body, or test.skip(({ browserName }) => …) at file level, decides at run time, and --list
+// reports that test as expected to pass with no annotation (probed with Playwright 1.63; test.skip(true, …) at load time
+// lists as skipped and is caught). Run-time skips from helpers are out of L1's reach; review covers that.
 
 /** One test as `playwright test --list --reporter=json` reports it. */
 export interface ListedTest {
