@@ -4,7 +4,7 @@
 plus the readiness of the synthetic staging environment. It is not a readiness claim. Production promotion is BLOCKED
 by design (QG-13), and nothing here approves a deployment. Requirement: REQ-DOC-008 (task V13-ARCH-011).
 
-Last updated: **1 Nov 2026 04:05 UTC** (Chief Architect), `develop` `220b9d2`. Facts are taken from
+Last updated: **1 Nov 2026 04:47 UTC** (Chief Architect), `develop` `0bc2542`. Facts are taken from
 `docs/DEPLOYMENT_STATUS.md`, `docs/OPEN_ISSUES.md` and `docs/IMPLEMENTATION_STATUS.md`, each with its own check time.
 
 ## 1. Production promotion gate (ADR-005, QG-13)
