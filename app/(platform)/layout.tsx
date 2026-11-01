@@ -11,6 +11,7 @@ import { WorkspaceSwitcher } from "@/components/shell/WorkspaceSwitcher";
 import { getCurrentSession } from "@/lib/auth/server-session";
 import { translateKey } from "@/lib/i18n";
 import { getTranslator } from "@/lib/i18n/server";
+import { confirmedMembershipsForRequest } from "@/lib/server/membership-records";
 import { navigationFor } from "@/lib/server/navigation";
 import { PlatformNav } from "./_components/PlatformNav";
 import { workspaceOptions } from "./_components/workspace-options";
@@ -24,7 +25,8 @@ export default async function PlatformLayout({ children }: { children: ReactNode
   if (!session) redirect("/sign-in");
   const { locale, t } = await getTranslator();
   const active = session.identity.active_workspace;
-  const options = workspaceOptions(session.identity, locale, t);
+  // Role words only from memberships the database confirms in this request (V13-FE-008, OI-044).
+  const options = workspaceOptions(session.identity, locale, t, await confirmedMembershipsForRequest());
   const roleLabel = options.find((o) => o.code === active)?.role ?? "";
   return (
     <AppShell

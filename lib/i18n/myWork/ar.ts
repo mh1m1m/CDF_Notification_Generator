@@ -5,6 +5,7 @@ export const ar = {
   subtitle: "مهامك المفتوحة في مساحة عمل {workspace}",
   persona: "الشخصية",
   roles: "الأدوار",
+  noConfirmedRole: "لا يوجد دور مؤكد في مساحة العمل هذه",
   workspace: "مساحة العمل النشطة",
   navLabel: "أعمالي",
   actionFailed: "تعذّر تنفيذ الطلب. الرقم المرجعي: {reference}",
