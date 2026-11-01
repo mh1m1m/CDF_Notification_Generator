@@ -42,6 +42,12 @@ dependency needs a row here (why, alternative considered) in the same pull reque
 | `@playwright/test`          | 1.63.0  | End-to-end smoke tests against a production build.                                                                                                                                  | Cypress: a second runner; Playwright is the stack's e2e tool (CLAUDE.md).  |
 | `@axe-core/playwright`      | 4.14.0  | Accessibility checks (axe-core) inside the Playwright suite.                                                                                                                        | Lighthouse: page-level scores, not per-rule assertions.                    |
 
+## CI system packages (not npm)
+
+| Package (Ubuntu 24.04, apt) | Where | Why |
+| --- | --- | --- |
+| `fonts-liberation`, `fonts-dejavu-core`, `fonts-crosextra-carlito`, `fonts-noto-core` | `.github/workflows/visual.yml` (V13-ARCH-014) | The app uses system font stacks (`--cdf-font-ar`, `--cdf-font-latin`), and glyph widths differ by machine (QA-010's probe: Liberation Sans 321 px against Carlito 294 px for the same link). Visual baselines are made and compared only in the visual job, on one runner image with these four packages installed explicitly (`docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` §3, §8). Their versions are printed in the job log and written into the screenshot library's manifest, so a font update shows up as a reviewed baseline diff. Not pinned to a version: Ubuntu's archive keeps only the current one. Alternative considered: committed web fonts, which would change what users see and need UX's design decision. |
+
 Deliberately **not** added: Testing Library and jsdom (component tests render with `react-dom/server`), any Supabase
 SDK, any ORM, any dotenv loader (Next.js loads `.env.local` itself; scripts read `process.env`).
 
