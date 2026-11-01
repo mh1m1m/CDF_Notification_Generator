@@ -348,3 +348,13 @@ export interface AuthorityPort {
 export interface ProjectionPort {
   isProjected(model: unknown): boolean;
 }
+
+/** W-D2 rendering provenance (OI-053): the rendering was made from this projected model and is unchanged. */
+export interface RenderingPort {
+  /** `content` is the snapshot of subject, text and HTML the export will use; the digest is checked on it */
+  isRenderingOf(
+    rendered: unknown,
+    model: unknown,
+    content: { readonly subject?: unknown; readonly text?: unknown; readonly html?: unknown },
+  ): boolean;
+}
