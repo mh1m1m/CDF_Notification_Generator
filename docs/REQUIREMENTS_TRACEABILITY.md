@@ -118,8 +118,8 @@ assessed in the next pass; owners update their rows meanwhile (§6).
 
 | Status | Rows |
 |---|---|
-| COMPLETE | 69 |
-| IN_PROGRESS | 177 |
+| COMPLETE | 68 |
+| IN_PROGRESS | 178 |
 | — of which review-enforced standing rules | 51 |
 | — of which document or configuration evidence only, no test | 45 |
 | BLOCKED | 16 |
@@ -132,7 +132,7 @@ assessed in the next pass; owners update their rows meanwhile (§6).
 | Owner team | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
 |---|---|---|---|---|---|---|
 | ARCH | 105 | 9 | 82 | 12 | 0 | 2 |
-| QA | 51 | 10 | 25 | 4 | 0 | 12 |
+| QA | 51 | 9 | 26 | 4 | 0 | 12 |
 | DB | 33 | 15 | 17 | 0 | 1 | 0 |
 | FE | 31 | 12 | 19 | 0 | 0 | 0 |
 | SEC | 27 | 14 | 13 | 0 | 0 | 0 |
@@ -146,7 +146,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | Gate | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
 |---|---|---|---|---|---|---|
 | QG-01 | 10 | 2 | 8 | 0 | 0 | 0 |
-| QG-02 | 29 | 11 | 15 | 3 | 0 | 0 |
+| QG-02 | 29 | 10 | 16 | 3 | 0 | 0 |
 | QG-03 | 32 | 21 | 8 | 2 | 1 | 0 |
 | QG-04 | 11 | 5 | 6 | 0 | 0 | 0 |
 | QG-05 | 18 | 6 | 10 | 1 | 0 | 1 |
@@ -159,7 +159,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | QG-12 | 15 | 0 | 4 | 10 | 0 | 1 |
 | QG-13 | 15 | 1 | 11 | 3 | 0 | 0 |
 | Gate A | 4 | 0 | 3 | 1 | 0 | 0 |
-| Gate B | 19 | 8 | 8 | 3 | 0 | 0 |
+| Gate B | 19 | 7 | 9 | 3 | 0 | 0 |
 | Gate C | 23 | 14 | 7 | 2 | 0 | 0 |
 | Gate D | 5 | 0 | 2 | 0 | 0 | 3 |
 | Gate E | 16 | 3 | 10 | 0 | 0 | 3 |
