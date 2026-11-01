@@ -14,6 +14,7 @@ import { previewHref, type NotificationPreviewView } from "@/lib/server/notifica
 import { NotificationPreviewFrame } from "@/components/data/NotificationPreviewFrame";
 import { DraftForm } from "../notifications/_components/DraftForm";
 import { DataTable } from "@/components/data/DataTable";
+import { NextActionCard } from "@/components/data/NextActionCard";
 import { StatusBadge, type Tone } from "@/components/data/StatusBadge";
 import { Timeline as UxTimeline } from "@/components/data/Timeline";
 import { formatDate, formatDateTime } from "@/components/format";
@@ -206,11 +207,14 @@ export function TaskTable({
   captionVisuallyHidden = false,
   emptyText,
   testId,
+  anchorRows = false,
 }: {
   t: Translator;
   locale: Locale;
   caseRef: string;
   tasks: readonly CaseTask[];
+  /** V13-FE-015: each row's title carries the anchor `task-<id>` the Next Action Card links to (overview only). */
+  anchorRows?: boolean;
   caption: string;
   /** The caption names the table for assistive technology only (a visible heading already says it). */
   captionVisuallyHidden?: boolean;
@@ -249,7 +253,8 @@ export function TaskTable({
           key: "task",
           header: t("case.tasks.column.task"),
           rowHeader: true,
-          cell: (task) => task.title[locale],
+          cell: (task) =>
+            anchorRows ? <span id={`task-${task.id}`}>{task.title[locale]}</span> : task.title[locale],
         },
         {
           key: "assignee",
@@ -616,6 +621,23 @@ export function CaseTabContent({
     case "overview":
       return (
         <div data-testid="case-overview">
+          {/* V13-FE-015: first in the overview, above the stage card (SCREENS S3); nothing at all for NONE. */}
+          <NextActionCard
+            t={t}
+            locale={locale}
+            action={
+              view.nextAction
+                ? {
+                    taskId: view.nextAction.task.id,
+                    taskCode: view.nextAction.task.task_code,
+                    title: view.nextAction.task.title,
+                    status: <TaskStatus t={t} locale={locale} task={view.nextAction.task} />,
+                    due: view.nextAction.due,
+                    href: view.nextAction.href,
+                  }
+                : null
+            }
+          />
           <h2>{t("case.overview.stageCard")}</h2>
           <p data-testid="case-overview-stage" data-stage={view.summary.lifecycle_stage}>
             {stageLabel(t, view.summary.lifecycle_stage)}
@@ -630,6 +652,7 @@ export function CaseTabContent({
             captionVisuallyHidden
             emptyText={t("case.overview.noMyTasks")}
             testId="case-my-tasks"
+            anchorRows
           />
           <ListPager t={t} paging={view.paging} testId="case-my-tasks" />
           <h2>{t("case.overview.lastEvents")}</h2>
