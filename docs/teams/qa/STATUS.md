@@ -129,6 +129,9 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 - QA-004: Truth Inspector on the case pages with a DB event oracle (local/CI database only); DB half of the Sentinel.
 - QA-005 (rest): five-screen audit, screenshot library; QA-006 staging Gate J (OI-008).
 - Local note: the local PostgreSQL cluster can stop between runs; `pnpm db:local start` before `pnpm db:reset`.
+- V13-QA-021 — branch test/V13-QA-021-no-js-server-actions (stacked on V13-ARCH-013 ddf928a) — IN_REVIEW: Server
+  Action forms with JavaScript off (sign-in, workspace switch), same-origin `Origin` pinned; fails on `no-referrer`
+  (2 tests, `Origin: "null"`), passes on the fix; the no-JS sign-in observation from the FE-016 review is closed by it.
 
 ## Unresolved defects
 - none open from QA
