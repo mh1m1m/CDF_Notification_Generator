@@ -64,7 +64,7 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 
 - V13-QA-013 — this branch — IN_REVIEW (SEC, then ARCH): design note `docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` for the
   M1 rows still NOT_STARTED in QA's name (REQ-VIS-001, -004, -005, -010, -011, -012, -015, -018; REQ-A11Y-003, -014;
-  REQ-QA-003; REQ-CICD-002): what QA builds, what needs ARCH in CI, what stays open; decisions D1–D4 for ARCH.
+  REQ-QA-003; REQ-CICD-002): what QA builds, what needs ARCH in CI, what stays open; ARCH rulings D1–D4 folded in.
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |

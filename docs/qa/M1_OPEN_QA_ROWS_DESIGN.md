@@ -1,6 +1,7 @@
 # M1 QA rows still NOT_STARTED: design note (V13-QA-013)
 
-Status: DESIGN (V13-QA-013). Review: SEC first, then ARCH. Synthetic data only. No code ships with this note.
+Status: DESIGN (V13-QA-013), with ARCH's rulings on D1–D4 folded in (§11). Review: SEC first, then ARCH. Synthetic
+data only. No code ships with this note.
 
 This note plans the M1 register rows that QA still owns and that are `NOT_STARTED`:
 
@@ -19,15 +20,15 @@ artifacts and retention) and what stays open, with the reason. Facts about the a
 | REQ-VIS-001 screens | `tests/visual/library.spec.ts` for the screens that exist (§2.1) | CI job and artifact (§8) | Notification Generator, Search Interface: no such page in M1; listed "not applicable", never staged |
 | REQ-VIS-004 matrix | viewports × languages × themes × the states each screen really has (§2.2) | none beyond §8 | loading state: no route renders one (no `loading.tsx`, no `Suspense`); "not applicable" until FE adds one |
 | REQ-VIS-005 no invented states | the state table is the source; a state needs a real route, persona and seed row (§2.3) | none | none |
-| REQ-VIS-010 determinism | fixed data, browser clock, reduced motion, masks for server-clock text, Linux-only baselines (§3) | fonts in the visual job; decision D1 (server clock) | server-clock text is masked, not frozen, unless ARCH decides D1 |
+| REQ-VIS-010 determinism | fixed data, browser clock, reduced motion, masks for server-clock text, Linux-only baselines (§3) | fonts in the visual job and their `docs/DEPENDENCIES.md` line | server-clock text stays masked, not frozen (D1: no app clock seam) |
 | REQ-VIS-011 masking | masks plus a pre-capture data check that refuses non-synthetic text (§4) | none | none |
-| REQ-VIS-012 never auto-approve | committed baselines, a guard against updating them in CI, review rule (§5) | the guard's workflow rule; decision D2 (what is committed) | none |
+| REQ-VIS-012 never auto-approve | committed baselines (D2), a guard against updating them in CI, review rule (§5) | the guard's workflow rule | none |
 | REQ-VIS-015 UXQA-05 library | the library run, its manifest and `docs/qa/SCREENSHOT_LIBRARY.md` (§2.4) | artifact retention (§8) | none |
-| REQ-VIS-018 UXQA-14 before/after | base vs head capture for a UX PR, paired index (§5.3) | an on-demand job input (§8) | none |
-| REQ-A11Y-003 manual checklist | `docs/qa/A11Y_MANUAL_CHECKLIST.md` (§6) | none | carrying it out needs a person with a screen reader; this sandbox has none |
+| REQ-VIS-018 UXQA-14 before/after | base vs head capture for a UX PR, paired index (§5.3) | the `visual-before-after` PR label trigger (§8) | none |
+| REQ-A11Y-003 manual checklist | `docs/qa/A11Y_MANUAL_CHECKLIST.md` (§6) | who runs it (ARCH puts it to the owner) | carrying it out needs a person with a screen reader; this sandbox has none |
 | REQ-A11Y-014 UXQA-07 audit | `docs/qa/ACCESSIBILITY_AUDIT.md` from the automated suites plus the checklist (§7) | none | the manual half, as REQ-A11Y-003; never a "compliant" claim |
-| REQ-QA-003 Firefox, WebKit | `firefox-ar` and `webkit-ar` projects with an engine-neutral subset (§9) | a cross-browser job that installs the two browsers; decision D3 (when it runs) | Chromium-only suites stay Chromium-only (§9.2) |
-| REQ-CICD-002 PR report | a report builder from the Playwright and Vitest results (§10) | job summary step; decision D4 (path for the builder) | "performance changes": nothing measures performance in M1 |
+| REQ-QA-003 Firefox, WebKit | `firefox-ar` and `webkit-ar` projects with an engine-neutral subset (§9) | `.github/workflows/cross-browser.yml` (D3); the `V13_E2E_BROWSERS` line in `.env.example` | Chromium-only suites stay Chromium-only (§9.2) |
+| REQ-CICD-002 PR report | a report builder in `tests/report/` from the Playwright and Vitest results (§10) | the job summary step; `tests/report/` added to QA's paths (D4) | "performance changes": nothing measures performance in M1 |
 
 Delivery order (each its own QA PR, reviewed as the board says): §3 + §4 + §2 (library, no baselines) → §5
 (baselines and guard) → §9 (cross-browser) → §10 (report) → §6 and §7 (checklist, audit). §5.3 rides the first UX PR
@@ -87,9 +88,9 @@ state with no way to reach it is a row "not applicable" with the reason. It is n
 | --- | --- |
 | Data | `pnpm db:reset` before the run, seeded rows only. A test that must create a row (a draft for the preview) masks its run-specific text (§3.1) |
 | Browser time | `page.clock.setFixedTime` to one instant inside the seed's date range, before the first navigation |
-| Server time | My Work's deadline words (`DeadlineText`: "overdue 3 days") and the created time of a run-made draft come from the server clock, which the browser clock cannot reach. They are masked (§3.1). Decision D1 asks whether FE adds a test-only clock instead |
+| Server time | My Work's deadline words (`DeadlineText`: "overdue 3 days") and the created time of a run-made draft come from the server clock, which the browser clock cannot reach. They are masked (§3.1). D1 (ARCH): no test-only clock in the app, because it would change what deadline and time-based logic sees on the server |
 | Motion | `reducedMotion: "reduce"`, `animations: "disabled"`, `caret: "hide"` in every capture |
-| Fonts | the app uses system font stacks (`--cdf-font-ar`, `--cdf-font-latin`). Glyphs differ by machine (the QA-010 font probe: Liberation Sans 321 px against Carlito 294 px for the same link). Baselines are made and compared only in the CI visual job on one Ubuntu image with a fixed font set. They are never made in a Claude sandbox |
+| Fonts | the app uses system font stacks (`--cdf-font-ar`, `--cdf-font-latin`). Glyphs differ by machine (the QA-010 font probe: Liberation Sans 321 px against Carlito 294 px for the same link). Baselines are made and compared only in the CI visual job on one Ubuntu image with a fixed font set, never in a Claude sandbox. The manifest records the font package names and versions from that job (`dpkg-query`), so a runner-image font update shows up and its baseline diff is reviewed like any other |
 | Viewport | fixed per capture (§2.2); full-page screenshots wait for `document.fonts.ready` and for the main landmark |
 | Random identifiers | seed ids are fixed. Run-made ids (notification UUIDs, `NTF-DEMO-XXXXXXXX`, correlation ids) are masked |
 
@@ -119,9 +120,9 @@ every capture, so that a screenshot can never carry anything else:
 
 ## 5. Baselines and review (REQ-VIS-012, REQ-VIS-018)
 
-### 5.1 What is committed (decision D2)
+### 5.1 What is committed (D2, agreed by ARCH)
 
-The full library (§2.4) is about 200 images per run: too many to commit and review. QA proposes this split:
+The full library (§2.4) is about 200 images per run: too many to commit and review. The split:
 
 - **Baselines, committed** under `tests/visual/__screenshots__/`: a regression subset. It covers each screen in its
   data state, at desktop and mobile, in ar and en, light theme, plus the workspace switcher open: about 30 images. These
@@ -130,18 +131,20 @@ The full library (§2.4) is about 200 images per run: too many to commit and rev
 
 ### 5.2 Never auto-approved
 
-- No config sets `updateSnapshots` other than `"none"` in CI, and no workflow passes `--update-snapshots`.
-- `tests/sentinel/leak-suite-guard.spec.ts` gains a rule G7 that fails on either, with a planted negative for each
-  form, as G1–G6 have.
+- `playwright.config.ts` sets `updateSnapshots: process.env.CI ? "none" : "missing"`, and no workflow passes
+  `--update-snapshots`.
+- `tests/sentinel/leak-suite-guard.spec.ts` gains a rule G7 that fails on any other `updateSnapshots` value in CI and
+  on `--update-snapshots` in a workflow, with a planted negative for each form, as G1–G6 have.
 - A baseline changes only in a PR that says so in its body and lists each changed file. The reviewer's verdict names
   the changed baselines, and an ACCEPT that does not list them does not cover them.
 - When a comparison fails, Playwright writes the expected, actual and diff images. They go into the artifact and the
   PR report (§10). A changed screen is reported, never silently re-baselined.
-- A new baseline is made in the CI visual job on demand (§8) and downloaded from its artifact, not from a sandbox (§3).
+- A new baseline is made in the CI visual job (§8) and downloaded from its artifact, never from a sandbox (§3).
 
 ### 5.3 Before and after (UXQA-14)
 
-For a UX or FE PR that changes the look, the on-demand job runs the library twice: once on the PR's base and once on
+For a UX or FE PR that changes the look and carries the `visual-before-after` label, the visual job runs the library
+twice: once on the PR's base and once on
 its head. It pairs each image as `before | after | diff` and writes `test-results/before-after/index.html` plus a
 manifest. An unchanged pair is listed as unchanged. The design review (`docs/design/reviews/`) links the artifact
 instead of a hand capture, which replaces the temporary captures UX-007 and UX-013 used.
@@ -164,7 +167,8 @@ applies.
 
 **Stays open:** the checklist is written by QA, but carrying it out needs a person at a real screen reader and
 browser. This sandbox has neither, and a check that was not run is never reported as passed. Who runs it is ARCH's
-to assign (UX or the owner). QA records the results.
+call: the owner, or UX with the owner, put to the owner once the checklist exists. Until then every manual row is
+NOT_RUN. QA records the results.
 
 ## 7. Accessibility audit (REQ-A11Y-014, UXQA-07)
 
@@ -181,16 +185,22 @@ carried out.
 
 ## 8. What needs ARCH in CI (shared files)
 
-| Item | Proposal |
+GitHub runs `schedule` and `workflow_dispatch` only for a workflow file on the default branch. Ours is `main`, which
+only the owner merges into, so nothing here uses those triggers before the M1 milestone merge (ARCH ruling on D3).
+Labels and pushes to `develop` stand in for them. After M1, once the workflows are on `main`, schedule and dispatch are
+revisited.
+
+| Item | Design |
 | --- | --- |
-| Visual job | a `visual` job in `ci.yml`: the same database service and steps as `e2e`, plus `fonts-liberation fonts-dejavu-core fonts-crosextra-carlito fonts-noto-core` installed explicitly, and `pnpm exec playwright test --project=visual-*` |
-| When | the baseline subset (§5.1) on every PR; the full library and the before/after run on `workflow_dispatch` with an input `mode: library | before-after` and, for before/after, `base` |
+| Visual job | a `visual` job in `ci.yml`: the same database service and steps as `e2e`, plus `fonts-liberation fonts-dejavu-core fonts-crosextra-carlito fonts-noto-core` installed explicitly (a line in `docs/DEPENDENCIES.md` with the reason), their versions written to the manifest, and `pnpm exec playwright test --project=visual-*` |
+| When | the baseline subset (§5.1) on every PR; the full library on PRs labelled `visual-library`; the before/after run on PRs labelled `visual-before-after` (§5.3), with the PR's base as "before" |
 | Artifacts | `visual-results` (diffs, library, manifest), retention 14 days like the other jobs; the before/after artifact 30 days, so a design review can link it |
 | Guard | G7 (§5.2) runs in the existing e2e job; no workflow passes `--update-snapshots` |
-| Cross-browser job | §9.3 |
+| Cross-browser workflow | §9.3 |
 | Report | §10.2 |
+| `.env.example` | a `V13_E2E_BROWSERS` line (`check-env-example` scans `tests/` and `playwright.config.ts`); an ARCH hunk on QA's build PR with ARCH's path-owner ACCEPT |
 
-No new dependency is needed. `@playwright/test` and `@axe-core/playwright` are already in the lockfile.
+No new npm dependency is needed. `@playwright/test` and `@axe-core/playwright` are already in the lockfile.
 
 ## 9. Firefox and WebKit (REQ-QA-003)
 
@@ -212,13 +222,15 @@ They do not run the suites that depend on Chromium's DevTools protocol:
 Those suites stay Chromium-only through `testMatch` and `testIgnore` on the two projects, never through `test.skip`.
 A skip in a leak-detection suite is refused by the leak-suite guard (QA-008), and that rule stays as it is.
 
-### 9.3 CI (decision D3)
+### 9.3 CI (D3, as ruled by ARCH)
 
-A `cross-browser` job runs `pnpm exec playwright install --with-deps firefox webkit` and then
-`V13_E2E_BROWSERS=firefox-ar,webkit-ar pnpm test:e2e`. QA proposes it runs nightly and on `workflow_dispatch`. It
-would be a required PR check only after five green nightly runs in a row, because a red engine-specific result needs
-a triage path before it can block merges. Results are reported as "Chromium/Firefox/WebKit emulation", never as
-real-device testing (TEST_ARCHITECTURE §1 rule 5).
+- A separate `.github/workflows/cross-browser.yml` runs `pnpm exec playwright install --with-deps firefox webkit` and
+  then `V13_E2E_BROWSERS=firefox-ar,webkit-ar pnpm test:e2e`.
+- It runs on every push to `develop` (`concurrency: cross-browser-develop`, `cancel-in-progress: true`), and on a PR
+  labelled `cross-browser` (`pull_request` types `labeled` and `synchronize`, with an `if` on the label).
+- After five green `develop` runs in a row, ARCH adds it to every PR and to the merge rule.
+- Results are reported as "Chromium/Firefox/WebKit emulation", never as real-device testing (TEST_ARCHITECTURE §1
+  rule 5).
 
 **Stays open:** this sandbox cannot run Firefox or WebKit, so QA's local evidence for §9 is the Chromium run plus
 the CI job's results, which QA reads and records.
@@ -238,21 +250,27 @@ Each PR run gets one Markdown report, built from what the jobs already write. No
 | Performance changes | "not measured in M1" (stays open: no performance baseline or budget exists; one needs a source and an ARCH decision) |
 | Recommended corrections | a fixed table from rule to the usual correction (for example `color-contrast` → token pair, reflow check 1 → `min-inline-size: 0` on the flex child), linked to UX_BACKLOG conventions; never invented per run |
 
-### 10.2 Where it lives (decision D4)
+### 10.2 Where it lives (D4, as ruled by ARCH)
 
-- The builder is a small Node script with no new dependency. QA proposes `tests/report/pr-report.ts`, a new
-  QA-owned path, which needs ARCH to add it to QA's paths. The alternative is `tests/fixtures/report/`.
+- The builder is `tests/report/pr-report.mjs`, plain ESM with `// @ts-check` like `scripts/ci/*.mjs`, so CI runs it
+  with `node` and needs no loader and no new dependency. `tests/report/` becomes a QA path in ARCH's next board pass.
+- Its unit tests sit next to it or in `tests/unit`.
 - CI runs it in an `if: always()` step after the e2e, unit and visual jobs and writes it to `$GITHUB_STEP_SUMMARY`.
   No PR comment and no extra token are needed.
 - The same file goes into the job's artifact.
 
-## 11. Decisions for ARCH
+## 11. ARCH rulings (1 Nov)
 
-- **D1 Server clock.** Mask server-clock text (QA's default, no app change), or have FE add a test-only clock that is
-  read only when `V13_PERSONA_SIGNIN=enabled` and a test variable is set. The second gives frozen deadline words, but
-  it is an app seam, so it needs FE, SEC and ARCH.
-- **D2 Baselines.** Commit the about-30-image subset and keep the full library as an artifact (QA's proposal), or
-  something else.
-- **D3 Cross-browser.** Run nightly plus on demand, and become required after five green nightly runs (QA's
-  proposal), or required from the start.
-- **D4 Report path.** `tests/report/` as a new QA path, or `tests/fixtures/report/`.
+- **D1 Server clock: mask.** No test-only clock in the app: it would change what deadline and time-based logic sees on
+  the server, a high-risk surface for a screenshot gain. Each mask stays listed in the manifest (§3, §3.1).
+- **D2 Baselines: agreed.** The about-30-image subset is committed; the full library is an artifact; baselines are
+  made only in the CI visual job; font package names and versions go into the manifest;
+  `updateSnapshots: process.env.CI ? "none" : "missing"` with G7 (§5).
+- **D3 Cross-browser: changed** for GitHub's trigger rules: `cross-browser.yml` on every push to `develop` and on PRs
+  labelled `cross-browser`; required after five green `develop` runs in a row; the visual library and before/after
+  run on the labels `visual-library` and `visual-before-after`; schedule and dispatch revisited after M1 (§8, §9.3).
+- **D4 Report path: `tests/report/`**, a new QA path; the builder is `.mjs` with `// @ts-check` (§10.2).
+- **Build PRs:** the `V13_E2E_BROWSERS` line in `.env.example` and the apt fonts' line in `docs/DEPENDENCIES.md` are
+  ARCH hunks on QA's PRs, with ARCH's path-owner ACCEPT.
+- **§6:** who runs the manual checklist is ARCH's call (the owner, or UX with the owner); until then the manual rows
+  stay NOT_RUN.
