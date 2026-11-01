@@ -3,7 +3,7 @@
  * SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production; no production-readiness claim.
  *
  * Re-exports the four domain modules (concepts, epistemic, status, invariants), the badge mapping, the case task
- * status catalogue and the shared types. status re-exports
+ * status catalogue, the Next Action Card source and the shared types. status re-exports
  * a few concepts bindings (the delivery-confirmation catalogue, StatusObjectName); a name exported by two modules
  * resolves to the same binding.
  */
@@ -14,3 +14,4 @@ export * from "./status";
 export * from "./invariants";
 export * from "./badge";
 export * from "./task-status";
+export * from "./next-action";
