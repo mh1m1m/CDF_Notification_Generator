@@ -16,6 +16,7 @@ Last checked: **1 Nov 2026 04:47 UTC** by the Chief Architect (§1 GitHub and §
 | Integration branch | `develop` at `0bc2542` (merge of #119, V13-DB-020); 118 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1; migrations `0000`–`0012` in Git | 1 Nov 04:47 |
 | Branch protection | **none on `main` or `develop`** (`protected: false`); the GitHub connector cannot set protection rules (OI-016) | 31 Oct 19:08 |
 | CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Since #36 (V13-ARCH-008) the Playwright job runs the app against a PostgreSQL 17 service built by `pnpm db:reset`. Latest `develop` push run [41274148140](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41274148140) on `0bc2542`: success | 1 Nov 04:47 |
+| Release | `.github/workflows/release.yml` (V13-ARCH-012, REQ-CICD-006): on a push to `main`, which is the owner's milestone merge, it tags the commit `v<version>` from `package.json` and publishes that version's `CHANGELOG.md` section as the GitHub release notes; a tag is never moved. Not run yet: `main` has had no merge since 28 Oct, and the repository has no tags and no releases | 1 Nov 05:24 |
 
 ## 2. Supabase (database)
 
