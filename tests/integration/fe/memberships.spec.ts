@@ -145,6 +145,38 @@ describe.skipIf(!available)("V13 own memberships on the primary cluster (FE-008)
       ).toEqual([{ workspace: "SECRETARIAT", role: "COMMITTEE_SECRETARY" }]);
     });
 
+    // ARCH CHANGES 466ea5d: the end of the window. Same workspace as above, so only the adapter's valid_to predicate
+    // can drop the row (checked by deleting it). now() is fixed inside the transaction, so valid_to = now() is the
+    // exact exclusive end.
+    const plantAlphaSecretariatEnded = (validTo: string) => (tx: Tx) => tx`
+      insert into cdf_notifications_v13.persona_workspace_membership
+        (persona_id, workspace_id, role_id, valid_from, valid_to)
+      select '0b000000-0000-4000-8000-000000000001'::uuid, w.id, r.id, now() - interval '2 days',
+             now() + ${validTo}::interval
+        from cdf_notifications_v13.workspace w, cdf_notifications_v13.role r
+       where w.code = 'SECRETARIAT' and r.code = 'GOVERNANCE_OFFICER'`;
+
+    it("negative: a membership whose valid_to has passed gives no row", async () => {
+      expect(
+        await planted(plantAlphaSecretariatEnded("-1 hour"), who(1, "SECRETARIAT", "COMMITTEE_SECRETARY")),
+      ).toEqual([{ workspace: "SECRETARIAT", role: "COMMITTEE_SECRETARY" }]);
+    });
+
+    it("negative: the window's end is exclusive (valid_to = now() gives no row)", async () => {
+      expect(
+        await planted(plantAlphaSecretariatEnded("0 seconds"), who(1, "SECRETARIAT", "COMMITTEE_SECRETARY")),
+      ).toEqual([{ workspace: "SECRETARIAT", role: "COMMITTEE_SECRETARY" }]);
+    });
+
+    it("positive control: a membership ending later than now() is confirmed", async () => {
+      expect(
+        await planted(plantAlphaSecretariatEnded("1 hour"), who(1, "SECRETARIAT", "COMMITTEE_SECRETARY")),
+      ).toEqual([
+        { workspace: "SECRETARIAT", role: "COMMITTEE_SECRETARY" },
+        { workspace: "SECRETARIAT", role: "GOVERNANCE_OFFICER" },
+      ]);
+    });
+
     it("negative: a membership in a workspace with is_active = false gives no row", async () => {
       expect(
         await planted(
