@@ -85,6 +85,21 @@ async function measure(page: Page, edges: boolean): Promise<Finding[]> {
       }
       // The deepest elements whose content is wider than their box (no spilling descendant), with their children's
       // widths: the element that makes the page wider is among them.
+      // Which child makes the page wider: hide each in turn and measure the page again (restored at once).
+      const culprits = (el: Element) =>
+        [...el.children]
+          .filter((c): c is HTMLElement => c instanceof HTMLElement && c.getClientRects().length > 0)
+          .map((c) => {
+            const before = c.style.getPropertyValue("display");
+            const priority = c.style.getPropertyPriority("display");
+            c.style.setProperty("display", "none", "important");
+            const width = root.scrollWidth;
+            c.style.setProperty("display", before, priority);
+            if (!before) c.style.removeProperty("display");
+            return `${name(c)} ${width}`;
+          })
+          .slice(0, 10)
+          .join(", ");
       const spills: [number, string][] = spilling
         .filter((el) => !spilling.some((other) => other !== el && el.contains(other)))
         .map((el) => [
@@ -99,7 +114,7 @@ async function measure(page: Page, edges: boolean): Promise<Finding[]> {
               return `${name(c)} ${Math.round(b.left)}…${Math.round(b.right)} ${Math.round(b.width)}/${c.scrollWidth}`;
             })
             .slice(0, 10)
-            .join(", ")}`,
+            .join(", ")}; page width without each: ${culprits(el)}`,
         ]);
       const top = (xs: [number, string][]) =>
         xs
