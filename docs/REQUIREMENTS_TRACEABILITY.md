@@ -101,8 +101,8 @@ The 280 rows with `Milestone` = M1, counted from this CSV. Their statuses were a
 the merges from `d5b61b0` to `d26ada9` (#78, #70, #76, #83, #80) in V13-PROC-014, the merges from `d26ada9` to `286eb93`
 (#74, #84, #85, #81) in V13-PROC-015, the merges from `286eb93` to `40af5ef` (#87, #89, #91, #92, #93) in
 V13-PROC-016, the merges from `40af5ef` to `11fad34` (#90, #94, #82, #95) in V13-PROC-017, the merges from
-`11fad34` to `a0bf765` (#96, #88, #97, #99) in V13-PROC-019, and the merges from `373f19c` to **`85f7332`** (#103,
-#105, #101) in V13-PROC-020.
+`11fad34` to `a0bf765` (#96, #88, #97, #99) in V13-PROC-019, and the merges from `373f19c` to **`75733ba`** (#103,
+#105, #101, #106) in V13-PROC-020.
 The status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
 merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
 merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief

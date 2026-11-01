@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 03:07 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 373f19c
+Updated: 2026-11-01 03:26 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 75733ba
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -30,8 +30,9 @@ Updated: 2026-11-01 03:07 UTC · Branch: `claude/project-thread-94r9g5` · Base:
 | V13-PROC-017 sixth M1 register pass (merges 40af5ef..11fad34: #90, #94, #82, #95) | COMPLETE | #99 merged `a0bf765` (SEC ACCEPT 7f14954, final head 8dd4e4b; CI 41266036893). 7 M1 rows. REQ-JRN-007 → COMPLETE (#95, JI-01..07); its component now names the lib/journeys resolver and says there is no stored instance table in M1 (ARCH: PROC's call within path (a)). IA-007, QA-024, VIS-006: M1-06/M1-11/M1-12 FIXED (#90), M1-09 and M1-15 to M1-18 fixed in code (#82; the review register still shows ROUTED). NOTIF-006: preview frame name from the projected title (#82). CASE-012, QA-033: per-case journey (#95). #88, #96 and #97 had not merged at opening; REQ-QA-038 waits for #97 (next pass). Totals 71 COMPLETE, 175 IN_PROGRESS (52 standing rules, 44 document-only), 16 BLOCKED, 1 PSR, 17 NOT_STARTED |
 | V13-PROC-018 per-case journey instances (REQ-JRN-007) | COMPLETE | #95 merged `11fad34` (SEC ACCEPT 81f82d3, re-confirmed on 93a489e; CI 41264806199). Path (a), design note `docs/teams/proc/JOURNEY_INSTANCE.md`: the computed journey is the case's instance; no `case_journey_instances` table in M1 (version pinning is REQ-JRN-008/009, M3). Resolver fix: an event of another case, or with no case_id, that names this case's object as its object or in its payload is now refused (`CASE_MISMATCH`; the reference checked the object path only). The no-case_id part is ARCH's ruling on SEC's LOW. JI-01..07 in `tests/unit/journeys/case-isolation.spec.ts`; JI-03 and JI-07 fail without the fix. |
 | V13-PROC-019 seventh M1 register pass (merges 11fad34..a0bf765: #96, #88, #97, #99) | COMPLETE | #102 merged `373f19c` (CI 41266714543). 4 M1 rows. REQ-CASE-014 → COMPLETE (ruling (b): the V13-QA-008 leak-suite guard G1–G6, #88). REQ-QA-038 → COMPLETE (ruling (a): UX_BACKLOG.md, #97, QA ACCEPT 745acdd). REQ-A11Y-010 → IN_PROGRESS (#96 review, R-01..R-03 fixed and pinned by reflow.spec.ts; QA-010's browser spec not merged). REQ-QA-024 gains #96 and #97. Totals 73 COMPLETE, 175 IN_PROGRESS (51 standing rules, 44 document-only), 16 BLOCKED, 1 PSR, 15 NOT_STARTED |
-| V13-PROC-021 plain-text twin of the platform preview (REQ-NOTIF-011, supports REQ-NOTIF-018) | IN_REVIEW | `renderPlatform(...).text` now follows renderEmail's text twin: marking first and last, a blank line after every component, the preview notice, controls and bidi characters stripped, lines ≤ 900 octets; same components and order as the HTML. HTML unchanged (516 reference renders identical). Tests PTX-01..08. Showing the text in the in-case preview is FE-011 |
-| V13-PROC-020 eighth M1 register pass | NOT_STARTED | starts when ARCH says #103 and #101 have landed |
+| V13-PROC-021 plain-text twin of the platform preview (REQ-NOTIF-011, supports REQ-NOTIF-018) | COMPLETE | #106 merged `75733ba` (SEC ACCEPT b34b569; CI 41267938962). `renderPlatform(...).text` follows renderEmail's text twin; HTML unchanged; PTX-01..08. Showing the text in the preview is V13-FE-011 |
+| V13-PROC-020 eighth M1 register pass (merges 373f19c..75733ba: #103, #105, #101, #106) | IN_REVIEW | 8 M1 rows, columns 10–13. REQ-DATA-023 → COMPLETE (ruling (b): the rollback register and its checker, #101). REQ-CASE-014's Test_ID lists the §7.1 detection suites (SEC INFO on #102). SEC-APP-22 (#103) on REQ-SEC-002, REQ-DEPLOY-013 and REQ-CASE-014. OI-052 (#105) on REQ-DEPLOY-003 and REQ-DEPLOY-015 (ARCH 03:15). #106 on REQ-NOTIF-011 and REQ-NOTIF-018. Totals 74 COMPLETE, 174 IN_PROGRESS (51 standing rules, 44 document-only), 16 BLOCKED, 1 PSR, 15 NOT_STARTED |
+| V13-PROC-022 export binds the rendering to the validated model; the export builder strips controls (OI-053, SEC findings on #108) | NOT_STARTED | after PROC-020; negatives: SEC's probe and PROC's swap probe (CF-35 rendering under CF-31's record) |
 
 ## Changed files
 - PR #3: `docs/teams/proc/PORT_PLAN.md`, `docs/teams/proc/STATUS.md`
@@ -53,6 +54,7 @@ Updated: 2026-11-01 03:07 UTC · Branch: `claude/project-thread-94r9g5` · Base:
 - PROC-016: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #87, #91, #92, #93), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1 intro), this file
 - PROC-017: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #90, #82, #95), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
 - PROC-019: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #96, #88, #97), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
+- PROC-020: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #103, #105, #101, #106), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
 - PROC-021: `lib/notifications/render/platform.ts` (text twin), `tests/unit/notifications/platform-text.spec.ts` (new, PTX-01..08), this file
 - PROC-018: `lib/journeys/resolve.ts` (case check on payload references), `tests/unit/journeys/case-isolation.spec.ts` (JI-01..07), `docs/teams/proc/JOURNEY_INSTANCE.md`, this file
 - PROC-012: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows: status, test, evidence, open issue), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
