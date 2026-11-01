@@ -299,14 +299,20 @@ describe("Case Workspace notifications tab with the preview", () => {
     }
   });
 
-  it('the preview renders inside UX-006\'s frame: sandbox="", srcdoc only, lang and dir of the notice', async () => {
+  it('the preview renders inside UX-006\'s frame: sandbox="", srcdoc only, lang and dir in the document', async () => {
     const v = await tab(WITNESS_1.notification_id, createFakeNotificationPreview(ROWS));
     const out = html(v);
     expect(out).toContain('data-preview-state="preview"');
     expect(out).toMatch(/<iframe[^>]*sandbox=""/);
     expect(out).toMatch(/<iframe[^>]*srcDoc="&lt;!DOCTYPE html&gt;/i);
     expect(out).not.toMatch(/<iframe[^>]*\ssrc=/);
-    expect(out).toMatch(/<iframe[^>]*lang="en"[^>]*dir="ltr"/);
+    // V13-UX-011 (UXB-13): the frame element carries no lang or dir, so its name takes the page language; the
+    // notice's language and direction are declared by the document in srcdoc.
+    const frame = (out.match(/<iframe[^>]*>/)?.[0] ?? "").replace(/ srcDoc="[^"]*"/i, "");
+    expect(frame).not.toMatch(/ lang=| dir=/);
+    expect(out).toMatch(
+      /<iframe[^>]*srcDoc="&lt;!DOCTYPE html&gt;[^"]*&lt;html lang=&quot;en&quot; dir=&quot;ltr&quot;&gt;/i,
+    );
     expect(out).toContain('data-testid="case-notification-preview-frame"');
     // the notice is never injected into the page outside the frame's attribute
     expect(out).not.toContain('<p class="marking" data-marking="DESIGN_PREVIEW">');

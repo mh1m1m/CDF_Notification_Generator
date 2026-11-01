@@ -23,7 +23,7 @@ beforeAll(async () => {
 
 const render = (l: Locale, html: string, title = "Synthetic notice") =>
   renderToStaticMarkup(
-    <NotificationPreviewFrame t={createTranslator(l)} rendered={{ html }} title={title} lang={l} />,
+    <NotificationPreviewFrame t={createTranslator(l)} rendered={{ html }} title={title} />,
   );
 const unescape = (s: string) =>
   s
@@ -47,15 +47,40 @@ describe("NotificationPreviewFrame — isolation", () => {
       expect(frame).toMatch(/ sandbox=""/);
       expect(frame).not.toMatch(/ src=/);
       expect(frame).not.toMatch(/allow-/);
-      expect(frame).toContain(`lang="${l}"`);
-      expect(frame).toContain(`dir="${l === "ar" ? "rtl" : "ltr"}"`);
+      // UXB-13 (V13-UX-011): no lang or dir on the frame element, so its name takes the page language.
+      const own = frame.replace(/ srcDoc="[^"]*"/i, "");
+      expect(own).not.toMatch(/ lang=/);
+      expect(own).not.toMatch(/ dir=/);
       expect(frame).toContain('title="Synthetic notice"');
       expect(frame).toMatch(/referrerpolicy="no-referrer"/i);
       const srcdoc = frame.match(/ srcDoc="([^"]*)"/i)?.[1];
       expect(srcdoc).toBeDefined();
       expect(unescape(srcdoc!)).toBe(docs[key]);
+      // The document inside keeps its own language and direction.
+      expect(unescape(srcdoc!)).toMatch(
+        new RegExp(`<html[^>]* lang="${l}"[^>]* dir="${l === "ar" ? "rtl" : "ltr"}"`),
+      );
       // Nothing of the document reaches the page as markup: the only element-like text is inside the attribute.
       expect(html.replace(/ srcDoc="[^"]*"/i, "")).not.toMatch(/<html|<style|<script|<body/i);
+    },
+  );
+
+  it.each(LOCALES)(
+    "leaves the frame untagged, so an Arabic notice on the %s page is named in the page language",
+    (l) => {
+      // The English UI shows an Arabic notice (UXB-13): the frame's name mixes the Arabic title with English words.
+      const html = renderToStaticMarkup(
+        <div lang={l}>
+          <NotificationPreviewFrame
+            t={createTranslator(l)}
+            rendered={{ html: docs["platform-ar"]! }}
+            title="قضية تجريبية — design preview"
+          />
+        </div>,
+      );
+      const frame = html.match(/<iframe[^>]*>/)?.[0] ?? "";
+      expect(frame).toContain('title="قضية تجريبية — design preview"');
+      expect(frame.replace(/ srcDoc="[^"]*"/i, "")).not.toMatch(/ lang=| dir=/);
     },
   );
 
@@ -103,12 +128,7 @@ describe("NotificationPreviewFrame — refusals render nothing and log no conten
   it("refuses a missing html and an empty title", () => {
     expect(
       renderToStaticMarkup(
-        <NotificationPreviewFrame
-          t={createTranslator("ar")}
-          rendered={{} as { html: string }}
-          title="x"
-          lang="ar"
-        />,
+        <NotificationPreviewFrame t={createTranslator("ar")} rendered={{} as { html: string }} title="x" />,
       ),
     ).toBe("");
     expect(render("ar", docs["platform-ar"]!, "  ")).toBe("");
