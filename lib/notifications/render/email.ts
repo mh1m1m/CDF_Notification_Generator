@@ -28,6 +28,7 @@ import "server-only";
  *  - card budget + compact fallback + cardJsonForHtml ← notifications/generator/source/engine_v9.js ~520–575
  *    (V12 escaped only "</"; V13 escapes <, >, &, U+2028, U+2029).
  */
+import { recordRendering } from "./provenance";
 import { assertProjected, outcomeOf, type Projected, type ProjectedModel } from "@/lib/disclosure/project";
 import { COMPONENTS, type RenderCtx, type CardElement, type ComponentOutput } from "./components";
 import {
@@ -657,7 +658,7 @@ export function renderEmail(
       seed: `${nid}|${lang}|${density}`,
     });
   }
-  return {
+  const out: RenderedEmail = {
     subject,
     preheader,
     html,
@@ -673,4 +674,6 @@ export function renderEmail(
     marking: MARKING,
     not_available: NOT_AVAILABLE[lang],
   };
+  recordRendering(out, projected); // OI-053: the export accepts this rendering only with this projection
+  return out;
 }

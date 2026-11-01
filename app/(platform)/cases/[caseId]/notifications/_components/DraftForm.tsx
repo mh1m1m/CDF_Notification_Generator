@@ -19,12 +19,14 @@ export interface DraftFormText {
 export interface DraftFormProps {
   readonly caseId: string;
   readonly idempotencyKey: string;
+  /** The server's binding of caseId and idempotencyKey (V13-FE-012); opaque here. */
+  readonly binding: string;
   readonly templates: readonly { readonly value: string; readonly code: string; readonly label: string }[];
   readonly recipients: readonly { readonly value: string; readonly label: string }[];
   readonly text: DraftFormText;
 }
 
-export function DraftForm({ caseId, idempotencyKey, templates, recipients, text }: DraftFormProps) {
+export function DraftForm({ caseId, idempotencyKey, binding, templates, recipients, text }: DraftFormProps) {
   const [state, action, pending] = useActionState<DraftActionState, FormData>(createDraft, null);
   // After a refusal, focus moves to the alert: the submit button was disabled while pending, so focus would otherwise
   // fall to <body> and keyboard users would lose their place (QA review of #51).
@@ -50,6 +52,7 @@ export function DraftForm({ caseId, idempotencyKey, templates, recipients, text 
       <form action={action} className={styles.form} data-testid="draft-form">
         <input type="hidden" name="case_id" value={caseId} />
         <input type="hidden" name="idempotency_key" value={idempotencyKey} />
+        <input type="hidden" name="case_binding" value={binding} />
         <label htmlFor="draft-template">{text.template}</label>
         <select id="draft-template" name="template_version_id" required data-testid="draft-template">
           {templates.map((o) => (

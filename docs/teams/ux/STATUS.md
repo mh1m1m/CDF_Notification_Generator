@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `feature/V13-UX-009-text-resize-reflow` · Base: `develop` `f11e65a`
+Updated: 2026-11-01 · Branch: `feature/V13-UX-011-preview-frame-language` · Base: `develop` `68a42b9`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -150,7 +150,7 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   closed notice role), lint, typecheck, format, e2e 224/224 locally. Visual check at 360/768/1280 in ar and en
   (overview, events, tasks, closed case): no page scroll, tab row on one line, no broken case numbers.
 
-## V13-UX-009: text resize and reflow (REQ-A11Y-010; IN_REVIEW once its PR is open; QA reviews)
+## V13-UX-009: text resize and reflow (REQ-A11Y-010). PR #96, QA ACCEPT `cb2c5ee`, CI 41264584584, merged into `develop` as `68a42b9`
 - Review of the five M1 screens in ar and en at 200% zoom, 320 px and with the WCAG 1.4.12 spacing override:
   `docs/design/reviews/UX009_TEXT_RESIZE_REFLOW.md` (4 findings). No two-dimensional page scroll anywhere; tables
   scroll only inside their labelled regions.
@@ -159,8 +159,22 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - `tests/unit/components/reflow.spec.ts` pins R-01 to R-03 and the no-clipping rules (fails on the old stylesheet).
 - Spec for QA's a11y e2e in the register §4 (V13-QA-010). M1-09 recorded FIXED by #90; M1-12 now wraps (R-02).
 
+## V13-UX-010: UX improvement backlog (UXQA-19, REQ-QA-038). PR #97 (IN_REVIEW; QA)
+- `docs/design/reviews/UX_BACKLOG.md`: 15 open items (UXB-01 … UXB-15) with evidence, reproduction, severity,
+  priority, owner task and status; ruled and closed findings listed. QA CHANGES at `c24b31a` and `d7b7ad6` fixed in
+  `d7b7ad6` and `745acdd` (UXB-14 case-tab dates and version, #82 statuses, UXB-15 OI-037 replaces the preview).
+
+## V13-UX-011: preview frame named in the page language (UXB-13; IN_REVIEW once its PR is open; QA, FE for `app/**`)
+- `components/data/NotificationPreviewFrame.tsx`: no `lang` or `dir` on the `<iframe>` element. Its `lang` also
+  covered the `title`, so "— design preview" in the English UI was tagged Arabic. The document inside keeps its own
+  `<html lang dir>` from the renderer. The `lang` prop is removed; FE's call site in `CaseWorkspace.tsx` drops it (one
+  line). `sandbox=""`, srcdoc-only, the refusals and the CSP are unchanged.
+- Tests: `tests/unit/components/preview-frame.spec.tsx` (no `lang`/`dir` on the frame element, the srcdoc still
+  declares them, an Arabic notice on an ar and an en page) and FE's `tests/unit/server/notification-preview.spec.tsx`
+  (the same on the case tab's preview). 7 of 49 fail on the old component, 49 pass now.
+
 ## Unresolved defects
-- QA nit from #74 (preview frame title "— DESIGN_PREVIEW"): routed by ARCH to FE-009 (#82); no UX change.
+- None open on UX paths. Open items on other teams' paths are in `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once

@@ -6,11 +6,14 @@
 //   - The srcdoc document inherits the page's Content-Security-Policy (lib/http/csp.ts). The renderer's inline
 //     <style> works under style-src 'unsafe-inline'; nothing can run.
 //   - A server component: the HTML goes to the browser as an escaped attribute and never into a client bundle.
+//   - The <iframe> element carries no lang or dir (V13-UX-011, UXB-13). An element's lang also covers its attributes,
+//     so lang="ar" on the frame tagged the English words of its name ("… — design preview") as Arabic for screen
+//     readers. The frame's name now takes the page language; the document inside keeps its own <html lang dir>.
 // Runtime guard, for callers outside the type system: anything that is not a complete document carrying the
 // renderer's DESIGN_PREVIEW marking renders nothing and logs a warning without content.
 import type { RenderedEmail } from "@/lib/notifications/render/email";
 import type { RenderedPlatform } from "@/lib/notifications/render/platform";
-import type { Locale, Translator } from "@/lib/i18n";
+import type { Translator } from "@/lib/i18n";
 
 /** A preview the renderer produced from a projected model. Only its `html` is used. */
 export type RenderedPreview = Pick<RenderedEmail, "html"> | Pick<RenderedPlatform, "html">;
@@ -20,8 +23,6 @@ export interface NotificationPreviewFrameProps {
   rendered: RenderedPreview;
   /** Accessible name of the frame, localised by the caller (e.g. the notice's subject). */
   title: string;
-  /** Language of the rendered document; sets lang and dir on the frame. */
-  lang: Locale;
   testId?: string;
 }
 
@@ -37,7 +38,6 @@ export function NotificationPreviewFrame({
   t,
   rendered,
   title,
-  lang,
   testId = "notification-preview",
 }: NotificationPreviewFrameProps) {
   const html = rendered?.html;
@@ -51,8 +51,6 @@ export function NotificationPreviewFrame({
         srcDoc={html}
         sandbox=""
         title={title}
-        lang={lang}
-        dir={lang === "ar" ? "rtl" : "ltr"}
         referrerPolicy="no-referrer"
         data-testid={`${testId}-frame`}
       />

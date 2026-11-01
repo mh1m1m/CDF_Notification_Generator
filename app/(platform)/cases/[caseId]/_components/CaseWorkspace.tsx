@@ -468,7 +468,6 @@ export function NotificationPreviewSection({
             title={t("case.preview.frameTitle", {
               title: preview.eventTitle ?? t("case.preview.untitled"),
             })}
-            lang={preview.lang}
             testId="case-notification-preview"
           />
           {/* V13-FE-011 (REQ-NOTIF-011): the plain-text twin of the same rendering, as escaped text in the notice's
@@ -540,6 +539,7 @@ function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; dra
     <DraftForm
       caseId={draft.caseId}
       idempotencyKey={draft.idempotencyKey}
+      binding={draft.binding}
       templates={draft.templates.map((o) => ({
         value: o.template_version_id,
         code: o.template_code,

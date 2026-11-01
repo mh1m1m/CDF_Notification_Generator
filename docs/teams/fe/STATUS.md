@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 04:04 UTC · Branch: feature/V13-FE-011-plain-text-preview (develop 937cff3 merged in; #82, #98 merged; FE-012 is #112) · Head: see PR
+Updated: 2026-11-01 04:29 UTC · Branch: feature/V13-FE-011-plain-text-preview (develop ca16cba merged in; #112 FE-012 and #100 UX-011 merged; FE-013 is #121) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -86,6 +86,14 @@ Updated: 2026-11-01 04:04 UTC · Branch: feature/V13-FE-011-plain-text-preview (
   as in the Center; UXB-02) and the version is Latin in `<bdi>` (UXB-04, D10); the unused `dateTimeFormat` helper is
   removed. ARCH 02:42: the draft form's template option shows the version as Latin digits, never grouped (D10; an
   `<option>` holds text only, so no `<bdi>`) — IN_REVIEW (QA).
+- V13-FE-012 Draft bound to the route's case (OI-049, ADR-020 design B) — the draft form carries a signed binding
+  `v1.<payload>.<mac>`: HMAC-SHA256 over a fixed-order JSON array [purpose, persona, workspace id, case, idempotency
+  key, session iat, session exp], key from `lib/auth/draft-binding-key.ts` (HKDF info `cdf-v13/draft-route-binding/v1`,
+  PRODUCTION_SUBSTITUTION_REQUIRED: KMS/HSM). `createNotificationDraft`: schema → binding → pre-check → command, and the
+  command takes the case from the verified binding. Every binding failure is the generic refusal with code BINDING
+  only. Replay is deduplicated by the bound idempotency key (DUPLICATE). The lib/auth hunk needs ARCH ACCEPT; QA's
+  Sentinel `request-leak-app.spec.ts:124` (which pinned the old behaviour) needs QA's hunk on this PR — reviewers SEC + QA. COMPLETE: merged into
+  develop as abdd885 (ARCH combined check: unit 2,110, test:db 497, e2e 332); OI-049 resolved.
 - V13-FE-011 Plain-text version in the in-case preview (REQ-NOTIF-011; PROC-021 #106) — the preview view carries
   `renderPlatform(...).text` from the same projected model as the frame's HTML. It is shown under the frame in a
   native `<details>` (closed by default, works without JavaScript), as escaped text in a `<pre>` with the notice's
@@ -191,6 +199,8 @@ Updated: 2026-11-01 04:04 UTC · Branch: feature/V13-FE-011-plain-text-preview (
 | FE-010 + UXB-02/UXB-04 (case tab dates and version) after merging develop 11fad34: unit pins in ar and en for the month-in-words created time (equals `formatDateTime`, no `/`) and the Latin `<bdi>` version; restoring the numeric date or `numberFormat` version fails them (checked). Commands as above | pass | 79 files, 2018 / 468 / 235 of 235 | FE-010 head |
 | FE-010 + draft option version (D10) after merging develop 68a42b9: unit pin in ar and en with version 1234 ("الإصدار 1234" / "version 1234", no Arabic-Indic digits, no grouping); numberFormat output fails it (checked). Commands as above | pass | 80 files, 2026 / 468 / 235 of 235 | FE-010 head |
 | FE-010 after merging develop a0bf765 (#99, QA's leak-suite guard): commands as above | pass | 80 files, 2026 / 468 / 312 of 312 | FE-010 head |
+| FE-012 after merging develop 2bcd183: lint, typecheck, prettier, db:lint / `pnpm test` (draft-binding 24 new; notification-draft 60, of which binding, expiry, session and replay cases new) / `pnpm db:reset` + `pnpm test:db` (FE integration 27: posted id edited ×4, foreign bindings ×6, all with no command call and nothing written) / `pnpm db:reset` + `pnpm test:e2e` (Scenario E tamper test new). Mutation: without the verify call 9 integration and 12 unit tests fail; deleting any of the 12 guards in `verifyDraftBinding` fails a unit test | pass except QA's Sentinel :124 (expected, pins OI-049) | 85 files, 2099 / 479 / 312 passed + 1 failed | FE-012 head |
+| FE-012 after SEC CHANGES 8c07746 (workspace-only binding: Delta signed in Governance / Alpha signed in Governance, posted in Secretariat; crafted payload with another workspace's id; FE integration Alpha in Governance) and QA's P3 hunk 7971547: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e`. Mutation: without the workspace comparison 4 unit and 1 integration tests fail | pass | 85 files, 2103 / 480 / 313 of 313 | FE-012 head |
 | FE-011 on develop 800ab8a: lint, typecheck, format:check / `pnpm test` (notification-preview 5 new: loader text is the renderer's twin for the projected model, ar + en; closed localised disclosure after the frame; notice's lang/dir; markup escaped; no text in unmapped/unavailable/none) / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (Scenario E: text version at 320 px, text only, axe). Mutation: the HTML in place of the text fails the loader test; `white-space: pre` fails the 320 px test (799 vs 320) | pass | 84 files, 2059 / 485 / 313 of 313 | FE-011 head |
 | FE-011 after merging develop 937cff3, and with the `<pre>`'s UI-language aria-label removed (the UXB-13 rule from #100: the notice's lang covers only the notice's text): commands as above | pass | 84 files, 2060 / 485 / 313 of 313 | FE-011 head |
 
@@ -199,6 +209,7 @@ Updated: 2026-11-01 04:04 UTC · Branch: feature/V13-FE-011-plain-text-preview (
   field. A tampered id to a case the persona may not draft on is refused generically, nothing written; a swap to
   another case it may draft on lands the draft and its audit event there only (tested). ARCH + SEC accepted this
   binding without an HMAC helper (31 Oct).
+  Closed by V13-FE-012 (ADR-020) once merged: the swap is refused and nothing is written.
 - FE-OPEN-1 RULED by ARCH 28 Oct 03:47: `synthetic_title` is `{ar, en} | null`, `source_ref` follows the database
   pattern `^[A-Za-z0-9._:-]{1,80}$` (both in `lib/contracts`, this PR, needs ARCH + SEC ACCEPT); DB returns
   `updated_at`, `source_system`, `source_ref` and makes `source_ref` NOT NULL in its PR (b). Until DB's PR lands the
