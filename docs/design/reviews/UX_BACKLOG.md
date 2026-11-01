@@ -32,6 +32,7 @@ evidence-based backlog that converts verified defects into development tasks wit
 | QA reviews of UX PRs (`docs/teams/qa/STATUS.md`) | Every QA CHANGES on a UX PR was fixed in that PR; QA lists no open defects. QA's notes that fall to UX are entered here (UXB-13 from #82; UXB-14 and UXB-15 from QA's review of #97) | `develop` `11fad34` |
 | UXB-07 re-check (V13-UX-013) | UXB-01 … 05, 08, 14 re-measured after FE-009 and FE-010; new UXB-17, UXB-18 | `develop` `ca16cba`; method in `M1_DESIGN_REVIEW.md` "Re-check" |
 | Reflow re-check (V13-UX-016) | UX-009's conditions and a four-font probe on the pages changed since #96: draft form, pager, preview text, Center, Portfolio, My Work status form. No new finding; UXB-19 confirmed and its fix checked on #131 | `develop` `cfb82be`; `UX009_TEXT_RESIZE_REFLOW.md` §5 |
+| Next Action Card reflow (V13-UX-017) | The card on the Overview at 200 %, 320 px and with 1.4.12 spacing, ar and en, four fonts; complements QA's #150 (320 px only). No finding | `develop` `0a0c955`; `UX009_TEXT_RESIZE_REFLOW.md` §6 |
 
 ## Backlog
 
