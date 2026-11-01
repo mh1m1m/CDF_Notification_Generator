@@ -7,6 +7,7 @@ export const en: Record<keyof typeof ar, string> = {
   subtitle: "Your open tasks in the {workspace} workspace",
   persona: "Persona",
   roles: "Roles",
+  noConfirmedRole: "No role confirmed in this workspace",
   workspace: "Active workspace",
   navLabel: "My work",
   actionFailed: "The request could not be completed. Reference: {reference}",

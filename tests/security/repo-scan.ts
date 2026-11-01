@@ -65,9 +65,15 @@ export const PERSONAL_DATA_RULES: Readonly<Record<string, RegExp>> = {
   case_ref_not_cdf_demo: /\bCDF-(?!DEMO-\d{4}-)[A-Z]{2,}-\d{4}-[A-Z0-9-]+/g,
 };
 
-/** The tracked files whose content feeds the demo or its tests: the personal-data scan's scope. */
+/**
+ * The tracked files whose content feeds the demo or its tests: the personal-data scan's scope. Migrations and the
+ * hosted scripts are in it because reference data (roles, catalogues, templates) ships in migrations and the hosted
+ * scripts run against the shared project (V13-SEC-009, DB's suggestion on #72).
+ */
 export const PERSONAL_DATA_SCOPE: readonly RegExp[] = [
   /^database\/seed\//,
+  /^database\/migrations\//,
+  /^database\/hosted\//,
   /^tests\/fixtures\//,
   /^tests\/e2e\//,
   /^tests\/security\/e2e\//,
