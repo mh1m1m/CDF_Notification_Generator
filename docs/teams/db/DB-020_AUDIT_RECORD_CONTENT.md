@@ -67,6 +67,21 @@ rolling back, and V13 has no autonomous transactions (no dblink, no extensions, 
 - **(B) Refusals in the same step.** Same as A, built now. Larger change (lib/db, SEC suites, new command), and the
   refusal path needs its own threat review; it would delay REQ-AUD-005's outcome and policy-version columns.
 
+**Which command supplies each new value.** No caller passes either value. `_append_audit` keeps its signature; it
+sets `outcome` and reads `policy_version` itself, inside the chain lock, so no command can choose or forge them.
+
+| Writer (action) | outcome | policy_version |
+| --- | --- | --- |
+| `api_install_claims_key` (CLAIMS_KEY_INSTALLED) | SUCCEEDED, by `_append_audit` | latest `policy_version` row, by `_append_audit` |
+| `api_update_task_status` (TASK_STATUS_CHANGED) | SUCCEEDED, by `_append_audit` | same |
+| `api_create_notification_draft` (NOTIFICATION_DRAFT_CREATED) | SUCCEEDED, by `_append_audit` | same |
+| `api_switch_workspace` (WORKSPACE_SWITCHED) | SUCCEEDED, by `_append_audit` | same |
+| seed 0001 (SEED_M1_LOADED), seed 0002 (SEED_M1_CASES_LOADED) | SUCCEEDED, by `_append_audit` | same |
+| `api_record_refusal` (DB-021, option A or B) | REFUSED, by an internal `_append_audit_outcome` that only that command may call | same |
+
+If no `policy_version` row exists, `_append_audit` raises and the command rolls back, so a v2 row can never carry an
+absent version. No existing command body changes in this step.
+
 ## 4. Policy version
 
 The relevant policy for a V13 database command is the **access policy the database enforced**: the RLS policies and
