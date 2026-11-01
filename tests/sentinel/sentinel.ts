@@ -16,7 +16,11 @@
 //   S8 every child frame of the page could be read (evaluated, or parsed from its srcdoc); none passes silently
 //   P1 a payload (HTML, RSC flight, JSON) contains no case id or reference outside the allowed set
 //   P2 every recorded payload could be read (from the browser, or by fetching the same GET again); none passes silently
-import type { Page, Response } from "@playwright/test";
+//   P3 an outbound same-origin request with a body (form post, Server Action call, fetch) carries, in its URL or body,
+//      no case id or reference other than the case of the page that sent it (none at all off a case page, unless
+//      the test allows it) (V13-QA-007, OI-048)
+//   P4 every such request body could be read; none passes silently
+import type { Page, Request, Response } from "@playwright/test";
 import { readChildFrames, type FramePage, type UnreadableFrame } from "./frames";
 
 export const CASE_REF_PATTERN = /CDF-DEMO-\d{4}-\d{4}/gi;
@@ -427,6 +431,118 @@ export function recordPayloads(page: Page, origin: string, options: { bodyTimeou
     },
     stop() {
       page.off("response", onResponse);
+    },
+  };
+}
+
+/** What an outbound request may name, given the page that sent it (P3). */
+export interface RequestAllowance {
+  /** Case id → reference of the cases the persona may see; the context case's reference is looked up here. */
+  refs: ReadonlyMap<string, string>;
+  /** Every known case id (so that unrelated UUIDs — idempotency keys, persona ids — are not reported). */
+  knownCaseIds: ReadonlySet<string>;
+  /** Off a case page, the cases a request may name; none when absent. */
+  outsideCase?: { caseIds: ReadonlySet<string>; caseRefs: ReadonlySet<string> };
+}
+
+const CASE_PAGE = /^\/cases\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:\/|$)/i;
+
+/** The case a page URL is in context of, or null off a case page. */
+export function caseContextOf(pageUrl: string): string | null {
+  try {
+    return CASE_PAGE.exec(new URL(pageUrl).pathname)?.[1]?.toLowerCase() ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** P3's allowance for a request sent from `pageUrl`: its own case only, or `outsideCase` off a case page. */
+export function requestAllowance(pageUrl: string, allow: RequestAllowance): PayloadAllowance {
+  const id = caseContextOf(pageUrl);
+  if (id === null)
+    return {
+      caseIds: allow.outsideCase?.caseIds ?? new Set(),
+      caseRefs: allow.outsideCase?.caseRefs ?? new Set(),
+      knownCaseIds: allow.knownCaseIds,
+    };
+  const ref = allow.refs.get(id);
+  return { caseIds: new Set([id]), caseRefs: new Set(ref ? [ref] : []), knownCaseIds: allow.knownCaseIds };
+}
+
+const decodeComponent = (text: string) => {
+  try {
+    return decodeURIComponent(text.replace(/\+/g, " "));
+  } catch {
+    return text;
+  }
+};
+
+/** The text P3 scans: the URL and the body, each also percent-decoded (a form post encodes Arabic-Indic digits). */
+export function requestText(url: string, body: string, contentType: string): string {
+  const parts = [url, decodeComponent(url), body];
+  if (/application\/x-www-form-urlencoded/i.test(contentType)) parts.push(decodeComponent(body));
+  return parts.join("\n");
+}
+
+type RequestRead =
+  { where: string; pageUrl: string; text: string } | { where: string; pageUrl: string; error: string };
+
+const BODY_METHODS = /^(POST|PUT|PATCH|DELETE)$/;
+
+/**
+ * Records every same-origin request with a body that the page sends (form posts, Server Action calls, fetch/XHR with
+ * a body), with the URL of the page that sent it, for P3. Attach before the step under test; call `violations()`
+ * after it.
+ *
+ * Playwright hands over every body Chromium sends, also large ones (2 MB measured), and none for an empty body. A
+ * request without a body is therefore an empty one and only its URL is scanned, except a multipart request: multipart
+ * always has a body (at least its closing boundary), so one without a body was not handed over, and that is P4. A body
+ * Playwright refuses to read is P4 too.
+ */
+export function recordRequests(page: Page, origin: string) {
+  const reads: RequestRead[] = [];
+  const onRequest = (request: Request) => {
+    const url = request.url();
+    if (!url.startsWith(origin) || !BODY_METHODS.test(request.method())) return;
+    let pageUrl: string;
+    try {
+      pageUrl = request.frame().url(); // still the sending page while a form post navigates away from it
+    } catch {
+      pageUrl = page.url(); // a request without a frame (service worker): judge it by the page
+    }
+    const where = `${request.method()} ${url} (from ${pageUrl})`;
+    const headers = request.headers();
+    const type = headers["content-type"] ?? "";
+    let body: Buffer | null;
+    try {
+      body = request.postDataBuffer();
+    } catch (e) {
+      reads.push({ where, pageUrl, error: `body not readable (${firstLine(e)})` });
+      return;
+    }
+    if (body === null && /^multipart\//i.test(type))
+      reads.push({ where, pageUrl, error: `a ${type.split(";")[0]} body was not handed over` });
+    else reads.push({ where, pageUrl, text: requestText(url, body?.toString("utf8") ?? "", type) });
+  };
+  page.on("request", onRequest);
+  return {
+    violations(allow: RequestAllowance): Violation[] {
+      return reads.flatMap((r) =>
+        "error" in r
+          ? [{ rule: "P4", where: r.where, detail: `request body could not be inspected: ${r.error}` }]
+          : scanPayload(r.where, r.text, requestAllowance(r.pageUrl, allow)).map((v) => ({
+              ...v,
+              rule: "P3",
+              detail: v.detail.replace("payload carries", "request carries"),
+            })),
+      );
+    },
+    /** Requests recorded (read or not), for evidence that the check is not vacuous. */
+    count(): number {
+      return reads.length;
+    },
+    stop() {
+      page.off("request", onRequest);
     },
   };
 }
