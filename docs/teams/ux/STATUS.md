@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `feature/V13-UX-014-form-controls` · Base: `develop` `4f94b07`
+Updated: 2026-11-01 · Branch: `feature/V13-UX-015-next-action-card` · Base: `develop` `772e26d`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -185,7 +185,7 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - New: UXB-17 (MEDIUM, draft form controls unstyled: no border, 21–22 px selects) and UXB-18 (LOW, "Preview" link
   looks like text), both routed by ARCH to V13-UX-014 (from `develop` after this PR merges). Docs only.
 
-## V13-UX-014: one form-control rule and underlined table links (UXB-17, UXB-18). PR #128 (IN_REVIEW; FE for app/**, QA)
+## V13-UX-014: one form-control rule and underlined table links (UXB-17, UXB-18). PR #128, QA ACCEPT `cf8a348`, CI 41276246852, merged as `772e26d`
 - `styles/globals.css`: `.v13-control` is the one look for a text input, select or textarea (control-token border,
   2.5rem, max-inline-size 100%); a link in any `tbody` is underlined (`tbody a:not(.v13-btn)`).
 - FE hunks: class names in DraftForm, NotificationCenterView, PortfolioView and MyWorkView; the two `.field input,
@@ -197,8 +197,16 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Split out: UXB-19 (LOW), the closed template select's code clip at 320 px in Arabic; not fixable in CSS. ARCH ruled
   option (b): FE shows the selected code under the select in `<bdi>` (V13-FE-016).
 
+## V13-UX-015: Next Action Card design (REQ-IA-009) on PROC's contract (#124). IN_REVIEW once its PR is open; QA
+- `components/data/NextActionCard.tsx`: NONE renders nothing; a TASK shows the recorded title as an underlined link in
+  `<bdi>`, the status FE renders (existing labels and badge) and, only when recorded, the due date with `DeadlineText`.
+- Strings `common.nextAction.heading|status|dueDate` (ar, en). Styles `.v13-next-action*` in `styles/globals.css`.
+- Spec: SCREENS.md S3 (Next Action Card), DESIGN_SYSTEM.md §3.4a, STRINGS.md.
+- Tests: `tests/unit/components/next-action-card.spec.tsx` (14). FE wires the card (calls `nextActionForCase`, passes
+  status, day count and an in-page `#task-<id>` link to the overview row, ARCH ruling); QA checks it on the page then.
+
 ## Unresolved defects
-- UXB-17 (MEDIUM) and UXB-18 (LOW) are IN_REVIEW in #128. UXB-19 (LOW) is OPEN, owned by FE as V13-FE-016
+- UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is OPEN, owned by FE as V13-FE-016
   (ARCH ruling). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests
