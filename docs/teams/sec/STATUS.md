@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 1 Nov 2026 · Branch: `security/V13-SEC-013-export-isolation` · `develop` now at `b396062`
+Updated: 1 Nov 2026 · Branch: `docs/V13-SEC-014-status-reviews` · `develop` now at `94fd0b7`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -80,9 +80,22 @@ Updated: 1 Nov 2026 · Branch: `security/V13-SEC-013-export-isolation` · `devel
   is set (QA's and ARCH's follow-up on #88); SEC-APP-22 — COMPLETE, merged #103 (`4bf455d`)
 - Reviews 1 Nov (morning): #95 PROC-018 ACCEPT `93a489e`; #101 DB-018 ACCEPT `c6f83cb`, `434c1c7`; #102 PROC-019 ACCEPT
   `82b1467`; #105 ARCH-002 ACCEPT `d801f86`
-- V13-SEC-013 — export isolation (REQ-SEC-020, "export" clause), SEC-APP-23, reviewer PROC — IN_REVIEW. Two findings
-  reported to ARCH, not pinned: the export does not bind `rendered` to the validated model, and it does not strip bidi
-  or zero-width characters from caller-supplied subject and text
+- V13-SEC-013 — export isolation (REQ-SEC-020, "export" clause), SEC-APP-23 — COMPLETE, merged #108 (`185b2ff`). Its
+  two findings (the export did not bind `rendered` to the validated model; no bidi or zero-width strip of caller-supplied
+  subject and text) became OI-053, fixed by PROC-022 #113 (`220b9d2`) and RESOLVED
+- Reviews 1 Nov (cont.): #106 PROC-021 ACCEPT `b34b569`; #109 ARCH-002 ACCEPT `b68aea2`, `29cd96d`; #110 DB-019
+  CHANGES `5d2413e` then ACCEPT `e2b8317`; #111 PROC-020 ACCEPT `40ca2c3`; #112 FE-012 CHANGES `8c07746` then ACCEPT
+  `c2021cf`; #113 PROC-022 CHANGES `7925815` (getter probe: subject, text and HTML read more than once) then ACCEPT
+  `a62eb00`; #116 FE-011 ACCEPT `51e63c6`
+- Reviews 1 Nov (to 05:40 UTC): #117 ARCH-002 ACCEPT `4deedad`; #120 DB-021 design note ACCEPT `f1eb959`
+  (R1–R7), `26024a9`; #114 QA-009 ACCEPT `f96def3`; #119 DB-020 migration 0012 ACCEPT `c3c1411`; #118 PROC-023 ACCEPT
+  `11d9bd6` (INFO: quote test titles exactly); #121 FE-013 CHANGES `5254893` then ACCEPT `0b00bb8`; #123 ARCH-002
+  CHANGES `d388c54` then ACCEPT `ccfe02c`; #124 PROC-025 ACCEPT `a578228` (INFO: no `persona` input; title escaped in
+  `<bdi>`); #126 PROC-024 ACCEPT `270d848`, `8acb69a`; #125 QA-012 ACCEPT `fe4d9c4`; #127 DB-021 migration 0013 ACCEPT
+  `321051c`; #133 ARCH-012 ACCEPT `0df0f9e` (INFO: tag protection for `v*` is an owner step; `--prerelease` for
+  versions with a `-` part); #129 DB-022 migration 0014 ACCEPT `07dc591` (8/8 mutations killed, SEC-DB-17 needs the
+  registry line); #130 PROC-026 ACCEPT `926360d` (INFO: no extra-field test inside `case`; §4 sketch still lists
+  `persona`); #132 QA-013 design note ACCEPT `c778049` (D1: mask; five INFO for the CI hunks)
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
@@ -101,6 +114,8 @@ Updated: 1 Nov 2026 · Branch: `security/V13-SEC-013-export-isolation` · `devel
 | Local, V13-SEC-011 on `develop` `b22f153`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; each of the three signals deleted in turn; the DB stopped with `CI=false V13_DB_TESTS_REQUIRED=1` and with all three unset on `case-matrix`; `CI=true` security DB suites after `pnpm db:reset` | unit **1989/1989**, SEC-APP-21 **5/5**; each deleted signal fails 2 tests; DB stopped: the file **fails** with `CI=false V13_DB_TESTS_REQUIRED=1`, 18 skipped with none set; DB up **101/101** | 5 + 101 | SEC-011 head |
 | Local, V13-SEC-012 on `develop` `a0bf765`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; the `requireBuildWhenSignalled` call removed from `surface.spec.ts`; the leak-suite guard over the 15 suites; `CI=true` Playwright `tests/security/e2e/surface.spec.ts` after `pnpm db:reset` | lint 0, typecheck 0, unit **2026/2026** (SEC-APP-22 4/4); with the call removed 1 test fails; guard `[]`; surface **12/12**, the bundle scan ran (not skipped). A first surface run with the local DB stopped had 1 flaky sign-in test; re-run with the DB up 12/12 | 4 + 12 | SEC-012 head |
 | Local, V13-SEC-013 on `develop` `b396062`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; eleven mutations of `lib/notifications` / `lib/disclosure`, one at a time, then restored | lint 0, typecheck 0, unit **2032/2032** (82 files; SEC-APP-23 6/6); every mutation fails at least one SEC-APP-23 test (model-hash check, export projection gate, revision check, unknown-version fallback, render suppression, renderer bidi strip, `X-Unsent`, an added `To:`, projection keeping a withheld field, renderer showing withheld fields, SECURITY denial not written) | 6 | SEC-013 head |
+| Local, #129 head `07dc591`: `pnpm db:lint`, `pnpm db:reset`, `CI=true pnpm test:db`; eight mutations of migration 0014, one at a time, then restored; the registry line removed from `context-forgery.spec.ts` | db:lint 15 migrations, 0 findings; test:db **600/600** (34 files); every mutation fails tests or db:lint (grant to PUBLIC: `[forbidden-grantee]`); without the registry line SEC-DB-17 fails | 600 | `07dc591` |
+| Local, #130 head `926360d`: `pnpm typecheck`, eslint on the changed files, `vitest --project unit tests/unit/domain/next-action.spec.ts`; fifteen mutations of `lib/domain/next-action.ts` | typecheck 0, lint 0, **17/17**; 14 of 15 mutations fail tests; survivor: `case` not strict (INFO) | 17 | `926360d` |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.
