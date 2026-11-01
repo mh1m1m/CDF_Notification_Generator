@@ -191,6 +191,7 @@ describe("Case Workspace markup", () => {
     expect(markup).toContain('data-case-ref="CDF-DEMO-2026-0001"');
     expect(markup).toContain('data-testid="case-header"');
     expect(markup).toContain('data-testid="case-number"');
+    expect(markup).toContain('data-testid="case-title"');
     expect(markup).toContain('data-stage="INVESTIGATION"');
     expect(markup).toContain('data-capacity="SECRETARY"');
     expect(markup).toContain("صفتك: أمين سر");
@@ -239,6 +240,8 @@ describe("Case Workspace markup", () => {
     const markup = html(await view("events"));
     expect(attrs(markup, "data-event-id")).toEqual([caseEventId(1, 2), caseEventId(1, 1)]);
     expect(markup).toContain('data-provenance="SEED_SYNTHETIC"');
+    expect(markup).toContain('data-testid="case-event-occurred"');
+    expect(markup).toContain('data-testid="case-event-recorded"');
     expect(markup).toContain("بيانات اصطناعية أولية");
     expect(markup).toContain("دون صفة مسجلة");
     expect(markup).not.toContain("data-epistemic");
@@ -259,15 +262,18 @@ describe("Case Workspace markup", () => {
     expect(markup).not.toContain(`data-testid="case-task-${caseTaskId(1, 1)}"`);
     expect(markup).toContain('data-testid="case-task-mine"');
     expect(markup).toContain('data-testid="case-last-events"');
+    // The Overview heading names the table; its caption is for assistive technology only (no visible repeat).
+    expect(markup).toContain('<caption id="case-my-tasks-caption"><span class="v13-sr-only">');
   });
 
   it("M1-09: overview shows 'My open tasks' once; the caption still names the table and its region", async () => {
     for (const locale of ["ar", "en"] as const) {
       const markup = html(await view("overview"), locale);
       const label = createTranslator(locale)("case.overview.myTasks");
-      const caption = markup.match(/<caption id="case-my-tasks-caption"([^>]*)>([^<]*)<\/caption>/);
-      expect(caption?.[1]).toContain('class="v13-sr-only"');
-      expect(caption?.[2]).toBe(label);
+      // DataTable's captionVisuallyHidden (#90): the caption keeps its id and text, shown to assistive technology only.
+      expect(markup).toContain(
+        `<caption id="case-my-tasks-caption"><span class="v13-sr-only">${label}</span></caption>`,
+      );
       expect(markup.match(/<h2[^>]*>([^<]*)<\/h2>/g)?.filter((h) => h.includes(label))).toHaveLength(1);
       expect(scrollRegionProblems(markup)).toEqual([]);
     }
@@ -275,7 +281,7 @@ describe("Case Workspace markup", () => {
 
   it("M1-09: the Tasks tab keeps its visible caption (only the overview hides it)", async () => {
     const markup = html(await view("tasks"), "en");
-    expect(markup).toMatch(/<caption id="case-tasks-caption">/);
+    expect(markup).toMatch(/<caption id="case-tasks-caption"><span class="v13-table-caption-text">/);
   });
 
   it("overview without own open tasks says so", async () => {

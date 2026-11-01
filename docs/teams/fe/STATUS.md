@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-polish (develop 286eb93 merged in; #74 and #81 merged) · Head: see PR
+Updated: 2026-11-01 02:20 UTC · Branch: fix/V13-FE-009-overview-and-center-polish (develop f11e65a merged in; #74, #81 and #90 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -68,9 +68,10 @@ Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
   `lib/adapters/identity/v13-memberships.ts`: own persona via `current_persona_id()`, active workspace, valid now).
   Session roles are never shown; no confirmed role gives an empty switcher role and "No role confirmed in this
   workspace" on My Work; a read failure shows no role (fail closed). COMPLETE (#81, merged into develop 286eb93 by ARCH). ARCH pre-review folded in: the port states its guarantees, roles in the closed set's order, planted-row negatives for a future window and an inactive workspace. The Workspaces page also uses confirmed roles. Empty-role e2e `tests/e2e/confirmed-role.spec.ts` (ARCH request, for QA review).
-- V13-FE-009 (M1 design review) — Case Workspace overview: "My open tasks in this case" shown once (the heading; the
-  caption stays for assistive technology and still names the scroll region), the events list styled (rail and
-  marker per entry, same on Overview and Events) (M1-09). Notification Operations Center: the table keeps a 48rem
+- V13-FE-009 (M1 design review) — Case Workspace overview (M1-09): after #90 (develop f11e65a) the Overview's task
+  table uses UX's DataTable `captionVisuallyHidden` and the events list is UX's Timeline, so FE-009's own caption
+  and timeline-CSS hunks were dropped (ARCH ruling). FE-009 keeps unit tests for "My open tasks in this case" shown
+  once in ar and en, the caption still naming the table and scroll region, and the Tasks tab keeping its visible caption. Notification Operations Center: the table keeps a 48rem
   minimum and scrolls in its region, never the page (M1-15); template codes and the version never break (M1-16); the
   version is Latin in `<bdi>` after a translated label (M1-17, D10); dates, times and counts through
   `components/format.ts` (M1-18). UX finding on #74: the preview frame's accessible name is a UI string (disclosed event
@@ -172,6 +173,7 @@ Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
 | FE-009 on fix/V13-FE-009-overview-and-center-polish: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (new: Center at 360 and 768 px in ar and en — no page scroll, region scrolls at 360, codes on one line, Latin version, month in words; the four fail on the old Center markup, checked) | pass | — / 73 files, 1910 / 447 / 177 | FE-009 head |
 | FE-009 after merging develop a93fa61 (#74) + the frame title (unit: ar/en titles, withheld title, no raw marking; e2e: Scenario E frame name ends in عرض تجريبي): format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 76 files, 1968 / 456 / 204 | FE-009 head |
 | FE-009, SEC CHANGES 61d2853 + develop 286eb93 (#81) merged: loader-level frame-title tests on the real projection with event_title stubbed as the projector's outcomes (absent / null = PROHIBITED or REDACTED → generic word; SAFE_REFERENCE → null, token and label never in the name; GENERALIZED → the generic text; malformed → null); returning the token for an object fails the SAFE_REFERENCE test (checked). QA nit on #81: /workspaces role lines in `confirmed-role.spec.ts`. Commands: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e`. The full e2e run had 1 failure in QA's Sentinel self-test `planted-leak.spec.ts` "(o) … fetching the same GET again" (30 s timeout; its fixture page loads no application file); re-run of that spec + the edited spec after `db:reset`: 27/27 | pass (see note) | — / 77 files, 1994 / 468 / 230 of 231, re-run 27/27 | FE-009 head |
+| FE-009 after merging develop f11e65a (#90 UX-008(c), SEC-009 #87): conflicts in CaseWorkspace.tsx and case.module.css resolved to develop's version (FE caption + timeline hunks dropped), frame title re-applied, M1-09 unit tests moved to the DataTable caption markup. Commands: lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 78 files, 2008 / 468 / 231 of 231 | FE-009 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden

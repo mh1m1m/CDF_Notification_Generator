@@ -443,6 +443,30 @@ describe("DataTable", () => {
     expect(html).toContain('data-testid="empty-state"');
   });
 
+  it("a visually hidden caption still names the table and the scroll region", () => {
+    const html = render(
+      <DataTable
+        t={tr("en")}
+        testId="t"
+        caption="My open tasks"
+        captionId="t-caption"
+        captionVisuallyHidden
+        scope="case"
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.id}
+        rowCaseId={(r) => r.caseId}
+        rowCaseRef={(r) => r.caseRef}
+        empty={null}
+      />,
+    );
+    expect(html).toContain('aria-labelledby="t-caption"');
+    expect(html).toContain(
+      '<caption id="t-caption"><span class="v13-sr-only">My open tasks</span></caption>',
+    );
+    expect(html).not.toContain("v13-table-caption-text");
+  });
+
   it("refuses a case row whose identity is swapped or missing", () => {
     const bad = [{ ...rows[0]!, caseId: CASE_1.ref }];
     expect(() =>
@@ -488,6 +512,62 @@ describe("Pagination", () => {
       /<span aria-disabled="true" class="v13-pagination-off" data-testid="pagination-prev">/,
     );
     expect(html).not.toContain("data-count");
+  });
+});
+
+describe("Timeline — record-only entries (UX-008(c))", () => {
+  const record = (l: Locale): TimelineEntry => ({
+    eventId: EVT_1,
+    caseId: CASE_1.id,
+    caseRef: CASE_1.ref,
+    title: l === "ar" ? "تسجيل البلاغ" : "Report registered",
+    occurredAt: "2026-10-01T06:00:00Z",
+    recordedAt: "2026-10-01T06:00:00Z",
+    testId: "case-event",
+    data: { "data-event-code": "REPORT_REGISTERED" },
+    details: <span data-testid="case-event-provenance">Synthetic seed</span>,
+  });
+
+  it.each(LOCALES)("an entry without a status is a record: no badge, no epistemic claim (%s)", (l) => {
+    const html = render(
+      <Timeline t={tr(l)} locale={l} label="Events" entries={[record(l)]} data={{ "data-count": 1 }} />,
+    );
+    expect(html).toContain('data-count="1"');
+    expect(html).toContain(
+      `data-event-code="REPORT_REGISTERED" class="v13-timeline-entry" data-testid="case-event" data-event-id="${EVT_1}" data-case-id="${CASE_1.id}" data-case-ref="${CASE_1.ref}"`,
+    );
+    expect(html).not.toContain("data-epistemic");
+    expect(html).not.toContain("data-status");
+    expect(html).not.toContain("v13-badge");
+    expect(html).toContain(
+      '<p class="v13-muted v13-timeline-details"><span data-testid="case-event-provenance">',
+    );
+    // The record still shows when it was recorded.
+    expect(html).toContain(
+      esc(tr(l)("common.time.recorded", { time: formatDateTime(l, "2026-10-01T06:00:00Z") })),
+    );
+  });
+
+  it("time test ids; alwaysShowOccurred shows an occurred time equal to the recorded one", () => {
+    const entry = {
+      ...record("en"),
+      timeTestIds: { occurred: "case-event-occurred", recorded: "case-event-recorded" },
+    };
+    const shown = render(
+      <Timeline t={tr("en")} locale="en" label="Events" entries={[entry]} alwaysShowOccurred />,
+    );
+    expect(shown).toContain('data-testid="case-event-occurred"');
+    expect(shown).toContain('data-testid="case-event-recorded"');
+    const plain = render(<Timeline t={tr("en")} locale="en" label="Events" entries={[entry]} />);
+    expect(plain).not.toContain("case-event-occurred");
+    expect(plain).toContain('data-testid="case-event-recorded"');
+  });
+
+  it("refuses data attributes that are not data-*", () => {
+    const bad = { ...record("en"), data: { onclick: "x" } as unknown as Record<`data-${string}`, string> };
+    expect(() => render(<Timeline t={tr("en")} locale="en" label="Events" entries={[bad]} />)).toThrow(
+      /data-\* attributes only/,
+    );
   });
 });
 
