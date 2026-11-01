@@ -32,6 +32,19 @@ export interface SnapshotNotification {
   id: string;
   case_id: string;
   supersedes_id: string | null;
+  /** The addressed persona, when the notification names one (D4). */
+  recipient_persona_id: string | null;
+  /** ISO 8601, the moment D4 judges the recipient's team membership at. */
+  created_at: string;
+}
+export interface SnapshotAssignment {
+  case_id: string;
+  persona_id: string;
+  capacity: string;
+  /** ISO 8601. */
+  valid_from: string;
+  /** ISO 8601, or null while the assignment is open. */
+  valid_to: string | null;
 }
 export interface SnapshotNotificationEvent {
   id: string;
@@ -51,6 +64,8 @@ export interface PersonaSnapshot {
   events: SnapshotEvent[];
   notifications: SnapshotNotification[];
   notificationEvents: SnapshotNotificationEvent[];
+  /** Case team rows the persona may read (case_assignment, RLS-filtered). */
+  assignments: SnapshotAssignment[];
 }
 
 const SCHEMA = "cdf_notifications_v13";
@@ -100,12 +115,19 @@ export async function personaSnapshot(
              occurred_at > recorded_at as occurred_after_recorded
         from cdf_notifications_v13.procedural_event order by recorded_at, id`;
     const notifications = await tx<SnapshotNotification[]>`
-      select id::text as id, case_id::text as case_id, supersedes_id::text as supersedes_id
+      select id::text as id, case_id::text as case_id, supersedes_id::text as supersedes_id,
+             recipient_persona_id::text as recipient_persona_id,
+             to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as created_at
         from cdf_notifications_v13.notification order by id`;
     const notificationEvents = await tx<SnapshotNotificationEvent[]>`
       select id::text as id, notification_id::text as notification_id, case_id::text as case_id, event_code,
              (row_number() over (partition by notification_id order by occurred_at, id))::int as seq
         from cdf_notifications_v13.notification_event order by notification_id, occurred_at, id`;
+    const assignments = await tx<SnapshotAssignment[]>`
+      select case_id::text as case_id, persona_id::text as persona_id, capacity,
+             to_char(valid_from at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as valid_from,
+             to_char(valid_to at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as valid_to
+        from cdf_notifications_v13.case_assignment order by case_id, persona_id, valid_from`;
     return {
       persona,
       workspace,
@@ -115,6 +137,7 @@ export async function personaSnapshot(
       events: [...events],
       notifications: [...notifications],
       notificationEvents: [...notificationEvents],
+      assignments: [...assignments],
     };
   });
 }
