@@ -9,6 +9,8 @@ import { expect, test } from "@playwright/test";
 import ts from "typescript";
 import {
   checkListing,
+  checkSnapshotConfig,
+  checkSnapshotFlags,
   codeOnly,
   formatGuardViolations,
   guardLeakSuites,
@@ -490,5 +492,121 @@ test.describe("L1: what the runner registers is exactly each suite's own test ca
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+test.describe("G7: visual baselines are never written by the runner in CI (V13-QA-015, design §5.2)", () => {
+  const CONFIG = "playwright.config.ts";
+  const config = (props: string, extra = "") =>
+    `import { defineConfig } from "@playwright/test";\n${extra}export default defineConfig({\n  testDir: "tests",\n${props}\n});\n`;
+  const PINNED = '  updateSnapshots: process.env.CI ? "none" : "missing",';
+
+  test("the real config, every workflow and package.json are clean", () => {
+    const src = read(CONFIG);
+    expect(src).not.toBeNull();
+    const v = [
+      ...checkSnapshotConfig(CONFIG, src!),
+      ...[".github/workflows/ci.yml", ".github/workflows/release.yml", "package.json"].flatMap((f) => {
+        const text = read(f);
+        return text === null ? [] : checkSnapshotFlags(f, text);
+      }),
+    ];
+    expect(v, formatGuardViolations(v)).toEqual([]);
+  });
+
+  test("the pinned form is clean (the control), including readable spreads and literal element access", () => {
+    const v = checkSnapshotConfig(
+      CONFIG,
+      config(
+        `${PINNED}\n  ...(flag ? { globalTeardown: "./t.ts" } : {}),\n  use: { ...devices["Desktop Chrome"] },`,
+        'const flag = true;\nconst devices = { "Desktop Chrome": {} };\n',
+      ),
+    );
+    expect(v, formatGuardViolations(v)).toEqual([]);
+  });
+
+  const plantedConfigs: [string, string, string?][] = [
+    ["no updateSnapshots at all (the default writes missing baselines)", ""],
+    ['unconditional "all"', '  updateSnapshots: "all",'],
+    ['unconditional "changed"', '  updateSnapshots: "changed",'],
+    ['unconditional "missing"', '  updateSnapshots: "missing",'],
+    ["the branches swapped", '  updateSnapshots: process.env.CI ? "missing" : "none",'],
+    ["another condition", '  updateSnapshots: process.env.UPDATE ? "none" : "missing",'],
+    ["the pinned value twice", `${PINNED}\n${PINNED}`],
+    ["a project-level updateSnapshots", `${PINNED}\n  projects: [{ name: "p", updateSnapshots: "all" }],`],
+    [
+      "a shorthand property",
+      `${PINNED}\n  projects: [{ updateSnapshots }],`,
+      'const updateSnapshots = "all";\n',
+    ],
+    ["a string key", `${PINNED}\n  use: { "updateSnapshots": "all" },`],
+    ["a computed key built from parts", `${PINNED}\n  [k]: "all",`, 'const k = "update" + "Snapshots";\n'],
+    [
+      "a spread of a variable",
+      `${PINNED}\n  ...extra,`,
+      'const extra = { updateSnapshots: "all" as const };\n',
+    ],
+    ["a spread of a call", `${PINNED}\n  ...extra(),`, "const extra = () => ({});\n"],
+    [
+      "an element access with a built name",
+      PINNED,
+      'const c: Record<string, string> = {};\nconst k = "u";\nc[k] = "all";\n',
+    ],
+    ["an assignment after the config", PINNED, ""],
+  ];
+  for (const [form, props, extra] of plantedConfigs)
+    test(`config: ${form} → G7`, () => {
+      const src =
+        form === "an assignment after the config"
+          ? config(props).replace("export default defineConfig(", "const cfg = defineConfig(") +
+            'cfg.updateSnapshots = "all";\nexport default cfg;\n'
+          : config(props, extra ?? "");
+      const v = checkSnapshotConfig(CONFIG, src);
+      expect(rulesOf(v), formatGuardViolations(v)).toEqual(["G7"]);
+    });
+
+  test("a config with no defineConfig object → G7", () => {
+    expect(rulesOf(checkSnapshotConfig(CONFIG, "export default {};\n"))).toEqual(["G7"]);
+  });
+
+  const plantedFlags: [string, string, string][] = [
+    [
+      "a workflow --update-snapshots",
+      ".github/workflows/ci.yml",
+      "      - run: pnpm exec playwright test --update-snapshots",
+    ],
+    [
+      "a workflow --update-snapshots=all",
+      ".github/workflows/ci.yml",
+      "        run: pnpm test:e2e --update-snapshots=all",
+    ],
+    ["a workflow -u", ".github/workflows/ci.yml", "      - run: pnpm exec playwright test -u"],
+    [
+      "a workflow --update-source-snapshots",
+      ".github/workflows/ci.yml",
+      "        run: npx playwright test --update-source-snapshots",
+    ],
+    ["a package script -u", "package.json", '    "test:visual": "playwright test -u",'],
+    [
+      "a package script -u before quotes",
+      "package.json",
+      '    "x": "playwright test --project=visual-baseline -u"',
+    ],
+  ];
+  for (const [form, file, line] of plantedFlags)
+    test(`flags: ${form} → G7, at its line`, () => {
+      const v = checkSnapshotFlags(file, `name: x\n${line}\n`);
+      expect(rulesOf(v), formatGuardViolations(v)).toEqual(["G7"]);
+      expect(v.map((x) => x.line)).toEqual([2]);
+    });
+
+  test("flags: a -u that does not run the runner, and words containing -u, are not hits", () => {
+    const text = [
+      "      - run: git push -u origin x",
+      "      - run: pnpm exec playwright test --project=visual-baseline",
+      "      - run: sort -u list.txt",
+      '    "test:e2e": "playwright test --grep-invert @slow-ui",',
+    ].join("\n");
+    expect(checkSnapshotFlags("ci.yml", text)).toEqual([]);
   });
 });

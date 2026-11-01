@@ -60,3 +60,19 @@ Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-t
 | case-events, case-tasks | empty | every seeded case has events and two tasks |
 | mobile-navigation | desktop, tablet | the row is the navigation at 360 px; at 768 px and wider it is the side navigation on every screen |
 | case pages | restricted | restricted and unknown look the same by design: captured once as not-found / restricted |
+
+## Baselines (V13-QA-015)
+
+Committed under `tests/visual/__screenshots__/` and compared by the `visual-baseline` project (V13_E2E_VISUAL=baseline): desktop, mobile; ar, en; light; threshold 0.2, at most 0 differing pixels. 36 images. Never written by the runner in CI (G7); a missing one fails and its candidate goes to `test-results/baseline-candidates/`.
+
+| Screen | State | Files |
+| --- | --- | --- |
+| my-work | data | `my-work-data-ar-desktop.png`, `my-work-data-ar-mobile.png`, `my-work-data-en-desktop.png`, `my-work-data-en-mobile.png` |
+| portfolio | data | `portfolio-data-ar-desktop.png`, `portfolio-data-ar-mobile.png`, `portfolio-data-en-desktop.png`, `portfolio-data-en-mobile.png` |
+| case-overview | data | `case-overview-data-ar-desktop.png`, `case-overview-data-ar-mobile.png`, `case-overview-data-en-desktop.png`, `case-overview-data-en-mobile.png` |
+| case-events | data | `case-events-data-ar-desktop.png`, `case-events-data-ar-mobile.png`, `case-events-data-en-desktop.png`, `case-events-data-en-mobile.png` |
+| case-tasks | data | `case-tasks-data-ar-desktop.png`, `case-tasks-data-ar-mobile.png`, `case-tasks-data-en-desktop.png`, `case-tasks-data-en-mobile.png` |
+| case-notifications | data | `case-notifications-data-ar-desktop.png`, `case-notifications-data-ar-mobile.png`, `case-notifications-data-en-desktop.png`, `case-notifications-data-en-mobile.png` |
+| notification-center | data | `notification-center-data-ar-desktop.png`, `notification-center-data-ar-mobile.png`, `notification-center-data-en-desktop.png`, `notification-center-data-en-mobile.png` |
+| notification-preview | data | `notification-preview-data-ar-desktop.png`, `notification-preview-data-ar-mobile.png`, `notification-preview-data-en-desktop.png`, `notification-preview-data-en-mobile.png` |
+| workspace-switcher | data | `workspace-switcher-data-ar-desktop.png`, `workspace-switcher-data-ar-mobile.png`, `workspace-switcher-data-en-desktop.png`, `workspace-switcher-data-en-mobile.png` |

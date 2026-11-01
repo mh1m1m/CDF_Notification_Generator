@@ -430,6 +430,46 @@ export function renderIndex(): string {
     "| --- | --- | --- |",
     ...NOT_APPLICABLE.map((n) => `| ${cell(n.screen)} | ${cell(n.state)} | ${cell(n.reason)} |`),
     "",
+    "## Baselines (V13-QA-015)",
+    "",
+    `Committed under \`tests/visual/__screenshots__/\` and compared by the \`visual-baseline\` project (V13_E2E_VISUAL=baseline): ${BASELINE_VIEWPORTS.join(", ")}; ${LANGUAGES.join(", ")}; ${BASELINE_THEME}; threshold ${BASELINE_COMPARE.threshold}, at most ${BASELINE_COMPARE.maxDiffPixels} differing pixels. ${baselineCount()} images. Never written by the runner in CI (G7); a missing one fails and its candidate goes to \`${BASELINE_CANDIDATES_DIR}/\`.`,
+    "",
+    "| Screen | State | Files |",
+    "| --- | --- | --- |",
+    ...BASELINE_ROWS.map(
+      (c) =>
+        `| ${c.screen} | ${c.state} | ${LANGUAGES.flatMap((l) => BASELINE_VIEWPORTS.map((v) => `\`${baselineFile(c, l, v)}\``)).join(", ")} |`,
+    ),
+    "",
   ];
   return lines.join("\n");
 }
+
+/**
+ * The committed regression subset (V13-QA-015, design §5.1, D2): each screen's data state and the open workspace
+ * switcher, at desktop and mobile, in ar and en, light theme. Compared on every run of the `visual-baseline` project with
+ * toHaveScreenshot; the full library stays an artifact. Baselines are made only in the CI visual job (fonts, §3).
+ */
+export const BASELINE_ROWS: readonly Capture[] = CAPTURES.filter(
+  (c) => c.state === "data" && c.screen !== "mobile-navigation",
+);
+export const BASELINE_VIEWPORTS: readonly ViewportName[] = ["desktop", "mobile"];
+export const BASELINE_THEME: Theme = "light";
+/** Pixel comparison (design §5.1): per-pixel colour threshold 0.2, and not one pixel may differ beyond it. */
+export const BASELINE_COMPARE = { threshold: 0.2, maxDiffPixels: 0 } as const;
+
+/**
+ * File name of one baseline under tests/visual/__screenshots__/ (one Linux image set; no platform suffix). Dashes, not
+ * dots: Playwright turns every dot before the extension into a dash, and the name must be the file's own.
+ */
+export const baselineFile = (c: Capture, lang: Language, viewport: ViewportName) =>
+  `${c.screen}-${c.state}-${lang}-${viewport}.png`;
+
+/**
+ * Where the spec writes the image of a baseline that does not exist yet (Playwright fails a missing baseline under
+ * updateSnapshots "none" but writes no actual image). The CI visual job uploads this folder; a reviewed PR copies its
+ * images into tests/visual/__screenshots__/ (§5.2). Never read by any comparison.
+ */
+export const BASELINE_CANDIDATES_DIR = "test-results/baseline-candidates";
+
+export const baselineCount = () => BASELINE_ROWS.length * BASELINE_VIEWPORTS.length * LANGUAGES.length;
