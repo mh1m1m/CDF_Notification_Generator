@@ -162,6 +162,10 @@ test.describe("Scenario E — notification preview", () => {
       "true",
     );
     const frame = page.getByTestId("case-notification-preview-frame");
+    // UX finding on #74: the frame's name is a UI string (event title + the localised preview word), never the raw marking.
+    const frameTitle = (await frame.getAttribute("title")) ?? "";
+    expect(frameTitle).toMatch(/^.+ — عرض تجريبي$/);
+    expect(frameTitle).not.toContain("DESIGN_PREVIEW");
     await expect(frame).toHaveAttribute("sandbox", "");
     expect(await frame.getAttribute("src")).toBeNull();
     expect(await frame.getAttribute("srcdoc")).toContain('data-marking="DESIGN_PREVIEW"');

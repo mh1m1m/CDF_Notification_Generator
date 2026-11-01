@@ -48,7 +48,7 @@ export const ar = {
   "column.status": "الحالة",
   "column.created": "تاريخ الإنشاء",
   "column.lastEvent": "آخر حدث",
-  version: "· الإصدار {version}",
+  versionLabel: "· الإصدار",
   noEvent: "لا يوجد حدث بعد",
   "pagination.label": "صفحات النتائج",
   "pagination.next": "التالي",

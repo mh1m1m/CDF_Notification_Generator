@@ -28,14 +28,17 @@
   font-weight: 600;
 }
 
+/* M1-15: the table keeps a readable minimum width and scrolls inside its region, never the page. */
 .scroll {
   overflow-x: auto;
   max-inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .table {
   border-collapse: collapse;
   inline-size: 100%;
+  min-inline-size: 48rem;
 }
 
 .table caption {

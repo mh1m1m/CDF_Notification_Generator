@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 00:09 UTC · Branch: fix/V13-FE-008-confirmed-workspace-role (develop a93fa61 merged in; #74 merged) · Head: see PR
+Updated: 2026-11-01 02:10 UTC · Branch: fix/V13-FE-009-overview-and-center-polish (develop f11e65a merged in; #74, #81 and #90 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -67,8 +67,16 @@ Updated: 2026-11-01 00:09 UTC · Branch: fix/V13-FE-008-confirmed-workspace-role
   in the request's security context (`MembershipReader`, proposed contract `lib/contracts/memberships.ts`, adapter
   `lib/adapters/identity/v13-memberships.ts`: own persona via `current_persona_id()`, active workspace, valid now).
   Session roles are never shown; no confirmed role gives an empty switcher role and "No role confirmed in this
-  workspace" on My Work; a read failure shows no role (fail closed). Needs ARCH + SEC ACCEPT (contracts) — IN_PROGRESS
-  — PR #81 (DRAFT; #76's optional role is on develop and merged in). ARCH pre-review folded in: the port states its guarantees, roles in the closed set's order, planted-row negatives for a future window and an inactive workspace. The Workspaces page also uses confirmed roles. Empty-role e2e `tests/e2e/confirmed-role.spec.ts` (ARCH request; QA reviews).
+  workspace" on My Work; a read failure shows no role (fail closed). COMPLETE (#81, merged into develop 286eb93 by ARCH). ARCH pre-review folded in: the port states its guarantees, roles in the closed set's order, planted-row negatives for a future window and an inactive workspace. The Workspaces page also uses confirmed roles. Empty-role e2e `tests/e2e/confirmed-role.spec.ts` (ARCH request, for QA review).
+- V13-FE-009 (M1 design review) — Case Workspace overview (M1-09): after #90 (develop f11e65a) the Overview's task
+  table uses UX's DataTable `captionVisuallyHidden` and the events list is UX's Timeline, so FE-009's own caption
+  and timeline-CSS hunks were dropped (ARCH ruling). FE-009 keeps unit tests for "My open tasks in this case" shown
+  once in ar and en, the caption still naming the table and scroll region, and the Tasks tab keeping its visible caption. Notification Operations Center: the table keeps a 48rem
+  minimum and scrolls in its region, never the page (M1-15); template codes and the version never break (M1-16); the
+  version is Latin in `<bdi>` after a translated label (M1-17, D10); dates, times and counts through
+  `components/format.ts` (M1-18). UX finding on #74: the preview frame's accessible name is a UI string (disclosed event
+  title + عرض تجريبي / design preview; generic word when withheld); the renderer's document title and DESIGN_PREVIEW
+  marking stay inside the frame — IN_REVIEW (QA).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -162,6 +170,10 @@ Updated: 2026-11-01 00:09 UTC · Branch: fix/V13-FE-008-confirmed-workspace-role
 | FE-006 part 3, QA CHANGES 982bd76: preview link accessible name from the template name and the class label (never raw codes, pinned in e2e by `toHaveAccessibleName`); OI-037 notice shows the class label with the code in `<bdi>`: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 75 files, 1947 / 456 / 179 | FE-006 part 3 head |
 | FE-008 after merging develop e9cd74d (#76): the Epsilon and Zeta negatives, session roles ignored, another workspace never filling this one, strict rows, a read failure giving none, and planted rows rolled back (future window, inactive workspace, positive control; each negative fails when its predicate is deleted). Empty-role e2e: Epsilon, Zeta, Alpha control. Commands: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (memberships integration 9) / `pnpm db:reset` + `pnpm test:e2e`. (Correction: the earlier 456/179 reported for fad4803 came from the FE-006 tree; fad4803's own run is not recorded.) | pass | — / 75 files, 1939 / 456 / 197 | 466ea5d |
 | FE-008, ARCH CHANGES 466ea5d (end of the window): planted negatives for an ended membership (valid_to = now() − 1 h) and the exact exclusive end (valid_to = now()), plus a positive control (+1 h); deleting the valid_to predicate fails 2 tests, `>` → `>=` fails the exact-end test. Commands: format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (memberships integration 12) / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 75 files, 1939 / 459 / 197 | FE-008 head |
+| FE-009 on fix/V13-FE-009-overview-and-center-polish: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (new: Center at 360 and 768 px in ar and en — no page scroll, region scrolls at 360, codes on one line, Latin version, month in words; the four fail on the old Center markup, checked) | pass | — / 73 files, 1910 / 447 / 177 | FE-009 head |
+| FE-009 after merging develop a93fa61 (#74) + the frame title (unit: ar/en titles, withheld title, no raw marking; e2e: Scenario E frame name ends in عرض تجريبي): format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 76 files, 1968 / 456 / 204 | FE-009 head |
+| FE-009, SEC CHANGES 61d2853 + develop 286eb93 (#81) merged: loader-level frame-title tests on the real projection with event_title stubbed as the projector's outcomes (absent / null = PROHIBITED or REDACTED → generic word; SAFE_REFERENCE → null, token and label never in the name; GENERALIZED → the generic text; malformed → null); returning the token for an object fails the SAFE_REFERENCE test (checked). QA nit on #81: /workspaces role lines in `confirmed-role.spec.ts`. Commands: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e`. The full e2e run had 1 failure in QA's Sentinel self-test `planted-leak.spec.ts` "(o) … fetching the same GET again" (30 s timeout; its fixture page loads no application file); re-run of that spec + the edited spec after `db:reset`: 27/27 | pass (see note) | — / 77 files, 1994 / 468 / 230 of 231, re-run 27/27 | FE-009 head |
+| FE-009 after merging develop f11e65a (#90 UX-008(c), SEC-009 #87): conflicts in CaseWorkspace.tsx and case.module.css resolved to develop's version (FE caption + timeline hunks dropped), frame title re-applied, M1-09 unit tests moved to the DataTable caption markup. Commands: lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 78 files, 2008 / 468 / 231 of 231 | FE-009 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden

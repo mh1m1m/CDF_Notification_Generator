@@ -266,6 +266,24 @@ describe("Case Workspace markup", () => {
     expect(markup).toContain('<caption id="case-my-tasks-caption"><span class="v13-sr-only">');
   });
 
+  it("M1-09: overview shows 'My open tasks' once; the caption still names the table and its region", async () => {
+    for (const locale of ["ar", "en"] as const) {
+      const markup = html(await view("overview"), locale);
+      const label = createTranslator(locale)("case.overview.myTasks");
+      // DataTable's captionVisuallyHidden (#90): the caption keeps its id and text, shown to assistive technology only.
+      expect(markup).toContain(
+        `<caption id="case-my-tasks-caption"><span class="v13-sr-only">${label}</span></caption>`,
+      );
+      expect(markup.match(/<h2[^>]*>([^<]*)<\/h2>/g)?.filter((h) => h.includes(label))).toHaveLength(1);
+      expect(scrollRegionProblems(markup)).toEqual([]);
+    }
+  });
+
+  it("M1-09: the Tasks tab keeps its visible caption (only the overview hides it)", async () => {
+    const markup = html(await view("tasks"), "en");
+    expect(markup).toMatch(/<caption id="case-tasks-caption"><span class="v13-table-caption-text">/);
+  });
+
   it("overview without own open tasks says so", async () => {
     const markup = html(await view("overview", 1, INVESTIGATOR_GAMMA), "en");
     expect(markup).toContain('data-testid="case-my-tasks-empty"');

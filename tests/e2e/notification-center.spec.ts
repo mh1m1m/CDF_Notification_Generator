@@ -5,7 +5,7 @@
 // relative (rows on the page = the authorised total), so drafts created by other specs never break this one.
 // SYNTHETIC personas only.
 import { expect, test, type Page } from "@playwright/test";
-import { messagesFor } from "@/lib/i18n";
+import { LOCALE_COOKIE, messagesFor } from "@/lib/i18n";
 import { signInAs } from "../fixtures/personas";
 
 const ar = messagesFor("ar");
@@ -127,4 +127,65 @@ test.describe("Notification Operations Center — Secretary and Governance Offic
     for (const r of await caseRefs(page)) expect(r).toMatch(/^CDF-DEMO-2026-\d{4}$/);
     expect(await page.content()).not.toContain(ref("0009"));
   });
+});
+
+// V13-FE-009 (UX's S4 review, 31 Oct): M1-15 at 360 px the table keeps its minimum width and scrolls inside its
+// region, never the page; M1-15/16 a template code and a case number stay on one line (no break at a hyphen);
+// M1-17 the version is Latin in <bdi>; M1-18 dates carry the month in words (Arabic-Indic digits in Arabic).
+test.describe("Center layout at narrow widths (V13-FE-009)", () => {
+  const cases = [
+    { locale: "ar", width: 360 },
+    { locale: "en", width: 360 },
+    { locale: "ar", width: 768 },
+    { locale: "en", width: 768 },
+  ] as const;
+  for (const { locale, width } of cases) {
+    test(`${locale} at ${width} px: no page scroll; the region scrolls; codes on one line`, async ({
+      page,
+      context,
+      baseURL,
+    }) => {
+      await context.addCookies([{ name: LOCALE_COOKIE, value: locale, url: baseURL! }]);
+      await page.setViewportSize({ width, height: 800 });
+      await signInAs(page, "secretary-alpha");
+      await page.goto("/notifications");
+      await expect(page.locator("html")).toHaveAttribute("lang", locale);
+      await expect(page.getByTestId("notifications-table")).toBeVisible();
+
+      const page_ = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      expect(page_.scrollWidth).toBe(page_.clientWidth);
+
+      const region = page
+        .locator("[data-scroll-region]")
+        .filter({ has: page.getByTestId("notifications-table") });
+      const r = await region.evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
+      if (width === 360) expect(r.scrollWidth).toBeGreaterThan(r.clientWidth);
+
+      const oneLine = async (testId: string) =>
+        page.getByTestId(testId).evaluateAll((els) =>
+          els.map((el) => {
+            const lh =
+              parseFloat(getComputedStyle(el).lineHeight) || parseFloat(getComputedStyle(el).fontSize) * 1.5;
+            return el.getClientRects().length === 1 && el.getBoundingClientRect().height < lh * 1.5;
+          }),
+        );
+      const codes = await oneLine("notification-template-code");
+      expect(codes.length).toBeGreaterThan(0);
+      expect(codes.every(Boolean)).toBe(true);
+
+      const versions = await page.getByTestId("notification-template-version").allInnerTexts();
+      expect(versions.length).toBeGreaterThan(0);
+      for (const v of versions) expect(v).toMatch(/^[0-9]+$/);
+
+      const created = await page.locator('[data-testid^="notification-row-"] time').first().innerText();
+      if (locale === "ar") {
+        expect(created).toMatch(/[٠-٩]/);
+        expect(created).not.toMatch(/[0-9]/);
+      }
+      expect(created).not.toMatch(/\d+\/\d+\/\d+|[٠-٩]+\/[٠-٩]+/);
+    });
+  }
 });

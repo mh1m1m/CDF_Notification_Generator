@@ -48,7 +48,7 @@ export const en: Record<keyof typeof ar, string> = {
   "column.status": "Status",
   "column.created": "Created",
   "column.lastEvent": "Last event",
-  version: "· version {version}",
+  versionLabel: "· version",
   noEvent: "No event yet",
   "pagination.label": "Result pages",
   "pagination.next": "Next",

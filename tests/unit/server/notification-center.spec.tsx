@@ -5,6 +5,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { InvalidCursorError, type NotificationCenterReader } from "@/lib/contracts";
+import { formatDateTime } from "@/components/format";
 import { createTranslator } from "@/lib/i18n";
 import { AppError } from "@/lib/server/errors";
 import { loadNotificationCenter, type NotificationCenterView } from "@/lib/server/notification-center";
@@ -328,10 +329,36 @@ describe("NotificationCenterView markup", () => {
     expect(html).not.toMatch(/Alpha|Beta|Gamma|Delta|@example\.test/);
   });
 
-  it("Arabic digits in the count and version", async () => {
-    const html = render("ar", await load());
-    expect(html).toContain("٤ إشعارات");
-    expect(html).toContain("الإصدار ١");
+  it("D10: the count follows the locale, the template version is an identifier (Latin in bdi) in both (M1-17)", async () => {
+    const ar = render("ar", await load());
+    expect(ar).toContain("٤ إشعارات");
+    expect(ar).toMatch(/الإصدار <bdi dir="ltr" data-testid="notification-template-version">1<\/bdi>/);
+    expect(ar).not.toContain("الإصدار ١");
+    const en = render("en", await load());
+    expect(en).toMatch(/version <bdi dir="ltr" data-testid="notification-template-version">1<\/bdi>/);
+  });
+
+  it("M1-16: template codes and their version never break inside a code", async () => {
+    const html = render("en", await load());
+    const codes = html.match(/<bdi[^>]*data-testid="notification-template-code"[^>]*>/g) ?? [];
+    expect(codes).toHaveLength(4);
+    for (const code of codes) expect(code).toMatch(/class="[^"]*nowrap/);
+  });
+
+  it("M1-18: dates and times through components/format (month in words; Arabic-Indic digits in Arabic)", async () => {
+    const view = await load();
+    const first = view.kind === "page" ? view.page.items[0]! : undefined;
+    expect(first).toBeDefined();
+    const ar = render("ar", view);
+    const en = render("en", view);
+    expect(ar).toContain(`>${formatDateTime("ar", first!.created_at)}</time>`);
+    expect(en).toContain(`>${formatDateTime("en", first!.created_at)}</time>`);
+    const times = [...ar.matchAll(/<time[^>]*>([^<]*)<\/time>/g)].map((m) => m[1]!);
+    expect(times.length).toBeGreaterThan(0);
+    for (const text of times) {
+      expect(text).not.toMatch(/[0-9]/);
+      expect(text).not.toMatch(/^[\u0660-\u0669]+\/[\u0660-\u0669]+\//);
+    }
   });
 
   it("empty workspace and no results are distinct states", async () => {
@@ -360,7 +387,7 @@ describe("NotificationCenterView markup", () => {
     expect(html).toMatch(/<option value="DRAFT" selected="">/);
     expect(html).toContain('value="CDF-DEMO-2026-0001"');
     expect(html).toContain('value="2026-10-01"');
-    expect(html).toContain("Filters: status: Draft, case: CDF-DEMO-2026-0001, and from 1 Oct 2026.");
+    expect(html).toContain("Filters: status: Draft, case: CDF-DEMO-2026-0001, and from 1 October 2026.");
     expect(html).toContain('data-testid="notifications-clear"');
   });
 
