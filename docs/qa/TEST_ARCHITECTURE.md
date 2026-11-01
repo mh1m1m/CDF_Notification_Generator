@@ -205,14 +205,22 @@ merges and before any release. It is detected by:
 The rule is enforced, not only written (V13-QA-008, REQ-CASE-014): `tests/sentinel/leak-suite-guard.spec.ts` (library
 `tests/critic/leak-suite-guard.ts`) reads the source of every suite above and of Scenarios A–E and fails the e2e job on
 **G1** a pin (`test.fail`, `test.fails`, `test.fixme`, `.todo`, `testInfo.fail/fixme`), **G2** a focus (`.only`,
-`fit`, `fdescribe`), **G3** a skip (`.skip`, `.skipIf`, `.runIf`, `xit`/`xdescribe`, `testInfo.skip`) that is not on
+`fit`, `fdescribe`), **G3** a skip (`.skip`, `.skipIf`, `.runIf`, `test.step.skip`, `xit`/`xdescribe`, `testInfo.skip`;
+Vitest's `suite` alias counts as `describe` throughout) that is not on
 its allow-list, and **G4** a named suite that is missing or an allow-list entry that matches nothing. The allow-list
 holds only environment-conditional skips, each with its reason: the session-secret skips in
 `negative-personas-pinning.spec.ts` and Scenario C (they apply only against an external `V13_E2E_BASE_URL`), and SEC's
 `describe.skipIf(!present)` in `case-matrix.spec.ts` (the CI `test:db` job resets the database first). An
-unconditional skip can never be allow-listed. Comments and strings are blanked before matching; every form is planted
-into a synthetic source in the same spec. Adding a skip to a leak suite therefore needs a reviewed change to the
-allow-list.
+unconditional skip can never be allow-listed. The source is tokenised by the TypeScript parser and comments and string,
+template and regular-expression literals are blanked before matching, so a quote inside a regular expression cannot
+hide the rest of a file. Every form is planted into a synthetic source in the same spec, and a `test.fixme()` is planted
+inside every test and describe body of every guarded suite (135 bodies) and must be found at its line. The same spec
+pins that the worker has the session secret whenever no external `V13_E2E_BASE_URL` is set, so the allow-listed skips
+cannot fire in a locally started or CI run, and that CI runs with `failOnFlakyTests`: with `retries: 1`, a leak that
+fails once and passes on its retry fails the job instead of passing as "flaky". Adding a skip to a leak suite
+therefore needs a reviewed change to the allow-list. Limit: the scan is textual, so a pin through an alias
+(`const t = test; t.fail()`) or a helper in another file is not seen; no guarded suite uses either, and review covers
+them.
 
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 

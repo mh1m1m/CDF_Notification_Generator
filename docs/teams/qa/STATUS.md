@@ -1,6 +1,6 @@
 # QA status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop eee17f7)
+Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 25a1c48)
 
 ## Completed
 - V13-QA-001 (design) — `docs/qa/TEST_ARCHITECTURE.md` — PR #1 — COMPLETE
@@ -31,7 +31,10 @@ Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop ee
 - V13-QA-007 (OI-048, REQ-QA-013) — PR #84 — merged (eee17f7): **D4** (a notification's recipient persona not on
   that case's team when it was created) and **P3/P4** (outbound request bodies: Server Actions, form posts, fetch).
 - V13-QA-008 (REQ-CASE-014, §7.1) — this branch — IN_PROGRESS (review): leak-suite guard G1–G4 (no pin, focus or
-  unlisted skip on a leak-detection suite), planted negatives for every form.
+  unlisted skip on a leak-detection suite), planted negatives for every form. ARCH CHANGES on cd15ddf addressed:
+  TypeScript-parser tokenising (a regex quote hid case-pages.spec.ts after line 30), a pin planted in all 135
+  test/describe bodies of the 13 suites, Vitest `suite` and `test.step.skip`, `failOnFlakyTests` in CI, and the
+  session-secret pin for the allow-listed skips.
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |

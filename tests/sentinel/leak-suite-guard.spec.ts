@@ -5,6 +5,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import ts from "typescript";
 import {
   codeOnly,
   formatGuardViolations,
@@ -37,6 +38,62 @@ test("each allow-listed skip is environment-conditional and gives its reason", (
     // the condition is an environment check: the session secret, or SEC's database-ready probe
     expect(a.call.source, a.file).toMatch(/!process\\\.env\\\.V13_E2E_SESSION_SECRET|!present/);
   }
+});
+
+/**
+ * The position just after the `{` of every test / it / describe / suite call's callback body (any chain:
+ * test.describe.serial, …), found by the TypeScript parser, so a plant can go inside each one.
+ */
+function openerBodies(src: string): number[] {
+  const sf = ts.createSourceFile("suite.ts", src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const out: number[] = [];
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isCallExpression(node) &&
+      /^(?:test|it|describe|suite)(?:\.\w+)*$/.test(node.expression.getText(sf))
+    ) {
+      for (const a of node.arguments)
+        if ((ts.isArrowFunction(a) || ts.isFunctionExpression(a)) && ts.isBlock(a.body))
+          out.push(a.body.getStart(sf) + 1);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return out;
+}
+
+test("a pin planted inside every test and describe body of every guarded suite is found, at its line", () => {
+  let total = 0;
+  for (const file of LEAK_SUITES) {
+    const src = read(file)!;
+    const at = openerBodies(src);
+    expect(at.length, `${file} has test or describe bodies to plant into`).toBeGreaterThan(0);
+    for (const i of at) {
+      const planted = `${src.slice(0, i)} test.fixme(); ${src.slice(i)}`;
+      const line = src.slice(0, i).split("\n").length;
+      const v = scanSuite(file, planted);
+      expect(
+        v.map((x) => `${x.rule}:${x.line}`),
+        `a test.fixme() planted at ${file}:${line} is found`,
+      ).toEqual([`G1:${line}`]);
+      total++;
+    }
+  }
+  expect(total, "plants across the 13 suites").toBeGreaterThan(100);
+});
+
+test("CI fails a flaky run: a leak that fails once and passes on retry is not green", () => {
+  // retries: 1 in CI would otherwise report a leak that fails on the first attempt as "flaky" and pass the job.
+  const config = test.info().config;
+  if (process.env.CI === "true") expect(config.failOnFlakyTests).toBe(true);
+  else expect(config.failOnFlakyTests).toBe(false);
+});
+
+test("the allow-listed skips cannot fire in a locally started run: the worker has the session secret", () => {
+  // negative-personas-pinning and Scenario C skip only without V13_E2E_SESSION_SECRET; playwright.config.ts sets it
+  // for every locally started build (CI included). Only a run against an external V13_E2E_BASE_URL may lack it.
+  if (!process.env.V13_E2E_BASE_URL?.trim())
+    expect(process.env.V13_E2E_SESSION_SECRET?.trim(), "the run's session secret").toBeTruthy();
 });
 
 test.describe("planted negatives are refused", () => {
@@ -76,6 +133,24 @@ test.describe("planted negatives are refused", () => {
       "G3",
     ],
     ["a multi-line pin", `test("t", async () => {\n  test\n    .fail(\n      true,\n    );\n});`, "G1"],
+    ["Vitest suite.only", `suite.only("d", () => {});`, "G2"],
+    ["Vitest suite.skip", `suite.skip("d", () => {});`, "G3"],
+    ["Vitest suite.todo", `suite.todo("later");`, "G1"],
+    ["test.step.skip", `test("t", async () => { await test.step.skip("s", async () => {}); });`, "G3"],
+    ["test.step.fixme", `test("t", async () => { await test.step.fixme("s", async () => {}); });`, "G1"],
+    // a quote or a slash inside a regular-expression literal must not hide what follows (ARCH, review of cd15ddf)
+    ["a focus after a regex holding a quote", `const r = /don't/;\ntest.only("t", async () => {});`, "G2"],
+    [
+      "a pin after a regex holding escaped slashes",
+      `test("t", async () => {\n  const u = "x";\n  /https?:\\/\\//.test(u); test.fixme();\n});`,
+      "G1",
+    ],
+    [
+      "a pin after a regex holding a double quote",
+      `const STACK = /relation "|SQLSTATE/i;\ntest("t", async () => {\n  test.fixme();\n});`,
+      "G1",
+    ],
+    ["a pin after a division", `const half = 4 / 2;\ntest("t", async () => { test.fail(); });`, "G1"],
   ];
   for (const [form, body, rule] of cases)
     test(`${form} → ${rule}`, () => {
@@ -140,7 +215,13 @@ test.describe("what is not a pin, focus or skip", () => {
   });
 
   test("codeOnly keeps line numbers", () => {
-    const src = "a\n// x\n'b\nc'\n/* d\ne */\nf";
+    const src = "a\n// x\n'b\nc'\n/* d\ne */\nf\n`g\n${h}\ni`\n/j\\//;\nk";
     expect(codeOnly(src).split("\n")).toHaveLength(src.split("\n").length);
+  });
+
+  test("a regular expression that names the forms is not a hit", () => {
+    expect(
+      scanSuite(FILE, wrap(`const r = /test\\.only\\(|it\\.skip\\(|"/;\nexpect(r).toBeTruthy();`), []),
+    ).toEqual([]);
   });
 });

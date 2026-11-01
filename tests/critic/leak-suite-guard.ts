@@ -1,16 +1,20 @@
 // Leak-suite guard (V13-QA-008; REQ-CASE-014, TEST_ARCHITECTURE.md §7.1): the automated half of the leak triage rule
 // "no severity downgrade, waiver or test.fail() pin applies to a leak". It reads the source of every suite §7.1 names
 // and refuses, before any test runs:
-//   G1  a pin: test.fail / test.fails / test.fixme / .todo (Playwright or Vitest, any depth: test.describe.fixme, …),
-//       and the testInfo forms (test.info().fail(), testInfo.fixme())
-//   G2  a focus: .only on test / it / describe (any depth), fit / fdescribe
-//   G3  a skip that is not on the allow-list: .skip / .skipIf / .runIf on test / it / describe, xit / xdescribe /
-//       xtest, testInfo.skip(). Only an environment-conditional skip can be allow-listed (file + a pattern on the call
+//   G1  a pin: test.fail / test.fails / test.fixme / .todo on test / it / describe / suite (Playwright or Vitest, any
+//       depth: test.describe.fixme, test.step.fixme, …), and the testInfo forms (test.info().fail(), testInfo.fixme())
+//   G2  a focus: .only on test / it / describe / suite (any depth), fit / fdescribe
+//   G3  a skip that is not on the allow-list: .skip / .skipIf / .runIf on test / it / describe / suite (any depth:
+//       test.step.skip, …), xit / xdescribe / xtest, testInfo.skip(). Only an environment-conditional skip can be allow-listed (file + a pattern on the call
 //       + the reason); an unconditional one (no argument, a title string, or `true`) never can.
 //   G4  a suite §7.1 names is missing (a rename must not drop it from the guard), or an allow-list entry matches
 //       nothing (a stale waiver)
-// Comments, strings and template literals are blanked before matching, so prose that names test.fail() is not a hit.
+// The source is tokenised by the TypeScript parser and comments and string, template and regular-expression literals
+// are blanked before matching, so prose that names test.fail() is not a hit and a quote inside a regular expression
+// cannot hide the rest of a file. The scan is textual: a pin through an alias (`const t = test; t.fail()`) or a helper
+// in another file is not seen; review covers those.
 // Pure functions over source text: the planted-negative self-test feeds them synthetic sources. SYNTHETIC only.
+import ts from "typescript";
 
 export interface GuardViolation {
   rule: "G1" | "G2" | "G3" | "G4";
@@ -69,74 +73,57 @@ export const SKIP_ALLOWANCES: readonly SkipAllowance[] = [
 ];
 
 /**
- * The source with comments removed and every string and template literal reduced to its quotes (`""`), keeping line
- * breaks so line numbers stay right. Regular-expression literals are left as they are (none of the guarded forms can
- * appear in one without also appearing outside it in a suite).
+ * The source with comments removed and every string, template and regular-expression literal reduced to `""`, keeping
+ * line breaks so line numbers stay right. It is tokenised by the TypeScript parser (already the repository's type
+ * checker), so a quote inside a regular expression (`/relation "/`) or a division cannot put it out of step with the
+ * code. Template substitutions (`${…}`) stay code. JSDoc and other comments become spaces.
  */
 export function codeOnly(src: string): string {
+  const sf = ts.createSourceFile("guarded.ts", src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   let out = "";
-  let i = 0;
-  while (i < src.length) {
-    const c = src[i]!;
-    const n = src[i + 1];
-    if (c === "/" && n === "/") {
-      while (i < src.length && src[i] !== "\n") i++;
-      continue;
+  let pos = 0;
+  const blank = (text: string) => text.replace(/[^\n]/g, " ");
+  const visit = (node: ts.Node) => {
+    if (node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode) return;
+    const children = node.getChildren(sf);
+    if (children.length > 0) {
+      for (const c of children) visit(c);
+      return;
     }
-    if (c === "/" && n === "*") {
-      i += 2;
-      while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) {
-        if (src[i] === "\n") out += "\n";
-        i++;
-      }
-      i += 2;
-      continue;
-    }
-    if (c === '"' || c === "'" || c === "`") {
-      out += '"';
-      i++;
-      let depth = 0; // ${ … } nesting inside a template literal
-      while (i < src.length) {
-        const d = src[i]!;
-        if (d === "\\") {
-          i += 2;
-          continue;
-        }
-        if (d === "\n") out += "\n";
-        if (c === "`" && d === "$" && src[i + 1] === "{") {
-          depth++;
-          i += 2;
-          continue;
-        }
-        if (c === "`" && depth > 0 && d === "}") {
-          depth--;
-          i++;
-          continue;
-        }
-        if (d === c && depth === 0) break;
-        i++;
-      }
-      out += '"';
-      i++;
-      continue;
-    }
-    out += c;
-    i++;
-  }
-  return out;
+    const start = node.getStart(sf);
+    if (start < pos) return;
+    out += blank(src.slice(pos, start)); // whitespace and comments
+    const text = src.slice(start, node.end);
+    out += LITERALS.has(node.kind) ? `""${text.replace(/[^\n]/g, "")}` : text;
+    pos = node.end;
+  };
+  visit(sf);
+  return out + blank(src.slice(pos));
 }
+
+const LITERALS = new Set<ts.SyntaxKind>([
+  ts.SyntaxKind.StringLiteral,
+  ts.SyntaxKind.NoSubstitutionTemplateLiteral,
+  ts.SyntaxKind.TemplateHead,
+  ts.SyntaxKind.TemplateMiddle,
+  ts.SyntaxKind.TemplateTail,
+  ts.SyntaxKind.RegularExpressionLiteral,
+]);
 
 // Member access may be split over lines (`test\n  .fail(`), so every dot allows whitespace around it.
 const D = String.raw`\s*\.\s*`;
-const CHAIN = String.raw`(?:${D}(?:describe|serial|parallel|concurrent|sequential|each))*`;
+const CHAIN = String.raw`(?:${D}(?:describe|serial|parallel|concurrent|sequential|each|step))*`;
 const INFO = String.raw`(?:test${D}info\(\)|testInfo)`;
 const PIN = new RegExp(
-  String.raw`\b(?:test|it|describe)${CHAIN}${D}(?:fail|fails|fixme|todo)\b|\b${INFO}${D}(?:fail|fixme)\b`,
+  String.raw`\b(?:test|it|describe|suite)${CHAIN}${D}(?:fail|fails|fixme|todo)\b|\b${INFO}${D}(?:fail|fixme)\b`,
   "g",
 );
-const FOCUS = new RegExp(String.raw`\b(?:test|it|describe)${CHAIN}${D}only\b|\bf(?:it|describe)\s*\(`, "g");
+const FOCUS = new RegExp(
+  String.raw`\b(?:test|it|describe|suite)${CHAIN}${D}only\b|\bf(?:it|describe)\s*\(`,
+  "g",
+);
 const SKIP = new RegExp(
-  String.raw`\b(?:test|it|describe)${CHAIN}${D}(?:skip|skipIf|runIf)\b|\bx(?:it|test|describe)\s*\(|\b${INFO}${D}skip\b`,
+  String.raw`\b(?:test|it|describe|suite)${CHAIN}${D}(?:skip|skipIf|runIf)\b|\bx(?:it|test|describe)\s*\(|\b${INFO}${D}skip\b`,
   "g",
 );
 
