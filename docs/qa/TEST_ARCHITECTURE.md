@@ -343,6 +343,31 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   listed as "not applicable", never staged. The plan for the library, visual baselines and their review, the manual
   accessibility checklist and audit, Firefox and WebKit, and the PR quality report is in
   `docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` (V13-QA-013).
+- **Library built (V13-QA-014, design §2–§4)**: `tests/visual/library-plan.ts` is the one table of rows (screen, state,
+  persona, route, state marker, masks) and "not applicable" cells; `library.spec.ts` captures each row in 3 viewports ×
+  ar/en × light/dark (244 images) in the `visual-library` project (`V13_E2E_VISUAL=library`, never in a plain e2e run);
+  `library-teardown.ts` writes `manifest.json` (commit, fonts from `dpkg-query`, masks with counts, where it was made);
+  `docs/qa/SCREENSHOT_LIBRARY.md` is generated from the plan and `library-index.spec.ts` fails when it differs. Before
+  each capture the state's own marker must be visible and the data check (`data-check.ts`, V1 seeded case numbers only,
+  V2 `@example.test` only, V3 no `cdf.gov.sa`, V4 synthetic persona names, V5 no cookie value or session secret) must
+  pass on the page and every frame; a finding fails with no image, and the project writes no failure screenshot, trace
+  or video. Decisions made while building: the preview's data state is a WITNESS draft the run makes as Investigator
+  Beta on 0005 (the seeded drafts' recipient classes have no disclosure mapping yet, captured as `no-mapping`; 0005 is
+  visible to no other captured persona, so the draft cannot change another row); server-clock text is masked (deadline
+  words and My Work's overdue and this-week counts, D1); the masked correlation id gets a fixed width during the
+  capture only, because its glyph width changes with the id; the run-made draft's masked created time likewise
+  (`DRAFT_TIME_STYLE`), because its width moved the table's columns. Frames (ARCH CHANGES on #140, `frames.ts`): before
+  the data check and the capture each frame is brought into view and must show non-empty content with its fonts loaded
+  (Chromium left the preview frame below a mobile viewport unpainted, so every mobile preview was an empty box, and a
+  data check that read the frame before it loaded could pass on an empty document); the page stays scrolled to the
+  frame, because back at the top Chromium again left it unpainted. The capture is taken to memory and written only
+  after a check that each frame's area of it holds at least 8 distinct colours (an empty frame has one), and mask
+  counts are taken before the capture; a mask inside a frame must cover its element. Chromium can still, rarely, leave a
+  frame that is in view and loaded unpainted (1 cell in 2 full runs on ARCH's machine): the capture is then retaken
+  after settling the frames again, at most 3 times (`captureWithPaintedFrames`), and the last attempt's check fails the
+  test; `captureAttempts` goes to the manifest. Planted tests in `library-index.spec.ts` prove the retake, the failure
+  after the last attempt and the control. Ten runs on fresh databases gave 244/244 identical images in the sandbox
+  (the last six on this code, with no retake needed).
 
 ## 11. Evidence and reporting
 
