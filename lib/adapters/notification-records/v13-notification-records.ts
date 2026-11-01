@@ -9,12 +9,15 @@ import "server-only";
 import {
   CaseNotificationSchema,
   type CaseId,
+  type CaseRecordsPage,
+  type CaseRecordsPageRequest,
   type CaseNotification,
   type NotificationRecordsReader,
   type RequestIdentity,
 } from "@/lib/contracts";
 import type { RequestContextRunner } from "@/lib/adapters/case-source/v13-records";
 import { sameCase } from "@/lib/adapters/procedural-records/v13-procedural-records";
+import { readCaseListPage } from "@/lib/adapters/case-list/page";
 
 interface NotificationRow {
   notification_id: string;
@@ -53,6 +56,33 @@ export function createV13NotificationRecordsReader(run: RequestContextRunner): N
            order by n.created_at desc, n.notification_id`,
       );
       return sameCase(caseId, rows.map(rowToCaseNotification));
+    },
+
+    // V13-FE-013: the same read one page at a time (case_notifications_page, migration 0011), same order.
+    async listForCasePage(
+      identity: RequestIdentity,
+      caseId: CaseId,
+      page: CaseRecordsPageRequest,
+    ): Promise<CaseRecordsPage<CaseNotification>> {
+      return readCaseListPage(
+        "notifications",
+        caseId,
+        page,
+        (after, limit) =>
+          run(
+            identity,
+            (tx) =>
+              tx<(NotificationRow & { page_cursor: string })[]>`
+              select n.notification_id, n.case_id, n.template_code, n.template_version, n.language, n.recipient_class,
+                     n.lifecycle_status, n.created_at, n.row_version, t.name_ar, t.name_en, n.page_cursor
+                from cdf_notifications_v13.case_notifications_page(${caseId}::uuid, ${after.at}::text,
+                                                                    ${after.id}::uuid, ${limit}::integer) n
+                join cdf_notifications_v13.notification_template t on t.code = n.template_code
+               order by n.created_at desc, n.notification_id`,
+          ),
+        ({ page_cursor: _cursor, ...row }) => rowToCaseNotification(row),
+        (n) => n.notification_id,
+      );
     },
   };
 }

@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { CaseCapacitySchema } from "./case-summary";
 import { CaseIdSchema, UuidSchema, type CaseId } from "./ids";
+import type { CaseRecordsPage, CaseRecordsPageRequest } from "./case-records-page";
 import type { RequestIdentity } from "./identity";
 
 const CODE = /^[A-Z][A-Z0-9_]{1,63}$/;
@@ -67,4 +68,20 @@ export interface ProceduralRecordsReader {
   listEvents(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseEvent[]>;
   /** Tasks, by due date (nulls last), task code, id. */
   listTasks(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseTask[]>;
+  /**
+   * listEvents one page at a time, same order (V13-FE-013, case_events_page). A cursor that does not decode to this
+   * list's shape throws InvalidCursorError before any read; a well-formed cursor of another case, a stale one, an
+   * unknown case and an unauthorised case all give an empty page (the database decides).
+   */
+  listEventsPage(
+    identity: RequestIdentity,
+    caseId: CaseId,
+    page: CaseRecordsPageRequest,
+  ): Promise<CaseRecordsPage<CaseEvent>>;
+  /** listTasks one page at a time, same order and cursor rules (case_tasks_page). */
+  listTasksPage(
+    identity: RequestIdentity,
+    caseId: CaseId,
+    page: CaseRecordsPageRequest,
+  ): Promise<CaseRecordsPage<CaseTask>>;
 }

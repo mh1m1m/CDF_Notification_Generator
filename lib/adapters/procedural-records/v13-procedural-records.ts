@@ -13,11 +13,14 @@ import {
   CaseTaskSchema,
   type CaseEvent,
   type CaseId,
+  type CaseRecordsPage,
+  type CaseRecordsPageRequest,
   type CaseTask,
   type ProceduralRecordsReader,
   type RequestIdentity,
 } from "@/lib/contracts";
 import type { RequestContextRunner } from "@/lib/adapters/case-source/v13-records";
+import { readCaseListPage } from "@/lib/adapters/case-list/page";
 
 type Instant = Date | string | null;
 const iso = (value: Instant): string | null => (value instanceof Date ? value.toISOString() : value);
@@ -117,6 +120,55 @@ export function createV13ProceduralRecordsReader(run: RequestContextRunner): Pro
             from cdf_notifications_v13.case_tasks(${caseId}::uuid) t`,
       );
       return sameCase(caseId, rows.map(rowToCaseTask));
+    },
+
+    // V13-FE-013: the same reads one page at a time (case_events_page, case_tasks_page; migration 0011).
+    async listEventsPage(
+      identity: RequestIdentity,
+      caseId: CaseId,
+      page: CaseRecordsPageRequest,
+    ): Promise<CaseRecordsPage<CaseEvent>> {
+      return readCaseListPage(
+        "events",
+        caseId,
+        page,
+        (after, limit) =>
+          run(
+            identity,
+            (tx) =>
+              tx<(EventRow & { page_cursor: string })[]>`
+              select e.id, e.case_id, e.event_code, e.occurred_at, e.recorded_at, e.actor_capacity, e.provenance,
+                     e.subject_type, e.subject_id, e.causation_id, e.page_cursor
+                from cdf_notifications_v13.case_events_page(${caseId}::uuid, ${after.at}::text, ${after.id}::uuid,
+                                                             ${limit}::integer) e`,
+          ),
+        ({ page_cursor: _cursor, ...row }) => rowToCaseEvent(row),
+        (e) => e.id,
+      );
+    },
+
+    async listTasksPage(
+      identity: RequestIdentity,
+      caseId: CaseId,
+      page: CaseRecordsPageRequest,
+    ): Promise<CaseRecordsPage<CaseTask>> {
+      return readCaseListPage(
+        "tasks",
+        caseId,
+        page,
+        (after, limit) =>
+          run(
+            identity,
+            (tx) =>
+              tx<(TaskRow & { page_cursor: string })[]>`
+              select t.id, t.case_id, t.task_code, t.title_ar, t.title_en, t.assignee_capacity, t.is_mine, t.status,
+                     t.due_date, t.row_version, t.status_event_id, t.page_cursor
+                from cdf_notifications_v13.case_tasks_page(${caseId}::uuid, ${after.at}::text, ${after.id}::uuid,
+                                                            ${limit}::integer) t`,
+          ),
+        ({ page_cursor: _cursor, ...row }) => rowToCaseTask(row),
+        (t) => t.id,
+      );
     },
   };
 }

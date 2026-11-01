@@ -38,6 +38,15 @@
   max-inline-size: 100%;
 }
 
+/* V13-FE-013: previous / next under a paged list, as the portfolio's. */
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cdf-space-3);
+  align-items: center;
+  margin-block: var(--cdf-space-4);
+}
+
 /* V13-FE-011: the preview's plain-text twin. Wrapped, never scrolled sideways (WCAG 1.4.10 at 320 px); the notice's
    own font follows its lang attribute. */
 .previewText {

@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import type { CaseEvent, CaseNotification, CaseSummary, CaseTask } from "@/lib/contracts";
 import { toBadgeEpistemic } from "@/lib/domain";
 import { translateKey, type Locale, type MessageKey, type Translator } from "@/lib/i18n";
+import type { ListPaging } from "@/lib/server/case-list-paging";
 import { CASE_TABS, type CaseTab, type CaseWorkspaceView } from "@/lib/server/case-workspace";
 import type { DraftFormView, DraftNotice } from "@/lib/server/notification-draft";
 import { previewHref, type NotificationPreviewView } from "@/lib/server/notification-preview";
@@ -315,6 +316,7 @@ export function NotificationTable({
   notifications,
   createdId = null,
   selectedId = null,
+  pageSearch = "",
 }: {
   t: Translator;
   locale: Locale;
@@ -324,6 +326,8 @@ export function NotificationTable({
   createdId?: string | null;
   /** The notification shown in the preview below the table, if any. */
   selectedId?: string | null;
+  /** The list page's query string, kept by the preview links (V13-FE-013). */
+  pageSearch?: string;
 }) {
   if (notifications.length === 0) {
     return (
@@ -421,7 +425,7 @@ export function NotificationTable({
           header: t("case.notifications.column.preview"),
           cell: (n) => (
             <Link
-              href={previewHref(n.case_id, n.notification_id)}
+              href={previewHref(n.case_id, n.notification_id, pageSearch)}
               // QA CHANGES 982bd76: the accessible name uses the words on the row, never raw codes.
               aria-label={t("case.notifications.previewLinkLabel", {
                 template: n.template_name[locale],
@@ -447,10 +451,13 @@ export function NotificationPreviewSection({
   t,
   caseId,
   preview,
+  pageSearch = "",
 }: {
   t: Translator;
   caseId: string;
   preview: NotificationPreviewView;
+  /** The list page's query string; "close" returns to that page (V13-FE-013). */
+  pageSearch?: string;
 }) {
   if (preview.kind === "none") return null;
   return (
@@ -512,7 +519,10 @@ export function NotificationPreviewSection({
         </div>
       ) : null}
       <p>
-        <Link href={tabHref(caseId, "notifications")} data-testid="case-preview-close">
+        <Link
+          href={`${tabHref(caseId, "notifications")}${pageSearch ? `?${pageSearch}` : ""}`}
+          data-testid="case-preview-close"
+        >
           {t("case.preview.close")}
         </Link>
       </p>
@@ -567,6 +577,32 @@ function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; dra
 }
 
 /** The content of the active tab. */
+/**
+ * Previous / next links under a paged list (V13-FE-013), as the portfolio's. Nothing is rendered on a single page.
+ * No count or total is shown: none is read.
+ */
+export function ListPager({ t, paging, testId }: { t: Translator; paging: ListPaging; testId: string }) {
+  if (paging.prevHref === null && paging.nextHref === null) return null;
+  return (
+    <nav
+      aria-label={t("case.pagination.label")}
+      className={styles.pagination}
+      data-testid={`${testId}-pagination`}
+    >
+      {paging.prevHref ? (
+        <Link href={paging.prevHref} rel="prev" data-testid={`${testId}-prev`}>
+          {t("case.pagination.previous")}
+        </Link>
+      ) : null}
+      {paging.nextHref ? (
+        <Link href={paging.nextHref} rel="next" data-testid={`${testId}-next`}>
+          {t("case.pagination.next")}
+        </Link>
+      ) : null}
+    </nav>
+  );
+}
+
 export function CaseTabContent({
   t,
   locale,
@@ -613,25 +649,31 @@ export function CaseTabContent({
       );
     case "events":
       return (
-        <CaseTimeline
-          t={t}
-          locale={locale}
-          summary={view.summary}
-          events={view.events}
-          label={t("case.tab.events")}
-        />
+        <>
+          <CaseTimeline
+            t={t}
+            locale={locale}
+            summary={view.summary}
+            events={view.events}
+            label={t("case.tab.events")}
+          />
+          <ListPager t={t} paging={view.paging} testId="case-events" />
+        </>
       );
     case "tasks":
       return (
-        <TaskTable
-          t={t}
-          locale={locale}
-          caseRef={view.summary.case_number}
-          tasks={view.tasks}
-          caption={t("case.tasks.caption")}
-          emptyText={t("case.tasks.empty")}
-          testId="case-tasks"
-        />
+        <>
+          <TaskTable
+            t={t}
+            locale={locale}
+            caseRef={view.summary.case_number}
+            tasks={view.tasks}
+            caption={t("case.tasks.caption")}
+            emptyText={t("case.tasks.empty")}
+            testId="case-tasks"
+          />
+          <ListPager t={t} paging={view.paging} testId="case-tasks" />
+        </>
       );
     case "notifications":
       return (
@@ -648,8 +690,15 @@ export function CaseTabContent({
                 ? view.preview.notificationId
                 : null
             }
+            pageSearch={view.paging.search}
           />
-          <NotificationPreviewSection t={t} caseId={view.summary.case_id} preview={view.preview} />
+          <ListPager t={t} paging={view.paging} testId="case-notifications" />
+          <NotificationPreviewSection
+            t={t}
+            caseId={view.summary.case_id}
+            preview={view.preview}
+            pageSearch={view.paging.search}
+          />
           {view.draft ? <DraftFormFor t={t} locale={locale} draft={view.draft} /> : null}
         </>
       );

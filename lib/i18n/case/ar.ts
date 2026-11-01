@@ -80,6 +80,9 @@ export const ar = {
   "preview.heading": "معاينة الإشعار",
   "preview.frameTitle": "{title} — عرض تجريبي",
   "preview.untitled": "إشعار",
+  "pagination.label": "صفحات القائمة",
+  "pagination.previous": "السابق",
+  "pagination.next": "التالي",
   "preview.textSummary": "النسخة النصية",
   "preview.close": "إغلاق المعاينة",
   "preview.unmapped":

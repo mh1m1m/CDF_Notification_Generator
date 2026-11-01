@@ -78,9 +78,13 @@ export function previewParamOf(params: Readonly<Record<string, unknown>> | undef
   return Array.isArray(v) && v.length === 1 && typeof v[0] === "string" ? v[0] : "";
 }
 
-/** `/cases/<id>/notifications?n=<notification id>` */
-export function previewHref(caseId: string, notificationId: string): string {
-  return `/cases/${caseId}/notifications?${PREVIEW_PARAM}=${encodeURIComponent(notificationId)}`;
+/**
+ * `/cases/<id>/notifications?n=<notification id>`, keeping the list's page when one is given (`pageSearch`, V13-FE-013),
+ * so the selected row stays in view.
+ */
+export function previewHref(caseId: string, notificationId: string, pageSearch = ""): string {
+  const n = `${PREVIEW_PARAM}=${encodeURIComponent(notificationId)}`;
+  return `/cases/${caseId}/notifications?${pageSearch ? `${pageSearch}&` : ""}${n}`;
 }
 
 /** The authorised case row, as buildModelFromRecords and projectForRecipient read it. */
