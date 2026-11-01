@@ -14,7 +14,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { LOCALE_COOKIE } from "@/lib/i18n";
 import { mintSession, persona, signInAs } from "../fixtures/personas";
 import { checkSynthetic, formatFindings, type DataInput } from "./data-check";
-import { expectFramesPainted, frameBoxes, settleFrames } from "./frames";
+import { captureWithPaintedFrames, settleFrames } from "./frames";
 import {
   BROWSER_TIME,
   CAPTURES,
@@ -135,12 +135,14 @@ for (const c of CAPTURES) {
           };
           // Captured to memory and written only after the frame check: an empty frame never yields an image.
           let png: Buffer;
+          let attempts = 1;
           if (c.element) png = await page.locator(c.element).screenshot(options);
-          else {
-            const boxes = await frameBoxes(page);
-            png = await page.screenshot({ ...options, fullPage: true });
-            await expectFramesPainted(page, png, boxes, MASK_COLOR);
-          }
+          else
+            ({ png, attempts } = await captureWithPaintedFrames(
+              page,
+              () => page.screenshot({ ...options, fullPage: true }),
+              MASK_COLOR,
+            ));
           writeFileSync(path, png);
 
           entries.push({
@@ -153,6 +155,7 @@ for (const c of CAPTURES) {
             viewport,
             theme,
             element: c.element ?? null,
+            captureAttempts: attempts,
             masks: c.masks.map((m, i) => ({
               name: m,
               selector: withDraft(MASKS[m].selector, draft),

@@ -3,12 +3,22 @@
 //   - docs/qa/SCREENSHOT_LIBRARY.md is exactly what library-plan.ts generates (never hand-edited; regenerate locally
 //     with V13_E2E_VISUAL=index, never in CI);
 //   - the plan is well formed: one row per screen and state, real synthetic personas, seeded case routes only;
-//   - the data check (V1–V5) refuses each planted fault and passes a clean synthetic page.
+//   - the data check (V1–V5) refuses each planted fault and passes a clean synthetic page;
+//   - an empty frame in a capture is retaken at most MAX_CAPTURE_ATTEMPTS times, then fails (frames.ts).
 import { readFileSync, writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { PERSONAS } from "@/lib/contracts";
 import { checkSynthetic, SYNTHETIC_PERSONA_NAMES } from "./data-check";
-import { CAPTURES, imageCount, MASKS, NOT_APPLICABLE, renderIndex, VIEWPORTS } from "./library-plan";
+import { captureWithPaintedFrames, MAX_CAPTURE_ATTEMPTS, settleFrames } from "./frames";
+import {
+  CAPTURES,
+  imageCount,
+  MASK_COLOR,
+  MASKS,
+  NOT_APPLICABLE,
+  renderIndex,
+  VIEWPORTS,
+} from "./library-plan";
 
 const INDEX = "docs/qa/SCREENSHOT_LIBRARY.md";
 
@@ -72,4 +82,49 @@ test.describe("screenshot library: data check (V1–V5) refuses planted faults",
       expect(run(text, names)).toContain(rule);
     });
   }
+});
+
+test.describe("screenshot library: frames are painted before an image is kept (ARCH on #140)", () => {
+  const PAGE = `<!doctype html><html><body style="margin:0;background:#fff">
+    <iframe style="inline-size:400px;block-size:200px;border:0"
+      srcdoc="<p style='font:20px sans-serif'>Synthetic preview text for Witness Gamma, CDF-DEMO-2026-0001.</p>"></iframe>
+  </body></html>`;
+  const HIDE = "iframe { visibility: hidden; }";
+
+  test("a capture whose frame is empty is retaken, and the attempt is counted", async ({ page }) => {
+    await page.setContent(PAGE);
+    await settleFrames(page);
+    let calls = 0;
+    const { attempts } = await captureWithPaintedFrames(
+      page,
+      () => page.screenshot({ style: (calls += 1) === 1 ? HIDE : "" }),
+      MASK_COLOR,
+    );
+    expect(calls).toBe(2);
+    expect(attempts).toBe(2);
+  });
+
+  test("a frame that never paints fails after the last attempt: no image is kept", async ({ page }) => {
+    await page.setContent(PAGE);
+    await settleFrames(page);
+    let calls = 0;
+    await expect(
+      captureWithPaintedFrames(
+        page,
+        () => {
+          calls += 1;
+          return page.screenshot({ style: HIDE });
+        },
+        MASK_COLOR,
+      ),
+    ).rejects.toThrow(/frame 1 is painted/);
+    expect(calls).toBe(MAX_CAPTURE_ATTEMPTS);
+  });
+
+  test("a painted frame is kept on the first attempt (the control)", async ({ page }) => {
+    await page.setContent(PAGE);
+    await settleFrames(page);
+    const { attempts } = await captureWithPaintedFrames(page, () => page.screenshot(), MASK_COLOR);
+    expect(attempts).toBe(1);
+  });
 });

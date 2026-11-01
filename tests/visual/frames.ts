@@ -103,3 +103,31 @@ export async function expectFramesPainted(
     ),
   );
 }
+
+/** Most attempts at a full-page capture whose frames are all painted (ARCH on #140 at 3a75a42). */
+export const MAX_CAPTURE_ATTEMPTS = 3;
+
+/**
+ * Takes a full-page capture until every frame in it is painted, at most MAX_CAPTURE_ATTEMPTS times; between attempts
+ * the frames are settled again (into view, content, fonts, two animation frames). Chromium occasionally (1 cell in 2
+ * full runs on ARCH's machine) had not yet painted a frame that was in view and loaded. The last attempt's check
+ * fails the test, so an empty frame is still never an image; the attempt count goes to the manifest.
+ */
+export async function captureWithPaintedFrames(
+  page: Page,
+  shoot: () => Promise<Buffer>,
+  maskColor: string,
+): Promise<{ png: Buffer; attempts: number }> {
+  for (let attempts = 1; ; attempts += 1) {
+    const boxes = await frameBoxes(page);
+    const png = await shoot();
+    if (boxes.length === 0) return { png, attempts };
+    const colours = await frameColours(page, png, boxes, maskColor);
+    if (colours.every((n) => n >= MIN_FRAME_COLOURS)) return { png, attempts };
+    if (attempts >= MAX_CAPTURE_ATTEMPTS) {
+      await expectFramesPainted(page, png, boxes, maskColor);
+      throw new Error("unreachable: the frame check above fails");
+    }
+    await settleFrames(page);
+  }
+}
