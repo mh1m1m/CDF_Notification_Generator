@@ -1,7 +1,7 @@
 # V13-DB-020 — Audit record content: outcome and policy version (design note)
 
-**SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Team DB · 1 Nov 2026 · status: **PROPOSED**, for the
-Chief Architect's acceptance. No migration is written until this note is accepted. Requirement: **REQ-AUD-005** "Each
+**SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Team DB · 1 Nov 2026 · status: **PROPOSED**, with the Chief Architect's
+decisions of 1 Nov (PR #115 comment 6553045144) folded in (§7), for acceptance. No migration is written until this note is accepted. Requirement: **REQ-AUD-005** "Each
 audit record includes actor, action, target, timestamp, outcome, correlation ID and the relevant policy version."
 Governing: ADR-011 (append-only hash-chained ledger), ADR-017 (attribution from verified claims).
 
@@ -47,18 +47,17 @@ row_hash = sha256( 'v2' | seq | occurred_at (UTC, µs) | actor | workspace | act
 
 ## 3. Outcome
 
-New column `outcome text not null default 'SUCCEEDED'`, check `outcome in ('SUCCEEDED', 'NO_CHANGE', 'REFUSED')`.
+New column `outcome text not null default 'SUCCEEDED'`, check `outcome in ('SUCCEEDED', 'REFUSED')`.
 
 - **SUCCEEDED**: the command did what was asked (every row written today).
-- **NO_CHANGE**: an idempotent command that changed nothing but is worth recording. Nothing uses it in this step;
-  it is reserved so that, for example, `api_install_claims_key` with the same key could be audited later without a
-  schema change. (Today ALREADY_INSTALLED is not audited, and this note does not change that.)
-- **REFUSED**: see the decision below. Not written by this step.
+- **REFUSED**: written only by V13-DB-021 (decision 1, §7). Not written by this step.
+- Only decided values are pinned. Another value (for example a NO_CHANGE for an idempotent command) is a one-line
+  migration when a writer needs it.
 
-**Decision for the Chief Architect: refusals.** PostgreSQL cannot commit an audit row inside the transaction that is
+**Refusals (decided: A).** PostgreSQL cannot commit an audit row inside the transaction that is
 rolling back, and V13 has no autonomous transactions (no dblink, no extensions, CLAUDE.md §2). Two ways:
 
-- **(A, recommended) Successes now, refusals as their own step.** This step records `outcome` for every committed
+- **(A, decided) Successes now, refusals as their own step.** This step records `outcome` for every committed
   command (SUCCEEDED). A later task (DB-021, with SEC) adds `api_record_refusal(p_command text, p_code text,
   p_entity_type text, p_entity_id uuid)`: SECURITY DEFINER, called by `lib/db` in a **new** transaction after a command
   raised a V14xx code. Actor, workspace and correlation id still come from the verified claims; the arguments are
@@ -77,7 +76,7 @@ sets `outcome` and reads `policy_version` itself, inside the chain lock, so no c
 | `api_create_notification_draft` (NOTIFICATION_DRAFT_CREATED) | SUCCEEDED, by `_append_audit` | same |
 | `api_switch_workspace` (WORKSPACE_SWITCHED) | SUCCEEDED, by `_append_audit` | same |
 | seed 0001 (SEED_M1_LOADED), seed 0002 (SEED_M1_CASES_LOADED) | SUCCEEDED, by `_append_audit` | same |
-| `api_record_refusal` (DB-021, option A or B) | REFUSED, by an internal `_append_audit_outcome` that only that command may call | same |
+| `api_record_refusal` (V13-DB-021, not this step) | REFUSED, by an internal `_append_audit_outcome` that only that command may call | same |
 
 If no `policy_version` row exists, `_append_audit` raises and the command rolls back, so a v2 row can never carry an
 absent version. No existing command body changes in this step.
@@ -88,20 +87,36 @@ The relevant policy for a V13 database command is the **access policy the databa
 the authorisation functions (`can_access_case`, `is_assigned_to_case`, `current_*`, `has_role`, the commands' own
 checks). Proposal:
 
-- New owner-only table `policy_version (version text primary key, fingerprint text not null unique, recorded_at
-  timestamptz, migration text not null)`, RLS enabled, deny-all, append-only (same trigger as the ledger). Each
-  migration that changes an access rule inserts a row: `version` = `V13-ACCESS-<NNNN>` (the migration number),
-  `fingerprint` = sha256 of the canonical text of every RLS policy and every SECURITY DEFINER / authorisation function
-  in the schema (`pg_get_expr` of `polqual`/`polwithcheck`, `pg_get_functiondef`, ordered by name).
-- `_append_audit` writes the latest `policy_version.version` into the row (inside the chain lock; one indexed read).
+- New owner-only table `policy_version (version text primary key check (version ~ '^V13-ACCESS-\d{4}$'), fingerprint
+  text not null, recorded_at timestamptz not null default clock_timestamp(), migration text not null)`, RLS enabled
+  and forced, deny-all, append-only (same trigger as the ledger). Each migration that changes the access policy inserts
+  a row: `version` = `V13-ACCESS-<NNNN>` (the migration number), `fingerprint` = `_policy_fingerprint()`.
+- **What `_policy_fingerprint()` covers** (decision 2), for objects in `cdf_notifications_v13` only (ADR-012: the
+  hosted database is shared; it reads the catalogue for that schema and nothing else):
+  - every policy: table, name, command, roles, permissive or restrictive, USING and WITH CHECK (`pg_get_expr`);
+  - every table's `relrowsecurity` and `relforcerowsecurity`;
+  - the ACL of every table, view and sequence, of every function, and of the schema itself;
+  - the definition of every function in the schema (`pg_get_functiondef`).
+  Each part is ordered by schema-qualified name, functions by `oid::regprocedure::text` so overloads sort
+  deterministically; the result is sha256 of the joined text. So `DISABLE ROW LEVEL SECURITY`, a new `GRANT` and a
+  changed function body each change the fingerprint, not only a policy expression.
+- **Computed on the server at apply time, never a literal.** The migration inserts `_policy_fingerprint()`'s result on
+  the server it runs on (local PostgreSQL 16, CI's 17 and the hosted server may print definitions differently). The
+  guard compares the live value with the latest row on the same server.
+- **"Latest" is the highest `version`** (`order by version desc limit 1`; fixed four digits, so text order is number
+  order), never `recorded_at`.
+- `_append_audit` writes the latest version into the row (inside the chain lock; one primary-key read).
+- `audit_event.policy_version` gets a foreign key to `policy_version.version` (ARCH left it to DB; taken, it makes
+  the invariant explicit and costs one index lookup per append).
 - **Guard (automated, ruling (b) on #71):** a test, and a new check in `post_apply_checks.sql` (ARCH path, proposed),
   recomputes the live fingerprint and fails unless it equals the latest row's. A migration that changes a policy or an
   authorisation function without recording a new version therefore fails CI and the hosted post-apply check.
-- The first row is `V13-ACCESS-0012` (the migration that introduces it), fingerprinting the 0011 rules.
+- The first row is `V13-ACCESS-0012`, inserted as the last statement of 0012, so it fingerprints the access policy as
+  0012 leaves it (including the new table and functions).
 - The **disclosure** policy version of a notification (lib/disclosure, `policy_version` in the M5 lifecycle model) is a
   property of the notification record, not of the database access rule. It belongs on the notification row when M5
-  builds dispatch (REQ-NOTIF-003), not in this step. I note it so REQ-AUD-005 is not marked COMPLETE for notification
-  authorisation events before M5.
+  builds dispatch (REQ-AUD-003, M5 in the register), not in this step. REQ-AUD-005 therefore stays IN_PROGRESS for
+  that part; PROC's register pass records it.
 
 ## 5. How rows written before the change verify
 
@@ -126,7 +141,9 @@ checks). Proposal:
     current policy version; the chain crosses the boundary;
   - negatives: a v2 row with its outcome or policy version changed (trigger disabled as in the existing test) is
     reported at its seq; a v1 row inserted after a v2 row is reported; a v1 row with a non-default outcome is refused
-    by the constraint; a policy change without a new `policy_version` row fails the fingerprint guard;
+    by the constraint; an outcome outside SUCCEEDED/REFUSED is refused; each of disabling RLS on one table, granting
+    one table privilege and changing one function body without a new `policy_version` row fails the fingerprint
+    guard (decision 2), and recording a new row makes it pass again;
   - the hosted resume rehearsal (`hosted-resume.spec.ts`) keeps verifying across the change.
 - Hosted: the hosted project holds version-1 rows today (at least CLAIMS_KEY_INSTALLED). They verify unchanged by the
   argument above; `post_apply_checks.sql` P07 keeps running `verify_audit_chain()`.
@@ -134,16 +151,25 @@ checks). Proposal:
 ## 6. What the migration would contain (for sizing; not written yet)
 
 Migration 0012: three columns + two check constraints on `audit_event`; `policy_version` table (RLS, deny-all,
-append-only triggers) + its first row; `_policy_fingerprint()` (owner only); `_audit_row_hash_v2`; new bodies for
+append-only triggers) + its first row (last statement); foreign key from `audit_event.policy_version`;
+`_policy_fingerprint()` (owner only); `_audit_row_hash_v2`; new bodies for
 `_append_audit` and `verify_audit_chain()` (same signatures; dropped and created again in the same migration with
 their grants restored, so the rollback register files them under **Replaces** of 0012 exactly). No change to any `api_*` command, grant or
-RLS policy. Rollback-register entry §9. SEC reviews; the definer allow-list (SEC path) gains `_policy_fingerprint` only
+RLS policy. Rollback-register entry §9. A separate commit in the same PR adds the fingerprint check to
+`database/hosted/post_apply_checks.sql` for ARCH to accept as owner (decision 3). SEC reviews; the definer allow-list (SEC path) gains `_policy_fingerprint` only
 if it is SECURITY DEFINER (proposed: invoker, owner-only EXECUTE).
 
-## 7. Questions for the Chief Architect
+## 7. Decisions (Chief Architect, 1 Nov, PR #115 comment 6553045144)
 
-1. Refusals: option **A** (recommended) or B (§3)?
-2. Policy version source: the database access-policy fingerprint (§4), with the disclosure policy version deferred to
-   M5 on the notification record — agreed?
-3. The `post_apply_checks.sql` fingerprint check is an ARCH path: do you want DB to propose the lines in the PR, or add
-   them yourself?
+1. **Refusals: A.** This step records SUCCEEDED for committed commands. Recording refusals is **V13-DB-021**, starting
+   with its own short design note and SEC's threat review before any code: allow-listed command and refusal codes, ids
+   only; the case id only when `can_access_case` is true; attribution only from the verified claims; volume limits; how
+   `lib/db` calls it in a new transaction without turning the refusal into an oracle. NO_CHANGE is dropped from the
+   check (§3).
+2. **Policy version: the database access-policy fingerprint**, with the disclosure policy version on the notification
+   record in M5 (REQ-AUD-005 stays IN_PROGRESS for that part). Conditions, folded into §4 and §5: the fingerprint
+   covers policies, RLS enabled and forced flags, the ACLs of tables, views, sequences, functions and the schema, and
+   every function definition; scope `cdf_notifications_v13` only; deterministic order, functions by `regprocedure`;
+   computed on the server at apply time; latest = highest version; negative tests for disabled RLS, one grant and one
+   changed function body. Optional foreign key: taken.
+3. **`post_apply_checks.sql`:** DB proposes the lines in the 0012 PR as a separate commit; ARCH accepts them as owner.
