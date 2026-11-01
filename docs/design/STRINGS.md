@@ -109,6 +109,9 @@ Added: `common.pagination.label`, `common.epistemic.awaitingApprover`, and `comm
 | `common.deadline.overdue` | متأخر {days} | Overdue by {days} |
 | `common.deadline.today` | يستحق اليوم | Due today |
 | `common.deadline.inDays` | خلال {days} | In {days} |
+| `common.nextAction.heading` | إجراؤك التالي | Your next action |
+| `common.nextAction.status` | الحالة | Status |
+| `common.nextAction.dueDate` | تاريخ الاستحقاق | Due date |
 | `common.records.ACTIVE` | نشطة | Active |
 | `common.records.CLOSED` | مغلقة | Closed |
 | `common.layerA.COMPLETED` | اكتمل | Completed |

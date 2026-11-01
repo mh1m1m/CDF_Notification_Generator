@@ -86,7 +86,37 @@ returns 0009 for a non-assigned persona, and the count matches the visible rows.
 (restricted → NamedAccessFlag; closed → "مغلقة" with glyph), the persona's capacity on this case ("صفتك: محقق").
 `data-case-id` and `data-case-ref` on the header too (same values as the root).
 
-**Overview tab.** Stage card (current stage, `recorded`, with the event that set it and when) · "Next expected step"
+**Next Action Card (V13-UX-015, REQ-IA-009).** First in the Overview tab, above the stage card, so the next
+authorised action is the first thing after the header. Built on PROC's contract (`nextActionForCase`,
+`docs/teams/proc/NEXT_ACTION_SOURCES.md`); its only source in M1 is the persona's own open task on this case.
+
+- **TASK.** A `section` labelled by its `h2` "إجراؤك التالي" (`common.nextAction.heading`), then the task's recorded title
+  as a link to the task (escaped text in `<bdi>`, page language only), then two facts: "الحالة" with the task's status as
+  the Tasks tab shows it (existing labels and recorded badge; BLOCKED and DONE wording stays PROPOSED), and "تاريخ
+  الاستحقاق" with `DeadlineText` from the recorded `due_date` and FE's `deadlineOf` day count (the same clock as My Work).
+  No due date recorded → no due line; no date is invented, and the card says "due date", never "deadline under the rules".
+- **The link (ARCH ruling, 1 Nov).** An in-page link to the same task's row in the overview's own "مهامي المفتوحة في هذه
+  القضية" list on the same page (for example `#task-{task_id}`, an anchor FE puts on that row in V13-FE-015). The card's
+  task is always that list's first row: both come from one source in one order (PROC-026's order is DB-022's read, which
+  FE-014 puts on the overview). No `?task=` parameter, no new route state and no read by task id: such a read would have
+  to make unknown and unauthorised ids look identical, which is new surface for M1.
+- **NONE.** The card renders nothing: no element, no heading, no line, no placeholder. NONE carries no reason, and the
+  overview's own "لا توجد مهام مفتوحة مسندة إليك في هذه القضية" already covers the common case.
+- **Look.** Card surface with a 1 px control border and a 4 px start-side bar in `--cdf-primary`; the heading is small
+  and secondary, the title large (H2 size) and bold, so it stands out by position, weight and the bar, not colour alone.
+  The title link is underlined. Facts wrap; nothing scrolls sideways at 320 px.
+- **Never on the card.** Another persona, another task, a count, a reason for NONE, an action from the authority model,
+  a stage or journey step, a procedural deadline (PROC §3).
+- **Only what the function returns.** Task code (as `data-task-code`, not shown, as in the Tasks tab), title, status
+  and the one due date. No controls: the status is changed where it is today (Tasks tab, My Work), with the
+  `.v13-control` and `.v13-btn` rules; the card adds no form.
+- **Widths and tokens.** Checked in ar and en at 320 px and up; colours, borders and spacing from tokens only.
+- **Test ids.** `next-action-card` (with `data-task-id`, `data-task-code`), `next-action-link`, `next-action-status`,
+  `next-action-due`.
+- **Component.** `components/data/NextActionCard.tsx` (UX). FE wires it as V13-FE-015, after FE-014: it calls PROC's
+  `nextActionForCase` (V13-PROC-026), passes the status element, the `deadlineOf` day count (Asia/Riyadh) and the link.
+
+**Overview tab.** Next Action Card (above) · stage card (current stage, `recorded`, with the event that set it and when) · "Next expected step"
 card (Layer B, expected variant only — never a completed glyph; M1 shows it only when PROC supplies it, otherwise the
 card is absent, not empty) · the persona's open tasks in this case · last five recorded events (Timeline).
 
