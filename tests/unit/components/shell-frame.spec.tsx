@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Breadcrumbs } from "@/components/shell/Breadcrumbs";
 import { PersonaMenu } from "@/components/shell/PersonaMenu";
+import { WorkspaceSwitcher } from "@/components/shell/WorkspaceSwitcher";
 import { currentArea, SideNav, SideNavList, sideNavListItems } from "@/components/shell/SideNav";
 import { SideNavAuto } from "@/components/shell/SideNavAuto";
 import { createTranslator, type Locale } from "@/lib/i18n";
@@ -111,6 +112,56 @@ describe("test ids the platform layout passes", () => {
     );
     expect(html).toContain('<span data-testid="shell-persona">Secretary Alpha</span>');
     expect(html.match(/data-testid="shell-persona"/g)).toHaveLength(1);
+    expect(html).toContain('data-testid="sign-out"');
+  });
+});
+
+// FE-008 (OI-044): a role is shown only when an active membership is confirmed; without one, no empty "as …" line.
+describe("no confirmed role", () => {
+  const t = createTranslator("ar");
+  const asPrefix = t("shell.workspace.roleHeld", { role: "" }).trim();
+
+  it("menu option without a role: no role line for it, the other option keeps its role", () => {
+    const html = renderToStaticMarkup(
+      <WorkspaceSwitcher
+        t={t}
+        current="GOVERNANCE"
+        options={[
+          { code: "GOVERNANCE", name: "الحوكمة", role: "مسؤول الحوكمة" },
+          { code: "SECRETARIAT", name: "أمانة اللجنة" },
+        ]}
+        action={noop}
+        pageHref="/workspaces"
+      />,
+    );
+    expect(html).toContain(t("shell.workspace.roleHeld", { role: "مسؤول الحوكمة" }));
+    expect(html).not.toMatch(new RegExp(`${asPrefix}\\s*<`));
+    // Every "as …" on the page is GOVERNANCE's: none for the option without a role (not even a placeholder).
+    const count = (needle: string) => html.split(needle).length - 1;
+    expect(count(asPrefix)).toBe(count(t("shell.workspace.roleHeld", { role: "مسؤول الحوكمة" })));
+    expect(html).toContain('data-testid="workspace-menu-option-SECRETARIAT"');
+  });
+
+  it("single workspace without a role: the name only", () => {
+    const html = renderToStaticMarkup(
+      <WorkspaceSwitcher
+        t={t}
+        current="SECRETARIAT"
+        options={[{ code: "SECRETARIAT", name: "أمانة اللجنة", role: "" }]}
+        action={noop}
+        pageHref="/workspaces"
+      />,
+    );
+    expect(html).toContain('data-testid="workspace-switcher"');
+    expect(html).toContain("أمانة اللجنة");
+    expect(html).not.toContain("v13-muted");
+  });
+
+  it("PersonaMenu without a role label: no persona-menu-role line, sign-out stays", () => {
+    const html = renderToStaticMarkup(
+      <PersonaMenu t={t} name="Persona Zeta" roleLabel="" signOutAction={noop} />,
+    );
+    expect(html).not.toContain("persona-menu-role");
     expect(html).toContain('data-testid="sign-out"');
   });
 });

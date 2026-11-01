@@ -8,7 +8,7 @@ export interface PersonaMenuProps {
   t: Translator;
   /** Localised synthetic persona name, e.g. "Secretary Alpha". */
   name: string;
-  /** Localised role held in the active workspace. */
+  /** Localised role held in the active workspace; empty when none is confirmed (then no role line). */
   roleLabel: string;
   signOutAction: (formData: FormData) => Promise<void>;
   /** Optional test id on the visible name in the menu button. */
@@ -34,7 +34,7 @@ export function PersonaMenu({ t, name, roleLabel, signOutAction, nameTestId }: P
         <p className="v13-strong" data-testid="persona-menu-name">
           {name}
         </p>
-        <p data-testid="persona-menu-role">{roleLabel}</p>
+        {roleLabel ? <p data-testid="persona-menu-role">{roleLabel}</p> : null}
         <p className="v13-muted">{t("shell.persona.synthetic")}</p>
       </div>
       <form action={signOutAction}>
