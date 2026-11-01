@@ -1,6 +1,6 @@
 # QA status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: test/V13-QA-012-witness-twin-and-bodies (base develop 61b57cf)
+Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (base develop b50dea9)
 
 ## Completed
 - V13-QA-001 (design) — `docs/qa/TEST_ARCHITECTURE.md` — PR #1 — COMPLETE
@@ -52,7 +52,7 @@ Updated: 2026-11-01 · Branch: test/V13-QA-012-witness-twin-and-bodies (base dev
   preview in an ar and an en template; withheld fields absent from the frame, its names, its title and every payload;
   the generalized classification only; allowed fields as the control; oracle from the policy file, cross-checked field
   by field with `decide()` from `lib/disclosure` through `tests/fixtures/server-module.ts` (child Node process).
-- V13-QA-012 — this branch — IN_PROGRESS (review: ARCH + SEC):
+- V13-QA-012 — PR #125 — merged (3df2416) — COMPLETE:
   (b) the plain-text version (FE-011) withholds the same fields: no withheld-field marker or field name, not the
   notice's own marking; the class-safe wording, event title, issuer, notice reference and confidentiality notice in it
   (control). (c) SEC INFO 1 on #114 was a real gap: the router aborts its RSC fetch once it has consumed the payload,
@@ -61,6 +61,10 @@ Updated: 2026-11-01 · Branch: test/V13-QA-012-witness-twin-and-bodies (base dev
   must each carry the frame. (d) SEC INFO 2: the precondition is the claims key (ADR-014), not data; reproduced
   (`CLAIMS_KEY_MISMATCH` after a restart with a new secret; the spec passes twice on one database, and across a
   restart with the same secret); stated in the spec header and TEST_ARCHITECTURE §6.
+
+- V13-QA-013 — this branch — IN_REVIEW (SEC, then ARCH): design note `docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` for the
+  M1 rows still NOT_STARTED in QA's name (REQ-VIS-001, -004, -005, -010, -011, -012, -015, -018; REQ-A11Y-003, -014;
+  REQ-QA-003; REQ-CICD-002): what QA builds, what needs ARCH in CI, what stays open; ARCH rulings D1–D4 folded in.
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |
@@ -91,11 +95,13 @@ Updated: 2026-11-01 · Branch: test/V13-QA-012-witness-twin-and-bodies (base dev
 | #112 FE-012 | ACCEPT 7971547, c2021cf (merged abdd885) | QA's P3 hunk: the tampered 0004→0001 post is refused, P3 still flags it |
 | #100 UX-011 | ACCEPT f748c53 (merged ca16cba) | frame named in the page language |
 | #116 FE-011 | ACCEPT 0934b80, 9bc6d52, 0bbc7c2 | twin text has no withheld-field markers; re-confirms after develop merges |
-| #121 FE-013 | ACCEPT 19cf34c | 55-row paging walk; mutating the look-ahead fails 2 tests |
+| #121 FE-013 | ACCEPT 19cf34c, 7c23c2e (merged 4f94b07) | 61-row paging walk ar/en at 320 px; non-canonical cursors give the empty state |
+| #122 UX-013 | ACCEPT f9536a4 | UXB-17/18 confirmed in the browser |
+| #128 UX-014 | ACCEPT cf8a348 | 4 pages × ar/en × 320/768/1280: fields 40 px with a ≥ 3:1 border, table links underlined, axe incl. WCAG 2.2 AA clean |
 
 ## Changed files (this branch)
-- tests/e2e/scenario-e-notification-draft.spec.ts (header, disclosure tests)
-- docs/qa/TEST_ARCHITECTURE.md §6; docs/teams/qa/STATUS.md
+- docs/qa/M1_OPEN_QA_ROWS_DESIGN.md (new)
+- docs/qa/TEST_ARCHITECTURE.md §10 (pointer); docs/teams/qa/STATUS.md
 
 ## Test evidence
 | Command | Result | Counts | Commit |
