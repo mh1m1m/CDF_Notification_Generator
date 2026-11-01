@@ -7,6 +7,7 @@ import { translateKey, type Locale, type MessageKey, type Translator } from "@/l
 import type { PortfolioView as View } from "@/lib/server/portfolio";
 import {
   CLEAR_FILTERS_HREF,
+  filterFormKey,
   hasFilters,
   PORTFOLIO_RECORDS_STATES,
   PORTFOLIO_STAGES,
@@ -128,6 +129,9 @@ function Filters({ t, query }: { t: Translator; query: PortfolioQuery }) {
       method="get"
       action="/portfolio"
       role="search"
+      // Back to a page loaded as a document (back_forward) would otherwise get the browser's restored form values
+      // instead of the URL's filters (OI-043, QA review of #63).
+      autoComplete="off"
       aria-label={t("portfolio.filters.label")}
       className={styles.filters}
       data-testid="portfolio-filters"
@@ -232,7 +236,7 @@ export function PortfolioView({ t, locale, view }: { t: Translator; locale: Loca
   return (
     <section data-testid="portfolio-page">
       <h1>{t("portfolio.heading")}</h1>
-      {view.kind === "page" ? <Filters t={t} query={view.query} /> : null}
+      {view.kind === "page" ? <Filters key={filterFormKey(view.query)} t={t} query={view.query} /> : null}
       {view.kind === "invalid" ? (
         <>
           <ErrorState
