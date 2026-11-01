@@ -183,10 +183,11 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   320–1280 px with an own capture (QA-005's library not built yet): all DONE. M1-15 … M1-18, the case-tab remainders of
   M1-06/M1-11/M1-17 and UX-009 R-04 recorded FIXED. UXB-06, 13, 16 DONE with their merge shas.
 - New: UXB-17 (MEDIUM, draft form controls unstyled: no border, 21–22 px selects) and UXB-18 (LOW, "Preview" link
-  looks like text), routed through ARCH. Docs only.
+  looks like text), both routed by ARCH to V13-UX-014 (from `develop` after this PR merges). Docs only.
 
 ## Unresolved defects
-- UXB-18 (LOW) is partly on UX paths (link style), waiting for a task id. Other open items are in
+- UXB-17 (MEDIUM) and UXB-18 (LOW) are OPEN, assigned to V13-UX-014 (shared form-control rule, one table-cell link
+  style; FE path-owner ACCEPT for FE hunks). Other open items are in
   `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests

@@ -78,7 +78,7 @@ owner team through ARCH, with the task that closes it), RULED (an open rule ARCH
 - Verdict: M1-15 … M1-18 and the case-tab remainders of M1-06, M1-11 and M1-17 are FIXED (rows above; backlog UXB-01 …
   05, 08, 14 DONE). UX-009 R-04 is FIXED by FE-010.
 - New: the case tab's draft form has unstyled selects and button (UXB-17, MEDIUM) and its "Preview" link looks like
-  plain text (UXB-18, LOW). Routed through ARCH; not fixed here.
+  plain text (UXB-18, LOW). Both routed by ARCH to V13-UX-014; not fixed here.
 
 ## Next
 
