@@ -2,6 +2,7 @@
 // read function case_notifications (migration 0004). FE-006's Notification Operations Center extends this port.
 import { z } from "zod";
 import { CaseIdSchema, UuidSchema, type CaseId } from "./ids";
+import type { CaseRecordsPage, CaseRecordsPageRequest } from "./case-records-page";
 import type { RequestIdentity } from "./identity";
 
 const CODE = /^[A-Z][A-Z0-9_]{1,63}$/;
@@ -32,4 +33,14 @@ export type CaseNotification = z.infer<typeof CaseNotificationSchema>;
 export interface NotificationRecordsReader {
   /** Notifications of one case, newest first. */
   listForCase(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseNotification[]>;
+  /**
+   * listForCase one page at a time, same order (V13-FE-013, case_notifications_page). Cursor rules as
+   * ProceduralRecordsReader.listEventsPage: InvalidCursorError before any read for a cursor that does not decode; an
+   * empty page for another case's, a stale cursor, an unknown or an unauthorised case.
+   */
+  listForCasePage(
+    identity: RequestIdentity,
+    caseId: CaseId,
+    page: CaseRecordsPageRequest,
+  ): Promise<CaseRecordsPage<CaseNotification>>;
 }

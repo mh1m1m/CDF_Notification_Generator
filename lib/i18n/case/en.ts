@@ -80,6 +80,9 @@ export const en: Record<keyof typeof ar, string> = {
   "preview.heading": "Notification preview",
   "preview.frameTitle": "{title} — design preview",
   "preview.untitled": "Notification",
+  "pagination.label": "List pages",
+  "pagination.previous": "Previous",
+  "pagination.next": "Next",
   "preview.textSummary": "Plain-text version",
   "preview.close": "Close preview",
   "preview.unmapped":
