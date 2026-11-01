@@ -46,7 +46,7 @@ export interface CaseWorkspaceDeps {
   readonly preview?: NotificationPreviewReader;
   /** The raw `?n=` value (notifications tab only); undefined when absent. */
   readonly previewId?: string;
-  /** The parsed `after` / `back` paging state (events, tasks and notifications tabs); default the first page. */
+  /** The parsed `after` / `back` paging state (the overview's own open tasks and the paged tabs); default the first page. */
   readonly page?: ParsedListPage;
 }
 
@@ -60,6 +60,8 @@ export type CaseWorkspaceView =
       readonly tab: "overview";
       readonly events: readonly CaseEvent[];
       readonly myTasks: readonly CaseTask[];
+      /** Paging of the own open tasks (V13-FE-014); the last five events are not paged. */
+      readonly paging: ListPaging;
     })
   | (Frame & { readonly tab: "events"; readonly events: readonly CaseEvent[]; readonly paging: ListPaging })
   | (Frame & { readonly tab: "tasks"; readonly tasks: readonly CaseTask[]; readonly paging: ListPaging })
@@ -71,8 +73,6 @@ export type CaseWorkspaceView =
       readonly notice: DraftNotice | null;
       readonly preview: NotificationPreviewView;
     });
-
-const OPEN_STATUSES = new Set(["OPEN", "IN_PROGRESS", "BLOCKED"]);
 
 /**
  * One page of a list, or the empty page for a tampered URL or a cursor the reader refuses (InvalidCursorError): the
@@ -122,15 +122,13 @@ export async function loadCaseWorkspace(
   const frame = { summary, capacity };
   switch (tab) {
     case "overview": {
-      // The last five events are one page of five (V13-FE-013); own open tasks still read the case's task list.
+      // The last five events are one page of five (V13-FE-013); own open tasks are one page of the database's own
+      // read, case_my_open_tasks_page (V13-FE-014, DB-022): no read of the whole task list, no filter here.
       const events = await procedural.listEventsPage(ctx.identity, caseId, { limit: OVERVIEW_EVENTS });
-      const tasks = await procedural.listTasks(ctx.identity, caseId);
-      return {
-        ...frame,
-        tab,
-        events: events.items,
-        myTasks: tasks.filter((t) => t.is_mine && OPEN_STATUSES.has(t.status)),
-      };
+      const { items: myTasks, paging } = await onePage(`/cases/${caseId}`, page, (request) =>
+        procedural.listMyOpenTasksPage(ctx.identity, caseId, request),
+      );
+      return { ...frame, tab, events: events.items, myTasks, paging };
     }
     case "events": {
       const { items, paging } = await onePage(`/cases/${caseId}/events`, page, (request) =>
