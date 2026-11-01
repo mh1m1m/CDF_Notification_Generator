@@ -129,10 +129,12 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 - QA-004: Truth Inspector on the case pages with a DB event oracle (local/CI database only); DB half of the Sentinel.
 - QA-005 (rest): five-screen audit, screenshot library; QA-006 staging Gate J (OI-008).
 - Local note: the local PostgreSQL cluster can stop between runs; `pnpm db:local start` before `pnpm db:reset`.
+- V13-QA-014 — #140, merged into develop as 6401c45 — COMPLETE: screenshot library without baselines (design
+  §2–§4); ARCH hunk `.env.example` (`V13_E2E_VISUAL`); the CI visual job (§8) is ARCH's.
 - V13-QA-020 — branch test/V13-QA-020-next-action-card — IN_REVIEW: Next Action Card browser test (6 tests, ar/en at
-  320 px: card and :target link, NONE renders nothing, page 2 keeps the first page's task); three mutations caught;
-  e2e 372/372, unit 2412/2412.
-- V13-QA-021 — branch test/V13-QA-021-no-js-server-actions (stacked on V13-ARCH-013 ddf928a) — IN_REVIEW: Server
+  320 px: the card first in the overview before the stage card, its :target link, NONE renders nothing, page 2 keeps
+  the first page's task); four mutations caught; e2e 372/372, unit 2412/2412; card-first check 6/6 at 270af33.
+- V13-QA-021 — #148, merged into develop as d399987 — COMPLETE: Server
   Action forms with JavaScript off (sign-in, workspace switch), same-origin `Origin` pinned; fails on `no-referrer`
   (2 tests, `Origin: "null"`), passes on the fix; the no-JS sign-in observation from the FE-016 review is closed by it.
 

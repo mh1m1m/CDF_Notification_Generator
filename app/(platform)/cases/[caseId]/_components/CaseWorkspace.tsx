@@ -572,6 +572,7 @@ function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; dra
         heading: t("case.draft.heading"),
         hint: t("case.draft.hint"),
         template: t("case.draft.template"),
+        templateCode: t("case.draft.templateCode"),
         recipient: t("case.draft.recipient"),
         submit: t("case.draft.submit"),
         error: t("case.draft.error"),
