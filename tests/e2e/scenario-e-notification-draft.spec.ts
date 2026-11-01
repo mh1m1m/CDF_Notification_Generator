@@ -15,6 +15,8 @@
 // projector, so a projector that drifts from the policy fails here.
 // FE-011: the preview's plain-text version opens under the frame as text in the notice's language, with no page
 // scroll at 320 px.
+// FE-013: one bounded page; a tampered or forged cursor shows the empty state with a link to the first page,
+// never an error.
 // SYNTHETIC personas only.
 import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
@@ -580,6 +582,47 @@ test.describe("Scenario E — notification preview", () => {
       clientWidth: document.documentElement.clientWidth,
     }));
     expect(scrollWidth).toBe(clientWidth);
+  });
+  // V13-FE-013 (OI-026): the tab reads one bounded page. The seed holds fewer than 25 notifications per case, so there
+  // is no pager; an edited or forged cursor shows the empty state with a link to the first page, never an error.
+  test("the Notifications tab: no pager on one page; a tampered or forged cursor shows the empty state, never an error", async ({
+    page,
+  }) => {
+    await signInAs(page, "secretary-alpha");
+    await page.goto(`/cases/${C(3)}/notifications`);
+    await expect(page.locator('tr[data-testid^="case-notification-"]').first()).toBeVisible();
+    await expect(page.getByTestId("case-notifications-pagination")).toHaveCount(0);
+    const forged = Buffer.from(
+      JSON.stringify({
+        v: 1,
+        k: "notifications",
+        at: "2026-01-01T00:00:00.000000Z",
+        id: "0f000000-0000-4000-8000-0000000000ff",
+      }),
+      "utf8",
+    ).toString("base64url");
+    const tasksCursor = Buffer.from(
+      JSON.stringify({ v: 1, k: "tasks", at: "-|INTAKE_REVIEW", id: "0d000000-0000-4000-8000-0000000000ff" }),
+      "utf8",
+    ).toString("base64url");
+    for (const query of [
+      "after=not$a$cursor",
+      "after=a&after=b",
+      "back=~",
+      `after=${forged}&back=~`,
+      `after=${tasksCursor}`,
+      "after=Zm9yZ2Vk",
+    ]) {
+      const response = await page.goto(`/cases/${C(3)}/notifications?${query}`);
+      expect(response?.status(), query).toBe(200);
+      await expect(page.getByTestId("case-notifications-empty"), query).toBeVisible();
+      await expect(page.getByTestId("case-error")).toHaveCount(0);
+      await expect(page.getByTestId("case-notifications-next")).toHaveCount(0);
+      await expect(page.locator('tr[data-testid^="case-notification-"]')).toHaveCount(0);
+    }
+    await page.getByTestId("case-notifications-prev").click();
+    await expect(page).toHaveURL(new RegExp(`/cases/${C(3)}/notifications$`));
+    await expect(page.locator('tr[data-testid^="case-notification-"]').first()).toBeVisible();
   });
 
   // V13-FE-011 (REQ-NOTIF-011): the plain-text twin of the same rendering, under the frame, closed by default.
