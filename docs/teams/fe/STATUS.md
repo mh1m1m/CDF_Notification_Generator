@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 02:42 UTC · Branch: fix/V13-FE-010-notification-tables-caption (develop 11fad34 merged in; #82 merged) · Head: see PR
+Updated: 2026-11-01 02:41 UTC · Branch: fix/V13-FE-010-notification-tables-caption (develop 11fad34 merged in; #82 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
