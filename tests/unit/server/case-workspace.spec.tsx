@@ -3,6 +3,7 @@
 // statuses name their event, nothing from another case). Fake adapters; the SQL adapter is covered in
 // v13-case-records-adapter.spec.ts and, against the database, in tests/integration/fe.
 import { renderToStaticMarkup } from "react-dom/server";
+import { formatDateTime } from "@/components/format";
 import { describe, expect, it, vi } from "vitest";
 import type { NotificationRecordsReader, ProceduralRecordsReader } from "@/lib/contracts";
 import { createTranslator, type Locale } from "@/lib/i18n";
@@ -307,6 +308,50 @@ describe("Case Workspace markup", () => {
     expect(markup).toContain('data-lifecycle-status="DRAFT"');
     expect(markup).toContain('data-language="ar"');
   });
+
+  it.each(["ar", "en"] as const)(
+    "FE-010 (%s): the Notifications tab is a DataTable; its caption stays in view and wraps (UX-009 R-04)",
+    async (locale) => {
+      const v = await view("notifications");
+      const markup = html(v, locale);
+      const label = createTranslator(locale)("case.notifications.caption");
+      // DataTable's sticky caption inside the container-sized region (never cut at 320 px / 200% zoom).
+      expect(markup).toContain(
+        `<caption id="case-notifications-caption"><span class="v13-table-caption-text">${label}</span></caption>`,
+      );
+      expect(markup).toMatch(
+        /<div class="v13-scroll-region" role="region" aria-labelledby="case-notifications-caption" tabindex="0"><table class="v13-table" data-testid="case-notifications" data-count="1">/,
+      );
+      // Rows keep their ids and carry the case identity (ADR-013); the preview link stays per row.
+      if (v.tab !== "notifications") throw new Error("expected the notifications tab");
+      const [n] = v.notifications;
+      expect(markup).toContain(
+        `data-testid="case-notification-${n!.notification_id}" data-notification-id="${n!.notification_id}" data-case-id="${caseIdOf(1)}" data-case-ref="CDF-DEMO-2026-0001"`,
+      );
+      expect(markup).toContain(`data-testid="case-notification-preview-link-${n!.notification_id}"`);
+      expect(markup).toContain(`href="/cases/${caseIdOf(1)}/notifications?n=${n!.notification_id}"`);
+      for (const id of [
+        "case-notification-template-name",
+        "case-notification-template-code",
+        "case-notification-language",
+        "case-notification-recipient",
+        "case-notification-status",
+      ]) {
+        expect(markup).toContain(`data-testid="${id}"`);
+      }
+      expect(markup).toMatch(/<th scope="row"><span data-testid="case-notification-template-name">/);
+      // UXB-04 (D10): the version is an identifier, Latin in <bdi> in both languages.
+      expect(markup).toContain(
+        `<bdi dir="ltr" data-testid="case-notification-version">${n!.template_version}</bdi>`,
+      );
+      // UXB-02: the created time has the month in words (the Center's format), never a numeric d/m/y date.
+      const created = markup.match(new RegExp(`<time dateTime="${n!.created_at}"[^>]*>([^<]+)</time>`))?.[1];
+      expect(created).toBe(formatDateTime(locale, n!.created_at));
+      expect(created).not.toContain("/");
+      // A month word: Arabic letters in Arabic, a capitalised English month name in English.
+      expect(created).toMatch(locale === "ar" ? /[\u0621-\u064A]{3,}/ : /\b[A-Z][a-z]{2,} \d{4}\b/);
+    },
+  );
 
   it("empty tabs say so", async () => {
     const records: ProceduralRecordsReader = { listEvents: async () => [], listTasks: async () => [] };

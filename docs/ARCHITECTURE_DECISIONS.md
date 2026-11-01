@@ -28,8 +28,9 @@ on it) · **SUPERSEDED**.
 | [ADR-017](#adr-017--audit-attribution-from-verified-claims-and-the-audited-workspace-switch) | Audit attribution from verified claims, and the audited workspace switch | ACCEPTED | Chief Architect, on DB-001/DB-007 and SEC reviews |
 | [ADR-018](#adr-018--claims-key-installation-rotation-and-health) | Claims-key installation, rotation and health | ACCEPTED | Chief Architect, on DB-009 (OI-022) and SEC reviews |
 | [ADR-019](#adr-019--port-contracts-own-their-refusals) | Port contracts own their refusals | ACCEPTED | Chief Architect, on the FE-005 review (#32) |
+| [ADR-020](#adr-020--case-bound-form-submissions-a-signed-binding-field) | Case-bound form submissions: a signed binding field | ACCEPTED | Chief Architect, on FE-012 (OI-049) and SEC's review points |
 
-Next free number: **ADR-020**.
+Next free number: **ADR-021**.
 
 ---
 
@@ -465,3 +466,42 @@ Next free number: **ADR-020**.
   - `InvalidCursorError`, which `lib/server/cases.ts` still imports from `lib/adapters/case-source/cursor.ts`, follows
     in an FE follow-up after #19 (OI-031).
   - New command ports (notification drafts, FE-006) start this way.
+
+---
+
+## ADR-020 — Case-bound form submissions: a signed binding field
+
+- **Status:** ACCEPTED. Chief Architect, 1 Nov 2026, on FE's design note for V13-FE-012 (OI-049) and SEC's review
+  points.
+- **Context.** A Server Action receives only what the browser posts. The notification draft action took `case_id` from
+  the form, so a form on case 0004's page edited to name visible case 0001 created the draft on 0001 (OI-049). Nothing
+  was disclosed or granted, because the command authorises and audits the named case, but the request's case no longer
+  matched the page it came from, and case isolation is a first-class invariant (CLAUDE.md §3). Two designs were weighed:
+  - **A.** An inline Server Action that closes over the route's case id. Next.js encrypts closed-over values, so the
+    browser cannot change them. It is smaller, but its protection rests on framework behaviour, and SEC's static rule
+    that `'use server'` appears only as a file directive (`tests/security/app/static-boundaries.spec.ts`) would need an
+    exception.
+  - **B.** A file-level action and a hidden binding field that the server signs when it renders the form.
+- **Decision.** B.
+  1. **Key.** 32 bytes from HKDF-SHA256 over `V13_SESSION_SECRET` with info `cdf-v13/draft-route-binding/v1`, used for
+     nothing else and kept in `lib/auth` beside the other derivations. No new environment variable.
+  2. **Binding.** HMAC-SHA256, base64url, over an unambiguous encoding (a version tag and length-prefixed fields, or
+     canonical JSON with a fixed key order, never plain concatenation) of: a purpose tag, the persona, workspace and case
+     as canonical lower-case UUIDs, the idempotency key, the session's issued-at and an expiry no later than the
+     session's.
+  3. **Verification.** Decode, check the length, compare in constant time, compare each field with the posted case and
+     the session claims, and only then run the authorisation pre-check and the command. The purpose tag must equal the
+     action's own tag, the issued-at must equal the current session's, and the expiry is checked against the server
+     clock. The command takes the case from the verified binding, never from the form, and a posted `case_id` that
+     differs from it is refused. Every failure gets the same generic refusal with a correlation id; no command is called,
+     the binding is never logged, and nothing tells the caller which field failed.
+  4. **Other forms.** A later case-scoped form follows the same pattern under its own purpose tag, and binds its
+     record's id once the record exists.
+- **Consequences.**
+  - SEC's static rule stays as it is.
+  - A replay inside the session meets the command's idempotency-key refusal; a binding from another session, or past
+    its expiry, is refused.
+  - Rotating `V13_SESSION_SECRET` (ADR-018) also invalidates open forms, which then get the generic refusal.
+  - QA's Sentinel P3 negative (`tests/sentinel/request-leak-app.spec.ts`) changes, with V13-FE-012, to expect the
+    tampered post to be refused.
+  - `PRODUCTION_SUBSTITUTION_REQUIRED`: production derives the key in CDF KMS.

@@ -1,6 +1,6 @@
 # DB status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
+Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 
 ## Delivery plan (ruled by the Chief Architect)
 
@@ -18,7 +18,9 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-014]` | `feature/V13-DB-013-guard-tail` | text guard runs first: start, body, final statement and trailer checked before any statement runs | COMPLETE — #47 merged (267944a) |
 | `[V13-DB-015]` | `feature/V13-DB-015-notification-ops` | migration 0010: `notifications_page` / `notifications_count` for the Notification Operations Center (S4, FE-006) | COMPLETE — #52 merged (77a9e18), SEC ACCEPT fcd2db3 |
 | `[V13-DB-016]` | `feature/V13-DB-016-hosted-resume-rehearsal` | rehearsal of the hosted resume 0005 → 0010 + seeds 0001/0002; seed bundles (`--seed`) | COMPLETE — #56 merged (7a0eccb), SEC ACCEPT 54e1925 |
-| `[V13-DB-017]` | `feature/V13-DB-017-seed-lint` | OI-041: db:lint covers database/seed; seed bundle and db:reset refuse a seed with findings; transaction control inside DO/function bodies | IN_PROGRESS — PR open, SEC review pending |
+| `[V13-DB-017]` | `feature/V13-DB-017-seed-lint` | OI-041: db:lint covers database/seed; seed bundle and db:reset refuse a seed with findings; transaction control inside DO/function bodies | COMPLETE — #62 merged (a9745ba), SEC ACCEPT 2fe462d |
+| `[V13-DB-018]` | `feature/V13-DB-018-rollback-register` | REQ-DATA-023: per-migration rollback register (DATA_MODEL.md §9) and its automated check | COMPLETE — #101 merged (85f7332), SEC ACCEPT 434c1c7 |
+| `[V13-DB-019]` | `feature/V13-DB-019-keyset-paged-reads` | REQ-PERF-003, OI-026: migration 0011, keyset-paged per-case reads | IN_PROGRESS — PR open, SEC review pending |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -123,7 +125,7 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 - Evidence (local, dc52514 + working tree): lint, typecheck, prettier clean; unit 1658/1658 (hosted-bundle 37);
   test:db 418/418.
 
-## In progress: V13-DB-017 (OI-041, SEC LOW on #56)
+## Done: V13-DB-017 (OI-041, SEC LOW on #56), #62
 - `db:lint` now also lints `database/seed/*.sql` (`--seed-dir`) with every per-file rule of a migration after the
   bootstrap: transaction-control, session-role and owner-role above all (SET LOCAL ROLE cdf_v13_owner first, RESET ROLE
   only last). Seed file names NNNN_name.sql, unique versions, never 0000.
@@ -138,8 +140,39 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 - Evidence (local): db:lint 11 migrations + 2 seeds, 0 findings; lint, typecheck, prettier clean; unit 1700/1700;
   test:db 418/418 after a fresh db:reset; REHEARSAL PASS.
 
+## Done: V13-DB-018 (REQ-DATA-023), #101
+- `docs/architecture/DATA_MODEL.md` §9: one entry per migration 0000–0010 with the objects it creates, replaces, drops
+  or alters, what a revert loses, and the strategy: locally `pnpm db:reset`; on the hosted schema a forward-fix
+  migration (applied migrations are never edited), or the whole-schema `rollback_v13.sql` only on the owner's explicit
+  word. No reverse or DROP scripts, no migration, nothing hosted.
+- `scripts/db/rollback-register.mjs` (also a CLI) reads each migration with the db:lint lexer and compares its CREATE,
+  DROP and ALTER TABLE … ADD statements with the entry. An unknown CREATE or DROP form is refused, not ignored.
+- Tests: `tests/unit/rollback-register.spec.ts` (10): repository control, planted missing entry, unknown new migration,
+  wrong / missing / misfiled object, missing Alters, an object added to a migration, missing field / empty strategy /
+  hosted strategy without the forward fix, comments and bodies ignored. Mutation-checked: 8 of 8 mutants of the
+  checker killed.
+- Evidence (local, on develop 68a42b9 + this branch): lint, typecheck, prettier, db:lint clean; unit 2032/2032;
+  db:reset then test:db 468/468.
+
+## In progress: V13-DB-019 (REQ-PERF-003, OI-026)
+- Migration 0011: `case_events_page`, `case_tasks_page`, `case_notifications_page` (SECURITY INVOKER, `search_path`
+  '', EXECUTE for `cdf_v13_user` only), each = its unpaged read one page at a time plus `page_cursor`;
+  `_page_limit(integer)` refuses a limit outside 1..100 (NULL included) with 22023; index `task_case_page_idx`. The
+  cursor row is looked up by id in the same case under RLS and must carry exactly that `page_cursor`, so half,
+  malformed, stale and foreign cursors all return no rows, like an unknown or unauthorised case. The unpaged reads, their
+  grants and every `api_*` command are unchanged; FE switches in its own task. Register entry §9.
+- Tests: `tests/integration/case-paged-reads.spec.ts` (17): shape; unpaged reads unchanged; for every persona ×
+  workspace × case (and an unknown case) × limit 1/2/3/100 the pages concatenate to the unpaged read, disjoint and bounded,
+  pinned to the visibility table; ties (same due date, null due dates, same event instants, same created_at); limit
+  edges 1 and 100 accepted, 0/101/-1/NULL refused 22023 on every read; 101 drafts page as 100 + 1; ten cursor probes all
+  empty; a restricted row as Gamma's cursor; other workspace / other persona; closed 0010 readable; Epsilon, Zeta,
+  unknown, forged contexts; app login 42501; index plans. `hosted-resume.spec.ts` now resumes 0006–0011.
+  Mutation-checked: 8 of 8 migration mutants fail the suite.
+- Needs SEC: the SEC-DB-17 coverage guard (`tests/security/db/context-forgery.spec.ts`) lists every function the request
+  role may execute; it needs entries for the three paged reads and `_page_limit` (tried locally: 18/18 with them).
+
 ## Next
-- Next free migration: 0011.
+- Next free migration: 0012.
 - OI-026 per-case paging: proposal accepted by ARCH (`*_page` functions next to the current reads), after M1.
 
 ## Review given
@@ -150,6 +183,13 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
   `REVIEW: ACCEPT 8fcb8b1` (all 11 points fixed).
 - #49 `[V13-SEC-006]` case-page adversarial tests: `REVIEW: ACCEPT 4960460` (CI 6/6; three non-blocking suggestions).
 - #41 `[V13-SEC-005]` secret-value scans + P08 order: `REVIEW: ACCEPT 7529200` (surface spec 12/12 locally, mutation-checked).
+- #72 `[V13-SEC-007]`: `REVIEW: ACCEPT 0082185` (suggested migrations + hosted scripts in the personal-data scope).
+- #70: `REVIEW: ACCEPT e55413e`, `06d7043`, `84c9fd8` (security e2e green on each head).
+- #87 `[V13-SEC-009]` personal-data scan over migrations and hosted scripts: `REVIEW: ACCEPT 87d9ab6` (0 findings over
+  11 migrations + 9 hosted scripts; planted @example.test allowed, other domain found).
+- #91 `[V13-SEC-010]` DB suites fail in CI when not ready: `REVIEW: ACCEPT 8bf777c` (suggested the extra signals).
+- #92 `[V13-SEC-011]` V13_DB_TESTS_REQUIRED / GITHUB_ACTIONS signals: `REVIEW: ACCEPT 38ecdef` (7/10 mutants killed,
+  survivors stricter only).
 
 ## Changed files (PR (a))
 - database/migrations/0001_identity_access_audit.sql, database/seed/0001_m1_synthetic.sql,
@@ -162,10 +202,11 @@ Updated: 2026-10-31 20:25 UTC · Team DB · Reviewer of DB PRs: SEC
 - docs/architecture/DATA_MODEL.md, docs/teams/db/STATUS.md
 
 ## Test evidence
-Per-PR counts are in each PR description, from runs on the PR head. Latest local run, on `develop` 2766fd9 (0000–0009
-and the text guard; 31 Oct 2026, local PostgreSQL 16 via `pnpm db:local`):
-- `pnpm lint`: exit 0 · `pnpm typecheck`: 0 errors · `pnpm db:lint`: 10 migration files, 0 findings
-- `pnpm test`: 1021/1021 · `pnpm db:reset` then `pnpm test:db`: 358/358 (20 files, incl. SEC's suites)
+Per-PR counts are in each PR description, from runs on the PR head. Latest local run, on `develop` 68a42b9 plus the
+V13-DB-018 branch (0000–0010; 1 Nov 2026, local PostgreSQL 16 via `pnpm db:local`):
+- `pnpm lint`: exit 0 · `pnpm typecheck`: 0 errors · `pnpm db:lint`: 11 migration files, 2 seed files, 0 findings
+- `pnpm test`: 2032/2032 (81 files) · `pnpm db:reset` then `pnpm test:db`: 468/468 (30 files, incl. SEC's suites)
+- `node scripts/db/rollback-register.mjs`: 11 migrations, 0 findings
 - `node scripts/db/rehearse-shared.mjs`: REHEARSAL PASS (V13-DB-012 branch)
 - CI green on each merged head (e.g. #28 125b1f0 run 41230326573, #31 3bd1c93 run 41231559873, #44 02e8cb1 run
   41237743471).
@@ -183,7 +224,7 @@ and the text guard; 31 Oct 2026, local PostgreSQL 16 via `pnpm db:local`):
 - ARCH: a CI job that runs `node scripts/db/rehearse-shared.mjs` when `database/**` changes (V13-DB-006 acceptance;
   the script lands in PR (b)).
 - ARCH follow-up after (a): report a key mismatch in `/api/health` — V13-DB-009 (above).
-- Hosted: the Chief Architect applies 0001–0009 (paused at 0006 for OI-034; bundles now carry the generated text guard) with the plan procedure. DB never connects. Hosted notes:
+- Hosted: the Chief Architect applies the migrations and seeds with the plan procedure (the resume 0006–0010 + seeds is rehearsed by `hosted-resume.spec.ts`). DB never connects. Hosted notes:
   every deployment that shares the schema (previews included) must use the same `V13_SESSION_SECRET`, because the
   claims key is installed first-writer-wins at server start; seed part 2 needs 0001–0004; every request now takes a
   transaction id (`pg_current_xact_id()`), negligible at prototype load (SEC INFO); a health call with a session secret takes one too (V13-DB-009).

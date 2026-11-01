@@ -189,3 +189,61 @@ test.describe("Center layout at narrow widths (V13-FE-009)", () => {
     });
   }
 });
+
+// V13-FE-010 (UX-009 R-04): at 320 px (the reflow width, = 1280 px at 400%) the caption of the Center table and of the
+// case Notifications tab table stays inside its scroll region and wraps, before and after the region is scrolled to
+// its far end. It failed on the old markup (the caption was a plain cell-width caption that scrolled with the table).
+test.describe("Notification table captions at 320 px (V13-FE-010)", () => {
+  const C1 = "0c000000-0000-4000-8000-000000000001";
+  const targets = [
+    {
+      name: "Center",
+      path: "/notifications",
+      table: "notifications-table",
+      caption: "notifications-table-caption",
+    },
+    {
+      name: "case Notifications tab",
+      path: `/cases/${C1}/notifications`,
+      table: "case-notifications",
+      caption: "case-notifications-caption",
+    },
+  ] as const;
+  for (const locale of ["ar", "en"] as const) {
+    for (const target of targets) {
+      test(`${locale}: ${target.name} caption stays within its region`, async ({
+        page,
+        context,
+        baseURL,
+      }) => {
+        await context.addCookies([{ name: LOCALE_COOKIE, value: locale, url: baseURL! }]);
+        await page.setViewportSize({ width: 320, height: 800 });
+        await signInAs(page, "secretary-alpha");
+        await page.goto(target.path);
+        await expect(page.getByTestId(target.table)).toBeVisible();
+        const inside = () =>
+          page.getByTestId(target.table).evaluate((table, captionId) => {
+            const region = table.closest('[role="region"]') as HTMLElement;
+            const caption = document.getElementById(captionId)!;
+            const text = (caption.firstElementChild ?? caption) as HTMLElement;
+            const r = region.getBoundingClientRect();
+            const c = text.getBoundingClientRect();
+            return {
+              scrolls: region.scrollWidth > region.clientWidth,
+              fits: c.left >= r.left - 1 && c.right <= r.right + 1,
+            };
+          }, target.caption);
+        const before = await inside();
+        expect(before.scrolls).toBe(true);
+        expect(before.fits).toBe(true);
+        await page.getByTestId(target.table).evaluate((table) => {
+          const region = table.closest('[role="region"]') as HTMLElement;
+          const rtl = getComputedStyle(region).direction === "rtl";
+          region.scrollLeft = rtl ? -region.scrollWidth : region.scrollWidth;
+        });
+        const after = await inside();
+        expect(after.fits).toBe(true);
+      });
+    }
+  }
+});
