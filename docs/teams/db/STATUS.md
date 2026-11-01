@@ -24,7 +24,7 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note (#115 merged 937cff3, ACCEPT c35d6c1), then migration 0012 on `feature/V13-DB-020-audit-outcome-policy-version` | COMPLETE — 0012 merged with #119 (0bc2542) |
 | `[V13-DB-021]` | `feature/V13-DB-021-refusal-audit`, stacked on DB-020's 0012 branch | REQ-AUD-005: refused commands audited (design note #120, ACCEPTED); migration 0013, adapters and `lib/server` (FE path-owner), SEC suites, `post_apply_checks.sql` P03 (ARCH path) | COMPLETE — #127 merged (94fd0b7), CI green on 321051c |
 | `[V13-DB-022]` | `feature/V13-DB-022-my-open-case-tasks` (#129) | REQ-PERF-003, OI-054: migration 0014, `case_my_open_tasks_page` (the caller's open tasks on one case, paged) | COMPLETE — #129 merged (1e52670), CI 41277398237 6/6 |
-| `[V13-DB-023]` | `feature/V13-DB-023-access-audit-design` | REQ-AUD-001: design note `DB-023_CASE_ACCESS_AUDIT.md` (case opens, restricted opens, notification previews; fail closed; 300 s window DB-PROPOSED); migration 0015 after ACCEPT | IN_PROGRESS — design note in review (SEC, then ARCH) |
+| `[V13-DB-023]` | `feature/V13-DB-023-access-audit-design` | REQ-AUD-001: design note `DB-023_CASE_ACCESS_AUDIT.md` (case opens, restricted opens, notification previews; fail closed; 300 s window DB-PROPOSED); migration 0015 after ACCEPT | IN_PROGRESS — design note ACCEPTED in substance (SEC 1b32f87, ARCH D1–D6), §9 folded in; 0015 next |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -218,7 +218,7 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 - #127 (0013) merged at 94fd0b7; develop merged into #129. The FE switch to the new read is V13-FE-014.
 
 ## In progress: V13-DB-023 (REQ-AUD-001, case access audit)
-- Design note `docs/teams/db/DB-023_CASE_ACCESS_AUDIT.md`: PROPOSED; SEC threat review first, then ARCH. Migration 0015
+- Design note `docs/teams/db/DB-023_CASE_ACCESS_AUDIT.md`: ACCEPTED (SEC 1b32f87, ARCH D1–D6, §9). Migration 0015
   follows ACCEPT. No hosted step (OI-034).
 
 ## Next

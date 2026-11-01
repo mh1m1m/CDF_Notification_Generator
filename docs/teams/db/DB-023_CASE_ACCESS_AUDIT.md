@@ -1,7 +1,9 @@
 # V13-DB-023 — Recording case access in the audit ledger (design note)
 
-**SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Team DB · 1 Nov 2026 · status: **PROPOSED** (SEC
-threat review first, then the Chief Architect). Requirement: **REQ-AUD-001** ("record audit events for … case access,
+**SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Team DB · 1 Nov 2026 · status: **ACCEPTED** (SEC
+threat review ACCEPT 1b32f87 with Q1–Q3 answered and binding points 1–6, #137 comment 6554125758; Chief Architect
+accepted in substance with decisions D1–D6, comment 6554193404; all folded into §9, which wins over the text above
+where they differ). Requirement: **REQ-AUD-001** ("record audit events for … case access,
 restricted information access … and permission changes"; the register's open part reads "case access and permission
 changes not audited yet"). Builds on V13-DB-021 (migration 0013: one command per transaction, `refusal_window`, the
 REFUSED row). Governing: ADR-011 (append-only hash-chained ledger), ADR-017 (attribution from verified claims). The
@@ -33,6 +35,8 @@ governance officer actually sees what is in a case.
 | Paging inside a tab (`?page=`) | Same case, same persona: covered by the `CASE` row and its window (§3). |
 | The draft form on the notifications tab | Part of the case page (`CASE`); the draft itself is a command with its own row (0004, 0013). |
 | `/api/health`, sign-in, locale switch | No case content. |
+| A back/forward re-display served from the browser's router cache | No request reaches the server, so nothing can be written. The row records the delivery of case content, not each time it is displayed (D5). |
+| A link prefetch | Prefetch never reaches the record or the case content (D1); a click is the open. |
 | Reads that fail before the database (malformed id, `lib/authz` pre-check NOT_FOUND) | The BFF answers 404 without reaching the database; nothing names a case. These stay in the server log with the correlation id, as today. |
 
 ## 2. Write path
@@ -43,7 +47,9 @@ governance officer actually sees what is in a case.
   `api_record_access(p_kind text, p_case_id uuid, p_notification_id uuid default null)` is granted to `cdf_v13_user`.
   The BFF calls it **first**, inside the same `withRequestContext` transaction as the read it records (for `CASE`, the
   `case_header` read in `getCase`; for `NOTIFICATION_PREVIEW`, the `getForCase` read). The read and its row commit
-  together, or neither does.
+  together, or neither does. The transaction is the header read's own short one (record, then one header select), as
+  `getCase` runs today, never one that also runs the tab reads, so the ledger's chain lock
+  (`pg_advisory_xact_lock(…, 1)`, held until commit) never spans them (D4).
 - **(A) A read-through command.** `api_open_case` returns the header columns and writes the row, so a header can never
   be served without a row. It is stronger, but a SECURITY DEFINER function runs as the owner, which RLS does not
   bind: the function would have to repeat `case_header`'s visibility predicate by hand, and the two predicates could
@@ -107,8 +113,20 @@ per **(persona, case, action, entity)** per window, in a new owner-only table `a
 
 **Window: `ACCESS_AUDIT_WINDOW_SECONDS` = 300, DB-PROPOSED.** Five minutes covers moving between tabs and pages of one
 case in one sitting, so a sitting is one row, and a return later the same day is a new row. 0013's 60 s was chosen for
-refusals, which an attacker drives; opens are driven by authorised users, so a longer window loses less. SEC may
-prefer a shorter window, or none, for `RESTRICTED_CASE_OPENED` (Q2).
+refusals, which an attacker drives; opens are driven by authorised users, so a longer window loses less. **`RESTRICTED_CASE_OPENED` has no
+window** (SEC Q2): every restricted open is a row, so restricted access can be counted exactly. The 300 s window
+applies to `CASE_OPENED` and `NOTIFICATION_PREVIEW_OPENED` only.
+
+Lock time: a suppressed open takes no chain lock. A written one holds it only for the header read's own transaction
+(D4), never across the tab reads.
+
+The window only suppresses, never replaces (SEC 3): a window row is created or restarted only by an append that
+succeeded in the same transaction, so a failed append leaves no window row and the next open writes.
+
+Known limit (SEC 2): between rows, `suppressed` lives in the unchained, mutable `access_window`. A burst of ordinary
+opens followed by no later open reaches the ledger only as its first row; the count of the rest never does. The fact
+of access is always recorded; the exact count of repeat opens within a window is not. Restricted opens have no window,
+so the limit does not apply to them.
 
 Concurrency: the window row is taken `FOR UPDATE` (insert … on conflict do update), so two simultaneous opens by the
 same persona of the same case write one row, and the other increments `suppressed`.
@@ -193,3 +211,49 @@ deactivation) must:
 PRODUCTION_SUBSTITUTION_REQUIRED: in production, access events go to the CDF SIEM (SLS) through the audit sink port
 (`AuditSinkPort`), with the CDF platform's retention; the window value and the restricted-access rule come from the CDF
 records and security policy, not from this note.
+
+## 9. Decisions
+
+Binding on migration 0015 and the FE commit. Where they differ from §1–§7, these win.
+
+**SEC answers (comment 6554125758).**
+- **Q1:** no row for restricted titles shown in lists in M1. REQ-AUD-001's register note keeps saying list exposure of
+  restricted titles is not recorded.
+- **Q2:** no window for `RESTRICTED_CASE_OPENED`; every restricted open is a row. 300 s (DB-PROPOSED) stays for
+  `CASE_OPENED` and `NOTIFICATION_PREVIEW_OPENED`.
+- **Q3:** refused opens keep their trace: one id-less `COMMAND_REFUSED` row through 0013's wrapper and `refusal_window`,
+  identical for unknown and unauthorised.
+
+**SEC binding points.**
+1. **One choke point.** The record call sits in the one path that yields a `CaseHeader` for a route (`getCaseForRoute`
+   → the case port, in the same transaction as `case_header`), not in each page. A test shows every case tab (overview,
+   events, tasks, notifications, each paged tab) and the preview leave exactly one row or one suppressed increment; a
+   mutation that removes the call fails it. Any later BFF path that returns case content without `getCaseForRoute` is a
+   SEC review item.
+2. **Suppressed counts outside the chain** are a stated limit (§3).
+3. **The window suppresses, never replaces.** A window row exists only after a successful append in the same
+   transaction; tested by forcing the append to fail and checking no `access_window` row remains and the next open
+   writes.
+4. **Preview parity.** An unknown `?n=`, a notification of another case and a notification hidden by the notification
+   policy give the same refused row and the same preview "unavailable" state; the page's case row stays.
+5. **Slot.** No transaction holds `api_record_access` and a write command together (V1500); a test shows
+   `createDraft`'s transaction never calls the record command.
+6. **Registry and grants.** `context-forgery` registry entry (SEC path, separate commit); `access_window` RLS on,
+   deny-all, no grant; EXECUTE on `api_record_access` for `cdf_v13_user` only; `V13-ACCESS-0015` as the last statement.
+
+**Chief Architect decisions (comment 6554193404).**
+- **D1. No prefetch reaches the record or the content.** Pinned by a browser test on a production build (QA path, with
+  the FE commit): rendering My Work, Portfolio and the Notification Center with case links in view and hovered writes
+  no access row; clicking one case writes exactly one.
+- **D2. One load per request.** `generateMetadata` and the page share the load through React `cache()` with identical
+  keys, so one request makes one record call. Pinned where no window can hide a second call: one page request on
+  restricted case 0009 leaves exactly one `RESTRICTED_CASE_OPENED` row.
+- **D3. The recording read says so in its port.** `CaseSourceAdapter` gains `openCase(identity, caseId)` (record, then
+  read the header, in one transaction; a refusal answers null), documented in `lib/contracts`; `getCaseForRoute` is its
+  only caller. The preview reader's recording read is named and documented the same way. The `lib/contracts` hunk gets
+  the Chief Architect's path-owner review. The CDF platform adapter that replaces the prototype must record access too.
+- **D4. Lock time.** The record call stays in the header read's own short transaction, never in one that runs the tab
+  reads (§2.1, §3).
+- **D5. Router-cache re-display** writes no row (§1).
+- **D6. Register.** REQ-AUD-001 stays IN_PROGRESS after 0015 and the FE commit, with two parts open: permission changes
+  (no M1 command makes one, §5) and restricted titles in lists (Q1). PROC's next register pass records it.
