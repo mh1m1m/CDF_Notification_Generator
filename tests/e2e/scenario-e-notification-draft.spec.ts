@@ -94,6 +94,42 @@ test.describe("Scenario E — notification draft", () => {
     expect(csp).toEqual([]);
   });
 
+  // V13-FE-012 (OI-049): the draft is bound to the page's case. A form on 0004's page edited to name another case is
+  // refused, whatever that case is. Proof that nothing was written anywhere: the idempotency key is unique per author
+  // across all cases, so the same form submitted afterwards with its case id restored (the same key) can only create
+  // its draft if none of the tampered posts wrote one.
+  test("a form on 0004's page edited to name another case creates nothing on 0001, 0004 or elsewhere", async ({
+    page,
+  }) => {
+    await signInAs(page, "secretary-alpha");
+    await page.goto(`/cases/${C(4)}/notifications`);
+    await page.getByTestId("draft-recipient").selectOption("WITNESS");
+    const form = page.getByTestId("draft-form");
+    const setCase = (value: string) =>
+      form.locator('input[name="case_id"]').evaluate((el, v) => ((el as HTMLInputElement).value = v), value);
+    for (const value of [
+      C(1), // visible to Alpha, draftable
+      C(2), // another workspace's case
+      "0c000000-0000-4000-8000-0000000000ff", // unknown
+      "CDF-DEMO-2026-0001", // a display number
+    ]) {
+      await setCase(value);
+      await page.getByTestId("draft-submit").click();
+      const error = page.getByTestId("draft-error");
+      await expect(error.getByTestId("correlation-id")).toHaveText(UUID);
+      await expect(page).toHaveURL(new RegExp(`/cases/${C(4)}/notifications$`));
+      expect(await error.innerText()).not.toMatch(/0c000000|CDF-DEMO|sql|stack/i);
+    }
+    // The same form, case id restored: the unused key creates exactly this draft, on 0004.
+    await setCase(C(4));
+    await page.getByTestId("draft-submit").click();
+    await expect(page.getByTestId("draft-created")).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/cases/${C(4)}/notifications\\?created=`));
+    const created = new URL(page.url()).searchParams.get("created")!;
+    expect(created).toMatch(UUID);
+    expect(await notificationIds(page, 1)).not.toContain(created);
+  });
+
   test("at 375 px the Notifications tab with the draft form has no horizontal page scroll", async ({
     page,
   }) => {

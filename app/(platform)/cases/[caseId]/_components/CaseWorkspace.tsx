@@ -527,6 +527,7 @@ function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; dra
     <DraftForm
       caseId={draft.caseId}
       idempotencyKey={draft.idempotencyKey}
+      binding={draft.binding}
       templates={draft.templates.map((o) => ({
         value: o.template_version_id,
         code: o.template_code,
