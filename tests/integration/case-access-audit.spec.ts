@@ -144,7 +144,7 @@ describe.skipIf(!present)("case access audit (migration 0015)", () => {
         from pg_catalog.pg_proc p
        where p.pronamespace = 'cdf_notifications_v13'::regnamespace
          and p.proname in ('api_record_access', '_api_record_access_impl', '_record_access_row')
-       order by 1 collate "C"`;
+       order by p.proname collate "C"`;
     expect(rows.map((r) => [r.sig, r.definer, r.config, r.acl])).toEqual([
       [
         "_api_record_access_impl(text,uuid,uuid)",
