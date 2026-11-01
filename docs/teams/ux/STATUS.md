@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `feature/V13-UX-011-preview-frame-language` · Base: `develop` `68a42b9`
+Updated: 2026-11-01 · Branch: `docs/V13-UX-013-uxb07-recheck` · Base: `develop` `ca16cba`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -159,12 +159,12 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - `tests/unit/components/reflow.spec.ts` pins R-01 to R-03 and the no-clipping rules (fails on the old stylesheet).
 - Spec for QA's a11y e2e in the register §4 (V13-QA-010). M1-09 recorded FIXED by #90; M1-12 now wraps (R-02).
 
-## V13-UX-010: UX improvement backlog (UXQA-19, REQ-QA-038). PR #97 (IN_REVIEW; QA)
+## V13-UX-010: UX improvement backlog (UXQA-19, REQ-QA-038). PR #97, QA ACCEPT `745acdd`, merged as `2bccba2`
 - `docs/design/reviews/UX_BACKLOG.md`: 15 open items (UXB-01 … UXB-15) with evidence, reproduction, severity,
   priority, owner task and status; ruled and closed findings listed. QA CHANGES at `c24b31a` and `d7b7ad6` fixed in
   `d7b7ad6` and `745acdd` (UXB-14 case-tab dates and version, #82 statuses, UXB-15 OI-037 replaces the preview).
 
-## V13-UX-011: preview frame named in the page language (UXB-13; IN_REVIEW once its PR is open; QA, FE for `app/**`)
+## V13-UX-011: preview frame named in the page language (UXB-13). PR #100, FE and QA ACCEPT `f748c53`, CI 41270730010, merged as `ca16cba`
 - `components/data/NotificationPreviewFrame.tsx`: no `lang` or `dir` on the `<iframe>` element. Its `lang` also
   covered the `title`, so "— design preview" in the English UI was tagged Arabic. The document inside keeps its own
   `<html lang dir>` from the renderer. The `lang` prop is removed; FE's call site in `CaseWorkspace.tsx` drops it (one
@@ -173,8 +173,21 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   declares them, an Arabic notice on an ar and an en page) and FE's `tests/unit/server/notification-preview.spec.tsx`
   (the same on the case tab's preview). 7 of 49 fail on the old component, 49 pass now.
 
+## V13-UX-012: current area link wraps (UXB-16, UX-009 R-05). PR #107, QA ACCEPT `a2cf6dc`, merged as `aecd7ef`
+- `.v13-side-nav-link` wraps its own text (`overflow-wrap: anywhere`, `max-inline-size: 100%`, no `nowrap`); the bold
+  current link measured 321 px at 320 px with the 1.4.12 spacing in Liberation Sans, 294 px in Carlito. Pin in
+  `reflow.spec.ts`; QA-010's font probe (Liberation Sans, DejaVu Sans, Carlito) passed.
+
+## V13-UX-013: UXB-07 re-check of the routed M1 findings (IN_REVIEW once its PR is open; QA)
+- Re-measured UXB-01 … 05, 08, 14 on `develop` `ca16cba` (after FE-009 `961197e`, FE-010 `21dbbaa`) in ar and en at
+  320–1280 px with an own capture (QA-005's library not built yet): all DONE. M1-15 … M1-18, the case-tab remainders of
+  M1-06/M1-11/M1-17 and UX-009 R-04 recorded FIXED. UXB-06, 13, 16 DONE with their merge shas.
+- New: UXB-17 (MEDIUM, draft form controls unstyled: no border, 21–22 px selects) and UXB-18 (LOW, "Preview" link
+  looks like text), routed through ARCH. Docs only.
+
 ## Unresolved defects
-- None open on UX paths. Open items on other teams' paths are in `docs/design/reviews/UX_BACKLOG.md`.
+- UXB-18 (LOW) is partly on UX paths (link style), waiting for a task id. Other open items are in
+  `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once
