@@ -4,7 +4,7 @@
 plus the readiness of the synthetic staging environment. It is not a readiness claim. Production promotion is BLOCKED
 by design (QG-13), and nothing here approves a deployment. Requirement: REQ-DOC-008 (task V13-ARCH-011).
 
-Last updated: **1 Nov 2026 01:45 UTC** (Chief Architect), `develop` `b22f153`. Facts are taken from
+Last updated: **1 Nov 2026 02:51 UTC** (Chief Architect), `develop` `a0bf765`. Facts are taken from
 `docs/DEPLOYMENT_STATUS.md`, `docs/OPEN_ISSUES.md` and `docs/IMPLEMENTATION_STATUS.md`, each with its own check time.
 
 ## 1. Production promotion gate (ADR-005, QG-13)
@@ -35,6 +35,7 @@ Staging is the `develop` preview behind the staging alias, with synthetic data o
 | ---- | ------ | ------------------- | ---------- |
 | Vercel project, Git link, a preview for every pushed branch | COMPLETE | `docs/DEPLOYMENT_STATUS.md` §3 | — |
 | Vercel Authentication on every deployment (no custom domain) | COMPLETE | `docs/DEPLOYMENT_STATUS.md` §3 | — |
+| No protection bypass on the staging alias | OPEN | OI-052: one shareable link, taken to be left by the Vercel connector's authenticated fetch, lets its holder past Vercel Authentication until 1 Nov 23:00:52 UTC; its token is not recorded anywhere | Owner |
 | A deployment for every `develop` merge | BLOCKED (intermittent) | OI-038: the free plan's daily limit refuses some builds, so the staging alias can lag `develop` | Owner (plan) |
 | Hosted schema: `0000`–`0005` applied, every per-step check PASS | COMPLETE | `docs/DEPLOYMENT_STATUS.md` §2; `docs/TEST_EVIDENCE.md` §2–§2.1 (fingerprint unchanged, isolation 27 checks, 0 breaches) | — |
 | Hosted schema: `0006`–`0010` and the seed | BLOCKED | OI-034: waits for the owner to answer the Supabase connector's confirmation for statements that drop objects; never worked around | Owner ("ready"), then ARCH |

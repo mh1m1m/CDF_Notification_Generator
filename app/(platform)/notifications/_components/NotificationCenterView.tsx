@@ -267,9 +267,18 @@ function Results({
         )
       ) : (
         <>
-          <ScrollRegion className={styles.scroll} labelledBy="notifications-table-caption">
+          {/* FE-010 (UX-009 R-04): DataTable's caption pattern. The region is the caption's container, and the caption
+              text sticks to its inline start at the visible width, so it wraps instead of being cut at 320 px / 200%. */}
+          <ScrollRegion
+            className={`v13-scroll-region ${styles.scroll}`}
+            labelledBy="notifications-table-caption"
+          >
             <table className={styles.table} data-testid="notifications-table">
-              <caption id="notifications-table-caption">{captionOf(t, locale, query)}</caption>
+              <caption id="notifications-table-caption">
+                <span className="v13-table-caption-text" data-testid="notifications-table-caption">
+                  {captionOf(t, locale, query)}
+                </span>
+              </caption>
               <thead>
                 <tr>
                   <th scope="col">{t("notifications.column.case")}</th>

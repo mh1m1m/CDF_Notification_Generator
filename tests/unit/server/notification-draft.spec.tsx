@@ -32,6 +32,7 @@ import {
 import {
   createFakeNotificationDrafts,
   draftNotificationIdOf,
+  FAKE_DRAFT_OPTIONS,
   templateVersionIdOf,
 } from "./support/fake-notification-drafts";
 import {
@@ -516,6 +517,34 @@ describe("Notifications tab markup", () => {
       expect(markup).not.toMatch(/case_reference|\{\{/);
       expect(markup).not.toContain('data-testid="draft-error"');
       expect(scrollRegionProblems(markup)).toEqual([]);
+    }
+  });
+
+  it("FE-010 (D10): a template option's version is Latin digits in both languages, never grouped", async () => {
+    const [first] = FAKE_DRAFT_OPTIONS.templates;
+    const drafts = createFakeNotificationDrafts({
+      ...FAKE_DRAFT_OPTIONS,
+      templates: [{ ...first!, version: 1234 }],
+    });
+    const v = await loadCaseWorkspace(
+      {
+        ctx: ctxFor(SECRETARY),
+        source: createFakeCaseSource(),
+        procedural: createFakeProceduralRecords(),
+        notifications: createFakeNotificationRecords(),
+        drafts,
+        notice: parseDraftNotice(undefined),
+      },
+      caseIdOf(1),
+      "notifications",
+    );
+    for (const locale of ["ar", "en"] as const) {
+      const option = html(v, locale).match(
+        new RegExp(`<option value="${templateVersionIdOf(1)}"[^>]*>([^<]+)</option>`),
+      )?.[1];
+      // "الإصدار 1234" / "version 1234": an identifier, so no Arabic-Indic digits and no group separator.
+      expect(option).toContain(locale === "ar" ? "الإصدار 1234" : "version 1234");
+      expect(option).not.toMatch(/[٠-٩]|1,234|1٬234/);
     }
   });
 

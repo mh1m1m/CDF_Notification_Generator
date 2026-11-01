@@ -7,6 +7,10 @@ import "server-only";
  * every object on open (deep links are ids-only, notify.deep_link).
  *
  * renderPlatform(projected, {lang, density, tokens}) → {html, text, components, title}
+ *  - text is the plain-text twin of the page (V13-PROC-021, REQ-NOTIF-011): built like renderEmail's text twin — marking
+ *    first and last, identity without a heading, "== heading ==" per group, a blank line after every component, the
+ *    preview notice, controls and bidi characters stripped from the whole text, lines ≤ 900 octets — from the same
+ *    rendered components as the HTML, so the two forms carry the same components in the same order;
  *  - the same disclosure gate as e-mail (assertRenderable: projected for PLATFORM, not suppressed, not channel-prohibited);
  *  - semantic HTML: skip link, header / main / footer landmarks, one h1 (the event title), h2 per group, h3 inside components,
  *    lists for steps, <details>/<summary> for the expected process (Layer B, expandable, keyboard operable natively);
@@ -14,7 +18,7 @@ import "server-only";
  *    border-inline-start), visible :focus-visible outline, no animation, no transition, prefers-reduced-motion respected,
  *    single-column reflow below 40rem; no external font, script or image.
  */
-import { assertRenderable, renderComponents } from "./email";
+import { assertRenderable, renderComponents, wrapLongLines } from "./email";
 import { GROUPS, assertDensity, type GroupName, type ComponentName } from "./densities";
 import { escHtml, stripControls } from "./escape";
 import { MARKING, S, pick } from "./i18n";
@@ -116,16 +120,17 @@ export function renderPlatform(
     if (!items.length) continue;
     if (g === "identity") {
       sections.push(items.map((r) => r.html).join("\n"));
-      text.push(...items.map((r) => r.text), "");
+      for (const r of items) text.push(r.text, "");
       continue;
     }
     const id = `grp-${g}`;
     sections.push(
       `<section class="grp" aria-labelledby="${id}">\n<h2 class="grp-h" id="${id}">${escHtml(pick(GROUP_HEADING[g], lang))}</h2>\n${items.map((r) => r.html).join("\n")}\n</section>`,
     );
-    text.push(`== ${pick(GROUP_HEADING[g], lang)} ==`, ...items.map((r) => r.text), "");
+    text.push(`== ${pick(GROUP_HEADING[g], lang)} ==`);
+    for (const r of items) text.push(r.text, "");
   }
-  text.push(PREVIEW_PLATFORM[lang], MARKING);
+  text.push(PREVIEW_PLATFORM[lang], "", MARKING, "");
   const html = [
     "<!DOCTYPE html>",
     `<html lang="${lang}" dir="${dir}">`,
@@ -151,7 +156,8 @@ export function renderPlatform(
   ].join("\n");
   return {
     html,
-    text: stripControls(text.join("\n")),
+    // defence in depth, as renderEmail: the components already strip controls from every value
+    text: wrapLongLines(stripControls(text.join("\n")), 900),
     components: rendered.map((r) => r.name),
     title: stripControls(title),
   };
