@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 1 Nov 2026 · Branch: `test/V13-SEC-011-db-required-signals` · `develop` now at `b22f153`
+Updated: 1 Nov 2026 · Branch: `security/V13-SEC-012-surface-build-required` · `develop` now at `a0bf765`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -70,7 +70,14 @@ Updated: 1 Nov 2026 · Branch: `test/V13-SEC-011-db-required-signals` · `develo
 - Reviews 1 Nov (cont.): #82 FE-009 ACCEPT `45301ea` (three mutations each fail tests); #88 QA-008 CHANGES `bf063a9`
   (bracket access, `?.`, `!.`, parentheses, aliases, renamed imports and a Vitest per-suite retry still pass the guard)
 - V13-SEC-011 — `V13_DB_TESTS_REQUIRED=1` and `GITHUB_ACTIONS=true` also require the database (DB's suggestion on #91),
-  so `CI=false` alone cannot turn SEC-010 off — IN_REVIEW
+  so `CI=false` alone cannot turn SEC-010 off — COMPLETE, merged #92 (`7f14f33`), DB ACCEPT `38ecdef`, CI 41262513652
+- Reviews 1 Nov (early morning): #82 FE-009 ACCEPT re-confirmed `0c5c0ba`, `830c26d`; #88 QA-008 CHANGES `bf063a9` then
+  ACCEPT `488d93d` (superseded by ARCH's CHANGES on runner option forms) and ACCEPT `e2000b9` (28 planted forms);
+  #93 ARCH-002 ACCEPT `dd625a5`; #94 PROC-016 ACCEPT `0ce06d6`; #95 PROC-018 ACCEPT `81f82d3` (JI-03 pin mutation-checked;
+  LOW: an event with no `case_id` passed) then ACCEPT `93a489e` (JI-07); #99 PROC-017 ACCEPT `7f14954`, `a847241`,
+  `8dd4e4b` (REQ-JRN-007 COMPLETE checked on QG-02)
+- V13-SEC-012 — SEC-APP-13's bundle scan fails, not skips, when `.next/static` is missing and any `requiredBy()` signal
+  is set (QA's and ARCH's follow-up on #88); SEC-APP-22 — IN_REVIEW
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
@@ -87,6 +94,7 @@ Updated: 1 Nov 2026 · Branch: `test/V13-SEC-011-db-required-signals` · `develo
 | Local, V13-SEC-009 on `develop` `eee17f7`: `pnpm lint`, `pnpm typecheck`, `vitest --project unit tests/security/app`; mutation: the `database/hosted` scope entry removed | lint 0, typecheck 0, **75/75**; with the entry removed 2 tests fail | 75 | SEC-009 head |
 | Local, V13-SEC-010 on `develop` `25a1c48`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; `CI=true vitest --project integration tests/security/db` with the DB up; then the DB stopped: `CI=true` and `CI` unset on `case-matrix` | lint 0, typecheck 0, **3/3** (full unit **1987/1987**, 78 files); DB up **101/101** (5 files); DB stopped + `CI=true`: the file **fails** with `[security/db] case-matrix: the local cluster does not answer …`; DB stopped + `CI` unset: 18 skipped with a warning | 3 + 101 | SEC-010 head |
 | Local, V13-SEC-011 on `develop` `b22f153`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; each of the three signals deleted in turn; the DB stopped with `CI=false V13_DB_TESTS_REQUIRED=1` and with all three unset on `case-matrix`; `CI=true` security DB suites after `pnpm db:reset` | unit **1989/1989**, SEC-APP-21 **5/5**; each deleted signal fails 2 tests; DB stopped: the file **fails** with `CI=false V13_DB_TESTS_REQUIRED=1`, 18 skipped with none set; DB up **101/101** | 5 + 101 | SEC-011 head |
+| Local, V13-SEC-012 on `develop` `a0bf765`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; the `requireBuildWhenSignalled` call removed from `surface.spec.ts`; the leak-suite guard over the 15 suites; `CI=true` Playwright `tests/security/e2e/surface.spec.ts` after `pnpm db:reset` | lint 0, typecheck 0, unit **2026/2026** (SEC-APP-22 4/4); with the call removed 1 test fails; guard `[]`; surface **12/12**, the bundle scan ran (not skipped). A first surface run with the local DB stopped had 1 flaky sign-in test; re-run with the DB up 12/12 | 4 + 12 | SEC-012 head |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.

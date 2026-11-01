@@ -17,9 +17,16 @@ catalogue in `docs/security/AUTHORIZATION_MATRIX.md` §6 and the threats in `doc
 | `tests/security/app/repo-scans.spec.ts` + `tests/security/repo-scan.ts` (V13-SEC-008) | Vitest `unit` | SEC-APP-19, -20 | TM-I8 |
 | `tests/security/e2e/notification-center.spec.ts` (V13-SEC-007) | Playwright | SEC-APP-02, -07, -10 on `/notifications` | TM-I3, TM-I4, TM-I10 |
 | `tests/security/app/db-readiness.spec.ts` + `tests/security/db/readiness.ts` (V13-SEC-010) | Vitest `unit` | SEC-APP-21 (+ V13-SEC-011) | — (harness integrity) |
+| `tests/security/app/build-readiness.spec.ts` + `tests/security/build-readiness.ts` (V13-SEC-012) | Vitest `unit` | SEC-APP-22 | — (harness integrity) |
 
 What each suite proves:
 
+- **The bundle scan never skips silently in CI (V13-SEC-012)**: SEC-APP-22 pins `requireBuildWhenSignalled()`, which
+  `surface.spec.ts` calls immediately before its missing-build skip in the SEC-APP-13 bundle scan: a present build
+  runs the scan; a missing `.next/static` fails when any `requiredBy()` signal is set (truthy `CI`,
+  `V13_DB_TESTS_REQUIRED=1`, `GITHUB_ACTIONS=true`), naming the signals; locally it returns and the allow-listed
+  `test.skip` acts. A source check fails if the call is removed or moved away from the skip, whose text is unchanged
+  because QA-008's allow-list matches it.
 - **Database suites never skip silently in CI (V13-SEC-010)**: SEC-APP-21 pins the readiness verdict that every
   database-security suite (`case-matrix`, `catalog-hardening`, `commands`, `context-forgery`) calls through
   `databaseReady()`: ready → run; not ready with `CI` set (`true`, `1`, `yes`, any case) → the suite **fails** with the
