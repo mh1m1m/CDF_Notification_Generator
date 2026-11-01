@@ -7,7 +7,8 @@
 // or parallel runs wrote to. At 375 px the tab with the form has no horizontal page scroll (WCAG 1.4.10, QA review).
 // Preview (FE-006 part 3): a WITNESS draft opens in UX-006's sandboxed frame from its row's link; the seed's database
 // recipient classes show the OI-037 state; another case's id, an unknown id and a malformed value show one generic
-// state; a WITNESS draft on restricted 0009 fails closed with that same state.
+// state; a WITNESS draft on restricted 0009 fails closed with that same state. FE-011: the preview's plain-text
+// version opens under the frame as text in the notice's language, with no page scroll at 320 px.
 // SYNTHETIC personas only.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
@@ -270,5 +271,40 @@ test.describe("Scenario E — notification preview", () => {
       clientWidth: document.documentElement.clientWidth,
     }));
     expect(scrollWidth).toBe(clientWidth);
+  });
+
+  // V13-FE-011 (REQ-NOTIF-011): the plain-text twin of the same rendering, under the frame, closed by default.
+  test("the preview's plain-text version opens under the frame in the notice's language, as text, with no page scroll at 320 px", async ({
+    page,
+  }) => {
+    await signInAs(page, "secretary-alpha");
+    const id = await witnessDraft(page, ALPHA_CASE);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto(`/cases/${C(ALPHA_CASE)}/notifications?n=${id}`);
+    const details = page.getByTestId("case-preview-text");
+    const body = page.getByTestId("case-preview-text-body");
+    await expect(details).not.toHaveAttribute("open", /.*/);
+    await expect(body).toBeHidden();
+    await page.getByTestId("case-preview-text-toggle").click();
+    await expect(body).toBeVisible();
+    const lang = (await body.getAttribute("lang")) ?? "";
+    expect(["ar", "en"]).toContain(lang);
+    await expect(body).toHaveAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+    const text = await body.innerText();
+    expect(text.split("\n")[0]).toContain("DESIGN_PREVIEW");
+    // text only: no element inside, and the frame's document is not on the page
+    await expect(body.locator("*")).toHaveCount(0);
+    await expect(page.locator('[data-marking="DESIGN_PREVIEW"]')).toHaveCount(0);
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(scrollWidth).toBe(clientWidth);
+    const axe = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .options({ iframes: false })
+      .setLegacyMode(true)
+      .analyze();
+    expect(axe.violations.map((v) => v.id)).toEqual([]);
   });
 });

@@ -345,6 +345,7 @@ describe("frame title from the projection's event_title (withheld, safe referenc
           kind: "preview",
           notificationId: WITNESS_1.notification_id,
           html: RENDERED.html,
+          text: RENDERED.text,
           eventTitle,
           lang: "en",
         }}
@@ -455,6 +456,7 @@ describe("NotificationPreviewSection states", () => {
       kind: "preview" as const,
       notificationId: WITNESS_1.notification_id,
       html: '<!DOCTYPE html><html><body><p class="marking" data-marking="DESIGN_PREVIEW">DESIGN_PREVIEW</p></body></html>',
+      text: "DESIGN_PREVIEW",
       lang: "en" as const,
     };
     const titleOf = (out: string) => out.match(/<iframe[^>]*\stitle="([^"]*)"/)?.[1];
@@ -483,6 +485,79 @@ describe("NotificationPreviewSection states", () => {
 
   it("none renders nothing", () => {
     expect(section({ kind: "none" })).toBe("");
+  });
+});
+
+// V13-FE-011 (REQ-NOTIF-011, PROC-021): the plain-text twin of the same rendering, shown under the frame as escaped
+// text in the notice's language. It comes from the renderer's output for the projected model, never from the record.
+describe("plain-text version of the preview (V13-FE-011)", () => {
+  const section = (preview: NotificationPreviewView, locale: Locale = "en") =>
+    renderToStaticMarkup(
+      <NotificationPreviewSection t={createTranslator(locale)} caseId={caseIdOf(1)} preview={preview} />,
+    );
+  const base = {
+    kind: "preview" as const,
+    notificationId: WITNESS_1.notification_id,
+    html: '<!DOCTYPE html><html><body><p class="marking" data-marking="DESIGN_PREVIEW">DESIGN_PREVIEW</p></body></html>',
+    eventTitle: "Investigation assigned",
+    lang: "en" as const,
+  };
+
+  it("the loader's text is the renderer's text twin for the projected model, in the notice's language", async () => {
+    for (const row of [WITNESS_1, WITNESS_1_AR]) {
+      spies.render.mockClear();
+      const v = await load(row.notification_id);
+      if (v.kind !== "preview") throw new Error(v.kind);
+      const rendered = spies.render.mock.results[0]?.value as { text: string; html: string };
+      expect(spies.render.mock.calls[0]?.[0]).toBe(spies.project.mock.results.at(-1)?.value);
+      expect(v.text).toBe(rendered.text);
+      expect(v.text).not.toBe("");
+      expect(v.text.split("\n")[0]).toContain("DESIGN_PREVIEW");
+      // plain text: none of the HTML document travels in it
+      expect(v.text).not.toMatch(/<!DOCTYPE|<html|<style|<\/?[a-z][a-z0-9]*[\s>]/i);
+      expect(v.text).toContain(row.template_name[v.lang]);
+    }
+  });
+
+  it("is shown closed under the frame, in a native disclosure with a localised summary and name", () => {
+    for (const [locale, summary, label] of [
+      ["en", "Plain-text version", "Plain-text version of the notification"],
+      ["ar", "النسخة النصية", "النسخة النصية للإشعار"],
+    ] as const) {
+      const out = section({ ...base, text: "DESIGN_PREVIEW\n\nBody" }, locale);
+      const details = out.match(/<details[^>]*data-testid="case-preview-text"[^>]*>/)?.[0] ?? "";
+      expect(details).not.toBe("");
+      expect(details).not.toMatch(/\sopen/);
+      expect(out).toContain(`<summary data-testid="case-preview-text-toggle">${summary}</summary>`);
+      expect(out).toContain(`aria-label="${label}"`);
+      // after the frame, inside the ready state
+      expect(out.indexOf("<iframe")).toBeLessThan(out.indexOf('data-testid="case-preview-text"'));
+    }
+  });
+
+  it("takes the notice's language and direction, not the page's", () => {
+    const pre = (out: string) => out.match(/<pre[^>]*data-testid="case-preview-text-body"[^>]*>/)?.[0] ?? "";
+    expect(pre(section({ ...base, text: "x" }, "ar"))).toMatch(/lang="en"[^>]*dir="ltr"/);
+    expect(pre(section({ ...base, lang: "ar", text: "x" }, "en"))).toMatch(/lang="ar"[^>]*dir="rtl"/);
+  });
+
+  it("is escaped text: markup in it is never injected into the page", () => {
+    const out = section({ ...base, text: '<script>alert(1)</script><img src=x onerror="y"> & </pre>' });
+    expect(out).not.toContain("<script>");
+    expect(out).not.toContain("<img");
+    expect(out).toContain(
+      "&lt;script&gt;alert(1)&lt;/script&gt;&lt;img src=x onerror=&quot;y&quot;&gt; &amp; &lt;/pre&gt;",
+    );
+  });
+
+  it("the unmapped and unavailable states have no text version", () => {
+    for (const preview of [
+      { kind: "unmapped", notificationId: WITNESS_1.notification_id, recipientClass: "CASE_TEAM" },
+      { kind: "unavailable", correlationId: CORRELATION },
+      { kind: "none" },
+    ] as const) {
+      expect(section(preview)).not.toContain("case-preview-text");
+    }
   });
 });
 

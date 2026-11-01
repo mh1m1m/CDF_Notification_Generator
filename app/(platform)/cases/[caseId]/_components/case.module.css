@@ -37,3 +37,30 @@
   min-inline-size: 0;
   max-inline-size: 100%;
 }
+
+/* V13-FE-011: the preview's plain-text twin. Wrapped, never scrolled sideways (WCAG 1.4.10 at 320 px); the notice's
+   own font follows its lang attribute. */
+.previewText {
+  margin-block-start: var(--cdf-space-3);
+}
+
+.previewText > summary {
+  cursor: pointer;
+  inline-size: fit-content;
+}
+
+.previewText > pre {
+  margin-block: var(--cdf-space-2) 0;
+  padding: var(--cdf-space-3);
+  border: var(--cdf-border-hairline) solid var(--cdf-border-control);
+  background: var(--cdf-surface-subtle);
+  color: var(--cdf-text);
+  font-family: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-inline-size: 100%;
+}
+
+.previewText > pre:lang(en) {
+  font-family: var(--cdf-font-latin);
+}
