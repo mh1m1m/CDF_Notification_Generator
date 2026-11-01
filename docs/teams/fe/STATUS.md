@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-polish (from develop d5b61b0) · Head: see PR
+Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-polish (develop a93fa61 merged in; #74 FE-006 part 3 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -47,10 +47,22 @@ Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
   `lib/contracts/notification-center.ts` (NotificationCenterReader, row and filter schemas) and `InvalidCursorError`
   moved into `lib/contracts` (OI-031, own file `lib/contracts/cursor.ts`; `lib/adapters/case-source/cursor.ts` re-exports it): needs ARCH + SEC ACCEPT.
   Rows link to the case's Notifications tab; the in-case preview (`?n=`) is part 3. Part 2 — COMPLETE (#61, merged into develop 9290778).
+- V13-FE-006 part 3, in-case preview (SCREENS S3, REQ-NOTIF-011) + UX review M1-07 — `/cases/<id>/notifications?n=<uuid>`:
+  the read is keyed by the authorised case AND the notification id under RLS (`NotificationPreviewReader`, proposed
+  `lib/contracts/notification-preview.ts`), so unknown, other-case, hidden and malformed values show one generic state
+  with a reference; one frozen `case_record` object goes to `buildModelFromRecords` and `projectForRecipient` (ARCH
+  ruling 31 Oct), no `access_list` is passed, so restricted 0009 fails closed (NO_ACCESS_LIST_RESULT); only
+  `renderPlatform`'s HTML of the projected model reaches UX-006's `sandbox=""` frame; the binding's UNKNOWN_RECIPIENT
+  (every database class except WITNESS, OI-037) shows the OI-037 state; any other binding or read error is the generic
+  state, logged by code only. Each row of the tab and of the Center links to its preview by ids. M1-07: status and
+  recipient labels from `lib/i18n/case` (DISPATCHED reads "sent — delivery not confirmed"), template name beside its
+  code; `CaseNotificationSchema` gains `template_name` and `listForCase` joins `notification_template` by its unique
+  code with an explicit order (proposed contract change). Needs ARCH (contracts), SEC (lib/server, keyed read), QA (UI)
+  — IN_REVIEW.
 - V13-FE-007 (QA defects pinned in #58) — OI-042: `app/(platform)/not-found.tsx` renders notFound() inside the
   AppShell as a section (no second `<main>`, no second `id="main"`), same visible text, `data-testid` and title as the
   root not-found page; OI-043: the Portfolio filter form is keyed on its filter values (`filterFormKey`), so Clear,
-  Back and other client-side navigations remount it with the URL's values — IN_REVIEW (QA).
+  Back and other client-side navigations remount it with the URL's values — COMPLETE (#63, merged into develop 63d1271).
 - V13-FE-009 (M1 design review) — Case Workspace overview: "My open tasks in this case" shown once (the heading; the
   caption stays for assistive technology and still names the scroll region), the events list styled (rail and
   marker per entry, same on Overview and Events) (M1-09). Notification Operations Center: the table keeps a 48rem
@@ -92,6 +104,7 @@ Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
 
 ## Test evidence
 | Command | Result | Counts | Commit |
+| FE-006 part 3 + M1-07 after merging develop 9290778 (#61; Center rows open `?n=`): lint, typecheck, format:check / `pnpm test` (preview 25 + adapter 11 + list-reader 3 new) / `pnpm db:reset` + `pnpm test:db` (new `tests/integration/fe/notification-preview.spec.ts` 9: keyed read, other-case/hidden/unknown/other-workspace null, WITNESS draft renders inside a rolled-back request, 0009 fails closed, four database classes show OI-037, list names + order) / `pnpm db:reset` + `pnpm test:e2e` (Scenario E preview 5 + Center row link 1 new; axe on the page in legacy mode with iframes off, and on the srcdoc as its own page; the two ✘ are QA's `test.fail()` pins that #63 removes) | pass | 1927 / 456 / 156 | FE-006 part 3 head |
 | ------- | ------ | ------ | ------ |
 | `pnpm lint` | pass | 0 problems | c4c7f8f |
 | `pnpm typecheck` | pass | — | c4c7f8f |
@@ -146,6 +159,7 @@ Updated: 2026-11-01 00:18 UTC · Branch: fix/V13-FE-009-overview-and-center-poli
 | FE-006 part 1, SEC CHANGES 150d54a (integration access negatives, all NOT_FOUND with no notification, event or audit row): Alpha on 0002 and 0005, Alpha and Gamma on restricted 0009, unknown UUID, Gamma (Investigations) on 0008 (visible only in other workspaces), Delta (role): `pnpm db:reset` + `pnpm test:db` (FE draft suite 16) | pass | 405 | FE-006 head |
 | FE-006 part 1: committed `tests/e2e/scenario-e-notification-draft.spec.ts` (ARCH: rides #51, QA reviews; SEC condition 2 with relative counts): `pnpm db:reset` + `pnpm test:e2e`; then `db:reset` + the spec with `--repeat-each=2 --workers=1` (second pass on a database the first wrote to). A second server start without `db:reset` fails every e2e suite with CLAIMS_KEY_MISMATCH (migration 0007, known local constraint), not this spec | pass | 103 / 4 | FE-006 head |
 | FE-006 part 2 after merging develop 65a251d (#51; records.ts keeps both bindings, contracts index keeps both exports): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 69 files, 1860 / 28 files, 447 / 150 | FE-006 part 2 head |
+| FE-006 part 3, QA CHANGES 982bd76: preview link accessible name from the template name and the class label (never raw codes, pinned in e2e by `toHaveAccessibleName`); OI-037 notice shows the class label with the code in `<bdi>`: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 75 files, 1947 / 456 / 179 | FE-006 part 3 head |
 | FE-009 on fix/V13-FE-009-overview-and-center-polish: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (new: Center at 360 and 768 px in ar and en — no page scroll, region scrolls at 360, codes on one line, Latin version, month in words; the four fail on the old Center markup, checked) | pass | — / 73 files, 1910 / 447 / 177 | FE-009 head |
 
 ## Unresolved defects

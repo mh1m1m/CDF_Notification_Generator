@@ -108,6 +108,12 @@ const ROUTES = [
   "/does-not-exist",
   "/api/health",
   "/api/healthz",
+  // SEC-007: the Notification Operations Center, a hidden case (0009 for Alpha) and an undecodable path, which the
+  // proxy rewrites to the not-found page for a session (#59): the headers must still be set exactly once.
+  "/notifications",
+  "/cases/0c000000-0000-4000-8000-000000000009",
+  "/cases/%C0%AF",
+  "/cases/%C0%AF/events",
 ];
 
 test.describe("SEC-APP-08 / SEC-APP-14 security headers and caching (TM-I13, TM-I11)", () => {

@@ -23,7 +23,9 @@ describe("navigationFor", () => {
 describe("markup", () => {
   it("PlatformNav renders labelled links with test ids", async () => {
     const { PlatformNav } = await import("@/app/(platform)/_components/PlatformNav");
-    const html = renderToStaticMarkup(<PlatformNav t={t} items={navigationFor(INVESTIGATOR_BETA)} />);
+    const html = renderToStaticMarkup(
+      <PlatformNav t={t} locale="ar" items={navigationFor(INVESTIGATOR_BETA)} />,
+    );
     expect(html).toContain('data-testid="platform-nav"');
     expect(html).toContain('data-testid="nav-portfolio"');
     expect(html).not.toContain("/notifications");

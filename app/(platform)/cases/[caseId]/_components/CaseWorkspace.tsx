@@ -9,7 +9,10 @@ import { toBadgeEpistemic } from "@/lib/domain";
 import { translateKey, type Locale, type MessageKey, type Translator } from "@/lib/i18n";
 import { CASE_TABS, type CaseTab, type CaseWorkspaceView } from "@/lib/server/case-workspace";
 import type { DraftFormView, DraftNotice } from "@/lib/server/notification-draft";
+import { previewHref, type NotificationPreviewView } from "@/lib/server/notification-preview";
+import { NotificationPreviewFrame } from "@/components/data/NotificationPreviewFrame";
 import { DraftForm } from "../notifications/_components/DraftForm";
+import { Breadcrumbs } from "@/components/shell/Breadcrumbs";
 import { ScrollRegion } from "../../../_components/ScrollRegion";
 import styles from "./case.module.css";
 import {
@@ -17,8 +20,10 @@ import {
   dateFormat,
   dateTimeFormat,
   eventLabel,
+  notificationStatusLabel,
   numberFormat,
   PROVENANCE_KEYS,
+  recipientClassLabel,
   stageLabel,
   TASK_STATUS_KEYS,
 } from "./labels";
@@ -86,18 +91,13 @@ export function CaseFrame({
   const c = view.summary;
   return (
     <section data-testid="case-workspace" data-case-id={c.case_id} data-case-ref={c.case_number}>
-      <nav aria-label={t("case.breadcrumb")} className={styles.crumbs}>
-        <ol>
-          <li>
-            <Link href="/portfolio" data-testid="case-crumb-portfolio">
-              {t("portfolio.heading")}
-            </Link>
-          </li>
-          <li aria-current="page">
-            <bdi dir="ltr">{c.case_number}</bdi>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        t={t}
+        items={[
+          { href: "/portfolio", label: t("portfolio.heading"), testId: "case-crumb-portfolio" },
+          { label: <bdi dir="ltr">{c.case_number}</bdi> },
+        ]}
+      />
       <header
         className={styles.header}
         data-testid="case-header"
@@ -324,16 +324,37 @@ export function TaskTable({
   );
 }
 
+/** A code's label, or the code itself (Latin, isolated) when it has none: never blank. */
+function CodeLabel({ label, code }: { label: string | null; code: string }) {
+  return label === null ? <bdi dir="ltr">{code}</bdi> : <>{label}</>;
+}
+
+/** The class label with its code beside it in <bdi> (the code alone when the class has no label). */
+function UnmappedClass({ t, code }: { t: Translator; code: string }) {
+  const label = recipientClassLabel(t, code);
+  return (
+    <>
+      {label !== null ? <>{label} </> : null}
+      <bdi dir="ltr" data-testid="case-preview-unmapped-code">
+        {code}
+      </bdi>
+    </>
+  );
+}
+
 export function NotificationTable({
   t,
   locale,
   notifications,
   createdId = null,
+  selectedId = null,
 }: {
   t: Translator;
   locale: Locale;
   notifications: readonly CaseNotification[];
   createdId?: string | null;
+  /** The notification shown in the preview below the table, if any. */
+  selectedId?: string | null;
 }) {
   if (notifications.length === 0) {
     return (
@@ -355,6 +376,7 @@ export function NotificationTable({
             <th scope="col">{t("case.notifications.column.recipient")}</th>
             <th scope="col">{t("case.notifications.column.status")}</th>
             <th scope="col">{t("case.notifications.column.created")}</th>
+            <th scope="col">{t("case.notifications.column.preview")}</th>
           </tr>
         </thead>
         <tbody>
@@ -364,9 +386,13 @@ export function NotificationTable({
               data-testid={`case-notification-${n.notification_id}`}
               data-notification-id={n.notification_id}
               data-created={n.notification_id === createdId ? "true" : undefined}
+              data-selected={n.notification_id === selectedId ? "true" : undefined}
             >
               <th scope="row">
-                <bdi dir="ltr">{n.template_code}</bdi>
+                <span data-testid="case-notification-template-name">{n.template_name[locale]}</span>{" "}
+                <bdi dir="ltr" className={styles.metaRow} data-testid="case-notification-template-code">
+                  {n.template_code}
+                </bdi>
                 <span
                   className={styles.metaRow}
                   data-testid="case-notification-language"
@@ -376,20 +402,101 @@ export function NotificationTable({
                 </span>
               </th>
               <td>{num.format(n.template_version)}</td>
-              <td>
-                <bdi dir="ltr">{n.recipient_class}</bdi>
+              <td data-testid="case-notification-recipient" data-recipient-class={n.recipient_class}>
+                <CodeLabel label={recipientClassLabel(t, n.recipient_class)} code={n.recipient_class} />
               </td>
               <td data-testid="case-notification-status" data-lifecycle-status={n.lifecycle_status}>
-                <bdi dir="ltr">{n.lifecycle_status}</bdi>
+                <CodeLabel label={notificationStatusLabel(t, n.lifecycle_status)} code={n.lifecycle_status} />
               </td>
               <td className={styles.nowrap}>
                 <time dateTime={n.created_at}>{when.format(new Date(n.created_at))}</time>
+              </td>
+              <td>
+                <Link
+                  href={previewHref(n.case_id, n.notification_id)}
+                  // QA CHANGES 982bd76: the accessible name uses the words on the row, never raw codes.
+                  aria-label={t("case.notifications.previewLinkLabel", {
+                    template: n.template_name[locale],
+                    recipient: recipientClassLabel(t, n.recipient_class) ?? n.recipient_class,
+                  })}
+                  aria-current={n.notification_id === selectedId ? "true" : undefined}
+                  data-testid={`case-notification-preview-link-${n.notification_id}`}
+                >
+                  {t("case.notifications.previewLink")}
+                </Link>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
     </ScrollRegion>
+  );
+}
+
+/**
+ * The in-case preview (V13-FE-006 part 3). Only the server-rendered HTML of the projected model reaches the page, inside
+ * UX-006's sandboxed frame. The unmapped (OI-037) and unavailable states carry no notification content.
+ */
+export function NotificationPreviewSection({
+  t,
+  caseId,
+  preview,
+}: {
+  t: Translator;
+  caseId: string;
+  preview: NotificationPreviewView;
+}) {
+  if (preview.kind === "none") return null;
+  return (
+    <section
+      aria-labelledby="case-preview-heading"
+      data-testid="case-preview"
+      data-preview-state={preview.kind}
+    >
+      <h2 id="case-preview-heading">{t("case.preview.heading")}</h2>
+      {preview.kind === "preview" ? (
+        <div data-testid="case-preview-ready" data-notification-id={preview.notificationId}>
+          <NotificationPreviewFrame
+            t={t}
+            rendered={{ html: preview.html }}
+            title={preview.title}
+            lang={preview.lang}
+            testId="case-notification-preview"
+          />
+        </div>
+      ) : null}
+      {preview.kind === "unmapped" ? (
+        <p
+          className="v13-notice"
+          data-testid="case-preview-unmapped"
+          data-notification-id={preview.notificationId}
+        >
+          {t("case.preview.unmapped")}{" "}
+          <span data-testid="case-preview-unmapped-class">
+            {t("case.preview.unmappedClass")} <UnmappedClass t={t} code={preview.recipientClass} />
+          </span>
+        </p>
+      ) : null}
+      {preview.kind === "unavailable" ? (
+        <div role="alert" className="v13-error" data-testid="case-preview-unavailable">
+          <p>
+            <strong>{t("case.preview.unavailableTitle")}</strong>
+          </p>
+          <p>{t("case.preview.unavailableBody")}</p>
+          <p>
+            <span>{t("case.error.correlation")}</span>{" "}
+            <bdi dir="ltr" data-testid="case-preview-correlation-id">
+              {preview.correlationId}
+            </bdi>
+          </p>
+        </div>
+      ) : null}
+      <p>
+        <Link href={tabHref(caseId, "notifications")} data-testid="case-preview-close">
+          {t("case.preview.close")}
+        </Link>
+      </p>
+    </section>
   );
 }
 
@@ -497,7 +604,13 @@ export function CaseTabContent({
             locale={locale}
             notifications={view.notifications}
             createdId={view.notice?.kind === "created" ? view.notice.notificationId : null}
+            selectedId={
+              view.preview.kind === "preview" || view.preview.kind === "unmapped"
+                ? view.preview.notificationId
+                : null
+            }
           />
+          <NotificationPreviewSection t={t} caseId={view.summary.case_id} preview={view.preview} />
           {view.draft ? <DraftFormFor t={t} locale={locale} draft={view.draft} /> : null}
         </>
       );
