@@ -96,8 +96,10 @@ describe("SEC-APP-20 no personal-data shape in the demo's data and test inputs (
   const scan = scanRepository(ROOT, PERSONAL_DATA_RULES, files);
   const result = applyAllow(scan.findings, PERSONAL_DATA_ALLOW);
 
-  it("the scope holds the seeds, fixtures and e2e specs (control)", () => {
+  it("the scope holds the seeds, migrations, hosted scripts, fixtures and e2e specs (control)", () => {
     expect(files.some((f) => f.startsWith("database/seed/"))).toBe(true);
+    expect(files.some((f) => f.startsWith("database/migrations/"))).toBe(true);
+    expect(files.some((f) => f.startsWith("database/hosted/"))).toBe(true);
     expect(files.some((f) => f.startsWith("tests/fixtures/"))).toBe(true);
     expect(files.some((f) => f.startsWith("tests/e2e/"))).toBe(true);
     expect(scan.scanned).toBe(files.length);
@@ -168,6 +170,25 @@ describe("SEC-APP-19/20 negative: planted samples in a temporary repository", ()
     expect(where.has("binary.bin")).toBe(false);
     expect(where.has("link.txt")).toBe(false);
     expect(scan.skipped).toBe(2);
+  });
+
+  it("the personal-data scope covers migrations and hosted scripts, and not application code (V13-SEC-009)", () => {
+    const inScope = (f: string) => PERSONAL_DATA_SCOPE.some((rx) => rx.test(f));
+    for (const f of [
+      "database/seed/0001_demo.sql",
+      "database/migrations/0011_planted.sql",
+      "database/hosted/planted_check.sql",
+      "tests/fixtures/x.ts",
+      "tests/security/db/x.spec.ts",
+    ])
+      expect(inScope(f), f).toBe(true);
+    for (const f of [
+      "lib/server/x.ts",
+      "docs/x.md",
+      "xdatabase/migrations/a.sql",
+      "database/migrationsx/a.sql",
+    ])
+      expect(inScope(f), f).toBe(false);
   });
 
   it("an ALLOW entry covers only its own file and rule", () => {

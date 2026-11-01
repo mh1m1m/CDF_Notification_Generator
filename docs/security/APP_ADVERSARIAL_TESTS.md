@@ -23,7 +23,8 @@ What each suite proves:
   symbolic links skipped, nothing outside the repository read) for credential shapes: private-key blocks, connection
   strings with a password, signed tokens, GitHub/AWS/Slack/provider/Google key prefixes and literal secret
   assignments (REQ-SEC-002). SEC-APP-20 runs the seven personal-data rules of the copy-time evidence scan (EVS-01)
-  over the seeds, fixtures, sentinel, integration, database-security and e2e specs (REQ-GOV-001). A finding reports
+  over the seeds, migrations, hosted scripts, fixtures, sentinel, integration, database-security and e2e specs
+  (REQ-GOV-001; migrations and hosted scripts added in V13-SEC-009). A finding reports
   rule, file and line only, never the matched text. Synthetic credentials in tests, CI service containers and local
   tooling carry the marker `not-a-secret` / `not-a-real-password`; anything else needs an ALLOW entry (one file, one
   rule, a reason; unused entries fail). Planted samples are assembled at runtime from fragments in a temporary Git

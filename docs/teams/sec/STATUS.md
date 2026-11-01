@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 31 Oct 2026 23:20 UTC · Branch: `docs/V13-SEC-007-matrix-surface` · `develop` now at `9290778`
+Updated: 1 Nov 2026 01:20 UTC · Branch: `test/V13-SEC-009-scan-scope` · `develop` now at `eee17f7`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -48,11 +48,19 @@ Updated: 31 Oct 2026 23:20 UTC · Branch: `docs/V13-SEC-007-matrix-surface` · `
   no-store with a session); APP_ADVERSARIAL_TESTS records SEC-APP-17 as covered by FE's Center e2e and the draft action;
   after #61, `tests/security/e2e/notification-center.spec.ts` (Alpha and Delta: rows name visible cases only, hidden
   numbers answer like unknown ones, 11 forged cursors, forged trails and odd parameters refused with a reference) —
-  IN_REVIEW (#70)
+  COMPLETE, merged #70 (`fddbff8`), DB ACCEPT `06d7043`, re-confirmed `84c9fd8`
 - V13-SEC-008 — repository scans: SEC-APP-19 credential shapes in every tracked file (REQ-SEC-002), SEC-APP-20
   personal-data shapes in seeds, fixtures and test inputs (REQ-GOV-001); findings report rule, file and line only —
-  IN_REVIEW (#72)
-- Review #71 PROC-012: 31 of 33 security rows accepted; REQ-SEC-002 and REQ-GOV-001 back to IN_PROGRESS until #72
+  COMPLETE, merged #72 (`afa6684`), DB ACCEPT `0082185`, CI 41249715821
+- Reviews 31 Oct–1 Nov (night): #71 PROC-012 ACCEPT `94fefc3` (33/33 rows); #74 FE-006 part 3 ACCEPT `982bd76`,
+  re-confirmed `aa61079`, `e8829ce`; #75 ARCH-002 + E01 ACCEPT `b8f47ab`; #77 ARCH-011 ACCEPT `749dc43`; #79 ARCH-002
+  ACCEPT `7ed5caf`; #80 PROC-013 CHANGES `2fde455` (REQ-QA-013 claimed COMPLETE without a recipient check or an
+  outbound-request check → OI-048) then ACCEPT `59e7613`; #83 ARCH-002 ACCEPT `0ad54ba`; #84 QA-007 CHANGES `7381c0f`
+  then ACCEPT `570d984`; #86 PROC-014 ACCEPT `77db3d4`, re-confirmed `0a4bb27`; #81 FE-008 CHANGES `466ea5d` (the
+  membership `valid_to` predicate survived deletion, shown by mutation) then ACCEPT `5dbe293`; #82 FE-009 CHANGES
+  `61d2853` (no negative test that a withheld event title stays out of the frame name)
+- V13-SEC-009 — the personal-data scan (SEC-APP-20) also covers `database/migrations/` and `database/hosted/` (DB's
+  suggestion on #72), with a scope test that fails if either entry is dropped — IN_REVIEW
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
@@ -66,6 +74,7 @@ Updated: 31 Oct 2026 23:20 UTC · Branch: `docs/V13-SEC-007-matrix-surface` · `
 
 | Local, #32 head `018b46e` merged with `develop` `a6c224a` (throwaway branch): `pnpm db:reset`, `pnpm typecheck`, `pnpm test`, `pnpm test:db` | typecheck 0, unit **909/909**, test:db **377/377** (includes SEC-002 suites and post-apply checks) | 909 + 377 | `018b46e` + `a6c224a` |
 | Local, #41 head `7529200`: `pnpm db:reset`, `pnpm test:e2e`; post-apply spec | e2e **93/93**, post-apply spec **27/27** | 93 + 27 | `7529200` |
+| Local, V13-SEC-009 on `develop` `eee17f7`: `pnpm lint`, `pnpm typecheck`, `vitest --project unit tests/security/app`; mutation: the `database/hosted` scope entry removed | lint 0, typecheck 0, **75/75**; with the entry removed 2 tests fail | 75 | SEC-009 head |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.
