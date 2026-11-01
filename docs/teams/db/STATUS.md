@@ -1,6 +1,6 @@
 # DB status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 03:00 UTC · Team DB · Reviewer of DB PRs: SEC
+Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 
 ## Delivery plan (ruled by the Chief Architect)
 
@@ -19,7 +19,8 @@ Updated: 2026-11-01 03:00 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-015]` | `feature/V13-DB-015-notification-ops` | migration 0010: `notifications_page` / `notifications_count` for the Notification Operations Center (S4, FE-006) | COMPLETE — #52 merged (77a9e18), SEC ACCEPT fcd2db3 |
 | `[V13-DB-016]` | `feature/V13-DB-016-hosted-resume-rehearsal` | rehearsal of the hosted resume 0005 → 0010 + seeds 0001/0002; seed bundles (`--seed`) | COMPLETE — #56 merged (7a0eccb), SEC ACCEPT 54e1925 |
 | `[V13-DB-017]` | `feature/V13-DB-017-seed-lint` | OI-041: db:lint covers database/seed; seed bundle and db:reset refuse a seed with findings; transaction control inside DO/function bodies | COMPLETE — #62 merged (a9745ba), SEC ACCEPT 2fe462d |
-| `[V13-DB-018]` | `feature/V13-DB-018-rollback-register` | REQ-DATA-023: per-migration rollback register (DATA_MODEL.md §9) and its automated check | IN_PROGRESS — PR open, SEC review pending |
+| `[V13-DB-018]` | `feature/V13-DB-018-rollback-register` | REQ-DATA-023: per-migration rollback register (DATA_MODEL.md §9) and its automated check | COMPLETE — #101 merged (85f7332), SEC ACCEPT 434c1c7 |
+| `[V13-DB-019]` | `feature/V13-DB-019-keyset-paged-reads` | REQ-PERF-003, OI-026: migration 0011, keyset-paged per-case reads | IN_PROGRESS — PR open, SEC review pending |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -139,7 +140,7 @@ Updated: 2026-11-01 03:00 UTC · Team DB · Reviewer of DB PRs: SEC
 - Evidence (local): db:lint 11 migrations + 2 seeds, 0 findings; lint, typecheck, prettier clean; unit 1700/1700;
   test:db 418/418 after a fresh db:reset; REHEARSAL PASS.
 
-## In progress: V13-DB-018 (REQ-DATA-023)
+## Done: V13-DB-018 (REQ-DATA-023), #101
 - `docs/architecture/DATA_MODEL.md` §9: one entry per migration 0000–0010 with the objects it creates, replaces, drops
   or alters, what a revert loses, and the strategy: locally `pnpm db:reset`; on the hosted schema a forward-fix
   migration (applied migrations are never edited), or the whole-schema `rollback_v13.sql` only on the owner's explicit
@@ -153,8 +154,25 @@ Updated: 2026-11-01 03:00 UTC · Team DB · Reviewer of DB PRs: SEC
 - Evidence (local, on develop 68a42b9 + this branch): lint, typecheck, prettier, db:lint clean; unit 2032/2032;
   db:reset then test:db 468/468.
 
+## In progress: V13-DB-019 (REQ-PERF-003, OI-026)
+- Migration 0011: `case_events_page`, `case_tasks_page`, `case_notifications_page` (SECURITY INVOKER, `search_path`
+  '', EXECUTE for `cdf_v13_user` only), each = its unpaged read one page at a time plus `page_cursor`;
+  `_page_limit(integer)` refuses a limit outside 1..100 (NULL included) with 22023; index `task_case_page_idx`. The
+  cursor row is looked up by id in the same case under RLS and must carry exactly that `page_cursor`, so half,
+  malformed, stale and foreign cursors all return no rows, like an unknown or unauthorised case. The unpaged reads, their
+  grants and every `api_*` command are unchanged; FE switches in its own task. Register entry §9.
+- Tests: `tests/integration/case-paged-reads.spec.ts` (17): shape; unpaged reads unchanged; for every persona ×
+  workspace × case (and an unknown case) × limit 1/2/3/100 the pages concatenate to the unpaged read, disjoint and bounded,
+  pinned to the visibility table; ties (same due date, null due dates, same event instants, same created_at); limit
+  edges 1 and 100 accepted, 0/101/-1/NULL refused 22023 on every read; 101 drafts page as 100 + 1; ten cursor probes all
+  empty; a restricted row as Gamma's cursor; other workspace / other persona; closed 0010 readable; Epsilon, Zeta,
+  unknown, forged contexts; app login 42501; index plans. `hosted-resume.spec.ts` now resumes 0006–0011.
+  Mutation-checked: 8 of 8 migration mutants fail the suite.
+- Needs SEC: the SEC-DB-17 coverage guard (`tests/security/db/context-forgery.spec.ts`) lists every function the request
+  role may execute; it needs entries for the three paged reads and `_page_limit` (tried locally: 18/18 with them).
+
 ## Next
-- Next free migration: 0011.
+- Next free migration: 0012.
 - OI-026 per-case paging: proposal accepted by ARCH (`*_page` functions next to the current reads), after M1.
 
 ## Review given
