@@ -51,11 +51,6 @@ jobs:
       V13_MIGRATION_RUNNER: ci
       V13_E2E_DATABASE_URL: postgres://cdf_v13_app:local-only-not-a-secret@127.0.0.1:5432/v13_local
       V13_E2E_BROWSERS: firefox-ar,webkit-ar
-      # WebKit reaches the app through a local TLS front (tests/fixtures/tls-front.mjs): Playwright's WebKit on Linux
-      # drops the Secure session cookie on plain-http localhost. Throwaway certificate, made below in the runner's temp
-      # directory, outside the workspace: never committed, never uploaded.
-      V13_E2E_TLS_CERT: ${{ runner.temp }}/e2e-tls/cert.pem
-      V13_E2E_TLS_KEY: ${{ runner.temp }}/e2e-tls/key.pem
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -68,13 +63,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:reset
       - run: pnpm exec playwright install --with-deps firefox webkit
+      # WebKit reaches the app through a local TLS front (tests/fixtures/tls-front.mjs): Playwright's WebKit on Linux drops
+      # the Secure session cookie on plain-http localhost. A throwaway one-day certificate in the runner's temp directory,
+      # outside the workspace: never committed, never uploaded. (The runner context is not available in a job's env, so
+      # the paths go to GITHUB_ENV from RUNNER_TEMP.)
       - name: Throwaway certificate for the WebKit TLS front
         run: |
-          mkdir -p "$(dirname "$V13_E2E_TLS_CERT")"
+          dir="$RUNNER_TEMP/e2e-tls"
+          mkdir -p "$dir"
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
             -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
-            -keyout "$V13_E2E_TLS_KEY" -out "$V13_E2E_TLS_CERT"
-          chmod 600 "$V13_E2E_TLS_KEY"
+            -keyout "$dir/key.pem" -out "$dir/cert.pem"
+          chmod 600 "$dir/key.pem"
+          echo "V13_E2E_TLS_CERT=$dir/cert.pem" >> "$GITHUB_ENV"
+          echo "V13_E2E_TLS_KEY=$dir/key.pem" >> "$GITHUB_ENV"
       # Only the two engine projects: Chromium already runs every suite in CI's e2e job. No trace is recorded here, so
       # none can reach the artifact.
       - run: pnpm exec playwright test --project=firefox-ar --project=webkit-ar --trace=off
