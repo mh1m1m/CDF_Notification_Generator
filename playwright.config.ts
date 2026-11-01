@@ -77,6 +77,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,
+  // A test that fails and then passes on its retry fails the CI run: a leak that shows once is never a green "flaky"
+  // (V13-QA-008, TEST_ARCHITECTURE.md §7.1; pinned in tests/sentinel/leak-suite-guard.spec.ts).
+  failOnFlakyTests: isCI,
   reporter: isCI
     ? [["list"], ["junit", { outputFile: "test-results/e2e-junit.xml" }], ["html", { open: "never" }]]
     : [["list"]],
