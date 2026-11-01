@@ -132,6 +132,10 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 - V13-QA-021 — branch test/V13-QA-021-no-js-server-actions (stacked on V13-ARCH-013 ddf928a) — IN_REVIEW: Server
   Action forms with JavaScript off (sign-in, workspace switch), same-origin `Origin` pinned; fails on `no-referrer`
   (2 tests, `Origin: "null"`), passes on the fix; the no-JS sign-in observation from the FE-016 review is closed by it.
+- V13-QA-016 — branch test/V13-QA-016-firefox-webkit — IN_REVIEW (ARCH, SEC for the CI hunk): `firefox-ar` and
+  `webkit-ar` projects only when `V13_E2E_BROWSERS` names them; `.github/workflows/cross-browser.yml` (ARCH hunk) on
+  develop pushes and the `cross-browser` label; guard B1 keeps every Sentinel spec and leak suite on Chromium. The
+  engines cannot run in the Claude sandbox: their evidence is the workflow's first runs, which QA records here.
 
 ## Unresolved defects
 - none open from QA

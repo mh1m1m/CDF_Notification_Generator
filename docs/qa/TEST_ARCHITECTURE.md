@@ -42,7 +42,7 @@ docs/qa/                   this file, SCENARIOS.md, SCREENSHOT_LIBRARY.md, repor
 | `mobile-ar` | Chromium | 360×780 (Pixel-class) | `ar-SA` | every PR | Gate G, mobile navigation |
 | `tablet-ar` | Chromium | 768×1024 | `ar-SA` | every PR | Gate G |
 | `wide-ar` | Chromium | 1920×1080 | `ar-SA` | every PR (visual only) | Gate G |
-| `firefox-ar`, `webkit-ar` | Firefox, WebKit | 1280×800 | `ar-SA` | CI nightly / on demand | cross-engine; not in the Claude sandbox (only Chromium is installed there) |
+| `firefox-ar`, `webkit-ar` | Firefox, WebKit | 1280×800 | `ar-SA` | `cross-browser.yml`: every push to `develop`, and PRs labelled `cross-browser` (V13-QA-016) | cross-engine emulation of tests/e2e and tests/a11y minus the Chromium-only specs; only when `V13_E2E_BROWSERS` names them; not in the Claude sandbox (only Chromium is installed there) |
 | `db-only` | none | — | — | every PR | Sentinel DB half and Truth DB half (no browser) |
 | `staging` | Chromium | 1280×800 | `ar-SA` | on demand / Gate J | read-only smoke + isolation against the staging preview (§9) |
 
@@ -277,6 +277,19 @@ runner registers at load time, so a helper in another file that skips **at run t
 or a conditional `test.skip(({ browserName }) => …)` at file level) lists as expected to pass with no annotation and is
 out of L1's reach (ARCH R1 on #136, probed with Playwright 1.63); review covers that. And `vitest list` leaves skipped suites out, so the
 Vitest suite `case-matrix.spec.ts` stays outside L1; for it the per-file scan and review apply.
+
+**B1 (V13-QA-016).** The Firefox and WebKit projects (`tests/fixtures/browsers.ts`) leave the Chromium-only specs out
+through their `testIgnore`, never through a skip. B1 checks on the runner's own listing, with both engines selected
+(`V13_E2E_BROWSERS=firefox-ar,webkit-ar`; nothing is launched), that `desktop-ar` still lists every Sentinel spec and
+every Playwright leak suite, that each engine lists only specs directly under `tests/e2e` or `tests/a11y` and none of
+the Chromium-only ones, and that every Chromium-only entry names an existing file. Without `V13_E2E_BROWSERS` only
+`desktop-ar` is listed, and an unknown name is refused. Planted listings (a Sentinel spec or an e2e leak suite dropped
+from Chromium, an engine running a Sentinel spec, SEC's browser suite or a Chromium-only spec, an empty or missing
+engine, a stale entry) and a planted Chromium `testIgnore` in a temporary configuration each fail B1. The engines run
+`tests/e2e` and `tests/a11y` by a regular expression, because a Playwright glob `e2e/**` also matches
+`tests/security/e2e`. Chromium-only today, with reasons in the file: Scenarios A and D (the Sentinel's response-body
+reads and CDP history steps), Scenario E (CSP console checks that match Chromium's text) and the negative-persona pin
+(the Sentinel).
 
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 

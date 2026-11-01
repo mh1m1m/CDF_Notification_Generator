@@ -225,7 +225,9 @@ A skip in a leak-detection suite is refused by the leak-suite guard (QA-008), an
 ### 9.3 CI (D3, as ruled by ARCH)
 
 - A separate `.github/workflows/cross-browser.yml` runs `pnpm exec playwright install --with-deps firefox webkit` and
-  then `V13_E2E_BROWSERS=firefox-ar,webkit-ar pnpm test:e2e`.
+  then, with `V13_E2E_BROWSERS=firefox-ar,webkit-ar`, `playwright test --project=firefox-ar --project=webkit-ar
+  --trace=off` (Chromium already runs every suite in CI's e2e job; no trace can reach the artifact). As built in
+  V13-QA-016.
 - It runs on every push to `develop` (`concurrency: cross-browser-develop`, `cancel-in-progress: true`), and on a PR
   labelled `cross-browser` (`pull_request` types `labeled` and `synchronize`, with an `if` on the label).
 - After five green `develop` runs in a row, ARCH adds it to every PR and to the merge rule.

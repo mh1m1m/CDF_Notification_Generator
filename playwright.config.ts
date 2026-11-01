@@ -12,14 +12,17 @@
 // this run's secret at start (ADR-014), so the database must not hold another key: run `pnpm db:reset` before every
 // local run (CI runs it in the e2e job). The database URL is never printed.
 //
-// One project for now, desktop-ar (Arabic, RTL, the primary language). QA adds further projects, including the
-// `staging` project that `pnpm test:e2e:staging` selects.
+// desktop-ar (Chromium, Arabic, RTL, the primary language) runs every suite. V13_E2E_BROWSERS=firefox-ar,webkit-ar adds
+// the Firefox and WebKit projects (V13-QA-016, tests/fixtures/browsers.ts), which CI's cross-browser workflow selects;
+// without it no other engine is needed. QA adds further projects, including the `staging` project that
+// `pnpm test:e2e:staging` selects.
 // PW_CHROMIUM_PATH points Playwright at a pre-installed Chromium in sandboxes without browser downloads; CI runs
 // `playwright install --with-deps chromium` instead.
 import { randomBytes } from "node:crypto";
 import { defineConfig, devices } from "@playwright/test";
 import { isLoopbackUrl, LOCAL_DATABASE, localPrimaryPort, V13_APP } from "./scripts/db/lib/migrations.mjs";
 import { DEFAULT_LOCAL_APP_PASSWORD } from "./scripts/db/reset-local.mjs";
+import { CHROMIUM_PROJECT, crossBrowserProject, selectedBrowsers } from "./tests/fixtures/browsers";
 
 const PORT = 3100;
 const externalBaseUrl = process.env.V13_E2E_BASE_URL?.trim();
@@ -90,13 +93,14 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "desktop-ar",
+      name: CHROMIUM_PROJECT,
       use: {
         ...devices["Desktop Chrome"],
         locale: "ar-SA",
         ...(chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {}),
       },
     },
+    ...selectedBrowsers(process.env.V13_E2E_BROWSERS).map(crossBrowserProject),
   ],
   webServer: externalBaseUrl
     ? undefined

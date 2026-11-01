@@ -33,7 +33,7 @@
 import ts from "typescript";
 
 export interface GuardViolation {
-  rule: "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "L1";
+  rule: "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "L1" | "B1";
   file: string;
   line: number;
   detail: string;
@@ -566,4 +566,72 @@ export function checkListing(
       if (!seen.has(line)) hit(file, line, "a test( call the runner does not register");
   }
   return out.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+}
+
+// B1 (V13-QA-016, SEC's rule for the Firefox and WebKit projects): the engines' testIgnore must never take a leak suite
+// away from Chromium. On the runner's own listing with every project selected (V13_E2E_BROWSERS names both engines):
+//   - the Chromium project lists every required file: every Sentinel spec and every Playwright leak suite;
+//   - each engine project exists and lists at least one file, only specs directly under tests/e2e or tests/a11y, and
+//     none of the Chromium-only specs;
+//   - every Chromium-only entry names a file that exists (a stale entry would hide nothing and mean nothing).
+
+/** The files each project lists, repository-relative (`testDir` is `tests/`). */
+export function filesPerProject(
+  json: { suites: { file: string; specs?: unknown[]; suites?: unknown[] }[] },
+  testDir = "tests/",
+): Map<string, Set<string>> {
+  interface Node {
+    specs?: { file: string; tests: { projectName: string }[] }[];
+    suites?: Node[];
+  }
+  const out = new Map<string, Set<string>>();
+  const walk = (suite: Node) => {
+    for (const spec of suite.specs ?? [])
+      for (const t of spec.tests) {
+        const set = out.get(t.projectName) ?? new Set<string>();
+        set.add(testDir + spec.file);
+        out.set(t.projectName, set);
+      }
+    for (const child of suite.suites ?? []) walk(child);
+  };
+  for (const top of json.suites) walk(top as Node);
+  return out;
+}
+
+export interface EngineCoverage {
+  readonly chromium: string;
+  readonly engines: readonly string[];
+  /** Files the Chromium project must list. */
+  readonly required: readonly string[];
+  /** Files no engine project may list. */
+  readonly chromiumOnly: readonly string[];
+}
+
+const ENGINE_FILE = /^tests\/(?:e2e|a11y)\/[^/]+\.spec\.ts$/;
+
+/** B1 over a listing's files per project. */
+export function checkEngineCoverage(
+  perProject: ReadonlyMap<string, ReadonlySet<string>>,
+  read: (file: string) => string | null,
+  c: EngineCoverage,
+): GuardViolation[] {
+  const out: GuardViolation[] = [];
+  const hit = (file: string, detail: string) => out.push({ rule: "B1", file, line: 0, detail });
+  const chromium = perProject.get(c.chromium) ?? new Set<string>();
+  for (const file of c.required)
+    if (!chromium.has(file)) hit(file, `${c.chromium} (Chromium) does not run this suite`);
+  for (const engine of c.engines) {
+    const files = perProject.get(engine);
+    if (!files || files.size === 0) {
+      hit(`(project ${engine})`, "the engine project lists nothing");
+      continue;
+    }
+    for (const file of files) {
+      if (!ENGINE_FILE.test(file)) hit(file, `${engine} runs a suite outside tests/e2e and tests/a11y`);
+      if (c.chromiumOnly.includes(file)) hit(file, `${engine} runs a Chromium-only suite`);
+    }
+  }
+  for (const file of c.chromiumOnly)
+    if (read(file) === null) hit(file, "a Chromium-only entry names no file");
+  return out.sort((a, b) => a.file.localeCompare(b.file) || a.detail.localeCompare(b.detail));
 }
