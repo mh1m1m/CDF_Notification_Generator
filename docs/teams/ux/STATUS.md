@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `docs/V13-UX-013-uxb07-recheck` · Base: `develop` `ca16cba`
+Updated: 2026-11-01 · Branch: `feature/V13-UX-014-form-controls` · Base: `develop` `4f94b07`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -178,17 +178,28 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   current link measured 321 px at 320 px with the 1.4.12 spacing in Liberation Sans, 294 px in Carlito. Pin in
   `reflow.spec.ts`; QA-010's font probe (Liberation Sans, DejaVu Sans, Carlito) passed.
 
-## V13-UX-013: UXB-07 re-check of the routed M1 findings (IN_REVIEW once its PR is open; QA)
+## V13-UX-013: UXB-07 re-check of the routed M1 findings. PR #122, QA ACCEPT `f9536a4`, CI 41273685051, merged as `452b467`
 - Re-measured UXB-01 … 05, 08, 14 on `develop` `ca16cba` (after FE-009 `961197e`, FE-010 `21dbbaa`) in ar and en at
   320–1280 px with an own capture (QA-005's library not built yet): all DONE. M1-15 … M1-18, the case-tab remainders of
   M1-06/M1-11/M1-17 and UX-009 R-04 recorded FIXED. UXB-06, 13, 16 DONE with their merge shas.
 - New: UXB-17 (MEDIUM, draft form controls unstyled: no border, 21–22 px selects) and UXB-18 (LOW, "Preview" link
   looks like text), both routed by ARCH to V13-UX-014 (from `develop` after this PR merges). Docs only.
 
+## V13-UX-014: one form-control rule and underlined table links (UXB-17, UXB-18). PR #128 (IN_REVIEW; FE for app/**, QA)
+- `styles/globals.css`: `.v13-control` is the one look for a text input, select or textarea (control-token border,
+  2.5rem, max-inline-size 100%); a link in any `tbody` is underlined (`tbody a:not(.v13-btn)`).
+- FE hunks: class names in DraftForm, NotificationCenterView, PortfolioView and MyWorkView; the two `.field input,
+  .field select` module rules removed. The draft submit is `.v13-btn-primary`, My Work's status submit
+  `.v13-btn-secondary` (same bare-control defect, fixed by the same rule).
+- Tests: `tests/unit/components/controls.spec.ts` (14 tests fail on `61b57cf`). Local after merging develop `4f94b07`
+  (#121, #122): lint 0, typecheck 0, unit 2,298/2,298, e2e 336/336. Browser, ar and en, 320 and 1280 px: fields 40 px with a 1 px `#5E646B` border
+  (5.43:1), table links underlined on the case tab, Center, Portfolio and My Work, no page scroll at 320 px.
+- Split out: UXB-19 (LOW), the closed template select's code clip at 320 px in Arabic; not fixable in CSS, routed to
+  ARCH.
+
 ## Unresolved defects
-- UXB-17 (MEDIUM) and UXB-18 (LOW) are OPEN, assigned to V13-UX-014 (shared form-control rule, one table-cell link
-  style; FE path-owner ACCEPT for FE hunks). Other open items are in
-  `docs/design/reviews/UX_BACKLOG.md`.
+- UXB-17 (MEDIUM) and UXB-18 (LOW) are IN_REVIEW in #128. UXB-19 (LOW) is OPEN, waiting on ARCH's choice of fix (FE
+  path). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once
