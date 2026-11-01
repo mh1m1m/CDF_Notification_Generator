@@ -9,8 +9,8 @@ shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations
 Status: **COMPLETE** for M1 on `develop` (b5ee5f46): migrations 0001–0008 and both seed parts, merged through #12
 (0001, identity seed, claims MAC, key install at start), #15 (0002–0004, cases seed), #17 (0005 workspace switch),
 #21 (0006 Case Workspace reads), #28 (0007 claims-key state for health) and #31 (0008 My Work case columns), each on
-SEC ACCEPT and green CI; 0009 (foreign-key index review, V13-DB-011) merged through #42. Migration 0010 (Notification
-Operations Center reads, V13-DB-015) is IN_PROGRESS in its PR. Tested on a local PostgreSQL 16 cluster (`pnpm test:db`). Applied to the hosted schema only by the Chief Architect, with the plan procedure.
+SEC ACCEPT and green CI; 0009 (foreign-key index review, V13-DB-011) merged through #42 and 0010 (Notification
+Operations Center reads, V13-DB-015) through #52. The rollback strategy of every migration is in §9 (REQ-DATA-023). Tested on a local PostgreSQL 16 cluster (`pnpm test:db`). Applied to the hosted schema only by the Chief Architect, with the plan procedure.
 
 ## 1. Principles
 
@@ -191,3 +191,187 @@ advisor's 14 unindexed-FK findings are **accepted**, each with its reason in `00
 FK `(notification_id, case_id)` while keeping the timeline order. `tests/integration/fk-index-coverage.spec.ts` fails
 on any new foreign key until it is indexed or added to the accepted list. Revisit when a reader by that key arrives
 (recipient inbox: `notification_recipient_persona_id`; supersede command: `notification_supersedes_fk`).
+
+## 9. Migration rollback register (REQ-DATA-023, V13-DB-018)
+
+One entry per migration file. **Creates**, **Replaces** (dropped and created again in the same file), **Drops** and
+**Alters** (a constraint or column added to an earlier table) list the objects as `kind name`, all in schema
+`cdf_notifications_v13` except roles. `tests/unit/rollback-register.spec.ts` (and `node scripts/db/rollback-register.mjs`)
+fails when a migration has no entry, when an entry has no migration, or when a list differs from the migration's own
+CREATE, DROP and ALTER TABLE … ADD statements. A CREATE or DROP form the checker does not know fails it too.
+
+Strategies, the same for every migration:
+
+- **Local** (developer cluster, CI): `pnpm db:reset` drops the local database `v13_local` and the three V13 roles and
+  rebuilds them from Git (migrations, then seeds). To revert a migration locally, check out the tree without it (or with the fix) and reset.
+  Nothing is kept, and only synthetic data is lost.
+- **Hosted** (shared CDF GC Review project, ADR-012): applied migrations are never edited and never reversed in place.
+  A defect is corrected by a **forward-fix migration**: the next free number, through the plan §6 procedure (review
+  ACCEPT, dry run, apply, fingerprint, isolation and post-apply checks), applied by the Chief Architect. Before the
+  fix lands, access can be cut first (plan §7: remove `V13_DATABASE_URL` or set `cdf_v13_app` NOLOGIN). To restore an
+  earlier definition, the forward fix recreates it from Git history. Grants, RLS enabling and policies are not
+  register items, so a forward fix that drops and recreates a table or function also restores its grants, RLS and
+  policies in the same migration (db:lint and `post_apply_checks.sql` check them). The only way back further is
+  `database/hosted/rollback_v13.sql`, which removes the whole V13 schema and its three roles, and **only on the owner's
+  explicit word** (plan §7). There are no per-migration reverse or DROP scripts. After a full removal, the schema is
+  rebuilt by applying 0000 onwards again, then the seeds.
+
+What is lost: the data held in the objects a revert removes. In V13 that is reference data a migration inserts itself (roles in 0001,
+recipient classes in 0004), which only re-applying that migration restores; synthetic seed data, which the seed bundles
+reload; plus rows written at run time by commands (audit events, task status changes, notification drafts, workspace
+switches), which nothing can reload. Function, policy and index changes hold no data.
+
+### 0000_bootstrap.sql
+
+- **Creates:** `role cdf_v13_owner`, `role cdf_v13_user`, `role cdf_v13_app`, `schema cdf_notifications_v13`,
+  `table schema_migrations`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** everything V13 holds. Every later migration depends on the schema and roles, so reverting
+  0000 means removing all of V13, including the migration history.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration for a defect in a role setting or grant. Removal of 0000 itself only through
+  `rollback_v13.sql` on the owner's explicit word; nothing narrower exists.
+
+### 0001_identity_access_audit.sql
+
+- **Creates:** `table workspace`, `table role`, `table persona`, `table persona_workspace_membership`,
+  `index persona_workspace_membership_persona_idx`, `table claims_key`, `table audit_event`,
+  `index audit_event_case_idx`, `policy schema_migrations_deny_all`, `policy claims_key_deny_all`,
+  `policy workspace_select_member`, `policy role_select_signed_in`, `policy persona_select_self_or_colleague`,
+  `policy membership_select_own`, `policy audit_event_deny_all`, `trigger audit_event_no_update_delete`,
+  `trigger audit_event_no_truncate`, `function _claims_hmac`, `function _verified_claims`, `function _claim_uuid`,
+  `function current_correlation_id`, `function api_install_claims_key`, `function current_persona_id`,
+  `function current_workspace_id`, `function current_role_codes`, `function has_role`, `function _is_colleague`,
+  `function current_persona`, `function _audit_row_hash`, `function _append_audit`, `function _reject_mutation`,
+  `function verify_audit_chain`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** the role catalogue, which 0001 inserts itself and only re-applying 0001 restores; the
+  identity seed (workspaces, personas, memberships; reloaded by seed 0001); the installed claims key (the app installs a new one at server start), and the **audit ledger**, whose run-time events
+  cannot be reloaded. 0002–0010 depend on these tables and functions.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration (for example a corrected function or policy). The ledger is append-only and is
+  never reverted in part. Removing 0001 means removing V13 (`rollback_v13.sql`, owner's explicit word).
+
+### 0002_case_registry.sql
+
+- **Creates:** `table case_record`, `table case_workspace_visibility`, `index case_workspace_visibility_ws_idx`,
+  `table case_assignment`, `index case_assignment_persona_idx`, `function _case_owning_visibility`,
+  `trigger case_record_owning_visibility`, `function is_assigned_to_case`, `function can_access_case`,
+  `policy case_record_select`, `policy case_workspace_visibility_select`, `policy case_assignment_select`,
+  `function case_header`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** `constraint audit_event_case_fk on audit_event`
+- **Data lost on revert:** the synthetic cases, their visibility and assignments (reloaded by seed 0002). Dropping
+  `case_record` also needs the `audit_event_case_fk` constraint removed, and 0003, 0004, 0006, 0008 and 0010 depend on
+  these tables or on `can_access_case`.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration; an access-rule defect is fixed by recreating `can_access_case` or a policy. Full
+  removal only through `rollback_v13.sql` on the owner's explicit word.
+
+### 0003_procedural_core.sql
+
+- **Creates:** `table procedural_event`, `index procedural_event_case_idx`, `trigger procedural_event_no_update_delete`,
+  `trigger procedural_event_no_truncate`, `table task`, `index task_case_idx`, `index task_assignee_idx`,
+  `policy procedural_event_select`, `policy task_select`, `function _task_transition_allowed`,
+  `function api_update_task_status`, `function my_work_tasks`, `function portfolio_page`, `function portfolio_count`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** seeded procedural events and tasks (reloaded by seed 0002), and task status changes made at
+  run time. 0006 and 0008 read these tables.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration (a corrected command or read, as 0008 did for `my_work_tasks`). Full removal only
+  through `rollback_v13.sql` on the owner's explicit word.
+
+### 0004_notification_core.sql
+
+- **Creates:** `table notification_recipient_class`, `table notification_template`,
+  `table notification_template_version`, `function _template_version_hash`,
+  `trigger notification_template_version_hash`, `trigger notification_template_version_immutable`,
+  `table notification`, `index notification_case_idx`, `table notification_event`,
+  `index notification_event_notification_idx`, `trigger notification_event_no_update_delete`,
+  `trigger notification_event_no_truncate`, `table dispatch_outbox`, `policy notification_recipient_class_select`,
+  `policy notification_template_select`, `policy notification_template_version_select`, `policy notification_select`,
+  `policy notification_event_select`, `policy dispatch_outbox_deny_all`, `function api_create_notification_draft`,
+  `function case_notifications`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** the recipient classes, which 0004 inserts itself and only re-applying 0004 restores; the
+  seeded templates, template versions and draft notifications (reloaded by seed 0002); notification drafts and events created at run time. The outbox holds no content. 0009 and 0010
+  depend on these tables.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration. Template versions are immutable, so a wrong version is superseded by a new one,
+  never edited. Full removal only through `rollback_v13.sql` on the owner's explicit word.
+
+### 0005_workspace_switch.sql
+
+- **Creates:** `function api_switch_workspace`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** none. The function holds no data; the WORKSPACE_SWITCHED audit events it wrote stay in the
+  ledger.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that drops or recreates `api_switch_workspace`, with the FE switcher changed in
+  the same release.
+
+### 0006_case_workspace_reads.sql
+
+- **Creates:** `function _capacity_rank`, `function case_events`, `function case_tasks`
+- **Replaces:** `function case_header`
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** none (functions only). Reverting `case_header` means recreating the 0002 definition, which
+  has no `my_capacity` column, so the FE case header must change with it.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that recreates the 0002 `case_header` from Git history, or a corrected one, and
+  drops or recreates the three new reads.
+
+### 0007_claims_key_state.sql
+
+- **Creates:** `function claims_key_state`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** none. `/api/health` would report the probe as failing until the app changes with it.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that drops or recreates `claims_key_state`.
+
+### 0008_my_work_case_columns.sql
+
+- **Creates:** none
+- **Replaces:** `function my_work_tasks`
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** none. The 0003 definition lacks the four case columns My Work shows, so the FE changes with
+  it.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that drops and recreates `my_work_tasks` with the 0003 definition from Git
+  history (the result type changes, so `create or replace` is not enough).
+
+### 0009_fk_index_review.sql
+
+- **Creates:** none
+- **Replaces:** `index notification_event_notification_idx`
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** none (an index). `tests/integration/fk-index-coverage.spec.ts` would then fail on the
+  unindexed `notification_event_notification_fk`.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that drops the index and creates the 0004 one.
+
+### 0010_notification_operations_reads.sql
+
+- **Creates:** `index notification_created_idx`, `function notifications_page`, `function notifications_count`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** none (an index and two reads). The Notification Operations Center changes with it.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that drops or recreates the two functions and the index.
