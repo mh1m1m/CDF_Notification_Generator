@@ -24,6 +24,15 @@ describe("reflow: navigation rows wrap, never scroll (R-01, R-02)", () => {
   it.each([".v13-side-nav ul", ".v13-case-tabs ul"])("%s wraps its items", (selector) => {
     expect(rules(selector)).toMatch(/flex-wrap:\s*wrap/);
   });
+
+  it("an area link wraps its own text instead of keeping one line (V13-UX-012)", () => {
+    // QA-010 at 320 × 256 with the 1.4.12 spacing, en, /notifications: the bold current link "Notification
+    // operations centre" on one line measured 321 px in a Liberation Sans / Arial-metric font, and the page scrolled.
+    const link = rules(".v13-side-nav-link");
+    expect(link).not.toMatch(/white-space:\s*nowrap/);
+    expect(link).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(link).toMatch(/max-inline-size:\s*100%/);
+  });
 });
 
 describe("reflow: text containers never clip (1.4.12)", () => {

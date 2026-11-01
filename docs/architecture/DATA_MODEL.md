@@ -1,7 +1,7 @@
 # E03 — Enterprise data model (Milestone M1)
 
 **SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Owner: team DB. Schema `cdf_notifications_v13` in the
-shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0010`; seed in two parts:
+shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0011`; seed in two parts:
 `database/seed/0001_m1_synthetic.sql` (identity: workspaces, personas, memberships; needs migration 0001 only; audit row
 `SEED_M1_LOADED`) and `database/seed/0002_m1_cases.sql` (cases and their history; needs 0001–0004; audit row
 `SEED_M1_CASES_LOADED`).
@@ -107,6 +107,8 @@ erDiagram
 | `my_work_tasks(boolean)` | invoker | yes | the persona's own tasks in cases accessible in the current workspace (open only unless `true`); order due date nulls last, display number, task code. Migration 0008 appends `case_title_ar`, `case_title_en`, `case_records_state` (UI hint only; V1423 stays the authority) and `status_event_id` (as `case_tasks`) |
 | `case_notifications(uuid)` | invoker | yes | notification history of one case |
 | `notifications_page(...)`, `notifications_count(...)` (migration 0010, V13-DB-015) | invoker | yes | Notification Operations Center (UX S4, FE-006): notifications across every case the caller may see, with exactly the access of `case_notifications` (RLS before filters, order, limit, count and summaries). Rows: case id, number and titles, template code, names, version and language, recipient class, lifecycle status, `created_at`, `created_at_cursor`, `last_event_at`, `row_version`; no person. Filters (identical for page and count): lifecycle status, template code, case display number (after authorisation, never a key), created range `[from, before)`. Keyset on (`created_at` desc, id desc): pass `created_at_cursor` (text, `YYYY-MM-DDTHH:MI:SS.ffffffZ`) and the id of the last row, or neither; half a cursor or another text form matches nothing. Limit 1..100 |
+| `case_events_page(...)`, `case_tasks_page(...)`, `case_notifications_page(...)` (migration 0011, V13-DB-019, OI-026) | invoker | yes | the three per-case reads one bounded page at a time: same rows, order and columns as `case_events` / `case_tasks` / `case_notifications`, plus `page_cursor`. Arguments `(p_case_id, p_after_cursor, p_after_id, p_limit)`: pass `page_cursor` and the id of the last row, or neither. The cursor row must be visible in the same case and carry exactly that `page_cursor`; the keyset then uses its stored values. A half, malformed, stale or foreign cursor returns no rows, the same answer as an unknown or unauthorised case. Limit 1..100 (default 25); any other value, NULL included, is refused with 22023, never clamped. Index `task_case_page_idx` serves the task order; the events and notifications orders use the 0003 and 0004 case indexes. The unpaged reads are unchanged |
+| `_page_limit(integer)` (migration 0011) | immutable, no table access | yes | returns the page limit if it is 1..100, else raises 22023 |
 | `api_update_task_status(uuid, text, int)` | definer command | yes | §6 |
 | `api_create_notification_draft(uuid, uuid, text, text)` | definer command | yes | §6 |
 | `api_switch_workspace(uuid)` (migration 0005) | definer command | yes | §6; returns the target workspace id, code and the persona's role codes there |
@@ -375,3 +377,16 @@ switches), which nothing can reload. Function, policy and index changes hold no 
 - **Data lost on revert:** none (an index and two reads). The Notification Operations Center changes with it.
 - **Local:** `pnpm db:reset`.
 - **Hosted:** a forward-fix migration that drops or recreates the two functions and the index.
+
+### 0011_case_paged_reads.sql
+
+- **Creates:** `function _page_limit`, `index task_case_page_idx`, `function case_events_page`,
+  `function case_tasks_page`, `function case_notifications_page`
+- **Replaces:** none
+- **Drops:** none
+- **Alters:** none
+- **Data lost on revert:** none (four functions and an index). The unpaged reads stay, so a revert only takes paging
+  away from any caller that switched to the paged reads.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that drops or recreates the three paged reads, `_page_limit` and the index, with
+  their grants.
