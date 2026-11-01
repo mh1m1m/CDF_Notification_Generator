@@ -1,6 +1,6 @@
 # PROC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 01:25 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 286eb93
+Updated: 2026-11-01 02:00 UTC · Branch: `claude/project-thread-94r9g5` · Base: `develop` 40af5ef
 
 ## Completed
 - Baseline of the V13 reference package reproduced on a scratch copy: 726 tests, 726 pass (Node v22.22.0).
@@ -25,7 +25,8 @@ Updated: 2026-11-01 01:25 UTC · Branch: `claude/project-thread-94r9g5` · Base:
 | V13-PROC-012 M1 status pass of the requirements register (V13-ARCH-004) | COMPLETE | PR #71 merged into `develop` a2be337 (31 Oct; ARCH ACCEPT and SEC ACCEPT 94fefc3, 33 of 33 security rows; CI 41253402064): Implementation_Status, Test_ID, Evidence and Open_Issue on the 280 M1 rows (68 COMPLETE, 171 IN_PROGRESS of which 51 review-enforced standing rules, 16 BLOCKED, 1 PRODUCTION_SUBSTITUTION_REQUIRED, 24 NOT_STARTED); traceability §3.1 by status, owner team and gate |
 | V13-PROC-013 second M1 register pass (merges 4cc72ec..d5b61b0: #61, #63, #68, #69, #73) | COMPLETE | #80 merged `d26ada9` (SEC CHANGES 2fde455, then ACCEPT 59e7613; CI on 59e7613 green). 26 M1 rows gain evidence; REQ-QA-013 IN_PROGRESS with OI-048 (recipient and request-body checks open); REQ-VIS-006, VIS-007, QA-024, RTL-006, A11Y-011, DS-016 → IN_PROGRESS (#69); REQ-PORT-004 loses OI-025 and OI-043 (resolved); IA-007 Evidence in UX's wording. Totals 68 COMPLETE, 178 IN_PROGRESS, 16 BLOCKED, 1 PSR, 17 NOT_STARTED |
 | V13-PROC-014 third M1 register pass (merges d5b61b0..d26ada9: #78, #70, #76, #83) | COMPLETE | #86 merged `76ed4b8` (SEC ACCEPT 0a4bb27, CI 41258920933). 24 M1 rows gain evidence, no status changes; REQ-CASE-014 is recorded as a review-enforced standing rule (§7.1 leak triage, #78; COMPLETE when V13-QA-008 merges); REQ-IA-007's open list loses #76 (M1-08/M1-10 FIXED). Totals unchanged: 68 COMPLETE, 178 IN_PROGRESS (52 standing rules, 44 document-only), 16 BLOCKED, 1 PSR, 17 NOT_STARTED |
-| V13-PROC-015 fourth M1 register pass (merges d26ada9..286eb93: #74, #84, #85, #81) | IN_REVIEW | 21 M1 rows gain evidence; REQ-QA-013 → COMPLETE (D4 and P3/P4, #84; OI-048 cleared from the row); REQ-NOTIF-006 → COMPLETE (in-case preview, #74); IA-007 stays IN_PROGRESS (UX-008c, FE-009, M1-07 marking). Totals 70 COMPLETE, 176 IN_PROGRESS (52 standing rules, 44 document-only), 16 BLOCKED, 1 PSR, 17 NOT_STARTED |
+| V13-PROC-015 fourth M1 register pass (merges d26ada9..286eb93: #74, #84, #85, #81) | COMPLETE | #89 merged `4ad41c2` (SEC ACCEPT ce11cef, CI 41261110773). 21 M1 rows gain evidence; REQ-QA-013 → COMPLETE (D4 and P3/P4, #84; OI-048 cleared from the row); REQ-NOTIF-006 → COMPLETE (in-case preview, #74); IA-007 stays IN_PROGRESS (UX-008c, FE-009, M1-07 marking). Totals 70 COMPLETE, 176 IN_PROGRESS (52 standing rules, 44 document-only), 16 BLOCKED, 1 PSR, 17 NOT_STARTED |
+| V13-PROC-016 fifth M1 register pass (merges 286eb93..40af5ef: #87, #89, #91, #92, #93) | IN_REVIEW | 10 M1 rows, no status change; resolved OI-035 and OI-044 dropped from their rows (NOTIF-011 now cites OI-050); REQ-QA-012's open item is V13-QA-009 (Scenario E disclosure half); SEC-APP-21 (#91, #92) cited on SEC-011, SEC-022, TEST-004, CASE-014; SEC INFO on #89 (stale SEC-020 phrase) applied. Totals unchanged: 70 COMPLETE, 176 IN_PROGRESS, 16 BLOCKED, 1 PSR, 17 NOT_STARTED |
 
 ## Changed files
 - PR #3: `docs/teams/proc/PORT_PLAN.md`, `docs/teams/proc/STATUS.md`
@@ -44,6 +45,7 @@ Updated: 2026-11-01 01:25 UTC · Branch: `claude/project-thread-94r9g5` · Base:
 - PROC-013: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #61, #63, #68, #69, #73), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
 - PROC-014: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #78, #70, #76, #83), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
 - PROC-015: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #74, #84, #85, #81), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
+- PROC-016: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows touched by #87, #91, #92, #93), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1 intro), this file
 - PROC-012: `docs/REQUIREMENTS_REGISTER.csv` (M1 rows: status, test, evidence, open issue), `docs/REQUIREMENTS_TRACEABILITY.md` (§3.1), this file
 - PROC-011: `lib/notifications/data-epistemic.ts` (new), `lib/notifications/render/components.ts` (EventSummary), `tests/unit/notifications/data-epistemic.spec.ts` (new), this file
 - PROC-010: `scripts/integrity/source-ledger.mjs` (new), `tests/unit/integrity/source-ledger.spec.ts` (new), this file
