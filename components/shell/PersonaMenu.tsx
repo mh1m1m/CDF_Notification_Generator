@@ -8,8 +8,8 @@ export interface PersonaMenuProps {
   t: Translator;
   /** Localised synthetic persona name, e.g. "Secretary Alpha". */
   name: string;
-  /** Localised role held in the active workspace; empty when none is confirmed (then no role line). */
-  roleLabel: string;
+  /** Localised role held in the active workspace; absent or empty when none is confirmed (then no role line). */
+  roleLabel?: string;
   signOutAction: (formData: FormData) => Promise<void>;
   /** Optional test id on the visible name in the menu button. */
   nameTestId?: string;

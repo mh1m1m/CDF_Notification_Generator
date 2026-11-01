@@ -157,11 +157,52 @@ describe("no confirmed role", () => {
     expect(html).not.toContain("v13-muted");
   });
 
-  it("PersonaMenu without a role label: no persona-menu-role line, sign-out stays", () => {
+  it.each([
+    ["absent", undefined],
+    ["empty", ""],
+  ] as const)(
+    "PersonaMenu with the role label %s: no persona-menu-role line, sign-out stays",
+    (_case, roleLabel) => {
+      const html = renderToStaticMarkup(
+        <PersonaMenu t={t} name="Persona Zeta" roleLabel={roleLabel} signOutAction={noop} />,
+      );
+      expect(html).not.toContain("persona-menu-role");
+      expect(html).toContain('data-testid="sign-out"');
+    },
+  );
+
+  it("PersonaMenu with a role label: the line is there", () => {
     const html = renderToStaticMarkup(
-      <PersonaMenu t={t} name="Persona Zeta" roleLabel="" signOutAction={noop} />,
+      <PersonaMenu t={t} name="Secretary Alpha" roleLabel="أمين سر اللجنة" signOutAction={noop} />,
     );
-    expect(html).not.toContain("persona-menu-role");
-    expect(html).toContain('data-testid="sign-out"');
+    expect(html).toContain('data-testid="persona-menu-role">أمين سر اللجنة<');
+  });
+
+  it("single workspace with the role absent: the name only", () => {
+    const html = renderToStaticMarkup(
+      <WorkspaceSwitcher
+        t={t}
+        current="SECRETARIAT"
+        options={[{ code: "SECRETARIAT", name: "أمانة اللجنة" }]}
+        action={noop}
+        pageHref="/workspaces"
+      />,
+    );
+    expect(html).toContain("أمانة اللجنة");
+    expect(html).not.toContain("v13-muted");
+    expect(html).not.toContain(asPrefix);
+  });
+
+  it("single workspace with a role: the role line is there", () => {
+    const html = renderToStaticMarkup(
+      <WorkspaceSwitcher
+        t={t}
+        current="SECRETARIAT"
+        options={[{ code: "SECRETARIAT", name: "أمانة اللجنة", role: "أمين سر اللجنة" }]}
+        action={noop}
+        pageHref="/workspaces"
+      />,
+    );
+    expect(html).toContain(t("shell.workspace.roleHeld", { role: "أمين سر اللجنة" }));
   });
 });
