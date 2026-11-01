@@ -23,7 +23,8 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-019]` | `feature/V13-DB-019-keyset-paged-reads` | REQ-PERF-003, OI-026: migration 0011, keyset-paged per-case reads | COMPLETE — #110 merged (800ab8a), CI 41269347309 6/6 |
 | `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note (#115 merged 937cff3, ACCEPT c35d6c1), then migration 0012 on `feature/V13-DB-020-audit-outcome-policy-version` | COMPLETE — 0012 merged with #119 (0bc2542) |
 | `[V13-DB-021]` | `feature/V13-DB-021-refusal-audit`, stacked on DB-020's 0012 branch | REQ-AUD-005: refused commands audited (design note #120, ACCEPTED); migration 0013, adapters and `lib/server` (FE path-owner), SEC suites, `post_apply_checks.sql` P03 (ARCH path) | COMPLETE — #127 merged (94fd0b7), CI green on 321051c |
-| `[V13-DB-022]` | `feature/V13-DB-022-my-open-case-tasks` (#129) | REQ-PERF-003, OI-054: migration 0014, `case_my_open_tasks_page` (the caller's open tasks on one case, paged) | IN_PROGRESS — DRAFT PR #129 on develop, SEC review |
+| `[V13-DB-022]` | `feature/V13-DB-022-my-open-case-tasks` (#129) | REQ-PERF-003, OI-054: migration 0014, `case_my_open_tasks_page` (the caller's open tasks on one case, paged) | COMPLETE — #129 merged (1e52670), CI 41277398237 6/6 |
+| `[V13-DB-023]` | `feature/V13-DB-023-access-audit-design` | REQ-AUD-001: design note `DB-023_CASE_ACCESS_AUDIT.md` (case opens, restricted opens, notification previews; fail closed; 300 s window DB-PROPOSED); migration 0015 after ACCEPT | IN_PROGRESS — design note in review (SEC, then ARCH) |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -204,7 +205,7 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 - Evidence (local, 1 Nov): unit 2154/2154, test:db 584/584 (33 files), lint, typecheck, prettier, db:lint clean,
   rollback register 0 findings, shared-database rehearsal PASS.
 
-## In progress: V13-DB-022 (REQ-PERF-003, OI-054, "My open tasks in this case")
+## Completed: V13-DB-022 (REQ-PERF-003, OI-054, "My open tasks in this case")
 - Migration 0014: `case_my_open_tasks_page(case, cursor, id, limit)`, SQL, stable, invoker, `search_path ''`, EXECUTE to
   `cdf_v13_user` only. Rows = `case_tasks` filtered by `is_mine` and OPEN / IN_PROGRESS / BLOCKED; order due date
   nulls last, `task_code collate "C"`, id (ARCH); `case_tasks_page`'s columns and cursor; partial index
@@ -215,6 +216,10 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
   lint, typecheck, prettier, db:lint clean, rollback register 0 findings. Before the merge: shared-database rehearsal
   PASS, CI 6/6 on 07dc591 (run 41276230713).
 - #127 (0013) merged at 94fd0b7; develop merged into #129. The FE switch to the new read is V13-FE-014.
+
+## In progress: V13-DB-023 (REQ-AUD-001, case access audit)
+- Design note `docs/teams/db/DB-023_CASE_ACCESS_AUDIT.md`: PROPOSED; SEC threat review first, then ARCH. Migration 0015
+  follows ACCEPT. No hosted step (OI-034).
 
 ## Next
 - Next free migration: 0015.
@@ -234,6 +239,8 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 - #91 `[V13-SEC-010]` DB suites fail in CI when not ready: `REVIEW: ACCEPT 8bf777c` (suggested the extra signals).
 - #92 `[V13-SEC-011]` V13_DB_TESTS_REQUIRED / GITHUB_ACTIONS signals: `REVIEW: ACCEPT 38ecdef` (7/10 mutants killed,
   survivors stricter only).
+- #134 `[V13-SEC-014]` SEC STATUS: `REVIEW: CHANGES 3ad72cd` (all 30 verdict shas and both merge shas match; the
+  heading stamp "to 05:40 UTC" was in the future at commit 05:36, and SEC's #132 re-confirm `5c22fbd` is missing).
 
 ## Changed files (PR (a))
 - database/migrations/0001_identity_access_audit.sql, database/seed/0001_m1_synthetic.sql,
