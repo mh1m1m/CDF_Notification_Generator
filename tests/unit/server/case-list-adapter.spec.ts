@@ -16,9 +16,10 @@ const ID = "0e000000-0000-4000-8000-000001000001";
 const AT: Record<CaseListKind, string> = {
   events: "2026-10-01T08:00:00.123456Z|2026-10-01T08:00:01.000000Z",
   tasks: "2026-10-05|INTAKE_REVIEW",
+  myOpenTasks: "-|INTAKE_REVIEW",
   notifications: "2026-10-02T08:00:00.000001Z",
 };
-const KINDS = ["events", "tasks", "notifications"] as const;
+const KINDS = ["events", "tasks", "myOpenTasks", "notifications"] as const;
 const b64 = (v: unknown) => Buffer.from(JSON.stringify(v), "utf8").toString("base64url");
 
 describe("case list cursor", () => {

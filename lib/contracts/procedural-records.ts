@@ -84,4 +84,14 @@ export interface ProceduralRecordsReader {
     caseId: CaseId,
     page: CaseRecordsPageRequest,
   ): Promise<CaseRecordsPage<CaseTask>>;
+  /**
+   * The identity's own open tasks (OPEN, IN_PROGRESS, BLOCKED) of the case, one page at a time (V13-FE-014,
+   * case_my_open_tasks_page, DB-022): by due date (nulls last), task code in code point order, id. "Own" is the verified
+   * persona, never an argument. Same cursor rules as listTasksPage, with a cursor of its own list.
+   */
+  listMyOpenTasksPage(
+    identity: RequestIdentity,
+    caseId: CaseId,
+    page: CaseRecordsPageRequest,
+  ): Promise<CaseRecordsPage<CaseTask>>;
 }

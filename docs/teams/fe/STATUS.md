@@ -1,7 +1,7 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
 Updated: 2026-11-01 04:42 UTC · Branch: feature/V13-FE-013-case-lists-paged (develop abdd885 merged in; #112 FE-012 merged; FE-011 is #116) · Head: see PR
-Updated: 2026-11-01 04:55 UTC · Branch: feature/V13-FE-013-case-lists-paged (develop 61b57cf merged in; #116 FE-011 and #112 FE-012 merged) · Head: see PR
+Updated: 2026-11-01 06:37 UTC · Branch: feature/V13-FE-015-next-action-card (develop 00fac16 merged in; #138 FE-014 merged) · Head: see PR
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
 - V13-FE-001 (part 1) — `lib/authz` pre-check, `lib/server` (errors, request context, case read services, case source
@@ -104,7 +104,21 @@ Updated: 2026-11-01 04:55 UTC · Branch: feature/V13-FE-013-case-lists-paged (de
   `lib/adapters/case-list/cursor.ts` (page_cursor text verbatim + row id + list), limit + 1 read. URL state as the
   portfolio (`after` + bounded `back`), previous / next links. A tampered URL or a refused cursor shows the empty
   state with a link to the first page, never an error. The overview reads one page of five events; own open tasks
-  still read the case's task list (known limit). Preview links and close keep the page — IN_REVIEW (QA, SEC).
+  still read the case's task list (known limit). Preview links and close keep the page — COMPLETE: merged into develop as 4f94b07 (#121).
+- V13-FE-014 Overview's own open tasks through DB-022 (OI-054; REQ-PERF-003; migration 0014) — "My open tasks in
+  this case" reads one page of 25 of `case_my_open_tasks_page` through the new port method `listMyOpenTasksPage`
+  (`lib/contracts` hunk for ARCH + SEC); the unpaged `listTasks` read and its filter in `loadCaseWorkspace` are gone.
+  Same rows, order, labels and test ids; the persona is the verified one, never an argument. The adapter refuses the
+  page if a row is not the caller's or not open (fail closed). Its own cursor kind (`myOpenTasks`); a pager under the
+  list appears only past 25 rows; a tampered URL or refused cursor shows the empty state with a first-page link while
+  the last five events stay — COMPLETE: merged into develop as 00fac16 (#138).
+- V13-FE-015 Next Action Card wiring (REQ-IA-009; PROC-026 #130, UX-015 #135) — the overview shows UX's
+  `NextActionCard` first, above the stage card. Its input is PROC-026's `nextActionForCase` over exactly the four
+  CaseHeader fields, the capacity and the FIRST page of the persona's own open tasks (FE-014's read): the rows already
+  read on the first page, one extra first-page read on any other or refused page (ARCH ruling, 1 Nov). Status is the
+  Tasks tab's rendering; due date with `deadlineOf` from today in Asia/Riyadh. The link is built by the wiring from the
+  task id: the overview URL with no paging parameters at `#task-<id>`, an anchor on that row of the overview's own
+  list. NONE renders nothing — IN_REVIEW (QA, SEC).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -137,6 +151,10 @@ Updated: 2026-11-01 04:55 UTC · Branch: feature/V13-FE-013-case-lists-paged (de
   tests/unit/server/{notification-center.spec.tsx,v13-notification-center-adapter.spec.ts,
   support/fake-notification-center.ts}, tests/integration/fe/notification-center.spec.ts,
   tests/e2e/notification-center.spec.ts (FE-committed, for QA's review, as agreed for Scenario E on #51)
+- FE-014: lib/contracts/procedural-records.ts (port method, ARCH + SEC), lib/adapters/{case-list/cursor.ts,
+  procedural-records/v13-procedural-records.ts}, lib/server/case-workspace.ts, app/(platform)/cases/[caseId]/_components/
+  {CaseWorkspace,render}.tsx, tests/unit/server/{v13-records-readers,case-list-adapter,case-list-paging,case-workspace}
+  specs, tests/unit/server/support/fake-records.ts, tests/integration/fe/case-records-paged.spec.ts
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -216,6 +234,9 @@ Updated: 2026-11-01 04:55 UTC · Branch: feature/V13-FE-013-case-lists-paged (de
 | FE-013 after merging develop abdd885 (#112): commands as above | pass | 88 files, 2172 / 506 / 333 of 333 | FE-013 head |
 | FE-013 after SEC CHANGES 5254893 (the cursor must re-encode to exactly what was passed: keys reordered, whitespace, an escaped character are refused; ARCH's listEventsPage wording): commands as above. Mutation: without the canonical check the 3 new tests fail | pass | 88 files, 2175 / 506 / 333 of 333 | FE-013 head |
 | FE-013 after merging develop 61b57cf (#116 FE-011; conflicts in case.module.css, case i18n, Scenario E and STATUS kept both sides): commands as above | pass | 88 files, 2182 / 540 / 336 of 336 | FE-013 head |
+| FE-014 on develop c3ccac6: lint, typecheck, format:check / `pnpm test` (v13-records-readers 10 new: only case_my_open_tasks_page with case and cursor bound, limit + 1, no persona argument; own cursor kind, the tasks cursor refused before any read; not mine, DONE, CANCELLED, another case, missing or wrong page_cursor refuse the page; case-list-paging 4 new: overview reads events page + own open tasks page and never listTasks, 60-row walk, tampered / refused cursor, pager markup; case-workspace overview reads updated) / `pnpm db:reset` + `pnpm test:db` (FE integration case-records-paged: the fourth list walks with limits 1, 2, 25 equal the old filter of listTasks; own-only check for Alpha, Gamma, Delta on all ten cases; all cross-case, cross-list, forged and hidden-case negatives) / `pnpm db:reset` + `pnpm test:e2e`. Mutation: without the adapter's own / open check 4 unit tests fail | pass | 89 files, 2353 / 610 / 336 of 336 | FE-014 head |
+| FE-015 on FE-014 1800c91 + develop cfb82be: lint, typecheck, format:check / `pnpm test` (next-action-wiring 10 new: first page reuses its rows; href = overview without after / back + #task-<id>; row anchors only in the overview list; card above the stage card; page 2 shows page 1's card from one extra first-page read; tampered / refused page still shows it; due day count from a fixed Riyadh clock, no due line without a date; status rendering; exactly the four header fields + capacity + first-page rows reach nextActionForCase; NONE renders nothing (no task, closed case, other persona); other tabs never compute it) / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e`. Mutation: feeding the shown page instead of the first fails 2 tests; paging parameters in the href fail 2 tests | pass | 93 files, 2411 / 610 / 336 of 336 | FE-015 head |
+| FE-015 after merging develop 00fac16 (#138 FE-014; no conflict; FE-015's changed lines unchanged, the diff to develop is now FE-015 only): commands as above | pass | 93 files, 2411 / 610 / 363 of 363 | FE-015 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden

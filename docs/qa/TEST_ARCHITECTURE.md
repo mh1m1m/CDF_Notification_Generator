@@ -159,6 +159,13 @@ new session secret on a database holding the previous run's key refuses every re
 first step times out at the draft form's template select. Run `pnpm db:reset` before each local run that starts a new
 app (`playwright.config.ts`); CI resets in the e2e job.
 
+**No JavaScript (V13-QA-021, OI-056).** `tests/e2e/no-js-server-actions.spec.ts` runs with `javaScriptEnabled: false`:
+persona sign-in reaches My Work with the session cookie set, and Governance Officer Delta switches workspace on
+`/workspaces`. Each form POST must carry the app's own `Origin` (never `null`) and get no server error. A control test
+proves no script ran (the TopBar's workspace `<details>` stays open after a click outside, which its client script would
+close; it fails with JavaScript on). With develop's former `Referrer-Policy: no-referrer` both form tests fail with
+`Origin: "null"`; with V13-ARCH-013's `same-origin` they pass.
+
 ## 7. Case Context Sentinel (QG-02, Gate B)
 
 Library `tests/sentinel/sentinel.ts`. Where each rule runs today (ARCH and SEC review of #84; the design aim is every
@@ -245,7 +252,10 @@ focus or skip method called on anything else (`const info = test.info(); info.fa
 **G6** the runners' options-object and annotation forms: an object property `skip`, `only`, `todo` or `fails` (Vitest's
 `it(name, { skip: true }, …)` and the like skip, focus or pin), and a property `type` whose value is `"skip"`,
 `"fixme"` or `"fail"` (Playwright's `{ annotation: { type: "skip" } }` skips, `"fixme"` skips, `"fail"` inverts),
-however the key is written. The allow-list holds only conditional
+however the key is written. Since V13-QA-011 an annotation's `type` must also be a plain string literal: a value built
+by concatenation, a variable, a template with a substitution, an annotation object or array held in a variable, a
+shorthand or spread property, a computed key, and any use of `testInfo.annotations` other than `.push(...)` of plain
+literal objects all fail G6, so a `"sk" + "ip"` cannot hide a skip. The allow-list holds only conditional
 skips, each with its reason: the session-secret skips in `negative-personas-pinning.spec.ts` and Scenario C (they apply
 only against an external `V13_E2E_BASE_URL`), SEC's `describe.skipIf(!present)` in `case-matrix.spec.ts` (since
 V13-SEC-010/011 a database that is not ready fails, not skips, in CI), and SEC's local-build skips in
@@ -256,8 +266,17 @@ source in the same spec, and a `test.fixme()` is planted inside every test and d
 (156 bodies) and must be found at its line. The same spec pins that the worker has the session secret whenever no
 external `V13_E2E_BASE_URL` is set, so the allow-listed skips cannot fire in a locally started or CI run, and that CI
 runs with `failOnFlakyTests`: with `retries: 1`, a leak that fails once and passes on its retry fails the job instead
-of passing as "flaky". Adding a skip to a leak suite therefore needs a reviewed change to the allow-list. Limit: the
-scan is per file, so a helper defined in another file that pins or skips is out of its reach; review covers that.
+of passing as "flaky". Adding a skip to a leak suite therefore needs a reviewed change to the allow-list. The scan is per
+file, so since V13-QA-011 **L1** closes the gap for the Playwright suites: the spec runs `playwright test --list
+--reporter=json` over every guarded Playwright suite and fails when a listed test comes from another file or from a line
+that is not one of the suite's own plain `test(`/`it(` calls, when any listed test's expected status is not `passed` or
+it carries a `skip`, `fixme` or `fail` annotation, or when one of the suite's own test calls is not listed. A helper in
+another file that pins, skips or registers a test **at load time** is therefore caught by what the runner registers,
+not by the source; a planted helper in a temporary directory proves it end to end. Limits: the listing is what the
+runner registers at load time, so a helper in another file that skips **at run time** (`test.skip()` inside a test body,
+or a conditional `test.skip(({ browserName }) => …)` at file level) lists as expected to pass with no annotation and is
+out of L1's reach (ARCH R1 on #136, probed with Playwright 1.63); review covers that. And `vitest list` leaves skipped suites out, so the
+Vitest suite `case-matrix.spec.ts` stays outside L1; for it the per-file scan and review apply.
 
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 

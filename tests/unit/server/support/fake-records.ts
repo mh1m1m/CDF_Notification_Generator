@@ -144,6 +144,10 @@ export function fakePage<T>(
   };
 }
 
+/** The fakes' case_my_open_tasks_page: the caller's OPEN, IN_PROGRESS and BLOCKED tasks, in the list's order. */
+export const myOpen = (tasks: readonly CaseTask[]): readonly CaseTask[] =>
+  tasks.filter((t) => t.is_mine && ["OPEN", "IN_PROGRESS", "BLOCKED"].includes(t.status));
+
 /** The paged methods over a reader's unpaged ones (for readers written inline in a test). */
 export function withPages(
   r: Pick<ProceduralRecordsReader, "listEvents" | "listTasks">,
@@ -154,6 +158,8 @@ export function withPages(
       fakePage("events", await r.listEvents(identity, caseId), page),
     listTasksPage: async (identity, caseId, page) =>
       fakePage("tasks", await r.listTasks(identity, caseId), page),
+    listMyOpenTasksPage: async (identity, caseId, page) =>
+      fakePage("myOpenTasks", myOpen(await r.listTasks(identity, caseId)), page),
   };
 }
 
@@ -190,6 +196,11 @@ export function createFakeProceduralRecords(): ProceduralRecordsReader & { calls
       calls.push(`listTasksPage:${page.limit}:${page.cursor ?? ""}`);
       const i = indexOf(identity, caseId);
       return fakePage("tasks", i === null ? [] : tasksOf(i, identity), page);
+    },
+    async listMyOpenTasksPage(identity, caseId, page) {
+      calls.push(`listMyOpenTasksPage:${page.limit}:${page.cursor ?? ""}`);
+      const i = indexOf(identity, caseId);
+      return fakePage("myOpenTasks", i === null ? [] : myOpen(tasksOf(i, identity)), page);
     },
   };
 }
