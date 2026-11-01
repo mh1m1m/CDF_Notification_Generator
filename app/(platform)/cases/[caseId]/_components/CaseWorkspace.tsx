@@ -248,6 +248,7 @@ export function TaskTable({
   locale,
   tasks,
   caption,
+  captionHidden = false,
   emptyText,
   testId,
 }: {
@@ -255,6 +256,8 @@ export function TaskTable({
   locale: Locale;
   tasks: readonly CaseTask[];
   caption: string;
+  /** The caption still names the table and its scroll region, but is not shown when a heading above says the same. */
+  captionHidden?: boolean;
   emptyText: string;
   testId: string;
 }) {
@@ -269,7 +272,9 @@ export function TaskTable({
   return (
     <ScrollRegion className={styles.scroll} labelledBy={`${testId}-caption`}>
       <table className={styles.table} data-testid={testId} data-count={tasks.length}>
-        <caption id={`${testId}-caption`}>{caption}</caption>
+        <caption id={`${testId}-caption`} className={captionHidden ? "v13-sr-only" : undefined}>
+          {caption}
+        </caption>
         <thead>
           <tr>
             <th scope="col">{t("case.tasks.column.task")}</th>
@@ -456,6 +461,8 @@ export function CaseTabContent({
             locale={locale}
             tasks={view.myTasks}
             caption={t("case.overview.myTasks")}
+            // M1-09: the heading above is the visible label; the caption stays for assistive technology only.
+            captionHidden
             emptyText={t("case.overview.noMyTasks")}
             testId="case-my-tasks"
           />

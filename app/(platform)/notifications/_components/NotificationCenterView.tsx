@@ -4,6 +4,7 @@
 // content. "Sent" reads "sent — delivery not confirmed", never "delivered" (V13 L-07). The view model comes from
 // lib/server/notification-center (authorised data only).
 import Link from "next/link";
+import { formatDate, formatDateTime, formatNumber } from "@/components/format";
 import { NOTIFICATION_LIFECYCLE_STATUSES, type NotificationLifecycleStatus } from "@/lib/contracts";
 import type { Locale, MessageKey, Translator } from "@/lib/i18n";
 import type { NotificationCenterView as View } from "@/lib/server/notification-center";
@@ -47,31 +48,14 @@ const RESULT_KEYS: Readonly<Record<Intl.LDMLPluralRule, MessageKey>> = {
   other: "notifications.results.other",
 };
 
-/** Arabic UI text uses Arabic-Indic digits, English Latin (DESIGN_SYSTEM.md §5). */
-function numberFormat(locale: Locale): Intl.NumberFormat {
-  return new Intl.NumberFormat(locale === "ar" ? "ar-u-nu-arab" : "en-u-nu-latn");
-}
-
-/** Date and time in the CDF time zone (Asia/Riyadh). The exact instant stays in the <time dateTime> attribute. */
-function dateTimeFormat(locale: Locale): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-u-nu-arab" : "en-GB-u-nu-latn", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Riyadh",
-  });
-}
-
-/** A calendar day of the filter (YYYY-MM-DD), formatted as the same day. */
+/** A calendar day of the filter (YYYY-MM-DD), shown as that same day (noon UTC is the same date in Riyadh). */
 function dayFormat(locale: Locale, day: string): string {
-  return new Intl.DateTimeFormat(locale === "ar" ? "ar-u-nu-arab" : "en-GB-u-nu-latn", {
-    dateStyle: "medium",
-    timeZone: "UTC",
-  }).format(new Date(`${day}T00:00:00Z`));
+  return formatDate(locale, `${day}T12:00:00Z`);
 }
 
 function resultLine(t: Translator, locale: Locale, total: number): string {
   const rule = total === 0 ? "zero" : new Intl.PluralRules(locale).select(total);
-  return t(RESULT_KEYS[rule], { count: numberFormat(locale).format(total) });
+  return t(RESULT_KEYS[rule], { count: formatNumber(locale, total) });
 }
 
 function captionOf(t: Translator, locale: Locale, query: CenterQuery): string {
@@ -262,8 +246,7 @@ function Results({
   view: Extract<View, { kind: "page" }>;
 }) {
   const { page, query } = view;
-  const fmt = numberFormat(locale);
-  const when = dateTimeFormat(locale);
+  const fmt = (value: number) => formatNumber(locale, value);
   const to = view.from > 0 ? view.from + page.items.length - 1 : 0;
   return (
     <div aria-live="polite" aria-atomic="false" className={styles.results}>
@@ -323,10 +306,16 @@ function Results({
                         {n.template_name[locale]}
                       </Link>
                       <span className={styles.sub}>
-                        <bdi dir="ltr" data-testid="notification-template-code">
+                        <bdi dir="ltr" className={styles.nowrap} data-testid="notification-template-code">
                           {n.template_code}
                         </bdi>{" "}
-                        {t("notifications.version", { version: fmt.format(n.template_version) })}
+                        {/* Template versions are identifiers: Latin in <bdi> in both languages (DESIGN_SYSTEM §6 D10). */}
+                        <span className={styles.nowrap}>
+                          {t("notifications.versionLabel")}{" "}
+                          <bdi dir="ltr" data-testid="notification-template-version">
+                            {n.template_version}
+                          </bdi>
+                        </span>
                       </span>
                     </td>
                     <td data-testid="notification-recipient-class" data-recipient-class={n.recipient_class}>
@@ -336,12 +325,12 @@ function Results({
                       {t(STATUS_KEYS[n.lifecycle_status])}
                     </td>
                     <td className={styles.nowrap}>
-                      <time dateTime={n.created_at}>{when.format(new Date(n.created_at))}</time>
+                      <time dateTime={n.created_at}>{formatDateTime(locale, n.created_at)}</time>
                     </td>
                     <td className={styles.nowrap}>
                       {n.last_event_at !== null ? (
                         <time dateTime={n.last_event_at} data-testid="notification-last-event">
-                          {when.format(new Date(n.last_event_at))}
+                          {formatDateTime(locale, n.last_event_at)}
                         </time>
                       ) : (
                         <span data-testid="notification-no-event">{t("notifications.noEvent")}</span>
@@ -356,9 +345,9 @@ function Results({
             {view.from > 0 ? (
               <p data-testid="count-notifications-total" data-count={page.total}>
                 {t("notifications.pageSummary", {
-                  from: fmt.format(view.from),
-                  to: fmt.format(to),
-                  total: fmt.format(page.total),
+                  from: fmt(view.from),
+                  to: fmt(to),
+                  total: fmt(page.total),
                 })}
               </p>
             ) : null}
