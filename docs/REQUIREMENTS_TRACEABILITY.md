@@ -93,7 +93,7 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 | QA | Playwright & Visual QA | 76 |
 | SEC | Security & Adversarial Testing | 39 |
 
-### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-024)
+### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-027)
 
 The 280 rows with `Milestone` = M1, counted from this CSV. Their statuses were assessed against the merges up to
 `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026), plus #72 (REQ-SEC-002, REQ-GOV-001), #75 (REQ-ARCH-025) and #77
@@ -103,8 +103,9 @@ the merges from `d5b61b0` to `d26ada9` (#78, #70, #76, #83, #80) in V13-PROC-014
 V13-PROC-016, the merges from `40af5ef` to `11fad34` (#90, #94, #82, #95) in V13-PROC-017, the merges from
 `11fad34` to `a0bf765` (#96, #88, #97, #99) in V13-PROC-019, the merges from `373f19c` to `75733ba` (#103,
 #105, #101, #106) in V13-PROC-020, the merges from `75733ba` to `220b9d2` (#98, #108, #109, #111, #110, #107,
-#115, #113) in V13-PROC-023, and the merges from `220b9d2` to **`df41474`** (#104, #117, #112, #100, #120, #114,
-#118, #119, #116, #124, #122, #123) in V13-PROC-024.
+#115, #113) in V13-PROC-023, and the merges from `220b9d2` to `df41474` (#104, #117, #112, #100, #120, #114,
+#118, #119, #116, #124, #122, #123) in V13-PROC-024, and the merges from `df41474` to **`b50dea9`** (#121, #125, #126) in
+V13-PROC-027.
 The status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
 merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
 merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief
@@ -118,7 +119,7 @@ Architect's rulings on #71:
   found on develop `<sha>`".
 
 COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, were checked by SEC before merge. REQ-SEC-002 and REQ-GOV-001
-are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Merges after `df41474` are
+are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Merges after `b50dea9` are
 assessed in the next pass; owners update their rows meanwhile (§6).
 
 **By status**
