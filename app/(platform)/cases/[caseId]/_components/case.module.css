@@ -1,30 +1,4 @@
 /* Case Workspace (FE-004). Logical properties only (RTL first); tokens from styles/tokens.css. */
-.header {
-  border-block-end: 1px solid var(--cdf-border);
-  padding-block: var(--cdf-space-3);
-}
-
-.number {
-  font-size: var(--cdf-text-h2, 1.5rem);
-  font-weight: 700;
-  margin: 0;
-  white-space: nowrap;
-}
-
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cdf-space-4);
-  margin-block: var(--cdf-space-2);
-}
-
-.facts dt {
-  color: var(--cdf-text-secondary);
-}
-
-.facts dd {
-  margin: 0;
-}
 
 .flag {
   display: inline-flex;
@@ -34,51 +8,6 @@
   color: var(--cdf-indicator-text);
   border-radius: 0;
   padding-inline: var(--cdf-space-1);
-}
-
-.glyph {
-  vertical-align: middle;
-  margin-inline-end: var(--cdf-space-1);
-}
-
-.notice {
-  border-inline-start: 4px solid var(--cdf-border-strong, currentColor);
-  padding-block: var(--cdf-space-2);
-  padding-inline: var(--cdf-space-3);
-  margin-block: var(--cdf-space-3);
-  background: var(--cdf-surface-subtle);
-}
-
-.tabs ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--cdf-space-4);
-  list-style: none;
-  padding: 0;
-  margin-block: var(--cdf-space-3);
-  border-block-end: 1px solid var(--cdf-border);
-}
-
-.tabs a {
-  display: inline-block;
-  padding-block: var(--cdf-space-2);
-}
-
-.tabs a[aria-current="page"] {
-  font-weight: 700;
-  border-block-end: 3px solid currentColor;
-}
-
-.timeline {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.timeline li {
-  border-inline-start: 2px solid var(--cdf-border);
-  padding-inline-start: var(--cdf-space-3);
-  padding-block-end: var(--cdf-space-3);
 }
 
 .meta {

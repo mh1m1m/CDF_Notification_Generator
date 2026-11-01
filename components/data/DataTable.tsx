@@ -38,6 +38,11 @@ interface DataTableBase<Row> {
   pagination?: ReactNode;
   /** Id for the caption; the scroll region is then labelled by it instead of the generic label. */
   captionId?: string;
+  /**
+   * The caption stays the table's accessible name but is not shown, for a table whose visible heading already says
+   * the same (e.g. the case Overview's "My open tasks in this case").
+   */
+  captionVisuallyHidden?: boolean;
   /** Row test id; defaults to `<testId>-row-<rowKey>`. */
   rowTestId?: (row: Row) => string;
   /** Extra evidence attributes on each row (`data-*` only). */
@@ -68,7 +73,8 @@ export interface UnscopedTable<Row> extends DataTableBase<Row> {
 export type DataTableProps<Row> = CaseScopedTable<Row> | UnscopedTable<Row>;
 
 export function DataTable<Row>(props: DataTableProps<Row>) {
-  const { t, testId, caption, columns, rows, rowKey, empty, pagination, captionId } = props;
+  const { t, testId, caption, columns, rows, rowKey, empty, pagination, captionId, captionVisuallyHidden } =
+    props;
   if (rows.length === 0) return <>{empty}</>;
   return (
     <div className="v13-table-block">
@@ -84,7 +90,9 @@ export function DataTable<Row>(props: DataTableProps<Row>) {
         <table className="v13-table" data-testid={testId} {...dataOnly(props.tableData)}>
           <caption id={captionId}>
             {/* Kept in view while the table scrolls sideways, and wrapped to the visible width (QA, M1-05). */}
-            <span className="v13-table-caption-text">{caption}</span>
+            <span className={captionVisuallyHidden ? "v13-sr-only" : "v13-table-caption-text"}>
+              {caption}
+            </span>
           </caption>
           <thead>
             <tr>
