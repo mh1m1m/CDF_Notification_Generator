@@ -4,7 +4,7 @@
 through the connected integrations at the time given. Nothing here is a plan presented as a fact. Production is blocked
 by the hosting gate (ADR-005); staging holds synthetic data only.
 
-Last checked: **1 Nov 2026 01:36 UTC** by the Chief Architect (§1 GitHub and §3 Vercel deployments; §2 Supabase: see its own times).
+Last checked: **1 Nov 2026 01:49 UTC** by the Chief Architect (§1 GitHub and §3 Vercel deployments; §2 Supabase: see its own times).
 
 ## 1. GitHub
 
@@ -13,9 +13,9 @@ Last checked: **1 Nov 2026 01:36 UTC** by the Chief Architect (§1 GitHub and §
 | Repository | [`mh1m1m/CDF_Notification_Generator`](https://github.com/mh1m1m/CDF_Notification_Generator) (existing; no other repository created) | 01:29 |
 | Visibility | public (OPEN_ISSUES OI-006) | E01 §1.2 |
 | Default branch | `main` at `9f1edaf` (README and .gitignore only); unchanged: only the owner merges `develop` → `main` | 31 Oct 19:56 |
-| Integration branch | `develop` at `25a1c48` (merge of #87, V13-SEC-009); 85 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1; migrations `0000`–`0010` in Git | 1 Nov 01:35 |
+| Integration branch | `develop` at `b22f153` (merge of #91, V13-SEC-010); 87 PRs merged into it since 28 Oct, each with its CI runs in `docs/TEST_EVIDENCE.md` §4.1; migrations `0000`–`0010` in Git | 1 Nov 01:49 |
 | Branch protection | **none on `main` or `develop`** (`protected: false`); the GitHub connector cannot set protection rules (OI-016) | 31 Oct 19:08 |
-| CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Since #36 (V13-ARCH-008) the Playwright job runs the app against a PostgreSQL 17 service built by `pnpm db:reset`. Latest `develop` push run [41261160718](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41261160718) on `25a1c48`: success | 1 Nov 01:35 |
+| CI | `.github/workflows/ci.yml`, six jobs on every PR and every push to `develop`: lint/typecheck/format/db:lint, unit, shared-database rehearsal, database integration, build, Playwright. Since #36 (V13-ARCH-008) the Playwright job runs the app against a PostgreSQL 17 service built by `pnpm db:reset`. Latest `develop` push run [41262353382](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41262353382) on `b22f153`: success | 1 Nov 01:49 |
 
 ## 2. Supabase (database)
 
@@ -57,7 +57,7 @@ Deployments:
 | `dpl_D8oLwP43MfU9Awe1RKj31u4Y6S8K` | `develop` `63d1271` (#63) | preview | READY | created 23:57 UTC; the staging alias pointed here when read through the Vercel connector on 1 Nov at 00:00 UTC. The seven merges between `9290778` and `63d1271` (`f069850` … `5153388`) have no deployment (OI-038) |
 | `dpl_GRqTQrsWFBcixuqmBvR959Fk529W` | `develop` `e9cd74d` (#76) | preview | READY | created 00:26:53 UTC; the staging alias pointed here when read through the Vercel connector on 1 Nov at 00:32 UTC. The three merges between `63d1271` and `e9cd74d` (`d5b61b0`, `24616f6`, `fddbff8`) have no deployment (OI-038) |
 | `dpl_ErmmMhvsjhQ7c2fKWFHruVxGGBTw` | `develop` `76ed4b8` (#86) | preview | READY | created 01:02:18 UTC. The three merges between `e9cd74d` and `76ed4b8` (`7d6a431`, `d26ada9`, `a93fa61`) have no deployment (OI-038) |
-| `dpl_DdvyZah41aBUzjsRwnpXzpqZqv33` | `develop` `286eb93` (#81) | preview, behind the staging alias | READY | created 01:21:36 UTC; the staging alias pointed here when read through the Vercel connector on 1 Nov at 01:32 UTC. `eee17f7` and `f45f192` have no deployment, and none existed for `25a1c48` (#87) at 01:36 UTC (OI-038) |
+| `dpl_DdvyZah41aBUzjsRwnpXzpqZqv33` | `develop` `286eb93` (#81) | preview, behind the staging alias | READY | created 01:21:36 UTC; the staging alias pointed here when read through the Vercel connector on 1 Nov at 01:32 UTC and again at 01:49 UTC. `eee17f7` and `f45f192` have no deployment, and none existed for `25a1c48` (#87), `4ad41c2` (#89) or `b22f153` (#91) at 01:49 UTC (OI-038) |
 
 Staging alias check, 1 Nov 2026 01:32:43 UTC (through the Vercel connector's authenticated fetch; Vercel
 Authentication stays on): `GET /api/health` → **HTTP 503**
