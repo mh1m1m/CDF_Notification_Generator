@@ -1,7 +1,8 @@
 # V13-DB-020 — Audit record content: outcome and policy version (design note)
 
-**SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Team DB · 1 Nov 2026 · status: **PROPOSED**, with the Chief Architect's
-decisions of 1 Nov (PR #115 comment 6553045144) folded in (§7), for acceptance. No migration is written until this note is accepted. Requirement: **REQ-AUD-005** "Each
+**SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Team DB · 1 Nov 2026 · status: **ACCEPTED** by the Chief Architect
+(PR #115, `REVIEW: ACCEPT c35d6c1`), with the decisions of 1 Nov (comment 6553045144) folded in (§7). Built as
+migration 0012; where the build differs from this text, §8 says so. Requirement: **REQ-AUD-005** "Each
 audit record includes actor, action, target, timestamp, outcome, correlation ID and the relevant policy version."
 Governing: ADR-011 (append-only hash-chained ledger), ADR-017 (attribution from verified claims).
 
@@ -89,7 +90,7 @@ checks). Proposal:
 
 - New owner-only table `policy_version (version text primary key check (version ~ '^V13-ACCESS-\d{4}$'), fingerprint
   text not null, recorded_at timestamptz not null default clock_timestamp(), migration text not null)`, RLS enabled
-  and forced, deny-all, append-only (same trigger as the ledger). Each migration that changes the access policy inserts
+  (not forced, see §8), deny-all, append-only (same trigger as the ledger). Each migration that changes the access policy inserts
   a row: `version` = `V13-ACCESS-<NNNN>` (the migration number), `fingerprint` = `_policy_fingerprint()`.
 - **What `_policy_fingerprint()` covers** (decision 2), for objects in `cdf_notifications_v13` only (ADR-012: the
   hosted database is shared; it reads the catalogue for that schema and nothing else):
@@ -173,3 +174,17 @@ if it is SECURITY DEFINER (proposed: invoker, owner-only EXECUTE).
    computed on the server at apply time; latest = highest version; negative tests for disabled RLS, one grant and one
    changed function body. Optional foreign key: taken.
 3. **`post_apply_checks.sql`:** DB proposes the lines in the 0012 PR as a separate commit; ARCH accepts them as owner.
+
+## 8. As built (migration 0012)
+
+Three points differ from the text above; everything else is built as written.
+
+- **RLS on `policy_version` is enabled, not forced.** Forcing it would also deny the owner, so the migration could not
+  insert the first row and `_append_audit` (owner) could not read the latest version. It matches `audit_event`: enabled,
+  a restrictive deny-all policy, no grant to any application role. The catalogue invariant suite also requires no
+  FORCE on any V13 table.
+- **The fingerprint covers two more parts** than decision 2 lists: column ACLs (a column `GRANT` changes access as much
+  as a table grant) and user triggers with their enabled state (the append-only triggers are access rules; disabling
+  one must change the version). Both stay inside `cdf_notifications_v13`.
+- **`fingerprint` is not unique.** A later migration could legitimately return the policy to an earlier state; the
+  register then records a new version with the same fingerprint.
