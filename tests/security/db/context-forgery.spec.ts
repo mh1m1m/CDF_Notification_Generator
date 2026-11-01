@@ -153,6 +153,28 @@ const REGISTRY: Record<string, Probe[]> = {
     call: (tx) => tx`select * from cdf_notifications_v13.case_tasks(${c})`,
     nobody: noRows,
   })),
+  "case_events_page(p_case_id uuid, p_after_cursor text, p_after_id uuid, p_limit integer)": CASES.map(
+    (c) => ({
+      label: `case_events_page ${c.slice(-2)}`,
+      call: (tx) => tx`select * from cdf_notifications_v13.case_events_page(${c}, null, null, 100)`,
+      nobody: noRows,
+    }),
+  ),
+  "case_tasks_page(p_case_id uuid, p_after_cursor text, p_after_id uuid, p_limit integer)": CASES.map(
+    (c) => ({
+      label: `case_tasks_page ${c.slice(-2)}`,
+      call: (tx) => tx`select * from cdf_notifications_v13.case_tasks_page(${c}, null, null, 100)`,
+      nobody: noRows,
+    }),
+  ),
+  "case_notifications_page(p_case_id uuid, p_after_cursor text, p_after_id uuid, p_limit integer)": CASES.map(
+    (c) => ({
+      label: `case_notifications_page ${c.slice(-2)}`,
+      call: (tx) => tx`select * from cdf_notifications_v13.case_notifications_page(${c}, null, null, 100)`,
+      nobody: noRows,
+    }),
+  ),
+  "_page_limit(p_limit integer)": [],
   "case_notifications(p_case_id uuid)": CASES.map((c) => ({
     label: `case_notifications ${c.slice(-2)}`,
     call: (tx) => tx`select * from cdf_notifications_v13.case_notifications(${c})`,
