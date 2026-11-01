@@ -3,7 +3,15 @@
 // browser in the e2e job, before the suites it guards matter. Each forbidden form is planted into a synthetic source
 // first, so a guard that cannot see it fails here before it is trusted. SYNTHETIC data only.
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join, relative } from "node:path";
 import { expect, test } from "@playwright/test";
 import ts from "typescript";
@@ -509,17 +517,65 @@ test.describe("G7: visual baselines are never written by the runner in CI (V13-Q
     `import { defineConfig } from "@playwright/test";\n${extra}export default defineConfig({\n  testDir: "tests",\n${props}\n});\n`;
   const PINNED = '  updateSnapshots: "none",';
 
+  // Every workflow file is read, so a workflow added later is scanned without a change here (ARCH finding on #152).
+  const flagFiles = (root: string): string[] => {
+    const dir = join(root, ".github", "workflows");
+    const workflows = existsSync(dir)
+      ? readdirSync(dir)
+          .filter((f) => /\.ya?ml$/.test(f))
+          .sort()
+          .map((f) => `.github/workflows/${f}`)
+      : [];
+    return [...workflows, "package.json"];
+  };
+  const scanFlagFiles = (root: string) =>
+    flagFiles(root).flatMap((f) => {
+      const path = join(root, f);
+      return existsSync(path) ? checkSnapshotFlags(f, readFileSync(path, "utf8")) : [];
+    });
+
   test("the real config, every workflow and package.json are clean", () => {
     const src = read(CONFIG);
     expect(src).not.toBeNull();
-    const v = [
-      ...checkSnapshotConfig(CONFIG, src!),
-      ...[".github/workflows/ci.yml", ".github/workflows/release.yml", "package.json"].flatMap((f) => {
-        const text = read(f);
-        return text === null ? [] : checkSnapshotFlags(f, text);
-      }),
-    ];
+    const files = flagFiles(ROOT);
+    expect(files).toEqual(
+      expect.arrayContaining([".github/workflows/ci.yml", ".github/workflows/release.yml", "package.json"]),
+    );
+    const v = [...checkSnapshotConfig(CONFIG, src!), ...scanFlagFiles(ROOT)];
     expect(v, formatGuardViolations(v)).toEqual([]);
+  });
+
+  test("a workflow file added under .github/workflows is scanned (.yml and .yaml) → G7, at its file and line", () => {
+    mkdirSync(join(ROOT, "test-results"), { recursive: true });
+    const dir = mkdtempSync(join(ROOT, "test-results", "guard-g7-"));
+    try {
+      mkdirSync(join(dir, ".github", "workflows"), { recursive: true });
+      writeFileSync(join(dir, ".github", "workflows", "ci.yml"), "name: ci\n      - run: pnpm test\n");
+      writeFileSync(
+        join(dir, ".github", "workflows", "zz-planted.yaml"),
+        "name: planted\n      - run: pnpm exec playwright test --update-snapshots\n",
+      );
+      writeFileSync(
+        join(dir, ".github", "workflows", "visual.yml"),
+        "name: visual\n\n        run: pnpm exec playwright test -u\n",
+      );
+      writeFileSync(join(dir, ".github", "workflows", "notes.md"), "playwright test -u\n");
+      writeFileSync(join(dir, "package.json"), '{ "scripts": { "test": "vitest" } }\n');
+      expect(flagFiles(dir)).toEqual([
+        ".github/workflows/ci.yml",
+        ".github/workflows/visual.yml",
+        ".github/workflows/zz-planted.yaml",
+        "package.json",
+      ]);
+      const v = scanFlagFiles(dir);
+      expect(rulesOf(v), formatGuardViolations(v)).toEqual(["G7"]);
+      expect(v.map((x) => `${x.file}:${x.line}`).sort()).toEqual([
+        ".github/workflows/visual.yml:3",
+        ".github/workflows/zz-planted.yaml:2",
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   test("the pinned form is clean (the control), including readable spreads and literal element access", () => {
