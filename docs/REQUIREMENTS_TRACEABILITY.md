@@ -125,8 +125,8 @@ assessed in the next pass; owners update their rows meanwhile (§6).
 
 | Status | Rows |
 |---|---|
-| COMPLETE | 76 |
-| IN_PROGRESS | 172 |
+| COMPLETE | 75 |
+| IN_PROGRESS | 173 |
 | — of which review-enforced standing rules | 51 |
 | — of which document or configuration evidence only, no test | 44 |
 | BLOCKED | 16 |
@@ -143,7 +143,7 @@ assessed in the next pass; owners update their rows meanwhile (§6).
 | DB | 33 | 16 | 16 | 0 | 1 | 0 |
 | FE | 31 | 13 | 18 | 0 | 0 | 0 |
 | SEC | 27 | 14 | 13 | 0 | 0 | 0 |
-| UX | 26 | 8 | 17 | 0 | 0 | 1 |
+| UX | 26 | 7 | 18 | 0 | 0 | 1 |
 | PROC | 7 | 5 | 2 | 0 | 0 | 0 |
 
 PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
@@ -175,7 +175,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | Gate H | 2 | 0 | 2 | 0 | 0 | 0 |
 | Gate I | 5 | 3 | 2 | 0 | 0 | 0 |
 | Gate J | 10 | 0 | 1 | 9 | 0 | 0 |
-| (none) | 110 | 21 | 83 | 2 | 0 | 4 |
+| (none) | 110 | 20 | 84 | 2 | 0 | 4 |
 
 ### 3.2 Superseded wording (Chief Architect)
 
