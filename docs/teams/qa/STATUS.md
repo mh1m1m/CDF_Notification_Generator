@@ -1,6 +1,6 @@
 # QA status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: test/V13-QA-007-recipient-and-request-rules (base develop fddbff8)
+Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop eee17f7)
 
 ## Completed
 - V13-QA-001 (design) — `docs/qa/TEST_ARCHITECTURE.md` — PR #1 — COMPLETE
@@ -28,9 +28,10 @@ Updated: 2026-11-01 · Branch: test/V13-QA-007-recipient-and-request-rules (base
 - Scenario E (notification draft) is FE's spec in #51, reviewed by QA.
 - V13-QA-003/004 DB half — PRs #68 (D1–D3, U1–U4), #73 (T9 preview-frame rule set), #78 (OI-046, OI-047, read
   functions, Epsilon/Zeta, CASE-014 triage, Scenario A history helper) — merged (24616f6).
-- V13-QA-007 (OI-048, REQ-QA-013) — this branch — IN_PROGRESS (review): **D4** (a notification's recipient persona
-  not on that case's team when it was created) and **P3/P4** (outbound request bodies: form posts, Server Action
-  calls); planted-fault self-tests and a real-app check. The D4 join awaits DB's agreement through ARCH.
+- V13-QA-007 (OI-048, REQ-QA-013) — PR #84 — merged (eee17f7): **D4** (a notification's recipient persona not on
+  that case's team when it was created) and **P3/P4** (outbound request bodies: Server Actions, form posts, fetch).
+- V13-QA-008 (REQ-CASE-014, §7.1) — this branch — IN_PROGRESS (review): leak-suite guard G1–G4 (no pin, focus or
+  unlisted skip on a leak-detection suite), planted negatives for every form.
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |
@@ -49,12 +50,13 @@ Updated: 2026-11-01 · Branch: test/V13-QA-007-recipient-and-request-rules (base
 | #63 FE-007 | CHANGES e1434b4 → ACCEPT ab52116 | OI-042 + OI-043; former pins 35/35 at repeat-each=5; mutation check |
 | #74 FE-006 part 3 | CHANGES 982bd76 | preview link's accessible name uses raw codes; OI-037 notice shows the bare code |
 | #76 UX-008a | CHANGES bc42998 → ACCEPT c2a849f | switcher panel off screen at 768/900; two banner landmarks |
+| #74 FE-006 part 3 (re-review) | ACCEPT e8829ce | accessible names and the OI-037 notice fixed |
+| #85 UX-008b | ACCEPT 6caa174 | 48 page loads clean; note: table text 12 px (body2) |
+| #81 FE-008 | ACCEPT 5dbe293 | no role shown for Epsilon/Zeta anywhere; controls correct |
 
 ## Changed files (this branch)
-- tests/fixtures/db-snapshot.ts, tests/sentinel/db-sentinel.ts, tests/sentinel/db.spec.ts (D4)
-- tests/sentinel/sentinel.ts, tests/sentinel/planted-request-leak.spec.ts, tests/sentinel/request-leak-app.spec.ts
-  (P3, P4)
-- docs/qa/TEST_ARCHITECTURE.md §7, §7.1; docs/teams/qa/STATUS.md
+- tests/critic/leak-suite-guard.ts, tests/sentinel/leak-suite-guard.spec.ts
+- docs/qa/TEST_ARCHITECTURE.md §7.1; docs/teams/qa/STATUS.md
 
 ## Test evidence
 | Command | Result | Counts | Commit |

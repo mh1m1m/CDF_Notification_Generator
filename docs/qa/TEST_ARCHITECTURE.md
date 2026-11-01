@@ -202,6 +202,18 @@ merges and before any release. It is detected by:
 - SEC's isolation suites: `tests/security/db/case-matrix.spec.ts` (SEC-DB-18, every case-keyed table) and
   `tests/security/e2e/case-pages.spec.ts` (case pages and Server Actions).
 
+The rule is enforced, not only written (V13-QA-008, REQ-CASE-014): `tests/sentinel/leak-suite-guard.spec.ts` (library
+`tests/critic/leak-suite-guard.ts`) reads the source of every suite above and of Scenarios A–E and fails the e2e job on
+**G1** a pin (`test.fail`, `test.fails`, `test.fixme`, `.todo`, `testInfo.fail/fixme`), **G2** a focus (`.only`,
+`fit`, `fdescribe`), **G3** a skip (`.skip`, `.skipIf`, `.runIf`, `xit`/`xdescribe`, `testInfo.skip`) that is not on
+its allow-list, and **G4** a named suite that is missing or an allow-list entry that matches nothing. The allow-list
+holds only environment-conditional skips, each with its reason: the session-secret skips in
+`negative-personas-pinning.spec.ts` and Scenario C (they apply only against an external `V13_E2E_BASE_URL`), and SEC's
+`describe.skipIf(!present)` in `case-matrix.spec.ts` (the CI `test:db` job resets the database first). An
+unconditional skip can never be allow-listed. Comments and strings are blanked before matching; every form is planted
+into a synthetic source in the same spec. Adding a skip to a leak suite therefore needs a reviewed change to the
+allow-list.
+
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 
 Library `tests/truth/inspector.ts`.
