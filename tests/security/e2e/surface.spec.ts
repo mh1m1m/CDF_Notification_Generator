@@ -18,7 +18,7 @@ const LOCAL_BUILD = !process.env.V13_E2E_BASE_URL?.trim();
 const REQUIRED_HEADERS: Record<string, string> = {
   "x-content-type-options": "nosniff",
   "x-frame-options": "DENY",
-  "referrer-policy": "no-referrer",
+  "referrer-policy": "same-origin",
   "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   "strict-transport-security": "max-age=63072000; includeSubDomains",
   "cross-origin-opener-policy": "same-origin",
