@@ -3,7 +3,8 @@
 # Jobs: quality (lint, typecheck, format, db:lint) · unit · rehearsal (scripts/db/rehearse-shared.mjs on a local
 # PostgreSQL 16 cluster) · integration (two throw-away PostgreSQL 17 containers: the db:reset target, and a hosted
 # simulation whose bootstrap superuser is supabase_admin) · build · e2e (Playwright end-to-end, accessibility and
-# browser security suites against the app started on a migrated, seeded throw-away PostgreSQL 17 container). No
+# browser security suites against the app started on a migrated, seeded throw-away PostgreSQL 17 container) · visual
+# (the committed visual baselines, V13-ARCH-014; the full screenshot library runs in visual-library.yml). No
 # repository secrets are used; the database passwords below exist only inside the job's containers and are
 # deliberately not secret.
 #
@@ -207,6 +208,76 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: e2e-test-results
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  visual:
+    name: Visual baselines (Playwright)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # V13-ARCH-014 (docs/qa/M1_OPEN_QA_ROWS_DESIGN.md §3, §5, §8; ruling D2): the `visual-baseline` project against the
+    # same migrated, seeded throw-away database as e2e. Baselines are made only here, because glyphs differ by machine:
+    # the four font packages the app's system font stacks resolve to are installed explicitly (docs/DEPENDENCIES.md)
+    # and their versions printed. While no baseline is committed under tests/visual/__screenshots__/ there is nothing to
+    # compare: the run must then fail on the missing snapshots alone, with one candidate image for each and no baseline
+    # written (scripts/ci/visual-candidates.mjs, which prints each candidate's sha256), and the candidates go into the
+    # artifact. Once baselines are committed, any difference fails the job. No step writes a baseline: updateSnapshots
+    # is "none" and guard G7 refuses an update flag in any workflow. The visual projects record no trace, video or
+    # failure screenshot (playwright.config.ts `visualUse`).
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      V13_ADMIN_DATABASE_URL: postgres://postgres:ci-only-not-a-secret@127.0.0.1:5432/v13_local
+      V13_MIGRATION_RUNNER: ci
+      # The app login with the local-only password db:reset gives it (scripts/db/reset-local.mjs); loopback only.
+      V13_E2E_DATABASE_URL: postgres://cdf_v13_app:local-only-not-a-secret@127.0.0.1:5432/v13_local
+      V13_E2E_VISUAL: baseline
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:reset
+      - name: Install the fonts the baselines are made with
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends fonts-liberation fonts-dejavu-core fonts-crosextra-carlito fonts-noto-core
+          dpkg-query -W -f='${Package} ${Version}\n' fonts-liberation fonts-dejavu-core fonts-crosextra-carlito fonts-noto-core
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Compare with the committed baselines, or make candidates while none is committed
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/visual-baseline.json
+        run: |
+          if [ -n "$(find tests/visual/__screenshots__ -name '*.png' -print -quit 2>/dev/null)" ]; then
+            pnpm exec playwright test --project=visual-baseline
+          else
+            # A retry cannot make a missing snapshot exist, so the candidate run makes one attempt per test.
+            rc=0
+            pnpm exec playwright test --project=visual-baseline --reporter=list,json --retries=0 || rc=$?
+            node scripts/ci/visual-candidates.mjs "$rc" test-results/visual-baseline.json test-results/baseline-candidates tests/visual/__screenshots__
+          fi
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: visual-results
           path: |
             test-results/
             playwright-report/
