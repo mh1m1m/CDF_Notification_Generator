@@ -72,6 +72,7 @@
     color: var(--cdf-primary);
     border: var(--cdf-border-hairline) solid var(--cdf-primary);
     border-radius: var(--cdf-radius-control);
+    max-inline-size: calc(100vw - 2 * var(--cdf-space-3));
   }
 
   .v13-skip-link:not(:focus) {
@@ -552,14 +553,16 @@
   }
 
   /* SideNav: a column at the inline start from 768 px, a horizontal scroll row below */
+  /* Under 768 px the areas are a row that wraps, never a row that scrolls: at 320 px (400% zoom) every area stays
+     visible without horizontal scrolling (WCAG 1.4.10, UX-009 R-01). */
   .v13-side-nav {
     background-color: var(--cdf-surface);
     border-block-end: var(--cdf-border-hairline) solid var(--cdf-border);
-    overflow-x: auto;
   }
 
   .v13-side-nav ul {
     display: flex;
+    flex-wrap: wrap;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -594,7 +597,6 @@
       inline-size: 15rem;
       border-block-end: 0;
       border-inline-end: var(--cdf-border-hairline) solid var(--cdf-border);
-      overflow-x: visible;
     }
 
     .v13-side-nav ul {
@@ -755,14 +757,16 @@
     border-radius: var(--cdf-radius-control);
   }
 
+  /* The tab row wraps rather than scrolls, so no case section is hidden off-screen at 320 px (WCAG 1.4.10, UX-009
+     R-02; supersedes the scrolling row of M1-12). */
   .v13-case-tabs {
     margin-block-end: var(--cdf-space-6);
     border-block-end: var(--cdf-border-hairline) solid var(--cdf-border-control);
-    overflow-x: auto;
   }
 
   .v13-case-tabs ul {
     display: flex;
+    flex-wrap: wrap;
     margin: 0;
     padding: 0;
     list-style: none;
