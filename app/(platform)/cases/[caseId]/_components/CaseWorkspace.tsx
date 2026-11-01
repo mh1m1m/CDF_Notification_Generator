@@ -25,7 +25,6 @@ import {
   CAPACITY_KEYS,
   eventLabel,
   notificationStatusLabel,
-  numberFormat,
   PROVENANCE_KEYS,
   recipientClassLabel,
   stageLabel,
@@ -524,7 +523,6 @@ function DraftNoticeView({ t, notice }: { t: Translator; notice: DraftNotice | n
 
 /** Server-side preparation of the Scenario E form: ids and already-localised strings only. */
 function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; draft: DraftFormView }) {
-  const num = numberFormat(locale);
   return (
     <DraftForm
       caseId={draft.caseId}
@@ -535,7 +533,9 @@ function DraftFormFor({ t, locale, draft }: { t: Translator; locale: Locale; dra
         label: t("case.draft.templateOption", {
           name: o.template_name[locale],
           code: o.template_code,
-          version: num.format(o.version),
+          // A version is an identifier: Latin digits in both languages, never grouped (D10). An <option> holds
+          // text only, so no <bdi> here.
+          version: String(o.version),
           language: t(o.language === "ar" ? "case.language.ar" : "case.language.en"),
         }),
       }))}

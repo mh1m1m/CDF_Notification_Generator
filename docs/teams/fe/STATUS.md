@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 02:41 UTC · Branch: fix/V13-FE-010-notification-tables-caption (develop 11fad34 merged in; #82 merged) · Head: see PR
+Updated: 2026-11-01 02:48 UTC · Branch: fix/V13-FE-010-notification-tables-caption (develop 68a42b9 merged in; #82 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -84,7 +84,8 @@ Updated: 2026-11-01 02:41 UTC · Branch: fix/V13-FE-010-notification-tables-capt
   both captions stay inside the region and wrap, also after scrolling to the far end. Unused case.module.css table
   rules removed. Added scope (ARCH 02:34, QA on 961197e): the tab's created time uses `formatDateTime` (month in words,
   as in the Center; UXB-02) and the version is Latin in `<bdi>` (UXB-04, D10); the unused `dateTimeFormat` helper is
-  removed — IN_REVIEW (QA).
+  removed. ARCH 02:42: the draft form's template option shows the version as Latin digits, never grouped (D10; an
+  `<option>` holds text only, so no `<bdi>`) — IN_REVIEW (QA).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -184,6 +185,7 @@ Updated: 2026-11-01 02:41 UTC · Branch: fix/V13-FE-010-notification-tables-capt
 | FE-009 after merging develop f11e65a (#90 UX-008(c), SEC-009 #87): conflicts in CaseWorkspace.tsx and case.module.css resolved to develop's version (FE caption + timeline hunks dropped), frame title re-applied, M1-09 unit tests moved to the DataTable caption markup. Commands: lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 78 files, 2008 / 468 / 231 of 231 | FE-009 head |
 | FE-010 on develop 961197e: new unit pins (case tab DataTable markup, sticky caption, row ids and ADR-013 attributes, ar/en; Center caption span + size-container region; removing either Center class fails the pin, checked) and e2e at 320 px (Center + case tab, ar/en, caption inside the region before and after scrolling; all 4 fail on develop's markup, checked). Commands: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 78 files, 2011 / 468 / 235 of 235 | FE-010 head |
 | FE-010 + UXB-02/UXB-04 (case tab dates and version) after merging develop 11fad34: unit pins in ar and en for the month-in-words created time (equals `formatDateTime`, no `/`) and the Latin `<bdi>` version; restoring the numeric date or `numberFormat` version fails them (checked). Commands as above | pass | 79 files, 2018 / 468 / 235 of 235 | FE-010 head |
+| FE-010 + draft option version (D10) after merging develop 68a42b9: unit pin in ar and en with version 1234 ("الإصدار 1234" / "version 1234", no Arabic-Indic digits, no grouping); numberFormat output fails it (checked). Commands as above | pass | 80 files, 2026 / 468 / 235 of 235 | FE-010 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
