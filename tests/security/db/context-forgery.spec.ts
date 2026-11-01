@@ -17,6 +17,7 @@ import {
   asPersona,
   asRaw,
   attempt,
+  attemptRolledBack,
   claimsText,
   databaseReady,
   executableFunctions,
@@ -271,7 +272,8 @@ async function sweep(tx: Tx, tables: { name: string }[], personaOnly = false): P
   for (const probes of Object.values(REGISTRY)) {
     for (const p of probes) {
       if (personaOnly && p.identity) continue;
-      const verdict = p.nobody(await attempt(tx, p.call));
+      // Each probe's savepoint is rolled back, so one command's mark (V13-DB-021 R1) does not refuse the next probe.
+      const verdict = p.nobody(await attemptRolledBack(tx, p.call));
       if (verdict) leaks.push(`${p.label}: ${verdict}`);
     }
   }
@@ -297,6 +299,54 @@ describe.skipIf(!present)(
       const executable = await asPersona(sql, PERSONA.alpha, "SECRETARIAT", (tx) => executableFunctions(tx));
       expect(executable).toEqual(Object.keys(REGISTRY).sort());
       expect(tables.length).toBeGreaterThanOrEqual(18);
+    });
+
+    // V13-DB-021 R3 (migration 0013): the command bodies, the REFUSED writer, the shared append and the command slot
+    // are owner-only. Not in REGISTRY (the request role cannot execute them); called directly here, each is 42501.
+    it("SEC-DB-17 the 0013 internals are not executable by the request role (42501), even with a valid context", async () => {
+      const internals: [string, (tx: Tx) => Promise<unknown>][] = [
+        [
+          "_api_update_task_status_impl",
+          (tx) => tx`select * from ${tx(SCHEMA)}._api_update_task_status_impl(${TASK(1)}, 'BLOCKED', 1)`,
+        ],
+        [
+          "_api_create_notification_draft_impl",
+          (tx) =>
+            tx`select * from ${tx(SCHEMA)}._api_create_notification_draft_impl(${ALL_CASES[0]!}, ${TEMPLATE_VERSION(1)}, 'CASE_TEAM', ${KEY})`,
+        ],
+        [
+          "_api_switch_workspace_impl",
+          (tx) => tx`select * from ${tx(SCHEMA)}._api_switch_workspace_impl(${WORKSPACE.SECRETARIAT})`,
+        ],
+        [
+          "_api_install_claims_key_impl",
+          (tx) => tx`select ${tx(SCHEMA)}._api_install_claims_key_impl(${Buffer.alloc(32, 1)})`,
+        ],
+        [
+          "_append_audit_refused",
+          (tx) =>
+            tx`select ${tx(SCHEMA)}._append_audit_refused('api_update_task_status', 'V1404', 'task', null, null)`,
+        ],
+        [
+          "_append_audit_row",
+          (tx) => tx`select ${tx(SCHEMA)}._append_audit_row('X', 'test', null, null, '{}'::jsonb, 'REFUSED')`,
+        ],
+        [
+          "_append_audit",
+          (tx) => tx`select ${tx(SCHEMA)}._append_audit('X', 'test', null, null, '{}'::jsonb)`,
+        ],
+        ["_claim_command_slot", (tx) => tx`select ${tx(SCHEMA)}._claim_command_slot()`],
+      ];
+      const codes = await asRaw(
+        sql,
+        { claims: claimsText(PERSONA.alpha, WORKSPACE.SECRETARIAT), mac: "valid" },
+        async (tx) => {
+          const out: Record<string, string | undefined> = {};
+          for (const [name, call] of internals) out[name] = (await attemptRolledBack(tx, call)).code;
+          return out;
+        },
+      );
+      expect(codes).toEqual(Object.fromEntries(internals.map(([name]) => [name, "42501"])));
     });
 
     it("control: a valid Secretary Alpha context is somebody (the sweep would see a leak)", async () => {

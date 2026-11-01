@@ -4,9 +4,10 @@
 //  - one success, which writes exactly one audit row carrying the verified claims' actor, workspace and correlation
 //    id, and leaves the chain valid;
 //  - refusals (unknown id, another case's or a hidden object, the restricted case from a workspace member, the closed
-//    case, a stale version, a replayed key, injection strings in every text argument), each of which writes no audit
-//    row and changes nothing;
-//  - unknown and unauthorised give the same SQLSTATE and the same message.
+//    case, a stale version, a replayed key, injection strings in every text argument), each of which changes nothing
+//    and, since migration 0013 (V13-DB-021), writes exactly one COMMAND_REFUSED audit row with codes only: no id for
+//    V1401/V1404, the target and its case for V1409/V1422/V1423 on a case the caller can access;
+//  - unknown and unauthorised give the same code, the same (absent) message and the same audit row.
 // The audit ledger is unreadable for the request role, so each case runs on the administrator connection: the
 // request context is set exactly as withRequestContext sets it, the command runs as cdf_v13_user, then the role is
 // reset to read the ledger in the same transaction, which is always rolled back.
@@ -46,6 +47,9 @@ interface Run {
   outcome: Outcome;
   audit: {
     action: string;
+    outcome: string;
+    entity: string | null;
+    metadata: Record<string, unknown>;
     actor: string | null;
     workspace: string | null;
     correlation: string | null;
@@ -78,6 +82,9 @@ async function runAs(
         }
         return out;
       };
+      // Since 0013 a refusal writes one row per (persona or none, command, code) per 60 s window; clear the windows
+      // (rolled back with the rest) so an earlier suite's refusal does not suppress the row this run inspects.
+      await tx`delete from cdf_notifications_v13.refusal_window`;
       const before = await counts();
       const [seqRow] = await tx<{ seq: string }[]>`
         select coalesce(max(seq), 0)::text as seq from cdf_notifications_v13.audit_event`;
@@ -93,7 +100,8 @@ async function runAs(
       const outcome = await attempt(tx as unknown as Tx, call);
       await tx.unsafe("reset role");
       const audit = await tx<Run["audit"]>`
-        select action, actor_persona_id::text as actor, workspace_id::text as workspace,
+        select action, outcome, entity_id::text as entity, metadata, actor_persona_id::text as actor,
+               workspace_id::text as workspace,
                correlation_id::text as correlation, case_id::text as case_id
           from cdf_notifications_v13.audit_event where seq > ${seq}::bigint order by seq`;
       const [validRow] = await tx<{ valid: boolean }[]>`
@@ -119,6 +127,9 @@ const draft =
     tx`select * from cdf_notifications_v13.api_create_notification_draft(${caseId}, ${tv}, ${recipient}, ${key})`;
 const switchTo = (ws: string) => (tx: Tx) =>
   tx`select * from cdf_notifications_v13.api_switch_workspace(${ws})`;
+const UPD = "api_update_task_status";
+const DRF = "api_create_notification_draft";
+const SWT = "api_switch_workspace";
 
 /** Strings an attacker would put in a text argument. Each must be refused as invalid input and stored nowhere. */
 const INJECTIONS = [
@@ -198,6 +209,9 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
         expect(run.audit).toEqual([
           {
             action: c.action,
+            outcome: "SUCCEEDED",
+            entity: expect.any(String),
+            metadata: expect.any(Object),
             actor: c.persona,
             workspace: c.ws,
             correlation: CORRELATION,
@@ -210,12 +224,53 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
     }
   });
 
-  describe("SEC-DB-08/10/11/15 refusals write nothing and change nothing", () => {
-    const refusals: [string, string | null, string, (tx: Tx) => Promise<unknown>, string][] = [
-      ["no context: update", null, WORKSPACE.SECRETARIAT, update(TASK(2), "IN_PROGRESS", 1), "V1401"],
-      ["no context: draft", null, WORKSPACE.SECRETARIAT, draft(CASE(1), "CASE_TEAM", KEY(2)), "V1401"],
-      ["no context: switch", null, WORKSPACE.SECRETARIAT, switchTo(WORKSPACE.SECRETARIAT), "V1401"],
-      ["unknown task", PERSONA.alpha, WORKSPACE.SECRETARIAT, update(UNKNOWN_TASK, "IN_PROGRESS", 1), "V1404"],
+  describe("SEC-DB-08/10/11/15 refusals change nothing and write one ids-only COMMAND_REFUSED row", () => {
+    /** [label, persona, workspace, call, code, command, case and entity on the row (only for an accessible case)]. */
+    const refusals: [
+      string,
+      string | null,
+      string,
+      (tx: Tx) => Promise<unknown>,
+      string,
+      string,
+      { caseId: string; entity: string | null } | null,
+    ][] = [
+      [
+        "no context: update",
+        null,
+        WORKSPACE.SECRETARIAT,
+        update(TASK(2), "IN_PROGRESS", 1),
+        "V1401",
+        UPD,
+        null,
+      ],
+      [
+        "no context: draft",
+        null,
+        WORKSPACE.SECRETARIAT,
+        draft(CASE(1), "CASE_TEAM", KEY(2)),
+        "V1401",
+        DRF,
+        null,
+      ],
+      [
+        "no context: switch",
+        null,
+        WORKSPACE.SECRETARIAT,
+        switchTo(WORKSPACE.SECRETARIAT),
+        "V1401",
+        SWT,
+        null,
+      ],
+      [
+        "unknown task",
+        PERSONA.alpha,
+        WORKSPACE.SECRETARIAT,
+        update(UNKNOWN_TASK, "IN_PROGRESS", 1),
+        "V1404",
+        UPD,
+        null,
+      ],
       // SEC-DB-08: another case's object. Alpha's own context; task 3 belongs to 0002, which Alpha cannot see.
       [
         "task of a hidden case (0002)",
@@ -223,6 +278,8 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
         WORKSPACE.SECRETARIAT,
         update(TASK(3), "IN_PROGRESS", 1),
         "V1404",
+        UPD,
+        null,
       ],
       // SEC-DB-11: restricted case from a member of its owning workspace who is not assigned.
       [
@@ -231,6 +288,8 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
         WORKSPACE.INVESTIGATIONS,
         update(TASK(17), "IN_PROGRESS", 1),
         "V1404",
+        UPD,
+        null,
       ],
       [
         "restricted case draft (Gamma)",
@@ -238,6 +297,8 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
         WORKSPACE.INVESTIGATIONS,
         draft(RESTRICTED_CASE, "CASE_TEAM", KEY(3)),
         "V1404",
+        DRF,
+        null,
       ],
       [
         "restricted case draft (Alpha, visible workspace, not assigned)",
@@ -245,6 +306,8 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
         WORKSPACE.SECRETARIAT,
         draft(RESTRICTED_CASE, "CASE_TEAM", KEY(4)),
         "V1404",
+        DRF,
+        null,
       ],
       // SEC-DB-10: closed case, for a persona who can see it.
       [
@@ -253,17 +316,37 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
         WORKSPACE.SECRETARIAT,
         draft(CLOSED_CASE, "CASE_TEAM", KEY(5)),
         "V1423",
+        DRF,
+        { caseId: CLOSED_CASE, entity: null },
       ],
       // SEC-DB-09: stale version.
-      ["stale version", PERSONA.beta, WORKSPACE.INVESTIGATIONS, update(TASK(1), "BLOCKED", 2), "V1409"],
-      ["null version", PERSONA.beta, WORKSPACE.INVESTIGATIONS, update(TASK(1), "BLOCKED", null), "V1409"],
-      // Wrong role for a draft (Governance only).
+      [
+        "stale version",
+        PERSONA.beta,
+        WORKSPACE.INVESTIGATIONS,
+        update(TASK(1), "BLOCKED", 2),
+        "V1409",
+        UPD,
+        { caseId: CASE(1), entity: TASK(1) },
+      ],
+      [
+        "null version",
+        PERSONA.beta,
+        WORKSPACE.INVESTIGATIONS,
+        update(TASK(1), "BLOCKED", null),
+        "V1409",
+        UPD,
+        { caseId: CASE(1), entity: TASK(1) },
+      ],
+      // Wrong role for a draft (Governance only): the role check answers V1404, so no id either.
       [
         "draft by Governance Delta",
         PERSONA.delta,
         WORKSPACE.GOVERNANCE,
         draft(CASE(8), "CASE_TEAM", KEY(6)),
         "V1404",
+        DRF,
+        null,
       ],
       [
         "switch to a non-member workspace",
@@ -271,6 +354,8 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
         WORKSPACE.SECRETARIAT,
         switchTo(WORKSPACE.INVESTIGATIONS),
         "V1404",
+        SWT,
+        null,
       ],
       [
         "inactive template version or unknown one",
@@ -278,26 +363,43 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
         WORKSPACE.SECRETARIAT,
         draft(CASE(1), "CASE_TEAM", KEY(7), "1f000000-0000-4000-8000-0000000000ff"),
         "V1422",
+        DRF,
+        { caseId: CASE(1), entity: null },
+      ],
+      [
+        "closed case, own task 19 (Alpha)",
+        PERSONA.alpha,
+        WORKSPACE.SECRETARIAT,
+        update(TASK(19), "OPEN", 1),
+        "V1423",
+        UPD,
+        { caseId: CLOSED_CASE, entity: TASK(19) },
       ],
     ];
-    for (const [label, persona, ws, call, code] of refusals) {
+    for (const [label, persona, ws, call, code, command, target] of refusals) {
       it(`${label}: ${code}`, async () => {
         const run = await runAs(admin, persona, ws, call);
         expect({ ok: run.outcome.ok, code: run.outcome.code }).toEqual({ ok: false, code });
-        expect(run.audit).toEqual([]);
-        expect(run.delta).toEqual({});
+        expect(run.outcome.message).toBeUndefined();
+        expect(run.audit).toEqual([
+          {
+            action: "COMMAND_REFUSED",
+            outcome: "REFUSED",
+            entity: target?.entity ?? null,
+            metadata: { command, refusal: code },
+            actor: persona,
+            workspace: persona ? ws : null,
+            correlation: persona ? CORRELATION : null,
+            case_id: target?.caseId ?? null,
+          },
+        ]);
+        expect(run.chainValid).toBe(true);
+        expect(run.delta).toEqual({ audit_event: 1 });
       });
     }
-
-    it("closed case, own task 19 (Alpha): V1423, nothing written", async () => {
-      const run = await runAs(admin, PERSONA.alpha, WORKSPACE.SECRETARIAT, update(TASK(19), "OPEN", 1));
-      expect(run.outcome.code).toBe("V1423");
-      expect(run.audit).toEqual([]);
-      expect(run.delta).toEqual({});
-    });
   });
 
-  describe("SEC-DB-19 unknown and unauthorised give the same SQLSTATE and the same message", () => {
+  describe("SEC-DB-19 unknown and unauthorised give the same code, the same message and the same audit row", () => {
     const pairs: [string, string, string, (tx: Tx) => Promise<unknown>, (tx: Tx) => Promise<unknown>][] = [
       [
         "update: hidden task vs unknown task",
@@ -337,26 +439,35 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
           code: b.outcome.code,
           message: b.outcome.message,
         });
+        // V13-DB-021 §4.1: the two REFUSED rows are identical (no id), apart from seq, time and hashes.
+        expect(a.audit).toHaveLength(1);
+        expect(a.audit).toEqual(b.audit);
       });
     }
   });
 
   describe("SEC-DB-14 injection strings in every text argument are refused as input and stored nowhere", () => {
+    // Since 0013 the refusal leaves one COMMAND_REFUSED row whose metadata holds two allow-listed codes only.
+    const storedNowhere = (run: Run, s: string) => {
+      expect(run.delta, s.slice(0, 30)).toEqual({ audit_event: 1 });
+      expect(JSON.stringify(run.audit), s.slice(0, 30)).not.toContain(s);
+      expect(run.audit[0]?.metadata).toEqual({ command: expect.any(String), refusal: "V1422" });
+    };
     it("api_update_task_status p_new_status", async () => {
       for (const s of INJECTIONS) {
         const run = await runAs(admin, PERSONA.beta, WORKSPACE.INVESTIGATIONS, update(TASK(1), s, 1));
         expect(run.outcome.code, s.slice(0, 30)).toBe("V1422");
-        expect(run.delta).toEqual({});
+        storedNowhere(run, s);
       }
     });
     it("api_create_notification_draft p_recipient_class and p_idempotency_key", async () => {
       for (const s of INJECTIONS) {
         const a = await runAs(admin, PERSONA.alpha, WORKSPACE.SECRETARIAT, draft(CASE(1), s, KEY(10)));
         expect(a.outcome.code, s.slice(0, 30)).toBe("V1422");
-        expect(a.delta).toEqual({});
+        storedNowhere(a, s);
         const b = await runAs(admin, PERSONA.alpha, WORKSPACE.SECRETARIAT, draft(CASE(1), "CASE_TEAM", s));
         expect(b.outcome.code, s.slice(0, 30)).toBe("V1422");
-        expect(b.delta).toEqual({});
+        storedNowhere(b, s);
       }
     });
     it("a NUL byte is refused by the driver or the server, never stored", async () => {
@@ -367,24 +478,46 @@ describe.skipIf(!present)("SEC-DB-08..17 state-changing commands", () => {
         draft(CASE(1), "CASE_TEAM\u0000", KEY(11)),
       );
       expect(run.outcome.ok).toBe(false);
-      expect(run.delta).toEqual({});
+      // Refused by the driver (nothing sent) or as input (V1422, one codes-only row); no notification either way.
+      expect(run.delta.notification ?? 0).toBe(0);
+      expect(JSON.stringify(run.audit)).not.toContain("\\u0000");
     });
   });
 
-  describe("SEC-DB-09 / SEC-DB-15 replays inside one transaction", () => {
-    it("the same expected version twice: the second update is stale (V1409), one audit row in all", async () => {
+  // Since 0013 a transaction runs one command (V13-DB-021 R1): a second call is refused V1500 (tests/integration/
+  // refused-command-audit.spec.ts). The replay is therefore a first write by the command's body (_impl, as the
+  // administrator under the same verified claims), then the command; everything is rolled back.
+  describe("SEC-DB-09 / SEC-DB-15 replays", () => {
+    const viaImpl = (sql: (tx: Tx) => Promise<unknown>) => async (tx: Tx) => {
+      await tx`reset role`;
+      await sql(tx);
+      await tx`select pg_catalog.set_config('role', 'cdf_v13_user', true)`;
+    };
+    it("the same expected version twice: the second update is stale (V1409)", async () => {
       const run = await runAs(admin, PERSONA.beta, WORKSPACE.INVESTIGATIONS, async (tx) => {
-        await update(TASK(1), "BLOCKED", 1)(tx);
+        await viaImpl(
+          (t) =>
+            t`select * from cdf_notifications_v13._api_update_task_status_impl(${TASK(1)}, 'BLOCKED', 1)`,
+        )(tx);
         return update(TASK(1), "IN_PROGRESS", 1)(tx);
       });
       expect(run.outcome.code).toBe("V1409");
+      expect(run.audit.map((r) => [r.action, r.outcome])).toEqual([
+        ["TASK_STATUS_CHANGED", "SUCCEEDED"],
+        ["COMMAND_REFUSED", "REFUSED"],
+      ]);
     });
     it("the same idempotency key twice by the same author: V1409, and the key under another case does not create", async () => {
       const run = await runAs(admin, PERSONA.alpha, WORKSPACE.SECRETARIAT, async (tx) => {
-        await draft(CASE(1), "CASE_TEAM", KEY(12))(tx);
+        await viaImpl(
+          (t) =>
+            t`select * from cdf_notifications_v13._api_create_notification_draft_impl(
+                ${CASE(1)}, ${TEMPLATE_VERSION(1)}, 'CASE_TEAM', ${KEY(12)})`,
+        )(tx);
         return draft(CASE(3), "CASE_TEAM", KEY(12))(tx);
       });
       expect(run.outcome.code).toBe("V1409");
+      expect(run.delta).toEqual({ notification: 1, notification_event: 1, audit_event: 2 });
     });
   });
 
