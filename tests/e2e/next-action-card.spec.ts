@@ -1,5 +1,6 @@
 // Next Action Card in the browser (V13-QA-020; V13-FE-015, PROC-026 nextActionForCase; SCREENS S3). FE's unit tests
 // pin the wiring; this suite pins what a person sees, in Arabic and English at 320 px:
+//   - the card is the overview's first element, before the stage card (SCREENS S3);
 //   - the card shows for a persona with an own open task, names one of those tasks, and its link opens that task's row
 //     on the overview (the row becomes :target);
 //   - nothing at all renders for NONE (no card, no heading);
@@ -61,6 +62,23 @@ async function expectNoSidewaysScroll(page: Page) {
   expect(overflow, "no horizontal scrolling at 320 px").toBeLessThanOrEqual(0);
 }
 
+/** The card is the overview's first element child and comes before the stage card (SCREENS S3: first in the overview). */
+async function expectCardFirst(page: Page) {
+  const order = await page.getByTestId("case-overview").evaluate((overview) => {
+    const card = overview.querySelector('[data-testid="next-action-card"]');
+    const stage = overview.querySelector('[data-testid="case-overview-stage"]');
+    return {
+      first: overview.firstElementChild?.getAttribute("data-testid") ?? null,
+      cardBeforeStage:
+        card !== null &&
+        stage !== null &&
+        (card.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+    };
+  });
+  expect(order.first, "the card is the overview's first element").toBe("next-action-card");
+  expect(order.cardBeforeStage, "the card comes before the stage card").toBe(true);
+}
+
 const isTarget = (page: Page, taskId: string) =>
   page.locator(`[id="task-${taskId}"]`).evaluate((el) => el.matches(":target"));
 
@@ -72,7 +90,7 @@ for (const locale of LOCALES) {
       await context.addCookies([{ name: LOCALE_COOKIE, value: locale, url: baseURL! }]);
     });
 
-    test("shows one of the persona's own open tasks, and its link opens that row as :target", async ({
+    test("shows one of the persona's own open tasks first in the overview, and its link opens that row as :target", async ({
       page,
     }) => {
       const withTasks = (await casesWithOwnTasks()).filter((c) => c.tasks.length > 0);
@@ -90,6 +108,7 @@ for (const locale of LOCALES) {
         await expect(card).toHaveAttribute("data-task-code", c.tasks.find((t) => t.id === taskId)!.task_code);
         const link = page.getByTestId("next-action-link");
         await expect(link).toHaveAttribute("href", `/cases/${c.id}#task-${taskId}`);
+        await expectCardFirst(page);
         await expectNoSidewaysScroll(page);
 
         await link.click();
@@ -132,6 +151,7 @@ for (const locale of LOCALES) {
       await expect(card).toHaveAttribute("data-task-id", firstPageTask!);
       const link = page.getByTestId("next-action-link");
       await expect(link).toHaveAttribute("href", `/cases/${id}#task-${firstPageTask}`);
+      await expectCardFirst(page);
       await expectNoSidewaysScroll(page);
 
       await link.click();
