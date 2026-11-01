@@ -26,7 +26,7 @@ const FILE = "tests/e2e/planted.spec.ts";
 const wrap = (body: string) => `import { expect, test } from "@playwright/test";\n${body}\n`;
 
 test("every §7.1 leak-detection suite exists and carries no pin, focus or unlisted skip", () => {
-  expect(LEAK_SUITES.length).toBeGreaterThanOrEqual(13);
+  expect(LEAK_SUITES.length).toBeGreaterThanOrEqual(15);
   const v = guardLeakSuites(read);
   expect(v, formatGuardViolations(v)).toEqual([]);
 });
@@ -35,8 +35,10 @@ test("each allow-listed skip is environment-conditional and gives its reason", (
   for (const a of SKIP_ALLOWANCES) {
     expect(LEAK_SUITES, a.file).toContain(a.file);
     expect(a.reason.length, a.file).toBeGreaterThan(40);
-    // the condition is an environment check: the session secret, or SEC's database-ready probe
-    expect(a.call.source, a.file).toMatch(/!process\\\.env\\\.V13_E2E_SESSION_SECRET|!present/);
+    // the condition is the session secret, SEC's database-ready probe, or SEC's local-build checks
+    expect(a.call.source, a.file).toMatch(
+      /!process\\\.env\\\.V13_E2E_SESSION_SECRET|!present|!LOCAL_BUILD|!existsSync\\\(root\\\)/,
+    );
   }
 });
 
@@ -79,7 +81,7 @@ test("a pin planted inside every test and describe body of every guarded suite i
       total++;
     }
   }
-  expect(total, "plants across the 13 suites").toBeGreaterThan(100);
+  expect(total, "plants across the guarded suites").toBeGreaterThan(100);
 });
 
 test("CI fails a flaky run: a leak that fails once and passes on retry is not green", () => {
@@ -151,6 +153,30 @@ test.describe("planted negatives are refused", () => {
       "G1",
     ],
     ["a pin after a division", `const half = 4 / 2;\ntest("t", async () => { test.fail(); });`, "G1"],
+    // G5: the runner reached any way but a plain dotted chain or call (SEC, review of bf063a9)
+    ["element access", `test("t", async () => {\n  test["fail"]();\n});`, "G5"],
+    ["element access with a template", 'test("t", async () => {\n  test[`fixme`]();\n});', "G5"],
+    ["element access deeper in the chain", `test.describe["only"]("d", () => {});`, "G5"],
+    ["optional chaining", `test("t", async () => {\n  test?.fail();\n});`, "G5"],
+    ["a non-null assertion", `test("t", async () => {\n  test!.fixme();\n});`, "G5"],
+    ["parentheses", `test("t", async () => {\n  (test).fail();\n});`, "G5"],
+    ["an alias", `const t = test;\nt.fail();`, "G5"],
+    ["a destructured alias", `const { fixme } = test;\nfixme();`, "G5"],
+    ["the runner passed as an argument", `wrap(test);`, "G5"],
+    ["a renamed import", `import { test as base } from "@playwright/test";\nbase.fixme();`, "G5"],
+    ["a namespace import", `import * as pw from "vitest";\npw.describe("d", () => {});`, "G5"],
+    ["a runner imported from elsewhere", `import { test as t2 } from "./fixtures";`, "G5"],
+    ["test imported from a fixture file", `import { test } from "./fixtures";`, "G5"],
+    ["the runner declared again", `const test = base.extend({});`, "G5"],
+    [
+      "test.info() kept in a variable",
+      `test("t", async () => {\n  const i = test.info();\n  i.fail();\n});`,
+      "G5",
+    ],
+    ["testInfo under another name", `test("t", async ({}, info) => {\n  info.skip();\n});`, "G5"],
+    ["Vitest retry on a describe", `describe("d", { retry: 3 }, () => {});`, "G5"],
+    ["Vitest retry on a test", `it("t", { retry: 2 }, () => {});`, "G5"],
+    ["Playwright retries in configure", `test.describe.configure({ retries: 2 });`, "G5"],
   ];
   for (const [form, body, rule] of cases)
     test(`${form} → ${rule}`, () => {
@@ -193,9 +219,11 @@ test.describe("what is not a pin, focus or skip", () => {
 
   test("identifiers that only end in test/it are not hits (contest.skip, latest.only, submit.fail)", () => {
     const src = wrap(
-      `const contest = { skip() {} }; contest.skip(); const latest = { only: 1 }; latest.only; submit.fail;`,
+      `const contest = { skip: 1 }; contest.skip; const latest = { only: 1 }; latest.only; submit.fail;`,
     );
     expect(scanSuite(FILE, src, [])).toEqual([]);
+    // calling such a method is G5 in a guarded suite, whatever the object (only test/it/describe/suite may be pinned)
+    expect(rulesOf(scanSuite(FILE, wrap(`contest.skip();`), []))).toEqual(["G5"]);
   });
 
   test("an allow-listed conditional skip passes and marks its entry used", () => {
@@ -217,6 +245,13 @@ test.describe("what is not a pin, focus or skip", () => {
   test("codeOnly keeps line numbers", () => {
     const src = "a\n// x\n'b\nc'\n/* d\ne */\nf\n`g\n${h}\ni`\n/j\\//;\nk";
     expect(codeOnly(src).split("\n")).toHaveLength(src.split("\n").length);
+  });
+
+  test("an unescaped regular expression that names the forms is not a hit", () => {
+    // `test.only` and `it.skip(` here would match G2 and G3 if regex literals were left as code (ARCH, bf063a9)
+    expect(scanSuite(FILE, wrap(`const r = /test.only|it.skip()/;\nexpect(r).toBeTruthy();`), [])).toEqual(
+      [],
+    );
   });
 
   test("a regular expression that names the forms is not a hit", () => {

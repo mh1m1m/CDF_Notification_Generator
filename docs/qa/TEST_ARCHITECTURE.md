@@ -199,28 +199,34 @@ merges and before any release. It is detected by:
   proven by `tests/sentinel/planted-leak.spec.ts` and `tests/sentinel/planted-request-leak.spec.ts`;
 - the Sentinel's database half (`tests/sentinel/db.spec.ts`, D1–D4, five persona/workspace pairs);
 - the negative-persona pins (`tests/e2e/negative-personas-pinning.spec.ts`: Epsilon and Zeta see nothing);
-- SEC's isolation suites: `tests/security/db/case-matrix.spec.ts` (SEC-DB-18, every case-keyed table) and
-  `tests/security/e2e/case-pages.spec.ts` (case pages and Server Actions).
+- SEC's isolation suites: `tests/security/db/case-matrix.spec.ts` (SEC-DB-18, every case-keyed table),
+  `tests/security/e2e/case-pages.spec.ts` (case pages and Server Actions),
+  `tests/security/e2e/notification-center.spec.ts` (the Notification Center) and `tests/security/e2e/surface.spec.ts`
+  (what reaches the client).
 
 The rule is enforced, not only written (V13-QA-008, REQ-CASE-014): `tests/sentinel/leak-suite-guard.spec.ts` (library
 `tests/critic/leak-suite-guard.ts`) reads the source of every suite above and of Scenarios A–E and fails the e2e job on
 **G1** a pin (`test.fail`, `test.fails`, `test.fixme`, `.todo`, `testInfo.fail/fixme`), **G2** a focus (`.only`,
 `fit`, `fdescribe`), **G3** a skip (`.skip`, `.skipIf`, `.runIf`, `test.step.skip`, `xit`/`xdescribe`, `testInfo.skip`;
 Vitest's `suite` alias counts as `describe` throughout) that is not on
-its allow-list, and **G4** a named suite that is missing or an allow-list entry that matches nothing. The allow-list
-holds only environment-conditional skips, each with its reason: the session-secret skips in
-`negative-personas-pinning.spec.ts` and Scenario C (they apply only against an external `V13_E2E_BASE_URL`), and SEC's
-`describe.skipIf(!present)` in `case-matrix.spec.ts` (the CI `test:db` job resets the database first). An
-unconditional skip can never be allow-listed. The source is tokenised by the TypeScript parser and comments and string,
-template and regular-expression literals are blanked before matching, so a quote inside a regular expression cannot
-hide the rest of a file. Every form is planted into a synthetic source in the same spec, and a `test.fixme()` is planted
-inside every test and describe body of every guarded suite (135 bodies) and must be found at its line. The same spec
-pins that the worker has the session secret whenever no external `V13_E2E_BASE_URL` is set, so the allow-listed skips
-cannot fire in a locally started or CI run, and that CI runs with `failOnFlakyTests`: with `retries: 1`, a leak that
-fails once and passes on its retry fails the job instead of passing as "flaky". Adding a skip to a leak suite
-therefore needs a reviewed change to the allow-list. Limit: the scan is textual, so a pin through an alias
-(`const t = test; t.fail()`) or a helper in another file is not seen; no guarded suite uses either, and review covers
-them.
+its allow-list, **G4** a named suite that is missing or an allow-list entry that matches nothing, and **G5** the
+runner reached any other way than a plain dotted chain or call: an alias (`const t = test`, destructuring, an
+argument), a renamed, namespace or default import, an import of `test`/`it`/`describe`/`suite` from anywhere but
+`@playwright/test` or `vitest`, a redeclaration, element access (`test["fail"]`), `?.`, `!` or parentheses; a pin,
+focus or skip method called on anything else (`const info = test.info(); info.fail()`, a renamed `testInfo`); and a
+`retry`/`retries` option, so neither runner can turn an intermittent leak green. The allow-list holds only conditional
+skips, each with its reason: the session-secret skips in `negative-personas-pinning.spec.ts` and Scenario C (they apply
+only against an external `V13_E2E_BASE_URL`), SEC's `describe.skipIf(!present)` in `case-matrix.spec.ts` (since
+V13-SEC-010/011 a database that is not ready fails, not skips, in CI), and SEC's local-build skips in
+`surface.spec.ts`. An unconditional skip can never be allow-listed. G1–G3 match the source after the TypeScript parser
+has tokenised it and comments and string, template and regular-expression literals are blanked, so a quote inside a
+regular expression cannot hide the rest of a file; G5 works on the syntax tree. Every form is planted into a synthetic
+source in the same spec, and a `test.fixme()` is planted inside every test and describe body of every guarded suite
+(156 bodies) and must be found at its line. The same spec pins that the worker has the session secret whenever no
+external `V13_E2E_BASE_URL` is set, so the allow-listed skips cannot fire in a locally started or CI run, and that CI
+runs with `failOnFlakyTests`: with `retries: 1`, a leak that fails once and passes on its retry fails the job instead
+of passing as "flaky". Adding a skip to a leak suite therefore needs a reviewed change to the allow-list. Limit: the
+scan is per file, so a helper defined in another file that pins or skips is out of its reach; review covers that.
 
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 

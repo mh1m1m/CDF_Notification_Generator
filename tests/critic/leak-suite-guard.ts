@@ -9,15 +9,20 @@
 //       + the reason); an unconditional one (no argument, a title string, or `true`) never can.
 //   G4  a suite §7.1 names is missing (a rename must not drop it from the guard), or an allow-list entry matches
 //       nothing (a stale waiver)
+//   G5  test / it / describe / suite reached other than by a plain dotted chain or call (SEC, review of bf063a9): an
+//       alias (`const t = test`, `import { test as base }`, a namespace import, an argument), element access
+//       (`test["fail"]`), `?.`, `!`, parentheses, a redeclaration, or an import from anywhere but @playwright/test or
+//       vitest; a pin, focus or skip method called on anything else (`const info = test.info(); info.fail()`); and a
+//       `retry` / `retries` option, so neither runner can turn an intermittent leak green
 // The source is tokenised by the TypeScript parser and comments and string, template and regular-expression literals
 // are blanked before matching, so prose that names test.fail() is not a hit and a quote inside a regular expression
-// cannot hide the rest of a file. The scan is textual: a pin through an alias (`const t = test; t.fail()`) or a helper
-// in another file is not seen; review covers those.
+// cannot hide the rest of a file. G5 works on the syntax tree. Limit: a helper defined in another file that pins or
+// skips is out of reach of a per-file scan (TEST_ARCHITECTURE.md §7.1).
 // Pure functions over source text: the planted-negative self-test feeds them synthetic sources. SYNTHETIC only.
 import ts from "typescript";
 
 export interface GuardViolation {
-  rule: "G1" | "G2" | "G3" | "G4";
+  rule: "G1" | "G2" | "G3" | "G4" | "G5";
   file: string;
   line: number;
   detail: string;
@@ -47,9 +52,11 @@ export const LEAK_SUITES: readonly string[] = [
   "tests/e2e/negative-personas-pinning.spec.ts",
   "tests/security/db/case-matrix.spec.ts",
   "tests/security/e2e/case-pages.spec.ts",
+  "tests/security/e2e/notification-center.spec.ts",
+  "tests/security/e2e/surface.spec.ts",
 ];
 
-/** The environment-conditional skips that exist today, each with its reason (ARCH, 1 Nov). */
+/** The conditional skips that exist today, each with its reason (ARCH, 1 Nov). */
 export const SKIP_ALLOWANCES: readonly SkipAllowance[] = [
   {
     file: "tests/e2e/negative-personas-pinning.spec.ts",
@@ -67,8 +74,22 @@ export const SKIP_ALLOWANCES: readonly SkipAllowance[] = [
     file: "tests/security/db/case-matrix.spec.ts",
     call: /^describe\.skipIf\(!present\)$/,
     reason:
-      "SEC's matrix needs the migrated, seeded database (databaseReady); the CI test:db job resets it first, and the " +
-      "missing-database case logs a warning",
+      "SEC's matrix needs the migrated, seeded database (databaseReady); since V13-SEC-010/011 a database that is not " +
+      "ready fails the suite whenever CI, GITHUB_ACTIONS or V13_DB_TESTS_REQUIRED=1 is set, so it skips only locally",
+  },
+  {
+    file: "tests/security/e2e/surface.spec.ts",
+    call: /^test\.skip\(!LOCAL_BUILD, "",? ?\)$/,
+    reason:
+      "SEC-APP-13 knows the session secret and app password, and has a .next/static to scan, only for a locally " +
+      "started build; LOCAL_BUILD is false only against an external V13_E2E_BASE_URL (two calls)",
+  },
+  {
+    file: "tests/security/e2e/surface.spec.ts",
+    call: /^test\.skip\(!existsSync\(root\), "",? ?\)$/,
+    reason:
+      "runs after the LOCAL_BUILD skip, where playwright.config.ts has just built the app, so .next/static exists; " +
+      "a build-state condition, not an environment one (SEC may make it fail instead, as SEC-010 did for the database)",
   },
 ];
 
@@ -183,6 +204,120 @@ export function scanSuite(
     if (entry) used.add(entry);
     else out.push({ rule: "G3", file, line, detail: `a skip that is not on the allow-list: ${brief(call)}` });
   }
+  return [...out, ...scanForms(file, src)].sort((a, b) => a.line - b.line);
+}
+
+const RUNNER_NAMES = new Set(["test", "it", "describe", "suite"]);
+const RUNNER_MODULES = new Set(["@playwright/test", "vitest"]);
+const GUARDED_METHODS = new Set(["fail", "fails", "fixme", "only", "todo", "skip", "skipIf", "runIf"]);
+const RETRY_OPTIONS = new Set(["retry", "retries"]);
+
+/** The innermost expression a member or call chain starts from (`a` in `a.b().c["d"]!`). */
+function chainRoot(e: ts.Expression): ts.Expression {
+  for (;;) {
+    if (ts.isPropertyAccessExpression(e) || ts.isElementAccessExpression(e) || ts.isCallExpression(e))
+      e = e.expression;
+    else if (ts.isNonNullExpression(e) || ts.isParenthesizedExpression(e)) e = e.expression;
+    else return e;
+  }
+}
+
+/** Positions where a runner name is not a reference: a member name, a property key, an import's own parts. */
+function isNameSlot(id: ts.Identifier): boolean {
+  const p = id.parent;
+  return (
+    (ts.isPropertyAccessExpression(p) && p.name === id) ||
+    (ts.isQualifiedName(p) && p.right === id) ||
+    ((ts.isPropertyAssignment(p) ||
+      ts.isPropertyDeclaration(p) ||
+      ts.isPropertySignature(p) ||
+      ts.isMethodDeclaration(p) ||
+      ts.isMethodSignature(p) ||
+      ts.isEnumMember(p)) &&
+      p.name === id) ||
+    (ts.isBindingElement(p) && p.propertyName === id) ||
+    ts.isImportSpecifier(p)
+  );
+}
+
+/** G5: the forms a textual match cannot see, found on the syntax tree. */
+export function scanForms(file: string, src: string): GuardViolation[] {
+  const sf = ts.createSourceFile("guarded.ts", src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const out: GuardViolation[] = [];
+  const hit = (node: ts.Node, what: string) =>
+    out.push({
+      rule: "G5",
+      file,
+      line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1,
+      detail: `${what}: ${brief(node.getText(sf).replace(/\s+/g, " "))}`,
+    });
+  const visit = (node: ts.Node) => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.importClause) {
+      const from = node.moduleSpecifier.text;
+      const runner = RUNNER_MODULES.has(from);
+      const clause = node.importClause;
+      if (runner && clause.name) hit(node, "a default import of a test runner");
+      const named = clause.namedBindings;
+      if (named && ts.isNamespaceImport(named) && runner) hit(node, "a namespace import of a test runner");
+      if (named && ts.isNamedImports(named))
+        for (const el of named.elements) {
+          const imported = (el.propertyName ?? el.name).text;
+          if (!RUNNER_NAMES.has(imported) && !RUNNER_NAMES.has(el.name.text)) continue;
+          if (el.propertyName && el.propertyName.text !== el.name.text)
+            hit(el, "a runner name imported under another name");
+          else if (!runner) hit(el, `a runner name imported from ${from}`);
+        }
+    }
+    if (ts.isIdentifier(node) && RUNNER_NAMES.has(node.text) && !isNameSlot(node)) {
+      const p = node.parent;
+      if (
+        (ts.isVariableDeclaration(p) ||
+          ts.isParameter(p) ||
+          ts.isBindingElement(p) ||
+          ts.isFunctionDeclaration(p) ||
+          ts.isClassDeclaration(p)) &&
+        p.name === node
+      ) {
+        hit(p, "a runner name declared again in the suite");
+      } else {
+        let top: ts.Expression = node;
+        let plain = true;
+        while (ts.isPropertyAccessExpression(top.parent) && top.parent.expression === top) {
+          if (top.parent.questionDotToken) plain = false;
+          top = top.parent;
+        }
+        const q = top.parent;
+        const called =
+          (ts.isCallExpression(q) && q.expression === top && !q.questionDotToken) ||
+          (ts.isTaggedTemplateExpression(q) && q.tag === top);
+        if (!plain || !called) hit(q, "a runner reached other than by a plain dotted chain or call");
+      }
+    }
+    if (ts.isCallExpression(node)) {
+      const callee = node.expression;
+      const method = ts.isPropertyAccessExpression(callee)
+        ? callee.name.text
+        : ts.isElementAccessExpression(callee) && ts.isStringLiteralLike(callee.argumentExpression)
+          ? callee.argumentExpression.text
+          : null;
+      if (method !== null && GUARDED_METHODS.has(method)) {
+        const root = chainRoot(callee);
+        const direct =
+          ts.isPropertyAccessExpression(callee) &&
+          ts.isIdentifier(root) &&
+          (RUNNER_NAMES.has(root.text) || (root.text === "testInfo" && callee.expression === root));
+        if (!direct) hit(node, `.${method}() called on something other than test / it / describe / suite`);
+      }
+    }
+    if (
+      (ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node)) &&
+      (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)) &&
+      RETRY_OPTIONS.has(node.name.text)
+    )
+      hit(node, "a retry option on a leak-detection suite");
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
   return out;
 }
 

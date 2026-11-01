@@ -1,6 +1,6 @@
 # QA status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 25a1c48)
+Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 40af5ef)
 
 ## Completed
 - V13-QA-001 (design) — `docs/qa/TEST_ARCHITECTURE.md` — PR #1 — COMPLETE
@@ -37,7 +37,10 @@ Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 25
   session-secret pin for the allow-listed skips. OI-051 (Sentinel self-test (o) timed out once in FE's run) fixed on
   the same branch: reproduced 5/300 under 8 workers; the trace shows every assertion passed, then `server.close()`
   waited on a socket Chromium had opened with no request. Fix: `closeAllConnections()` first (as the OI-047 test
-  already did), and the refetch timeout is never 0 (Playwright reads 0 as none). After: 0/600.
+  already did), and the refetch timeout is never 0 (Playwright reads 0 as none). After: 0/600. SEC CHANGES on bf063a9:
+  G5 (alias, renamed/namespace import, element access, `?.`, `!`, parentheses, redeclaration, pin methods on other
+  objects, Vitest/Playwright retry options) with 19 planted negatives; SEC's notification-center and surface suites
+  added (15 suites, 156 bodies planted).
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |
