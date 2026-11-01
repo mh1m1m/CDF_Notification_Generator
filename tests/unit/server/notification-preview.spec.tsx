@@ -5,6 +5,7 @@
 // frame, no content in the other states). Fake readers; the SQL adapter is covered in
 // v13-notification-preview-adapter.spec.ts and against the database in tests/integration/fe/notification-preview.spec.ts.
 import { renderToStaticMarkup } from "react-dom/server";
+import { recipientClassLabel } from "@/app/(platform)/cases/[caseId]/_components/labels";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NotificationPreviewReader } from "@/lib/contracts";
 import { createTranslator, type Locale } from "@/lib/i18n";
@@ -271,7 +272,27 @@ describe("Case Workspace notifications tab with the preview", () => {
     for (const n of v.notifications) {
       expect(out).toContain(`data-testid="case-notification-preview-link-${n.notification_id}"`);
       expect(out).toContain(`href="/cases/${n.case_id}/notifications?n=${n.notification_id}"`);
-      expect(out).toContain(`aria-label="Preview ${n.template_code} for ${n.recipient_class}"`);
+      const label = out.match(
+        new RegExp(
+          `aria-label="([^"]*)"[^>]*data-testid="case-notification-preview-link-${n.notification_id}"`,
+        ),
+      )?.[1];
+      expect(label).toBe(
+        `Preview ${n.template_name.en} for ${recipientClassLabel(createTranslator("en"), n.recipient_class)}`,
+      );
+      // QA CHANGES 982bd76: a screen reader never hears raw codes.
+      expect(label).not.toContain(n.template_code);
+      expect(label).not.toContain(n.recipient_class);
+    }
+  });
+
+  it("the accessible name follows the locale (Arabic template name and class label)", async () => {
+    const v = await tab(undefined, createFakeNotificationPreview(ROWS));
+    if (v.tab !== "notifications") throw new Error("tab");
+    const out = html(v, "ar");
+    for (const n of v.notifications) {
+      expect(out).toContain(`aria-label="معاينة ${n.template_name.ar} للفئة `);
+      expect(out).not.toMatch(new RegExp(`aria-label="[^"]*${n.template_code}`));
     }
   });
 
@@ -302,9 +323,23 @@ describe("NotificationPreviewSection states", () => {
       recipientClass: "CASE_TEAM",
     });
     expect(out).toContain('data-testid="case-preview-unmapped"');
-    expect(out).toContain("CASE_TEAM");
+    // QA CHANGES 982bd76: the class label, with the code beside it in <bdi> (the CodeLabel pattern).
+    expect(out).toContain(
+      'Recipient class: Case team <bdi dir="ltr" data-testid="case-preview-unmapped-code">CASE_TEAM</bdi>',
+    );
+    expect(out).not.toMatch(/class [A-Z_]{4,} has/);
     expect(out).not.toContain("<iframe");
     expect(out).toContain(`href="/cases/${caseIdOf(1)}/notifications"`);
+  });
+
+  it("unmapped with a class outside the catalogue shows the code alone in <bdi>, never blank", () => {
+    for (const locale of ["ar", "en"] as const) {
+      const out = section(
+        { kind: "unmapped", notificationId: WITNESS_1.notification_id, recipientClass: "NEW_CLASS" },
+        locale,
+      );
+      expect(out).toContain('<bdi dir="ltr" data-testid="case-preview-unmapped-code">NEW_CLASS</bdi>');
+    }
   });
 
   it("unavailable shows one generic alert with the correlation id and nothing about the notification", () => {

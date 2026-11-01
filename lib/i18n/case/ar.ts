@@ -76,11 +76,12 @@ export const ar = {
   "notifications.recipient.witness": "الشاهد",
   "notifications.recipient.governance": "الحوكمة",
   "notifications.previewLink": "معاينة",
-  "notifications.previewLinkLabel": "معاينة {code} للفئة {recipient}",
+  "notifications.previewLinkLabel": "معاينة {template} للفئة {recipient}",
   "preview.heading": "معاينة الإشعار",
   "preview.close": "إغلاق المعاينة",
   "preview.unmapped":
-    "لا توجد معاينة: لم يُعتمد بعد ربط إفصاح لفئة المستلم {recipient}، لذا لا يُعرض لها شيء. هذا قرار مفتوح لدى المالك.",
+    "لا توجد معاينة: لم يُعتمد بعد ربط إفصاح لفئة المستلم هذه، لذا لا يُعرض لها شيء. هذا قرار مفتوح لدى المالك.",
+  "preview.unmappedClass": "فئة المستلم:",
   "preview.unavailableTitle": "تعذّر عرض هذه المعاينة",
   "preview.unavailableBody":
     "المعاينة غير متاحة لهذه القضية. إن كنت تتوقع ظهورها فأرسل رقم المتابعة إلى فريق الدعم.",

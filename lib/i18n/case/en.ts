@@ -76,11 +76,12 @@ export const en: Record<keyof typeof ar, string> = {
   "notifications.recipient.witness": "Witness",
   "notifications.recipient.governance": "Governance",
   "notifications.previewLink": "Preview",
-  "notifications.previewLinkLabel": "Preview {code} for {recipient}",
+  "notifications.previewLinkLabel": "Preview {template} for {recipient}",
   "preview.heading": "Notification preview",
   "preview.close": "Close preview",
   "preview.unmapped":
-    "No preview: the recipient class {recipient} has no approved disclosure mapping yet, so nothing is shown for it. This is an open owner decision.",
+    "No preview: this recipient class has no approved disclosure mapping yet, so nothing is shown for it. This is an open owner decision.",
+  "preview.unmappedClass": "Recipient class:",
   "preview.unavailableTitle": "This preview cannot be shown",
   "preview.unavailableBody":
     "The preview is not available for this case. If you expected one, send the reference number to the support team.",

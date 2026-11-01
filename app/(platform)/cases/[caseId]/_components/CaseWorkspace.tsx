@@ -328,6 +328,19 @@ function CodeLabel({ label, code }: { label: string | null; code: string }) {
   return label === null ? <bdi dir="ltr">{code}</bdi> : <>{label}</>;
 }
 
+/** The class label with its code beside it in <bdi> (the code alone when the class has no label). */
+function UnmappedClass({ t, code }: { t: Translator; code: string }) {
+  const label = recipientClassLabel(t, code);
+  return (
+    <>
+      {label !== null ? <>{label} </> : null}
+      <bdi dir="ltr" data-testid="case-preview-unmapped-code">
+        {code}
+      </bdi>
+    </>
+  );
+}
+
 export function NotificationTable({
   t,
   locale,
@@ -400,9 +413,10 @@ export function NotificationTable({
               <td>
                 <Link
                   href={previewHref(n.case_id, n.notification_id)}
+                  // QA CHANGES 982bd76: the accessible name uses the words on the row, never raw codes.
                   aria-label={t("case.notifications.previewLinkLabel", {
-                    code: n.template_code,
-                    recipient: n.recipient_class,
+                    template: n.template_name[locale],
+                    recipient: recipientClassLabel(t, n.recipient_class) ?? n.recipient_class,
                   })}
                   aria-current={n.notification_id === selectedId ? "true" : undefined}
                   data-testid={`case-notification-preview-link-${n.notification_id}`}
@@ -456,7 +470,10 @@ export function NotificationPreviewSection({
           data-testid="case-preview-unmapped"
           data-notification-id={preview.notificationId}
         >
-          {t("case.preview.unmapped", { recipient: preview.recipientClass })}
+          {t("case.preview.unmapped")}{" "}
+          <span data-testid="case-preview-unmapped-class">
+            {t("case.preview.unmappedClass")} <UnmappedClass t={t} code={preview.recipientClass} />
+          </span>
         </p>
       ) : null}
       {preview.kind === "unavailable" ? (

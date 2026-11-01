@@ -196,6 +196,18 @@ test.describe("Scenario E — notification preview", () => {
     await signInAs(page, "secretary-alpha");
     await page.goto(`/cases/${C(1)}/notifications?n=${NTF(1)}`); // CASE_TEAM
     await expect(page.getByTestId("case-preview-unmapped")).toContainText("CASE_TEAM");
+    // QA CHANGES 982bd76: the class label, with the code in <bdi> beside it, not the bare code in the sentence.
+    await expect(page.getByTestId("case-preview-unmapped-class")).toContainText("فريق القضية");
+    await expect(page.getByTestId("case-preview-unmapped-code")).toHaveText("CASE_TEAM");
+    await expect(page.getByTestId("case-preview-unmapped-code")).toHaveAttribute("dir", "ltr");
+    // …and the preview link's accessible name uses the row's words, never raw codes.
+    const templateName = await page
+      .getByTestId(`case-notification-${NTF(1)}`)
+      .getByTestId("case-notification-template-name")
+      .innerText();
+    await expect(page.getByTestId(`case-notification-preview-link-${NTF(1)}`)).toHaveAccessibleName(
+      `معاينة ${templateName} للفئة فريق القضية`,
+    );
     // M1-07: the row itself shows labels and the template's name, not raw codes
     const seeded = page.getByTestId(`case-notification-${NTF(1)}`);
     await expect(seeded.getByTestId("case-notification-recipient")).toHaveText("فريق القضية");
