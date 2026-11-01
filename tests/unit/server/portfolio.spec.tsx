@@ -278,7 +278,9 @@ describe("PortfolioView markup", async () => {
 
   it("closed 0010 shows the records state with glyph and word; Arabic digits in the count", async () => {
     const html = render("ar", await load(SECRETARY));
-    expect(html).toMatch(/data-records-state="CLOSED"><svg aria-hidden="true"[^]*?<\/svg>مغلقة/);
+    expect(html).toMatch(
+      /data-records-state="CLOSED"><span class="[^"]*"><svg aria-hidden="true"[^]*?<\/svg>مغلقة<\/span>/,
+    );
     expect(html).toContain("٧ قضايا");
     expect(html).toContain("عرض ١–٧ من ٧");
     expect(html).toContain('<bdi dir="ltr">CDF-DEMO-2026-0010</bdi>');

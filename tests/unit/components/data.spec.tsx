@@ -132,6 +132,60 @@ describe("StatusBadge — attributes (ADR-013)", () => {
     expect(html).toContain(esc(tr(l)("common.epistemic.recordedAria", { time: formatDateTime(l, AT) })));
   });
 
+  it.each(LOCALES)("recorded without recordedAt: says recorded, never a time (%s)", (l) => {
+    const html = render(
+      <StatusBadge
+        t={tr(l)}
+        locale={l}
+        epistemic="recorded"
+        statusKind="task"
+        status="DONE"
+        label={l === "ar" ? "منجزة" : "Done"}
+        evidence={{ eventId: EVT_1 }}
+      />,
+    );
+    expect(html).toContain('data-epistemic="recorded"');
+    expect(html).toContain(`data-event-id="${EVT_1}"`);
+    expect(html).toContain(esc(tr(l)("common.epistemic.recordedAriaUndated")));
+    expect(html).not.toContain("<time");
+    // No digits of any script: no date or time was invented.
+    expect(html.replace(/<[^>]*>/g, "")).not.toMatch(/[0-9\u0660-\u0669]/);
+  });
+
+  it("passes data-* attributes through and never lets them override its own", () => {
+    const html = render(
+      <StatusBadge
+        t={tr("en")}
+        locale="en"
+        testId="my-work-task-status"
+        data={{ "data-task-status": "DONE", "data-epistemic": "expected", "data-event-id": "x" }}
+        epistemic="recorded"
+        statusKind="task"
+        status="DONE"
+        label="Done"
+        evidence={{ eventId: EVT_1 }}
+      />,
+    );
+    expect(html).toContain('data-task-status="DONE"');
+    expect(html).toContain('data-testid="my-work-task-status"');
+    expect(html).toContain('data-epistemic="recorded"');
+    expect(html).toContain(`data-event-id="${EVT_1}"`);
+    expect(html).not.toContain('data-epistemic="expected"');
+    expect(() =>
+      render(
+        <StatusBadge
+          t={tr("en")}
+          locale="en"
+          data={{ "data-x": "1", onclick: "x" } as unknown as Record<`data-${string}`, string>}
+          epistemic="expected"
+          statusKind="task"
+          status="PENDING"
+          label="Memo review"
+        />,
+      ),
+    ).toThrow(/data-\* attributes only/);
+  });
+
   it.each(LOCALES)(
     "non-recorded variants never carry data-event-id; awaiting approval is its own value (%s)",
     (l) => {
@@ -343,7 +397,9 @@ describe("DataTable", () => {
     expect(html).toContain(
       `<tr data-testid="portfolio-table-row-r2" data-case-id="${CASE_2.id}" data-case-ref="${CASE_2.ref}">`,
     );
-    expect(html).toContain('<table class="v13-table" data-testid="portfolio-table"><caption>Cases</caption>');
+    expect(html).toContain(
+      '<table class="v13-table" data-testid="portfolio-table"><caption><span class="v13-table-caption-text">Cases</span></caption>',
+    );
     expect(html).toContain(`role="region" aria-label="${esc(msg(l)["common.scrollRegion"])}" tabindex="0"`);
     expect(html.match(/<th scope="row">/g)).toHaveLength(2);
   });

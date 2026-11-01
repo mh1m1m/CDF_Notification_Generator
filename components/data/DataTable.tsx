@@ -16,7 +16,12 @@ export interface DataTableColumn<Row> {
   rowHeader?: boolean;
   /** Makes the header a sort link; `direction` is set on the column the table is sorted by. */
   sort?: { href: string; direction?: SortDirection };
+  /** Evidence attributes on this column's cells (`data-*` only, e.g. a cell test id or data-count). */
+  cellData?: (row: Row) => DataAttributes;
 }
+
+/** Only `data-*` attributes (test ids and ADR-013 evidence); never ARIA, events or styles. */
+export type DataAttributes = Readonly<Record<`data-${string}`, string | number | undefined>>;
 
 interface DataTableBase<Row> {
   t: Translator;
@@ -31,6 +36,24 @@ interface DataTableBase<Row> {
   empty: ReactNode;
   /** Pagination under the table. */
   pagination?: ReactNode;
+  /** Id for the caption; the scroll region is then labelled by it instead of the generic label. */
+  captionId?: string;
+  /** Row test id; defaults to `<testId>-row-<rowKey>`. */
+  rowTestId?: (row: Row) => string;
+  /** Extra evidence attributes on each row (`data-*` only). */
+  rowData?: (row: Row) => DataAttributes;
+  /** Extra evidence attributes on the <table> (`data-*` only), e.g. data-count. */
+  tableData?: DataAttributes;
+}
+
+function dataOnly(attrs: DataAttributes | undefined): Record<string, string | number> {
+  const out: Record<string, string | number> = {};
+  if (!attrs) return out;
+  for (const [name, value] of Object.entries(attrs)) {
+    if (!/^data-[a-z0-9-]+$/.test(name)) throw new Error("DataTable: only data-* attributes");
+    if (value !== undefined) out[name] = value;
+  }
+  return out;
 }
 
 export interface CaseScopedTable<Row> extends DataTableBase<Row> {
@@ -45,15 +68,24 @@ export interface UnscopedTable<Row> extends DataTableBase<Row> {
 export type DataTableProps<Row> = CaseScopedTable<Row> | UnscopedTable<Row>;
 
 export function DataTable<Row>(props: DataTableProps<Row>) {
-  const { t, testId, caption, columns, rows, rowKey, empty, pagination } = props;
+  const { t, testId, caption, columns, rows, rowKey, empty, pagination, captionId } = props;
   if (rows.length === 0) return <>{empty}</>;
   return (
     <div className="v13-table-block">
       {/* A scrollable region must be reachable by keyboard (WCAG 2.1.1; axe scrollable-region-focusable). */}
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex */}
-      <div className="v13-scroll-region" role="region" aria-label={t("common.scrollRegion")} tabIndex={0}>
-        <table className="v13-table" data-testid={testId}>
-          <caption>{caption}</caption>
+      <div
+        className="v13-scroll-region"
+        role="region"
+        aria-label={captionId ? undefined : t("common.scrollRegion")}
+        aria-labelledby={captionId}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={0}
+      >
+        <table className="v13-table" data-testid={testId} {...dataOnly(props.tableData)}>
+          <caption id={captionId}>
+            {/* Kept in view while the table scrolls sideways, and wrapped to the visible width (QA, M1-05). */}
+            <span className="v13-table-caption-text">{caption}</span>
+          </caption>
           <thead>
             <tr>
               {columns.map((column) => (
@@ -96,14 +128,21 @@ export function DataTable<Row>(props: DataTableProps<Row>) {
                 caseAttrs = { "data-case-id": caseId, "data-case-ref": caseRef };
               }
               return (
-                <tr key={key} data-testid={`${testId}-row-${key}`} {...caseAttrs}>
+                <tr
+                  key={key}
+                  data-testid={props.rowTestId ? props.rowTestId(row) : `${testId}-row-${key}`}
+                  {...dataOnly(props.rowData?.(row))}
+                  {...caseAttrs}
+                >
                   {columns.map((column) =>
                     column.rowHeader ? (
-                      <th key={column.key} scope="row">
+                      <th key={column.key} scope="row" {...dataOnly(column.cellData?.(row))}>
                         {column.cell(row)}
                       </th>
                     ) : (
-                      <td key={column.key}>{column.cell(row)}</td>
+                      <td key={column.key} {...dataOnly(column.cellData?.(row))}>
+                        {column.cell(row)}
+                      </td>
                     ),
                   )}
                 </tr>

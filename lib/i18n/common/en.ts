@@ -43,6 +43,7 @@ export const en: Record<keyof typeof ar, string> = {
   "empty.generic": "Nothing to show",
   unsaved: "You have unsaved changes",
   "epistemic.recordedAria": "recorded at {time}",
+  "epistemic.recordedAriaUndated": "recorded",
   "epistemic.expectedSuffix": "(expected)",
   "epistemic.expectedAria": "has not happened yet",
   "epistemic.conditionalPrefix": "Conditional:",

@@ -33,40 +33,6 @@
   font-weight: 700;
 }
 
-.scroll {
-  overflow-x: auto;
-  max-inline-size: 100%;
-}
-
-.table {
-  border-collapse: collapse;
-  inline-size: 100%;
-}
-
-.table caption {
-  text-align: start;
-  padding-block-end: var(--cdf-space-2);
-}
-
-.table th,
-.table td {
-  text-align: start;
-  padding-block: var(--cdf-space-2);
-  padding-inline: var(--cdf-space-3);
-  border-block-end: 1px solid var(--cdf-border);
-  vertical-align: top;
-}
-
-.secondLine {
-  display: block;
-  font-weight: 400;
-  color: var(--cdf-text-secondary);
-}
-
-.overdue {
-  font-weight: 700;
-}
-
 .form {
   display: flex;
   flex-wrap: wrap;
