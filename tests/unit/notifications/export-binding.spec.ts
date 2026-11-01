@@ -98,6 +98,17 @@ const OWN = projectedOf("CF-31", CASE_A);
 const OTHER = projectedOf("CF-35", CASE_B);
 const titleOf = (p: Projected) => (p.fields.event_title as { en: string }).en;
 
+/** the validated model's own rendering whose subject answers the check with its own value and any later read with
+ *  another case's subject (time of check vs time of use) */
+function getterRendering(): unknown {
+  const r = renderEmail(OWN, { lang: "en" });
+  const real = r.subject;
+  const foreign = renderEmail(OTHER, { lang: "en" }).subject;
+  let reads = 0;
+  Object.defineProperty(r, "subject", { get: () => (reads++ === 0 ? real : foreign), configurable: true });
+  return r;
+}
+
 describe("EXB the export takes only a rendering of the model it validated (OI-053)", () => {
   test("EXB-01 control: the validated model's own rendering exports, in Arabic and English", () => {
     for (const lang of ["en", "ar"] as const) {
@@ -123,7 +134,7 @@ describe("EXB the export takes only a rendering of the model it validated (OI-05
     assert.equal(exportEvidence(w, r.notification_id).length, 0);
   });
 
-  test("EXB-03 an edited rendering, a copy, a hand-made rendering and a rendering of an equal re-projection are refused", () => {
+  test("EXB-03 an edited rendering, a copy, a hand-made rendering, a rendering of an equal re-projection and a getter that answers twice are refused", () => {
     const own = renderEmail(OWN, { lang: "en" });
     const reprojected = projectedOf("CF-31", CASE_A); // equal content, another projection object
     const edited = renderEmail(OWN, { lang: "en" });
@@ -133,6 +144,7 @@ describe("EXB the export takes only a rendering of the model it validated (OI-05
       ["copy", { ...own }],
       ["hand-made", { subject: own.subject, text: own.text, html: own.html }],
       ["re-projection", renderEmail(reprojected, { lang: "en" })],
+      ["getter (SEC's probe on #113)", getterRendering()],
     ];
     for (const [name, rendered] of tries) {
       const { w, r } = queuedWith(OWN);
@@ -146,9 +158,20 @@ describe("EXB the export takes only a rendering of the model it validated (OI-05
 
   test("EXB-04 the default rendering port is the renderer's provenance, never 'accept'; the fixture port keeps it for real models", () => {
     const own = renderEmail(OWN, { lang: "en" });
-    assert.equal(RENDERER_PROVENANCE_PORT.isRenderingOf(own, OWN), true);
-    assert.equal(RENDERER_PROVENANCE_PORT.isRenderingOf(renderEmail(OTHER, { lang: "en" }), OWN), false);
-    assert.equal(F.FIXTURE_RENDERING_PORT.isRenderingOf(renderEmail(OTHER, { lang: "en" }), OWN), false);
+    const other = renderEmail(OTHER, { lang: "en" });
+    const snap = (x: { subject: string; text: string; html: string }) => ({
+      subject: x.subject,
+      text: x.text,
+      html: x.html,
+    });
+    assert.equal(RENDERER_PROVENANCE_PORT.isRenderingOf(own, OWN, snap(own)), true);
+    assert.equal(RENDERER_PROVENANCE_PORT.isRenderingOf(other, OWN, snap(other)), false);
+    assert.equal(F.FIXTURE_RENDERING_PORT.isRenderingOf(other, OWN, snap(other)), false);
+    // the digest is checked on the snapshot the export will use, not on a second read of the object
+    assert.equal(
+      RENDERER_PROVENANCE_PORT.isRenderingOf(own, OWN, { ...snap(own), subject: other.subject }),
+      false,
+    );
     // the fixture world (FIXTURE_RENDERING_PORT) on the real projection port refuses the swap too
     const { w, r } = queuedWith(OWN, { projection: null });
     const err = refusal(() =>

@@ -297,9 +297,13 @@ export const FIXTURE_PROJECTION_PORT = Object.freeze({
  * projectedModel() made, which no real projection can be) and applies the real check to every other model.
  */
 export const FIXTURE_RENDERING_PORT = Object.freeze({
-  isRenderingOf: (r: unknown, m: unknown): boolean =>
+  isRenderingOf: (
+    r: unknown,
+    m: unknown,
+    c: { readonly subject?: unknown; readonly text?: unknown; readonly html?: unknown },
+  ): boolean =>
     (typeof m === "object" && m !== null && FIXTURE_MODELS.has(m)) ||
-    RENDERER_PROVENANCE_PORT.isRenderingOf(r, m),
+    RENDERER_PROVENANCE_PORT.isRenderingOf(r, m, c),
 });
 
 /**

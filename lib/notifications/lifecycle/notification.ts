@@ -99,7 +99,10 @@ import type {
   ResolvedRecipient,
 } from "./ports";
 import { isProjected as disclosureIsProjected } from "@/lib/disclosure";
-import { isRenderingOf as rendererIsRenderingOf } from "@/lib/notifications/render/provenance";
+import {
+  isRenderingOf as rendererIsRenderingOf,
+  snapshotRendering,
+} from "@/lib/notifications/render/provenance";
 
 /**
  * The default projection port is W-D2's own brand check (SEC review of #45, LOW: fail closed). Without it the VALIDATED
@@ -116,7 +119,8 @@ export const DISCLOSURE_PROJECTION_PORT: ProjectionPort = Object.freeze({
  * (another case) would export under this record's label and model hash. Passing `rendering: null` keeps this port.
  */
 export const RENDERER_PROVENANCE_PORT: RenderingPort = Object.freeze({
-  isRenderingOf: (r: unknown, m: unknown) => rendererIsRenderingOf(r, m),
+  isRenderingOf: (r: unknown, m: unknown, c: Parameters<RenderingPort["isRenderingOf"]>[2]) =>
+    rendererIsRenderingOf(r, m, c),
 });
 
 export const NOTIFICATION_STATUSES = Object.freeze([
@@ -1918,7 +1922,14 @@ export function createNotificationLifecycle(deps: LifecycleDeps = {}): Notificat
       });
     }
     // OI-053: the rendering must come from the validated model (bound to this record by the hash above), unchanged
-    if (rendered && typeof rendered === "object" && rendering.isRenderingOf(rendered, model) !== true) {
+    // subject, text and HTML are read once: the check and the export use the same snapshot (no getter can answer
+    // the check with one value and the builder with another; an accessor is refused)
+    const content = rendered && typeof rendered === "object" ? snapshotRendering(rendered) : null;
+    if (
+      rendered &&
+      typeof rendered === "object" &&
+      (content === null || rendering.isRenderingOf(rendered, model, content) !== true)
+    ) {
       throw denied("RENDERING_NOT_FROM_MODEL", {
         command: "notification_export",
         outcome: "RENDERING_NOT_FROM_MODEL",
@@ -1930,7 +1941,13 @@ export function createNotificationLifecycle(deps: LifecycleDeps = {}): Notificat
     const issuedAt = evidence.summary(rec.notification_id, rec.version).issued_at;
     let out: ExportResult;
     try {
-      out = buildExportEml({ record: view(rec), rendered, exportedAt: clock(), issuedAt, modelHash });
+      out = buildExportEml({
+        record: view(rec),
+        rendered: content ?? rendered,
+        exportedAt: clock(),
+        issuedAt,
+        modelHash,
+      });
     } catch (err) {
       if (err instanceof ExportError) {
         throw denied(err.code, {

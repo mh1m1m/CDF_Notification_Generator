@@ -29,10 +29,40 @@ export function recordRendering(
   SOURCES.set(rendered, { model, digest: digestOf(rendered) });
 }
 
-/** true only for a renderer output made from `model` (the same object) whose subject, text and HTML are unchanged */
-export function isRenderingOf(rendered: unknown, model: unknown): boolean {
+/** what the export reads from a rendering: subject, text and HTML */
+export interface RenderedContent {
+  readonly subject?: unknown;
+  readonly text?: unknown;
+  readonly html?: unknown;
+}
+
+/**
+ * Reads subject, text and HTML once, as plain values. Returns null when any of them is an accessor (a getter could
+ * answer the check with one value and the export with another), so the caller checks and exports the same snapshot.
+ */
+export function snapshotRendering(rendered: unknown): RenderedContent | null {
+  if (typeof rendered !== "object" || rendered === null) return null;
+  const out: Record<string, unknown> = {};
+  for (const k of ["subject", "text", "html"] as const) {
+    const d = Object.getOwnPropertyDescriptor(rendered, k);
+    if (d && !("value" in d)) return null;
+    out[k] = d ? d.value : undefined;
+  }
+  return Object.freeze(out);
+}
+
+/**
+ * true only for a renderer output made from `model` (the same object) whose subject, text and HTML are unchanged.
+ * `content` is the snapshot the caller will use (snapshotRendering); without it, one is taken here.
+ */
+export function isRenderingOf(
+  rendered: unknown,
+  model: unknown,
+  content: RenderedContent | null = snapshotRendering(rendered),
+): boolean {
   if (typeof rendered !== "object" || rendered === null || typeof model !== "object" || model === null)
     return false;
+  if (!content) return false;
   const s = SOURCES.get(rendered);
-  return !!s && s.model === model && s.digest === digestOf(rendered as Record<string, unknown>);
+  return !!s && s.model === model && s.digest === digestOf(content);
 }
