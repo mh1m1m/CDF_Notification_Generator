@@ -57,7 +57,11 @@ export function rowToMyWorkTask(r: MyWorkRow): MyWorkTask {
   });
 }
 
-/** The command's SQLSTATEs (migration 0003). Anything else is an unexpected failure and propagates unchanged. */
+/**
+ * The command's refusal codes (migration 0003), returned in its `refusal` column since migration 0013 (V13-DB-021).
+ * Any other value, V1500 included, is an unexpected failure and throws a plain Error; any other database error
+ * propagates unchanged.
+ */
 const REFUSALS: Readonly<Record<string, TaskCommandRefusal>> = {
   V1401: "NO_CONTEXT",
   V1404: "NOT_FOUND",
@@ -65,6 +69,20 @@ const REFUSALS: Readonly<Record<string, TaskCommandRefusal>> = {
   V1422: "INVALID_TRANSITION",
   V1423: "CASE_CLOSED",
 };
+
+interface CommandRow {
+  task_id: string | null;
+  case_id: string | null;
+  status: string | null;
+  row_version: number | null;
+  refusal: string | null;
+}
+
+function refusalOf(code: string): TaskCommandRefusal {
+  const refusal = Object.hasOwn(REFUSALS, code) ? REFUSALS[code] : undefined;
+  if (!refusal) throw new Error("api_update_task_status: unknown refusal");
+  return refusal;
+}
 
 export function createV13MyWork(run: RequestContextRunner): MyWorkReader & TaskCommandPort {
   return {
@@ -85,24 +103,21 @@ export function createV13MyWork(run: RequestContextRunner): MyWorkReader & TaskC
       command: UpdateTaskStatusCommand,
     ): Promise<TaskStatusChange> {
       const c = UpdateTaskStatusCommandSchema.parse(command);
-      let rows: readonly unknown[];
-      try {
-        rows = await run(
-          identity,
-          (tx) =>
-            tx<{ task_id: string; case_id: string; status: string; row_version: number }[]>`
-            select r.task_id, r.case_id, r.status, r.row_version
-              from cdf_notifications_v13.api_update_task_status(
-                     ${c.task_id}::uuid, ${c.new_status}, ${c.expected_version}::integer) r`,
-        );
-      } catch (error) {
-        const code = (error as { code?: unknown } | null)?.code;
-        const refusal = typeof code === "string" ? REFUSALS[code] : undefined;
-        if (refusal) throw new TaskCommandRefusedError(refusal);
-        throw error;
-      }
+      // One command per transaction (R1). The refusal is mapped only after run(...) has resolved, so the transaction
+      // that holds the database's COMMAND_REFUSED audit row (migration 0013) has committed (DB-021 §6).
+      const rows = await run(
+        identity,
+        (tx) =>
+          tx<CommandRow[]>`
+          select r.task_id, r.case_id, r.status, r.row_version, r.refusal
+            from cdf_notifications_v13.api_update_task_status(
+                   ${c.task_id}::uuid, ${c.new_status}, ${c.expected_version}::integer) r`,
+      );
       if (rows.length !== 1) throw new Error("api_update_task_status: expected one row");
-      const change = TaskStatusChangeSchema.parse(rows[0]);
+      const { refusal, ...answer } = rows[0] as CommandRow;
+      // The refusal column is read before any other column (fail closed on an unknown code).
+      if (refusal !== null) throw new TaskCommandRefusedError(refusalOf(refusal));
+      const change = TaskStatusChangeSchema.parse(answer);
       // The database must answer for the task and status asked for, at the next version (fail closed otherwise).
       if (
         change.task_id !== c.task_id ||

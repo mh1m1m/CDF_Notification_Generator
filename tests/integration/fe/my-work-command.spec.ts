@@ -2,12 +2,14 @@
 // against the local primary cluster. Scenario B: an update in case 0001 changes that one task, adds exactly one
 // procedural event and one audit event (with this request's correlation id) in case 0001, and changes nothing in any
 // other case. Negatives: stale version (STALE), a task the persona may not change (NOT_FOUND, nothing written), a
-// closed case (CASE_CLOSED), a transition outside the table (INVALID_TRANSITION). Every command runs inside a
-// transaction that the test rolls back, so the seed is unchanged for the other suites. Synthetic data only.
+// closed case (CASE_CLOSED), a transition outside the table (INVALID_TRANSITION). Since migration 0013 (V13-DB-021) a
+// refusal writes exactly one COMMAND_REFUSED audit row and nothing else; it carries the task and case only for a
+// visible case (never for NOT_FOUND). Every command runs inside a transaction that the test rolls back, so the seed is
+// unchanged for the other suites; the adapter sees the rows only after that transaction has ended. Synthetic data only.
 //
 // The read side (my_work_tasks with DB-010's columns, migration 0008) is added here when 0008 is on develop.
 import postgres from "postgres";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { RequestIdentitySchema, type RequestIdentity, type TaskStatus } from "@/lib/contracts";
 import { createV13MyWork } from "@/lib/adapters/my-work/v13-my-work";
 import { TaskCommandRefusedError } from "@/lib/contracts";
@@ -15,6 +17,7 @@ import { databaseClientOptions } from "@/lib/db/client";
 import { withRequestContext, type Tx } from "@/lib/db/security-context";
 import { TEST_CLAIMS_KEY } from "../support/claims";
 import { clusterAvailable, PRIMARY_ADMIN_URL } from "../support/clusters";
+import { clearRefusalWindows } from "../support/refusal";
 
 const available = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
 const who = (persona: number, active_workspace: string, role: string): RequestIdentity =>
@@ -34,7 +37,7 @@ interface Snapshot {
   readonly tasks: Record<string, string>;
   readonly events: Record<string, number>;
   readonly audit: Record<string, number>;
-  readonly auditForCorrelation: { action: string; case_id: string; entity_id: string }[];
+  readonly auditForCorrelation: { action: string; case_id: string | null; entity_id: string | null }[];
 }
 
 class Rollback extends Error {
@@ -81,19 +84,26 @@ describe.skipIf(!available)("V13 task status command on the primary cluster (FE-
     version: number,
   ): Promise<{ outcome: string; after: Snapshot }> {
     let after: Snapshot | null = null;
-    const port = createV13MyWork((id, fn) =>
-      withRequestContext(
-        id,
-        async (tx) => {
-          // A refusal raises inside fn and aborts the transaction; a success is inspected here, then rolled back.
-          const rows = await fn(tx);
-          await tx.unsafe("reset role");
-          after = await snapshot(tx);
-          throw new Rollback(rows);
-        },
-        { sql: admin, claimsKey: TEST_CLAIMS_KEY, correlationId: CORRELATION as never },
-      ),
-    );
+    // The command's rows are inspected here, the transaction is rolled back, and only then does the adapter see the
+    // rows (as it would after a commit), so a refusal is mapped after the transaction ended (DB-021 §6).
+    const port = createV13MyWork(async (id, fn) => {
+      try {
+        await withRequestContext(
+          id,
+          async (tx) => {
+            const rows = await fn(tx);
+            await tx.unsafe("reset role");
+            after = await snapshot(tx);
+            throw new Rollback(rows);
+          },
+          { sql: admin, claimsKey: TEST_CLAIMS_KEY, correlationId: CORRELATION as never },
+        );
+      } catch (error) {
+        if (error instanceof Rollback) return error.value as never;
+        throw error;
+      }
+      throw new Error("not rolled back");
+    });
     let outcome: string;
     try {
       await port.updateStatus(identity, {
@@ -101,19 +111,33 @@ describe.skipIf(!available)("V13 task status command on the primary cluster (FE-
         new_status: status,
         expected_version: version,
       });
-      outcome = "NOT_ROLLED_BACK";
+      outcome = "OK";
     } catch (error) {
-      if (error instanceof Rollback) outcome = "OK";
-      else if (error instanceof TaskCommandRefusedError) outcome = error.refusal;
+      if (error instanceof TaskCommandRefusedError) outcome = error.refusal;
       else throw error;
     }
     return { outcome, after: after ?? (await snapshot(admin)) };
+  }
+
+  /** Only the one COMMAND_REFUSED row was written: in `caseId` (with `task`) when given, else with no ids. */
+  function expectOnlyRefusal(after: Snapshot, caseId: string | null, task: string | null): void {
+    expect(after.tasks).toEqual(before.tasks);
+    expect(after.events).toEqual(before.events);
+    const audit = { ...before.audit };
+    if (caseId) audit[caseId] = (audit[caseId] ?? 0) + 1;
+    expect(after.audit).toEqual(audit);
+    expect(after.auditForCorrelation).toEqual([
+      { action: "COMMAND_REFUSED", case_id: caseId, entity_id: task },
+    ]);
   }
 
   let before: Snapshot;
   beforeAll(async () => {
     admin = postgres(PRIMARY_ADMIN_URL, { ...databaseClientOptions(PRIMARY_ADMIN_URL, {}), max: 1 });
     before = await snapshot(admin);
+  });
+  beforeEach(async () => {
+    await clearRefusalWindows(admin);
   });
   afterAll(async () => {
     // The seed is untouched: every attempt was rolled back or refused.
@@ -138,10 +162,10 @@ describe.skipIf(!available)("V13 task status command on the primary cluster (FE-
     ]);
   });
 
-  it("a stale version is STALE and writes nothing", async () => {
+  it("a stale version is STALE and writes only its refusal row", async () => {
     const { outcome, after } = await attempt(ALPHA, 2, "IN_PROGRESS", 7);
     expect(outcome).toBe("STALE");
-    expect(after).toEqual(before);
+    expectOnlyRefusal(after, CASE(1), TASK(2));
   });
 
   it.each([
@@ -149,21 +173,21 @@ describe.skipIf(!available)("V13 task status command on the primary cluster (FE-
     ["Gamma on a restricted 0009 task", GAMMA, 17],
     ["Alpha on 0002's task (case not visible in Secretariat)", ALPHA, 3],
     ["Alpha on an unknown task id", ALPHA, 99],
-  ] as const)("%s is NOT_FOUND and writes nothing", async (_n, identity, task) => {
+  ] as const)("%s is NOT_FOUND and writes only a refusal row without ids", async (_n, identity, task) => {
     const { outcome, after } = await attempt(identity, task, "IN_PROGRESS", 1);
     expect(outcome).toBe("NOT_FOUND");
-    expect(after).toEqual(before);
+    expectOnlyRefusal(after, null, null);
   });
 
-  it("a task in the closed case 0010 is CASE_CLOSED and writes nothing", async () => {
+  it("a task in the closed case 0010 is CASE_CLOSED and writes only its refusal row", async () => {
     const { outcome, after } = await attempt(GAMMA, 20, "IN_PROGRESS", 1);
     expect(outcome).toBe("CASE_CLOSED");
-    expect(after).toEqual(before);
+    expectOnlyRefusal(after, CASE(10), TASK(20));
   });
 
-  it("a transition outside the table (OPEN → DONE) is INVALID_TRANSITION and writes nothing", async () => {
+  it("a transition outside the table (OPEN → DONE) is INVALID_TRANSITION and writes only its refusal row", async () => {
     const { outcome, after } = await attempt(ALPHA, 2, "DONE", 1);
     expect(outcome).toBe("INVALID_TRANSITION");
-    expect(after).toEqual(before);
+    expectOnlyRefusal(after, CASE(1), TASK(2));
   });
 });

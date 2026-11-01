@@ -84,6 +84,7 @@ erDiagram
 | 0004 | `notification` | `id`; unique (`created_by_persona_id`, `idempotency_key`) (keys scoped to their author); unique (`id`, `case_id`) | lifecycle DRAFT…SUPERSEDED; `supersedes_id` same case |
 | 0004 | `notification_event` | `id`; FK (`notification_id`, `case_id`) | append-only; `provenance` COMMAND (default) / SEED_SYNTHETIC |
 | 0012 | `policy_version` | `version` (`V13-ACCESS-NNNN`) | append-only register of access-policy versions with their fingerprint (§7); restrictive deny-all, no grant |
+| 0013 | `refusal_window` | (`actor_key`, `command`, `refusal`) | per persona (nil UUID for none), command and code: the start of the current 60 s audit window and the refusals it suppressed (§7); restrictive deny-all, no grant; written only by `_append_audit_refused` |
 | 0004 | `dispatch_outbox` | `id`; FK (`notification_id`, `case_id`); unique per channel | content-free; restrictive deny-all, no grant (ADR-010, used from M5) |
 
 ## 4. Functions
@@ -110,9 +111,12 @@ erDiagram
 | `notifications_page(...)`, `notifications_count(...)` (migration 0010, V13-DB-015) | invoker | yes | Notification Operations Center (UX S4, FE-006): notifications across every case the caller may see, with exactly the access of `case_notifications` (RLS before filters, order, limit, count and summaries). Rows: case id, number and titles, template code, names, version and language, recipient class, lifecycle status, `created_at`, `created_at_cursor`, `last_event_at`, `row_version`; no person. Filters (identical for page and count): lifecycle status, template code, case display number (after authorisation, never a key), created range `[from, before)`. Keyset on (`created_at` desc, id desc): pass `created_at_cursor` (text, `YYYY-MM-DDTHH:MI:SS.ffffffZ`) and the id of the last row, or neither; half a cursor or another text form matches nothing. Limit 1..100 |
 | `case_events_page(...)`, `case_tasks_page(...)`, `case_notifications_page(...)` (migration 0011, V13-DB-019, OI-026) | invoker | yes | the three per-case reads one bounded page at a time: same rows, order and columns as `case_events` / `case_tasks` / `case_notifications`, plus `page_cursor`. Arguments `(p_case_id, p_after_cursor, p_after_id, p_limit)`: pass `page_cursor` and the id of the last row, or neither. The cursor row must be visible in the same case and carry exactly that `page_cursor`; the keyset then uses its stored values. A half, malformed, stale or foreign cursor returns no rows, the same answer as an unknown or unauthorised case. Limit 1..100 (default 25); any other value, NULL included, is refused with 22023, never clamped. Index `task_case_page_idx` serves the task order; the events and notifications orders use the 0003 and 0004 case indexes. The unpaged reads are unchanged |
 | `_page_limit(integer)` (migration 0011) | immutable, no table access | yes | returns the page limit if it is 1..100, else raises 22023 |
-| `api_update_task_status(uuid, text, int)` | definer command | yes | §6 |
-| `api_create_notification_draft(uuid, uuid, text, text)` | definer command | yes | §6 |
-| `api_switch_workspace(uuid)` (migration 0005) | definer command | yes | §6; returns the target workspace id, code and the persona's role codes there |
+| `api_update_task_status(uuid, text, int)` | definer command | yes | §6; since 0013 returns a `refusal` column |
+| `api_create_notification_draft(uuid, uuid, text, text)` | definer command | yes | §6; since 0013 returns a `refusal` column |
+| `api_switch_workspace(uuid)` (migration 0005) | definer command | yes | §6; returns the target workspace id, code and the persona's role codes there; since 0013 a `refusal` column |
+| `_api_update_task_status_impl`, `_api_create_notification_draft_impl`, `_api_switch_workspace_impl`, `_api_install_claims_key_impl` (migration 0013) | internal definer | **no** | the four command bodies, unchanged from 0001/0003/0004/0005; run only by their `api_*` wrapper (§6) |
+| `_append_audit_refused(text, text, text, uuid, uuid)` (migration 0013) | internal definer | **no** | records one refused command (§7) |
+| `_append_audit_row(...)`, `_claim_command_slot()` (migration 0013) | internal invoker | **no** | the shared hash-chained append; the one-command-per-transaction mark (§6) |
 | `verify_audit_chain()` | definer | **no** (owner/administrator) | recomputes the chain, each row by its hash version (0012); counts and first broken `seq` only |
 | `_policy_fingerprint()`, `_acl_canonical(aclitem[])` (migration 0012) | invoker, stable | **no** (owner/administrator) | sha256 of the V13 access policy (§7) |
 | `_append_audit`, `_audit_row_hash`, `_audit_row_hash_v2`, `_reject_mutation`, `_task_transition_allowed`, `_case_owning_visibility`, `_template_version_hash` | internal | no | — |
@@ -149,7 +153,23 @@ Seed visibility, measured on the local cluster (28 Oct 2026 ≈ 01:40 UTC, `sele
 Error codes (SQLSTATE class `V1`; the BFF maps them to a generic message with a correlation id): `V1401` no valid
 context · `V1404` not found (unknown **and** unauthorised) · `V1409` stale `row_version` or duplicate idempotency key ·
 `V1422` invalid input or transition · `V1423` case closed (raised only after access is proven) · `V1403` append-only
-violation · `V1500` audit append outside READ COMMITTED · `V1501` audit append with no access-policy version recorded.
+violation · `V1500` audit append outside READ COMMITTED, or a second command in one transaction (0013) · `V1501` audit
+append with no access-policy version recorded.
+
+**Refusals as answers (migration 0013, V13-DB-021).** Each command's body runs in an internal `_<command>_impl`; the
+`api_*` wrapper calls it inside a PL/pgSQL block with an exception clause (a subtransaction). When the body raises one
+of `V1401`, `V1404`, `V1409`, `V1422`, `V1423` (named exactly; the wrapper reads the code, never the message), the
+subtransaction is rolled back (its writes, row locks and advisory locks are gone), one REFUSED audit row is written
+(§7), and the command returns one row whose `refusal` column holds the code and whose other columns are null; the
+transaction commits that row. Any other error raises as before and records nothing. `api_install_claims_key` records no
+refusal (its codes still raise).
+
+**One command per transaction (R1).** Every `api_*` function, `api_install_claims_key` included, takes a transaction-level
+advisory lock keyed by the backend pid in the V13 namespace and refuses when this transaction already holds it: the
+three request-time commands return `refusal` `V1500` (not recorded), `api_install_claims_key` raises `V1500`. The request
+role cannot release a transaction-level advisory lock; rolling back to a savepoint releases it with everything the
+command did. The BFF maps `refusal` after its transaction has committed (`lib/adapters/my-work`,
+`lib/adapters/notification-records`, `lib/server/workspace.ts`); an unknown refusal value is an error, not a refusal.
 
 | Command | Who | Checks | Writes (one transaction) |
 | ------- | --- | ------ | ------------------------ |
@@ -162,7 +182,8 @@ violation · `V1500` audit append outside READ COMMITTED · `V1501` audit append
 Read functions are `SECURITY INVOKER`; any future view is `WITH (security_invoker = true)`; no table uses FORCE RLS.
 `SECURITY DEFINER` is used only for: `api_*` commands (each calls `can_access_case` itself when case-keyed); the claims
 and access-rule helpers and the `_case_owning_visibility` trigger; `current_persona()`; `_append_audit` and
-`verify_audit_chain` (never granted to `cdf_v13_user`). A new definer function outside these groups needs ARCH and SEC.
+`verify_audit_chain` (never granted to `cdf_v13_user`); since 0013 the four command bodies `_api_*_impl` and
+`_append_audit_refused` (never granted). A new definer function outside these groups needs ARCH and SEC.
 
 ## 6b. Seed notifications
 
@@ -184,7 +205,19 @@ Architect's decisions: `docs/teams/db/DB-020_AUDIT_RECORD_CONTENT.md`.
   0012 added the columns with constant defaults, so no earlier row was rewritten. A check constraint pins a v1 row to
   `SUCCEEDED` with no policy version, and requires a policy version on every v2 row. `verify_audit_chain()` recomputes
   each row by its own version and fails when the version goes down along `seq`.
-- **Outcome**: `SUCCEEDED` (every committed command) or `REFUSED` (reserved for V13-DB-021, nothing writes it yet).
+- **Outcome**: `SUCCEEDED` (every committed command) or `REFUSED` (since 0013, V13-DB-021: a refused request-time
+  command, below).
+- **REFUSED rows** (0013): action `COMMAND_REFUSED`; `entity_type` `task`, `notification` or `workspace`; metadata only
+  `{"command", "refusal"}` from allow-lists, plus `suppressed` (a positive integer) when the previous window suppressed
+  rows. `V1401` and `V1404` rows never carry an id; `V1409`, `V1422`, `V1423` rows carry the target and its case only while
+  `can_access_case(case)` holds when the row is written (a refused draft has no notification id, so only the case).
+  Actor, workspace and correlation id come from the verified claims, null without them. The check constraint
+  `audit_event_refusal_shape_check` pins all of this, and keeps `refusal` and `suppressed` out of every SUCCEEDED row.
+- **Window** (0013): one REFUSED row per (persona, or none; command; code) per `REFUSAL_AUDIT_WINDOW_SECONDS` = 60
+  (DB-proposed). Later refusals in the window only increment `refusal_window.suppressed` under a row lock on that key
+  (no chain lock, no ledger row); the next window's row carries the count. A count with no later refusal stays in
+  `refusal_window`, readable by the owner. No reader of REFUSED rows exists; any later governance read excludes them
+  for case-team capacities (DB-021 §4.4).
 - **Policy version**: the highest `policy_version.version`. Every migration that changes the access policy inserts its
   own row as its last statement: `V13-ACCESS-<migration>`, with `_policy_fingerprint()` computed on the server that
   applies it. The fingerprint covers, in schema `cdf_notifications_v13` only, the schema ACL; every table, view and
@@ -246,6 +279,12 @@ What is lost: the data held in the objects a revert removes. In V13 that is refe
 recipient classes in 0004), which only re-applying that migration restores; synthetic seed data, which the seed bundles
 reload; plus rows written at run time by commands (audit events, task status changes, notification drafts, workspace
 switches), which nothing can reload. Function, policy and index changes hold no data.
+
+What the access-policy fingerprint does not cover (SEC INFO 1 on #119): `_policy_fingerprint()` and P10 are
+schema-level only. Role memberships, role attributes (such as BYPASSRLS) and default ACLs are outside them; the
+bootstrap lint (`db:lint`) and the hosted isolation checks (`database/hosted/isolation_checks.sql`, P08 and P09 of
+`post_apply_checks.sql`) cover those. A migration that records a new `policy_version` row therefore proves nothing about
+roles, and P10 passing is not evidence about them.
 
 ### 0000_bootstrap.sql
 
@@ -433,3 +472,21 @@ switches), which nothing can reload. Function, policy and index changes hold no 
 - **Local:** `pnpm db:reset`.
 - **Hosted:** a forward-fix migration that corrects the writer, the verifier or the fingerprint and records a new
   `policy_version` row; never a column drop or a ledger rewrite.
+
+### 0013_refused_command_audit.sql
+
+- **Creates:** `table refusal_window`, `policy refusal_window_deny_all`, `function _append_audit_row`,
+  `function _append_audit_refused`, `function _claim_command_slot`, `function _api_install_claims_key_impl`,
+  `function _api_update_task_status_impl`, `function _api_create_notification_draft_impl`,
+  `function _api_switch_workspace_impl`
+- **Replaces:** `function _append_audit`, `function api_install_claims_key`, `function api_update_task_status`,
+  `function api_create_notification_draft`, `function api_switch_workspace`
+- **Drops:** none
+- **Alters:** `constraint audit_event_refusal_shape_check on audit_event`
+- **Data lost on revert:** the window counters in `refusal_window` (suppressed counts not yet carried into a ledger
+  row). REFUSED ledger rows are never removed (ADR-011); a revert that keeps them must keep the shape constraint or a
+  looser one. The four commands' bodies are unchanged, so restoring the 0001/0003/0004/0005 definitions from Git
+  history restores today's raising behaviour, and the adapters must be reverted in the same change (DB-021 §6).
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that drops and re-creates the wrappers (the connector's DROP confirmation, ADR-012)
+  and records a new `policy_version` row; never a ledger rewrite.

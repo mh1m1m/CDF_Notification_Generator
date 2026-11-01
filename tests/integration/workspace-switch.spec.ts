@@ -17,6 +17,7 @@ import {
   PERSONA,
   WORKSPACE,
 } from "./support/context";
+import { outcomeOf } from "./support/refusal";
 
 const available = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
 
@@ -40,14 +41,8 @@ if (available && !present)
 
 const UNKNOWN_WS = "0a000000-0000-4000-8000-0000000000ff";
 
-async function codeOf(promise: Promise<unknown>): Promise<string> {
-  try {
-    await promise;
-    return "OK";
-  } catch (error) {
-    return String((error as { code?: unknown }).code ?? "UNKNOWN");
-  }
-}
+/** A command's refusal (migration 0013), its raised SQLSTATE, or "OK". */
+const codeOf = outcomeOf;
 
 const switchTo = (target: string | null) => (tx: Tx) =>
   tx<{ workspace_id: string; workspace_code: string; role_codes: string[] }[]>`
@@ -104,6 +99,7 @@ describe.skipIf(!present)("api_switch_workspace (migration 0005)", () => {
         workspace_id: WORKSPACE.GOVERNANCE,
         workspace_code: "GOVERNANCE",
         role_codes: ["GOVERNANCE_OFFICER"],
+        refusal: null,
       },
     ]);
     expect(audit).toEqual([

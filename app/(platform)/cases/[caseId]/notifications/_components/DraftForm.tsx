@@ -79,6 +79,7 @@ export function DraftForm({ caseId, idempotencyKey, binding, templates, recipien
           id="draft-template"
           name="template_version_id"
           required
+          className="v13-control"
           aria-describedby={selectedCode ? "draft-template-code" : undefined}
           onChange={(e) => setSelectedCode(codeOf(e.currentTarget.value))}
           data-testid="draft-template"
@@ -98,14 +99,26 @@ export function DraftForm({ caseId, idempotencyKey, binding, templates, recipien
           </p>
         ) : null}
         <label htmlFor="draft-recipient">{text.recipient}</label>
-        <select id="draft-recipient" name="recipient_class" required data-testid="draft-recipient">
+        <select
+          id="draft-recipient"
+          name="recipient_class"
+          required
+          className="v13-control"
+          data-testid="draft-recipient"
+        >
           {recipients.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>
           ))}
         </select>
-        <button type="submit" disabled={pending} aria-disabled={pending} data-testid="draft-submit">
+        <button
+          type="submit"
+          disabled={pending}
+          aria-disabled={pending}
+          className="v13-btn v13-btn-primary"
+          data-testid="draft-submit"
+        >
           {text.submit}
         </button>
       </form>

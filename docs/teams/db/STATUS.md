@@ -22,6 +22,7 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-018]` | `feature/V13-DB-018-rollback-register` | REQ-DATA-023: per-migration rollback register (DATA_MODEL.md §9) and its automated check | COMPLETE — #101 merged (85f7332), SEC ACCEPT 434c1c7 |
 | `[V13-DB-019]` | `feature/V13-DB-019-keyset-paged-reads` | REQ-PERF-003, OI-026: migration 0011, keyset-paged per-case reads | COMPLETE — #110 merged (800ab8a), CI 41269347309 6/6 |
 | `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note (#115 merged 937cff3, ACCEPT c35d6c1), then migration 0012 on `feature/V13-DB-020-audit-outcome-policy-version` | IN_PROGRESS — 0012 PR open, SEC review pending |
+| `[V13-DB-021]` | `feature/V13-DB-021-refusal-audit`, stacked on DB-020's 0012 branch | REQ-AUD-005: refused commands audited (design note #120, ACCEPTED); migration 0013, adapters and `lib/server` (FE path-owner), SEC suites, `post_apply_checks.sql` P03 (ARCH path) | IN_PROGRESS — DRAFT PR, waits for #119 |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -192,8 +193,18 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 - Not in this step: refusals (V13-DB-021, own note and SEC threat review first); the disclosure policy version (M5,
   REQ-AUD-003), so REQ-AUD-005 stays IN_PROGRESS for that part.
 
+## In progress: V13-DB-021 (REQ-AUD-005, refused commands)
+- Design note `docs/teams/db/DB-021_REFUSED_COMMAND_AUDIT.md`: ACCEPTED (#120); §8 lists where the build differs.
+- Migration 0013: command bodies moved verbatim into owner-only `_api_*_impl`; wrappers record V1401/V1404/V1409/
+  V1422/V1423 as one REFUSED row (subtransaction) and answer `refusal`; one command per transaction (V1500, install
+  command included); `refusal_window` (60 s bound); row-shape constraint; `V13-ACCESS-0013` as the last statement.
+- Separate commits: adapters and `lib/server` (FE path-owner ACCEPT, SEC review); SEC suites (`commands`,
+  `context-forgery`, `support.ts`) for SEC's ACCEPT; `post_apply_checks.sql` P03 allow-list for ARCH.
+- Evidence (local, 1 Nov): unit 2154/2154, test:db 584/584 (33 files), lint, typecheck, prettier, db:lint clean,
+  rollback register 0 findings, shared-database rehearsal PASS.
+
 ## Next
-- Next free migration: 0013.
+- Next free migration: 0014. Next task: V13-DB-022 (filtered, paged "My open tasks" read, OI-054).
 
 ## Review given
 - #29 `[V13-SEC-002]`: `REVIEW: ACCEPT ede6f46`, re-confirmed `ACCEPT bc89156` after the develop merge (294/294).

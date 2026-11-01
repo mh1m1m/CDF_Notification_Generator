@@ -93,7 +93,7 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 | QA | Playwright & Visual QA | 76 |
 | SEC | Security & Adversarial Testing | 39 |
 
-### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-023)
+### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-024)
 
 The 280 rows with `Milestone` = M1, counted from this CSV. Their statuses were assessed against the merges up to
 `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026), plus #72 (REQ-SEC-002, REQ-GOV-001), #75 (REQ-ARCH-025) and #77
@@ -102,8 +102,9 @@ the merges from `d5b61b0` to `d26ada9` (#78, #70, #76, #83, #80) in V13-PROC-014
 (#74, #84, #85, #81) in V13-PROC-015, the merges from `286eb93` to `40af5ef` (#87, #89, #91, #92, #93) in
 V13-PROC-016, the merges from `40af5ef` to `11fad34` (#90, #94, #82, #95) in V13-PROC-017, the merges from
 `11fad34` to `a0bf765` (#96, #88, #97, #99) in V13-PROC-019, the merges from `373f19c` to `75733ba` (#103,
-#105, #101, #106) in V13-PROC-020, and the merges from `75733ba` to **`220b9d2`** (#98, #108, #109, #111, #110, #107,
-#115, #113) in V13-PROC-023.
+#105, #101, #106) in V13-PROC-020, the merges from `75733ba` to `220b9d2` (#98, #108, #109, #111, #110, #107,
+#115, #113) in V13-PROC-023, and the merges from `220b9d2` to **`df41474`** (#104, #117, #112, #100, #120, #114,
+#118, #119, #116, #124, #122, #123) in V13-PROC-024.
 The status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
 merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
 merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief
@@ -117,15 +118,15 @@ Architect's rulings on #71:
   found on develop `<sha>`".
 
 COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, were checked by SEC before merge. REQ-SEC-002 and REQ-GOV-001
-are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Merges after `a0bf765` are
+are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Merges after `df41474` are
 assessed in the next pass; owners update their rows meanwhile (§6).
 
 **By status**
 
 | Status | Rows |
 |---|---|
-| COMPLETE | 74 |
-| IN_PROGRESS | 174 |
+| COMPLETE | 75 |
+| IN_PROGRESS | 173 |
 | — of which review-enforced standing rules | 51 |
 | — of which document or configuration evidence only, no test | 44 |
 | BLOCKED | 16 |
@@ -142,7 +143,7 @@ assessed in the next pass; owners update their rows meanwhile (§6).
 | DB | 33 | 16 | 16 | 0 | 1 | 0 |
 | FE | 31 | 13 | 18 | 0 | 0 | 0 |
 | SEC | 27 | 14 | 13 | 0 | 0 | 0 |
-| UX | 26 | 6 | 19 | 0 | 0 | 1 |
+| UX | 26 | 7 | 18 | 0 | 0 | 1 |
 | PROC | 7 | 5 | 2 | 0 | 0 | 0 |
 
 PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
@@ -158,7 +159,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | QG-05 | 18 | 6 | 10 | 1 | 0 | 1 |
 | QG-06 | 23 | 5 | 15 | 2 | 0 | 1 |
 | QG-07 | 18 | 1 | 11 | 0 | 0 | 6 |
-| QG-08 | 17 | 3 | 12 | 0 | 0 | 2 |
+| QG-08 | 17 | 4 | 11 | 0 | 0 | 2 |
 | QG-09 | 7 | 1 | 5 | 0 | 0 | 1 |
 | QG-10 | 4 | 1 | 3 | 0 | 0 | 0 |
 | QG-11 | 14 | 0 | 12 | 2 | 0 | 0 |
@@ -168,7 +169,7 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | Gate B | 19 | 10 | 6 | 3 | 0 | 0 |
 | Gate C | 23 | 14 | 7 | 2 | 0 | 0 |
 | Gate D | 5 | 0 | 2 | 0 | 0 | 3 |
-| Gate E | 16 | 3 | 11 | 0 | 0 | 2 |
+| Gate E | 16 | 4 | 10 | 0 | 0 | 2 |
 | Gate F | 6 | 1 | 4 | 0 | 0 | 1 |
 | Gate G | 6 | 0 | 4 | 1 | 0 | 1 |
 | Gate H | 2 | 0 | 2 | 0 | 0 | 0 |

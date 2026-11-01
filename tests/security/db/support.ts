@@ -67,12 +67,47 @@ export interface Outcome {
   rows?: Record<string, unknown>[];
 }
 
+/**
+ * A command's answer as an outcome: since migration 0013 (V13-DB-021) the three request-time commands answer a
+ * refusal in their `refusal` column (one row, every other column null) instead of raising it. Such a row is a refusal
+ * with that code and no message (the database sends no text with it).
+ */
+function outcomeOfRows(rows: Record<string, unknown>[]): Outcome {
+  if (rows.length === 1 && typeof rows[0]?.refusal === "string")
+    return { ok: false, code: rows[0].refusal, rows };
+  return { ok: true, rows };
+}
+
 /** Runs one statement in a savepoint, so a refusal does not abort the surrounding transaction. */
 export async function attempt(tx: Tx, fn: (sp: Tx) => Promise<unknown>): Promise<Outcome> {
   try {
     const rows = (await tx.savepoint((sp) => fn(sp as unknown as Tx))) as Record<string, unknown>[];
-    return { ok: true, rows: Array.isArray(rows) ? [...rows] : [] };
+    return outcomeOfRows(Array.isArray(rows) ? [...rows] : []);
   } catch (error) {
+    return { ok: false, code: errorCodeOf(error), message: (error as Error).message };
+  }
+}
+
+class SavepointRollback extends Error {
+  constructor(readonly rows: Record<string, unknown>[]) {
+    super("savepoint rollback");
+  }
+}
+
+/**
+ * As `attempt`, but the savepoint is always rolled back, so nothing the statement did survives it: a command's writes,
+ * its REFUSED audit row, and its one-command-per-transaction mark (V13-DB-021 R1, an advisory lock released with the
+ * savepoint). For sweeps that call several commands in one transaction.
+ */
+export async function attemptRolledBack(tx: Tx, fn: (sp: Tx) => Promise<unknown>): Promise<Outcome> {
+  try {
+    await tx.savepoint(async (sp) => {
+      const rows = (await fn(sp as unknown as Tx)) as Record<string, unknown>[];
+      throw new SavepointRollback(Array.isArray(rows) ? [...rows] : []);
+    });
+    throw new Error("savepoint was not rolled back");
+  } catch (error) {
+    if (error instanceof SavepointRollback) return outcomeOfRows(error.rows);
     return { ok: false, code: errorCodeOf(error), message: (error as Error).message };
   }
 }

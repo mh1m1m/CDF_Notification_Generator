@@ -2,11 +2,13 @@
 // migration 0004) through the adapter and withRequestContext, against the local primary cluster. A draft in case 0001
 // adds exactly one notification, one notification event and one case-bound audit event there (with this request's
 // correlation id) and changes nothing in any other case. Negatives: the same idempotency key twice (DUPLICATE), a
-// case the persona may not see or draft on (NOT_FOUND, nothing written), a closed case (CASE_CLOSED), an unknown
-// template version or recipient class (INVALID_INPUT). Every command runs inside a transaction the test rolls back, so
-// the seed is unchanged for the other suites. Synthetic data only.
+// case the persona may not see or draft on (NOT_FOUND), a closed case (CASE_CLOSED), an unknown template version or
+// recipient class (INVALID_INPUT). Since migration 0013 (V13-DB-021) a refusal writes exactly one COMMAND_REFUSED audit
+// row and nothing else; it carries the case only when the case is visible (never for NOT_FOUND). Every command runs
+// inside a transaction the test rolls back, so the seed is unchanged for the other suites; the adapter sees the rows
+// only after that transaction has ended. Synthetic data only.
 import postgres from "postgres";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   NotificationCommandRefusedError,
   RequestIdentitySchema,
@@ -21,6 +23,7 @@ import { signDraftBinding } from "@/lib/server/draft-binding";
 import { createNotificationDraft } from "@/lib/server/notification-draft";
 import { TEST_CLAIMS_KEY } from "../support/claims";
 import { clusterAvailable, PRIMARY_ADMIN_URL } from "../support/clusters";
+import { clearRefusalWindows } from "../support/refusal";
 
 const available = await clusterAvailable("primary", PRIMARY_ADMIN_URL);
 const who = (persona: number, active_workspace: string, role: string): RequestIdentity =>
@@ -43,7 +46,7 @@ interface Snapshot {
   readonly notifications: Record<string, number>;
   readonly events: Record<string, number>;
   readonly audit: Record<string, number>;
-  readonly auditForCorrelation: { action: string; case_id: string; entity_id: string }[];
+  readonly auditForCorrelation: { action: string; case_id: string | null; entity_id: string | null }[];
   readonly created: { id: string; case_id: string; recipient_class: string; lifecycle_status: string }[];
 }
 
@@ -85,19 +88,30 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
     };
   }
 
-  const port = (onSuccess: (tx: Tx) => Promise<Snapshot>) =>
-    createV13NotificationDrafts((id, fn) =>
-      withRequestContext(
-        id,
-        async (tx) => {
-          // A refusal raises inside fn and aborts the transaction; a success is inspected here, then rolled back.
-          const rows = await fn(tx);
-          await tx.unsafe("reset role");
-          throw new Rollback({ rows, after: await onSuccess(tx) });
-        },
-        { sql: admin, claimsKey: TEST_CLAIMS_KEY, correlationId: CORRELATION as never },
-      ),
-    );
+  /** What the last command's transaction held before it was rolled back. */
+  let last: { rows: unknown; after: Snapshot } | null = null;
+
+  // The rows are inspected inside the transaction, the transaction is rolled back, and only then does the adapter see
+  // the rows (as it would after a commit), so a refusal is mapped after the transaction ended (DB-021 §6).
+  const port = () =>
+    createV13NotificationDrafts(async (id, fn) => {
+      try {
+        await withRequestContext(
+          id,
+          async (tx) => {
+            const rows = await fn(tx);
+            await tx.unsafe("reset role");
+            throw new Rollback({ rows, after: await snapshot(tx) });
+          },
+          { sql: admin, claimsKey: TEST_CLAIMS_KEY, correlationId: CORRELATION as never },
+        );
+      } catch (error) {
+        if (!(error instanceof Rollback)) throw error;
+        last = error.value as { rows: unknown; after: Snapshot };
+        return last.rows as never;
+      }
+      throw new Error("not rolled back");
+    });
 
   async function attempt(
     identity: RequestIdentity,
@@ -110,18 +124,32 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
       idempotency_key: KEY,
       ...command,
     } as CreateNotificationDraftCommand;
+    last = null;
     try {
-      await port(snapshot).createDraft(identity, full);
-      return { outcome: "NOT_ROLLED_BACK", after: await snapshot(admin) };
+      await port().createDraft(identity, full);
+      if (!last) throw new Error("no transaction");
+      const v = last as { rows: unknown; after: Snapshot };
+      return { outcome: "OK", after: v.after, rows: v.rows };
     } catch (error) {
-      if (error instanceof Rollback) {
-        const v = error.value as { rows: unknown; after: Snapshot };
-        return { outcome: "OK", after: v.after, rows: v.rows };
+      if (error instanceof NotificationCommandRefusedError && last) {
+        return { outcome: error.refusal, after: (last as { after: Snapshot }).after };
       }
-      if (error instanceof NotificationCommandRefusedError)
-        return { outcome: error.refusal, after: await snapshot(admin) };
       throw error;
     }
+  }
+
+  /** Only the one COMMAND_REFUSED row was written: in `caseId` when given, else with no ids. */
+  function expectOnlyRefusal(after: Snapshot, caseId: string | null): void {
+    expect(after.notifications).toEqual(before.notifications);
+    expect(after.events).toEqual(before.events);
+    expect(after.created).toEqual(before.created);
+    const audit = { ...before.audit };
+    if (caseId) audit[caseId] = (audit[caseId] ?? 0) + 1;
+    expect(after.audit).toEqual(audit);
+    // The draft command's refusal row names the case (entity_type notification, no notification id).
+    expect(after.auditForCorrelation).toEqual([
+      { action: "COMMAND_REFUSED", case_id: caseId, entity_id: null },
+    ]);
   }
 
   let before: Snapshot;
@@ -132,6 +160,9 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
       select idempotency_key as k from cdf_notifications_v13.notification
        where id = '2f000000-0000-4000-8000-000000000001'::uuid`;
     seededKey = row?.k ?? SEEDED_KEY;
+  });
+  beforeEach(async () => {
+    await clearRefusalWindows(admin);
   });
   afterAll(async () => {
     // The seed is untouched: every attempt was rolled back or refused.
@@ -166,7 +197,13 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
       { id: expect.any(String), case_id: CASE(1), recipient_class: "WITNESS", lifecycle_status: "DRAFT" },
     ]);
     expect(rows).toEqual([
-      { notification_id: after.created[0]?.id, case_id: CASE(1), lifecycle_status: "DRAFT", row_version: 1 },
+      {
+        notification_id: after.created[0]?.id,
+        case_id: CASE(1),
+        lifecycle_status: "DRAFT",
+        row_version: 1,
+        refusal: null,
+      },
     ]);
     for (const k of ["notifications", "events", "audit"] as const) {
       for (const c of new Set([...Object.keys(before[k]), ...Object.keys(after[k])])) {
@@ -197,10 +234,10 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
     expect((await attempt(BETA, {})).outcome).toBe("OK");
   });
 
-  it("the author's own key used again is DUPLICATE and writes nothing", async () => {
+  it("the author's own key used again is DUPLICATE and writes only its refusal row", async () => {
     const { outcome, after } = await attempt(ALPHA, { idempotency_key: seededKey });
     expect(outcome).toBe("DUPLICATE");
-    expect(after).toEqual(before);
+    expectOnlyRefusal(after, CASE(1));
   });
 
   it("another persona's key gives no signal: Beta may use the key Alpha used", async () => {
@@ -219,16 +256,16 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
     // SEC (4): a case visible only in other workspaces, for a role that may draft.
     ["Gamma (Investigations) on 0008, visible only in Governance and Secretariat", GAMMA, 8],
     ["Delta in Governance on 0001 (role may not draft)", DELTA_GOV, 1],
-  ] as const)("%s is NOT_FOUND and writes nothing", async (_n, identity, c) => {
+  ] as const)("%s is NOT_FOUND and writes only a refusal row without ids", async (_n, identity, c) => {
     const { outcome, after } = await attempt(identity, { case_id: CASE(c) as never });
     expect(outcome).toBe("NOT_FOUND");
-    expect(after).toEqual(before);
+    expectOnlyRefusal(after, null);
   });
 
-  it("the closed case 0010 is CASE_CLOSED and writes nothing", async () => {
+  it("the closed case 0010 is CASE_CLOSED and writes only its refusal row", async () => {
     const { outcome, after } = await attempt(ALPHA, { case_id: CASE(10) as never });
     expect(outcome).toBe("CASE_CLOSED");
-    expect(after).toEqual(before);
+    expectOnlyRefusal(after, CASE(10));
   });
 
   // V13-FE-012 (OI-049): lib/server binds the draft to the route's case. The form 0004's page renders carries a binding
@@ -243,7 +280,7 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
     };
     const ctx = { session, identity: ALPHA, correlationId: CORRELATION } as unknown as RequestContext;
     function boundPort() {
-      const inner = port(snapshot);
+      const inner = port();
       const seen = { calls: 0, after: undefined as Snapshot | undefined };
       return {
         seen,
@@ -251,16 +288,11 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
           options: inner.options,
           async createDraft(identity: RequestIdentity, command: CreateNotificationDraftCommand) {
             seen.calls += 1;
+            last = null;
             try {
               return await inner.createDraft(identity, command);
-            } catch (error) {
-              if (!(error instanceof Rollback)) throw error;
-              const v = error.value as {
-                rows: { notification_id: string; case_id: string }[];
-                after: Snapshot;
-              };
-              seen.after = v.after;
-              return v.rows[0] as never;
+            } finally {
+              seen.after = (last as { after: Snapshot } | null)?.after;
             }
           },
         },
@@ -325,9 +357,9 @@ describe.skipIf(!available)("V13 notification draft command on the primary clust
   it.each([
     ["an unknown template version", { template_version_id: TV(9) }],
     ["an unknown recipient class", { recipient_class: "REPORTER" }],
-  ] as const)("%s is INVALID_INPUT and writes nothing", async (_n, command) => {
+  ] as const)("%s is INVALID_INPUT and writes only its refusal row", async (_n, command) => {
     const { outcome, after } = await attempt(ALPHA, command);
     expect(outcome).toBe("INVALID_INPUT");
-    expect(after).toEqual(before);
+    expectOnlyRefusal(after, CASE(1));
   });
 });

@@ -1,7 +1,7 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
 Updated: 2026-11-01 04:42 UTC · Branch: feature/V13-FE-013-case-lists-paged (develop abdd885 merged in; #112 FE-012 merged; FE-011 is #116) · Head: see PR
-Updated: 2026-11-01 05:24 UTC · Branch: feature/V13-FE-016-template-code-wraps (from develop 4f94b07; #121 FE-013 merged) · Head: see PR
+Updated: 2026-11-01 05:43 UTC · Branch: feature/V13-FE-016-template-code-wraps (develop 772e26d merged in; #121 FE-013 and #128 UX-014 merged) · Head: see PR
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
 - V13-FE-001 (part 1) — `lib/authz` pre-check, `lib/server` (errors, request context, case read services, case source
@@ -224,6 +224,7 @@ Updated: 2026-11-01 05:24 UTC · Branch: feature/V13-FE-016-template-code-wraps 
 | FE-013 after SEC CHANGES 5254893 (the cursor must re-encode to exactly what was passed: keys reordered, whitespace, an escaped character are refused; ARCH's listEventsPage wording): commands as above. Mutation: without the canonical check the 3 new tests fail | pass | 88 files, 2175 / 506 / 333 of 333 | FE-013 head |
 | FE-013 after merging develop 61b57cf (#116 FE-011; conflicts in case.module.css, case i18n, Scenario E and STATUS kept both sides): commands as above | pass | 88 files, 2182 / 540 / 336 of 336 | FE-013 head |
 | FE-016 on develop 4f94b07: lint, typecheck, format:check / `pnpm test` (notification-draft 2 new: code line markup in ar + en, order and aria-describedby; CSS pins own row + wrap anywhere) / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` (Scenario E: ar and en at 320 px, code shown whole, follows the selection CF-24 ↔ CF-20, no page scroll). Mutation: without the change handler both 320 px tests fail | pass | 88 files, 2184 / 540 / 338 of 338 | FE-016 head |
+| FE-016 after merging develop 772e26d (#128 UX-014; DraftForm's template `<select>` keeps UX's `v13-control` class with FE-016's ref, `aria-describedby` and change handler; Scenario E imports merged): commands as above | pass | 89 files, 2342 / 593 / 338 of 338 | FE-016 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden

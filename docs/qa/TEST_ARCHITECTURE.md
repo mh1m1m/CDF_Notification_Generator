@@ -143,7 +143,21 @@ appear in a payload at all. The GENERALIZED `classification_marking` shows the c
 allowed fields are rendered. A withheld field without browser markers in the test fails it. Mutation checks: the
 loader writing the case number into the frame, and the policy no longer generalizing the classification, both fail
 the test; making `case_number` or `delivery_status` ALLOWED in the policy is clamped by the projector's WITNESS
-scenario ceiling (defence in depth), so nothing changes in the browser.
+scenario ceiling (defence in depth), so nothing changes in the browser. The bodies are read in the test through
+`page.route` and `route.fetch()` and handed on to the page unchanged (V13-QA-012). Reading them from the browser
+afterwards (`response.text()`) missed the click's RSC payload: the router aborts its RSC fetch once it has consumed the
+payload, Chromium keeps no body for an aborted request, and the unread body passed every negative check as an empty
+string (SEC INFO 1 on #114). A body the test cannot fetch is now recorded and fails the test, and the click's payload
+and the reload's document must each carry the frame's document. Mutations: dropping the RSC bodies fails the click
+check; an RSC body that cannot be fetched fails the unread check. The plain-text version (V13-FE-011), opened as the
+page shows it, withholds the same fields: no withheld-field marker or field name and not the notice's own marking; the
+class-safe wording, the event title, issuer, notice reference and confidentiality notice are in it (control).
+Mutations: the loader appending the case number to the text, or the notice's own marking, fails the test. Database precondition (V13-QA-012): the disclosure tests need no fresh data (they
+assert on their own rows by id; the whole Scenario E spec passed twice in a row against one app on one database). Like
+every database-backed e2e test, they need the database to hold this app's claims key (ADR-014): an app started with a
+new session secret on a database holding the previous run's key refuses every request (`CLAIMS_KEY_MISMATCH`), and the
+first step times out at the draft form's template select. Run `pnpm db:reset` before each local run that starts a new
+app (`playwright.config.ts`); CI resets in the e2e job.
 
 ## 7. Case Context Sentinel (QG-02, Gate B)
 
