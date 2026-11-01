@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `feature/V13-UX-008-case-workspace` · Base: `develop` `f45f192`
+Updated: 2026-11-01 · Branch: `feature/V13-UX-009-text-resize-reflow` · Base: `develop` `f11e65a`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -130,7 +130,7 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   e2e 194/194 locally. Visual check at 360/768/1280 in ar and en with a scratch spec (deleted): no page scroll, caption
   inside the region, no broken case numbers.
 
-## V13-UX-008(c): Case Workspace on the shared components (IN_REVIEW once its PR is open; FE ACCEPTs `app/**`, QA reviews)
+## V13-UX-008(c): Case Workspace on the shared components. PR #90, merged into `develop` as `f11e65a`
 - Overview, Recorded events and Tasks use `CaseWorkspace`, `Breadcrumbs`, `CaseHeader`, `CaseTabs`, `Timeline`,
   `DataTable` and `StatusBadge`; dates through `components/format.ts`. The Notifications tab is unchanged (brief).
 - `CaseHeader`: `stageCode` (data-stage), `capacityCode` (data-capacity, with a "no recorded capacity" line when
@@ -149,6 +149,15 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Tests: unit 1,972/1,972 (new: record-only Timeline entries, data refusal, CaseHeader codes and no-capacity line,
   closed notice role), lint, typecheck, format, e2e 224/224 locally. Visual check at 360/768/1280 in ar and en
   (overview, events, tasks, closed case): no page scroll, tab row on one line, no broken case numbers.
+
+## V13-UX-009: text resize and reflow (REQ-A11Y-010; IN_REVIEW once its PR is open; QA reviews)
+- Review of the five M1 screens in ar and en at 200% zoom, 320 px and with the WCAG 1.4.12 spacing override:
+  `docs/design/reviews/UX009_TEXT_RESIZE_REFLOW.md` (4 findings). No two-dimensional page scroll anywhere; tables
+  scroll only inside their labelled regions.
+- Fixed in `styles/globals.css`: R-01 area navigation and R-02 case tabs wrap instead of scrolling (nothing off-screen
+  at 320 px), R-03 skip link width limit. R-04 (caption inside the scrolling table) → FE-009 with M1-15.
+- `tests/unit/components/reflow.spec.ts` pins R-01 to R-03 and the no-clipping rules (fails on the old stylesheet).
+- Spec for QA's a11y e2e in the register §4. M1-09 recorded FIXED by #90; M1-12 now wraps (R-02).
 
 ## Unresolved defects
 - QA nit from #74 (preview frame title "— DESIGN_PREVIEW"): routed by ARCH to FE-009 (#82); no UX change.
