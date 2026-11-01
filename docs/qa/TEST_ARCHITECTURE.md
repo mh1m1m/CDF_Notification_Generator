@@ -159,6 +159,16 @@ new session secret on a database holding the previous run's key refuses every re
 first step times out at the draft form's template select. Run `pnpm db:reset` before each local run that starts a new
 app (`playwright.config.ts`); CI resets in the e2e job.
 
+**Next Action Card (V13-QA-020, V13-FE-015).** `tests/e2e/next-action-card.spec.ts` runs as Investigator Beta in ar
+and en at 320 px. The oracle is `case_my_open_tasks_page` (DB-022), called read-only in Beta's own security context:
+on every active case with an own open task the card names one of those tasks, its link is `/cases/<id>#task-<id>`, and
+following it makes that row of the overview the `:target`; on every active case with none, nothing renders (no card,
+no heading); and on the page after the first task (the seed holds at most two own open tasks per case, so "another
+page" is opened with the cursor the app would write for the first row, which the database accepts only for that row)
+the card keeps the first page's task and its link leads back to page 1. No page scrolls sideways at 320 px. Mutations
+caught: the card computed from the current page (page-2 test fails), the row anchors removed (both link tests fail),
+a heading rendered for NONE (NONE test fails).
+
 **No JavaScript (V13-QA-021, OI-056).** `tests/e2e/no-js-server-actions.spec.ts` runs with `javaScriptEnabled: false`:
 persona sign-in reaches My Work with the session cookie set, and Governance Officer Delta switches workspace on
 `/workspaces`. Each form POST must carry the app's own `Origin` (never `null`) and get no server error. A control test
