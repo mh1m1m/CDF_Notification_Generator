@@ -574,10 +574,14 @@
     justify-content: space-between;
     gap: var(--cdf-space-3);
     min-block-size: var(--cdf-touch-min);
+    max-inline-size: 100%;
     padding-inline: var(--cdf-space-4);
     color: var(--cdf-text);
     text-decoration: none;
-    white-space: nowrap;
+    /* Wraps inside its item instead of keeping one line (V13-UX-012): with the 1.4.12 spacing a long current link
+       ("Notification operations centre", bold) is about as wide as a 320 px viewport, and how wide depends on the
+       font the browser has. */
+    overflow-wrap: anywhere;
     border-block-end: 4px solid transparent;
   }
 
@@ -605,7 +609,6 @@
     }
 
     .v13-side-nav-link {
-      white-space: normal;
       border-block-end: 0;
       border-inline-start: 4px solid transparent;
     }
