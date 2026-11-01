@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 02:48 UTC · Branch: fix/V13-FE-010-notification-tables-caption (develop 68a42b9 merged in; #82 merged) · Head: see PR
+Updated: 2026-11-01 02:54 UTC · Branch: fix/V13-FE-010-notification-tables-caption (develop a0bf765 merged in; #82 merged) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -186,6 +186,7 @@ Updated: 2026-11-01 02:48 UTC · Branch: fix/V13-FE-010-notification-tables-capt
 | FE-010 on develop 961197e: new unit pins (case tab DataTable markup, sticky caption, row ids and ADR-013 attributes, ar/en; Center caption span + size-container region; removing either Center class fails the pin, checked) and e2e at 320 px (Center + case tab, ar/en, caption inside the region before and after scrolling; all 4 fail on develop's markup, checked). Commands: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 78 files, 2011 / 468 / 235 of 235 | FE-010 head |
 | FE-010 + UXB-02/UXB-04 (case tab dates and version) after merging develop 11fad34: unit pins in ar and en for the month-in-words created time (equals `formatDateTime`, no `/`) and the Latin `<bdi>` version; restoring the numeric date or `numberFormat` version fails them (checked). Commands as above | pass | 79 files, 2018 / 468 / 235 of 235 | FE-010 head |
 | FE-010 + draft option version (D10) after merging develop 68a42b9: unit pin in ar and en with version 1234 ("الإصدار 1234" / "version 1234", no Arabic-Indic digits, no grouping); numberFormat output fails it (checked). Commands as above | pass | 80 files, 2026 / 468 / 235 of 235 | FE-010 head |
+| FE-010 after merging develop a0bf765 (#99, QA's leak-suite guard): commands as above | pass | 80 files, 2026 / 468 / 312 of 312 | FE-010 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
