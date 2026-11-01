@@ -120,14 +120,24 @@ function UpdateForm({ t, row }: { t: Translator; row: MyWorkRow }) {
         <input type="hidden" name="task_id" value={task.task_id} />
         <input type="hidden" name="expected_version" value={String(task.row_version)} />
         <label htmlFor={selectId}>{t("myWork.update.label")}</label>
-        <select id={selectId} name="new_status" required data-testid={`task-status-select-${task.task_id}`}>
+        <select
+          id={selectId}
+          name="new_status"
+          required
+          className="v13-control"
+          data-testid={`task-status-select-${task.task_id}`}
+        >
           {row.transitions.map((status) => (
             <option key={status} value={status}>
               {t(TASK_STATUS_KEYS[status])}
             </option>
           ))}
         </select>
-        <button type="submit" data-testid={`task-status-submit-${task.task_id}`}>
+        <button
+          type="submit"
+          className="v13-btn v13-btn-secondary"
+          data-testid={`task-status-submit-${task.task_id}`}
+        >
           {t("myWork.update.submit")}
         </button>
       </form>

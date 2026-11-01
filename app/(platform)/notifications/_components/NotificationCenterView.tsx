@@ -97,6 +97,7 @@ function Filters({ t, query }: { t: Translator; query: CenterQuery }) {
         <label htmlFor="notifications-status">{t("notifications.filters.status")}</label>
         <select
           id="notifications-status"
+          className="v13-control"
           name="status"
           defaultValue={query.status ?? ""}
           data-testid="notifications-filter-status"
@@ -113,6 +114,7 @@ function Filters({ t, query }: { t: Translator; query: CenterQuery }) {
         <label htmlFor="notifications-template">{t("notifications.filters.template")}</label>
         <input
           id="notifications-template"
+          className="v13-control"
           name="template"
           type="text"
           dir="ltr"
@@ -130,6 +132,7 @@ function Filters({ t, query }: { t: Translator; query: CenterQuery }) {
         <label htmlFor="notifications-case">{t("notifications.filters.case")}</label>
         <input
           id="notifications-case"
+          className="v13-control"
           name="case"
           type="text"
           dir="ltr"
@@ -147,6 +150,7 @@ function Filters({ t, query }: { t: Translator; query: CenterQuery }) {
         <label htmlFor="notifications-from">{t("notifications.filters.from")}</label>
         <input
           id="notifications-from"
+          className="v13-control"
           name="from"
           type="date"
           defaultValue={query.from ?? ""}
@@ -157,6 +161,7 @@ function Filters({ t, query }: { t: Translator; query: CenterQuery }) {
         <label htmlFor="notifications-to">{t("notifications.filters.to")}</label>
         <input
           id="notifications-to"
+          className="v13-control"
           name="to"
           type="date"
           defaultValue={query.to ?? ""}

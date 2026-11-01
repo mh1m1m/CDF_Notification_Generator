@@ -993,6 +993,19 @@
     background-color: var(--cdf-surface-subtle);
   }
 
+  /* V13-UX-014 (UXB-18): a link in a table cell is underlined, so it is told apart from the cell text by more than
+     colour or column (WCAG 2.2 SC 1.4.1); Tailwind's preflight removes the browser's underline. Defined here once for
+     every table, DataTable or the Center's own; buttons styled as links keep their own look. */
+  tbody a:not(.v13-btn) {
+    text-decoration-line: underline;
+    text-decoration-thickness: from-font;
+    text-underline-offset: 0.2em;
+  }
+
+  tbody a:not(.v13-btn):hover {
+    text-decoration-thickness: 2px;
+  }
+
   .v13-sort-link {
     display: inline-flex;
     align-items: center;
@@ -1217,6 +1230,28 @@
   }
 
   .v13-btn:disabled {
+    background-color: var(--cdf-disabled-bg);
+    color: var(--cdf-disabled-text);
+    cursor: not-allowed;
+  }
+
+  /* Form fields (V13-UX-014, UXB-17): the one definition of a text input, select or textarea. The border uses the
+     control token (>= 3:1 on every surface, WCAG 2.2 SC 1.4.11; tokens.spec.ts), the field is 40 px tall (SC 2.5.8
+     asks for 24 px), and it never grows past its container (SC 1.4.10 at 320 px). Checkboxes and radios keep their
+     native look with accent-color (base layer). */
+  .v13-control {
+    box-sizing: border-box;
+    min-block-size: 2.5rem;
+    max-inline-size: 100%;
+    padding-inline: var(--cdf-space-2);
+    border: var(--cdf-border-hairline) solid var(--cdf-border-control);
+    border-radius: var(--cdf-radius-control);
+    background-color: var(--cdf-surface);
+    color: var(--cdf-text);
+    font: inherit;
+  }
+
+  .v13-control:disabled {
     background-color: var(--cdf-disabled-bg);
     color: var(--cdf-disabled-text);
     cursor: not-allowed;
