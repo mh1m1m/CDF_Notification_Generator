@@ -569,29 +569,17 @@ export function checkListing(
 }
 
 // G7 (V13-QA-015; REQ-VIS-012; docs/qa/M1_OPEN_QA_ROWS_DESIGN.md §5.2, D2): visual baselines are never approved by the
-// runner in CI. playwright.config.ts holds exactly one updateSnapshots, the defineConfig object's own property, with
-// the value `process.env.CI ? "none" : "missing"` written exactly so (Playwright's default is "missing", so a missing
-// key would let CI write baselines); no other mention of the name, no computed key and no element access with a built
+// runner, in CI or locally. playwright.config.ts holds exactly one updateSnapshots, the defineConfig object's own
+// property, with the value "none" written as a plain string (Playwright's default is "missing", so a missing key would
+// write baselines; a local "missing" wrote sandbox images into tests/visual/__screenshots__/, ARCH B2 on #145; the
+// baseline spec writes candidates itself, to test-results/baseline-candidates/); no other mention of the name, no computed key and no element access with a built
 // name could set it otherwise. No workflow line and no package script passes --update-snapshots (or -u) to the runner.
 
 const UPDATE_SNAPSHOTS = "updateSnapshots";
 
-/** True for exactly `process.env.CI ? "none" : "missing"`. */
+/** True for exactly the string literal "none": no run, in CI or locally, writes a baseline (ARCH B2 on #145). */
 function isPinnedUpdateSnapshots(node: ts.Expression): boolean {
-  if (!ts.isConditionalExpression(node)) return false;
-  const c = node.condition;
-  return (
-    ts.isPropertyAccessExpression(c) &&
-    c.name.text === "CI" &&
-    ts.isPropertyAccessExpression(c.expression) &&
-    c.expression.name.text === "env" &&
-    ts.isIdentifier(c.expression.expression) &&
-    c.expression.expression.text === "process" &&
-    ts.isStringLiteral(node.whenTrue) &&
-    node.whenTrue.text === "none" &&
-    ts.isStringLiteral(node.whenFalse) &&
-    node.whenFalse.text === "missing"
-  );
+  return ts.isStringLiteral(node) && node.text === "none";
 }
 
 /** G7 over playwright.config.ts. */
@@ -645,7 +633,7 @@ export function checkSnapshotConfig(file: string, src: string): GuardViolation[]
       const prop = n.parent;
       const isConfigOwn = ts.isPropertyAssignment(prop) && prop.name === n && prop.parent === configObject;
       if (isConfigOwn && isPinnedUpdateSnapshots((prop as ts.PropertyAssignment).initializer)) pinned += 1;
-      else if (isConfigOwn) hit(n, 'updateSnapshots must be exactly process.env.CI ? "none" : "missing"');
+      else if (isConfigOwn) hit(n, 'updateSnapshots must be exactly "none"');
       else hit(n, "updateSnapshots is set or named outside the config's own property");
     }
     // A key or an element access whose name is built cannot be read; it could be updateSnapshots.
@@ -657,10 +645,7 @@ export function checkSnapshotConfig(file: string, src: string): GuardViolation[]
   };
   visit(sf);
   if (pinned !== 1 && !out.some((v) => v.detail.startsWith("updateSnapshots must")))
-    hit(
-      configObject,
-      'the config has no updateSnapshots: process.env.CI ? "none" : "missing" (the default writes baselines)',
-    );
+    hit(configObject, 'the config has no updateSnapshots: "none" (the default writes baselines)');
   return out;
 }
 

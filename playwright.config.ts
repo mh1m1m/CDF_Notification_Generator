@@ -97,9 +97,10 @@ export default defineConfig({
   // A test that fails and then passes on its retry fails the CI run: a leak that shows once is never a green "flaky"
   // (V13-QA-008, TEST_ARCHITECTURE.md §7.1; pinned in tests/sentinel/leak-suite-guard.spec.ts).
   failOnFlakyTests: isCI,
-  // Baselines are never written in CI (V13-QA-015, design §5.2, D2): a missing or changed one fails and its actual
-  // image goes to the artifact for review. Pinned by G7 in tests/sentinel/leak-suite-guard.spec.ts.
-  updateSnapshots: process.env.CI ? "none" : "missing",
+  // The runner never writes a baseline, in CI or locally (V13-QA-015, design §5.2, D2; ARCH B2 on #145): a missing or
+  // changed one fails; the baseline spec writes a missing one's candidate to test-results/baseline-candidates/, and
+  // Playwright writes a changed one's actual and diff images. Pinned by G7 in tests/sentinel/leak-suite-guard.spec.ts.
+  updateSnapshots: "none",
   reporter: isCI
     ? [["list"], ["junit", { outputFile: "test-results/e2e-junit.xml" }], ["html", { open: "never" }]]
     : [["list"]],

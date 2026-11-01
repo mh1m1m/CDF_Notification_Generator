@@ -499,7 +499,7 @@ test.describe("G7: visual baselines are never written by the runner in CI (V13-Q
   const CONFIG = "playwright.config.ts";
   const config = (props: string, extra = "") =>
     `import { defineConfig } from "@playwright/test";\n${extra}export default defineConfig({\n  testDir: "tests",\n${props}\n});\n`;
-  const PINNED = '  updateSnapshots: process.env.CI ? "none" : "missing",';
+  const PINNED = '  updateSnapshots: "none",';
 
   test("the real config, every workflow and package.json are clean", () => {
     const src = read(CONFIG);
@@ -530,8 +530,14 @@ test.describe("G7: visual baselines are never written by the runner in CI (V13-Q
     ['unconditional "all"', '  updateSnapshots: "all",'],
     ['unconditional "changed"', '  updateSnapshots: "changed",'],
     ['unconditional "missing"', '  updateSnapshots: "missing",'],
+    [
+      "the former CI-only form (a local run wrote baselines)",
+      '  updateSnapshots: process.env.CI ? "none" : "missing",',
+    ],
     ["the branches swapped", '  updateSnapshots: process.env.CI ? "missing" : "none",'],
     ["another condition", '  updateSnapshots: process.env.UPDATE ? "none" : "missing",'],
+    ["a template literal", "  updateSnapshots: `none`,"],
+    ["a variable holding none", `  updateSnapshots: mode,`, 'const mode = "none";\n'],
     ["the pinned value twice", `${PINNED}\n${PINNED}`],
     ["a project-level updateSnapshots", `${PINNED}\n  projects: [{ name: "p", updateSnapshots: "all" }],`],
     [

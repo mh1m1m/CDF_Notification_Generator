@@ -5,7 +5,7 @@
 // Each cell is opened and proven exactly as the library does (capture.ts openCell: status, language, state marker,
 // data check V1–V5) before the comparison, with the same masks and capture style.
 //
-// Never auto-approved (§5.2): playwright.config.ts sets updateSnapshots to "none" in CI, and the leak-suite guard's
+// Never auto-approved (§5.2): playwright.config.ts sets updateSnapshots to "none" for every run, and the leak-suite guard's
 // G7 fails any other setting and any --update-snapshots in a workflow or package script. A changed baseline fails here
 // and Playwright writes the expected, actual and diff images to the job's artifact. A missing one fails too, and since
 // Playwright then writes no image, this spec writes the candidate itself to test-results/baseline-candidates/ with the
