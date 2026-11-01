@@ -34,7 +34,10 @@ Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 25
   unlisted skip on a leak-detection suite), planted negatives for every form. ARCH CHANGES on cd15ddf addressed:
   TypeScript-parser tokenising (a regex quote hid case-pages.spec.ts after line 30), a pin planted in all 135
   test/describe bodies of the 13 suites, Vitest `suite` and `test.step.skip`, `failOnFlakyTests` in CI, and the
-  session-secret pin for the allow-listed skips.
+  session-secret pin for the allow-listed skips. OI-051 (Sentinel self-test (o) timed out once in FE's run) fixed on
+  the same branch: reproduced 5/300 under 8 workers; the trace shows every assertion passed, then `server.close()`
+  waited on a socket Chromium had opened with no request. Fix: `closeAllConnections()` first (as the OI-047 test
+  already did), and the refetch timeout is never 0 (Playwright reads 0 as none). After: 0/600.
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |
