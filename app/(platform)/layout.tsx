@@ -9,6 +9,7 @@ import { getCurrentSession } from "@/lib/auth/server-session";
 import { WorkspaceSwitcher } from "@/components/shell/WorkspaceSwitcher";
 import { translateKey, WORKSPACE_NAME_KEYS } from "@/lib/i18n";
 import { getTranslator } from "@/lib/i18n/server";
+import { confirmedMembershipsForRequest } from "@/lib/server/membership-records";
 import { navigationFor } from "@/lib/server/navigation";
 import { PlatformNav } from "./_components/PlatformNav";
 import { workspaceOptions } from "./_components/workspace-options";
@@ -31,7 +32,7 @@ export default async function PlatformLayout({ children }: { children: ReactNode
           <WorkspaceSwitcher
             t={t}
             current={session.identity.active_workspace}
-            options={workspaceOptions(session.identity, locale, t)}
+            options={workspaceOptions(session.identity, locale, t, await confirmedMembershipsForRequest())}
             action={switchWorkspace}
             pageHref="/workspaces"
           />

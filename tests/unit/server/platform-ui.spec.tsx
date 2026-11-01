@@ -6,6 +6,13 @@ import { navigationFor } from "@/lib/server/navigation";
 import { GOVERNANCE, INVESTIGATOR_BETA, SECRETARY } from "./support/identities";
 
 const t = createTranslator("ar");
+// What the database confirms for these personas in the M1 seed (V13-FE-008): Delta holds GOVERNANCE_OFFICER in
+// GOVERNANCE and SECRETARIAT, Alpha COMMITTEE_SECRETARY in SECRETARIAT.
+const DELTA_CONFIRMED = [
+  { workspace: "GOVERNANCE", role: "GOVERNANCE_OFFICER" },
+  { workspace: "SECRETARIAT", role: "GOVERNANCE_OFFICER" },
+] as const;
+const ALPHA_CONFIRMED = [{ workspace: "SECRETARIAT", role: "COMMITTEE_SECRETARY" }] as const;
 const noop = async (): Promise<void> => {};
 
 describe("navigationFor", () => {
@@ -34,7 +41,7 @@ describe("markup", () => {
   it("WorkspaceSwitcher with several memberships: a menu of own memberships carrying the active code", async () => {
     const { WorkspaceSwitcher } = await import("@/components/shell/WorkspaceSwitcher");
     const { workspaceOptions } = await import("@/app/(platform)/_components/workspace-options");
-    const options = workspaceOptions(GOVERNANCE, "ar", t);
+    const options = workspaceOptions(GOVERNANCE, "ar", t, DELTA_CONFIRMED);
     expect(options.map((o) => o.code)).toEqual(["GOVERNANCE", "SECRETARIAT"]);
     expect(options[0]!.name).toBe(t("workspaces.name.governance"));
     expect(options[0]!.role).toBe(t("persona.role.governanceOfficer"));
@@ -51,7 +58,7 @@ describe("markup", () => {
   it("single membership: the code is shown, no form", async () => {
     const { WorkspaceSwitcher } = await import("@/components/shell/WorkspaceSwitcher");
     const { workspaceOptions } = await import("@/app/(platform)/_components/workspace-options");
-    const options = workspaceOptions(SECRETARY, "ar", t);
+    const options = workspaceOptions(SECRETARY, "ar", t, ALPHA_CONFIRMED);
     expect(options.map((o) => o.code)).toEqual(["SECRETARIAT"]);
     const html = renderToStaticMarkup(
       <WorkspaceSwitcher
@@ -74,6 +81,6 @@ describe("markup", () => {
       ...GOVERNANCE,
       persona_id: "0b000000-0000-4000-8000-0000000000ff",
     } as typeof GOVERNANCE;
-    expect(workspaceOptions(unknown, "en", t).map((o) => o.code)).toEqual(["GOVERNANCE"]);
+    expect(workspaceOptions(unknown, "en", t, []).map((o) => o.code)).toEqual(["GOVERNANCE"]);
   });
 });

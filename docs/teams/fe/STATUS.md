@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-10-31 23:12 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-filter-reset (FE-006 part 1 #51 merged 65a251d; part 2 #61 merged 9290778) · Head: see PR
+Updated: 2026-11-01 00:09 UTC · Branch: fix/V13-FE-008-confirmed-workspace-role (from develop 63d1271) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -51,6 +51,12 @@ Updated: 2026-10-31 23:12 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-f
   AppShell as a section (no second `<main>`, no second `id="main"`), same visible text, `data-testid` and title as the
   root not-found page; OI-043: the Portfolio filter form is keyed on its filter values (`filterFormKey`), so Clear,
   Back and other client-side navigations remount it with the URL's values — IN_REVIEW (QA).
+- V13-FE-008 (OI-044) — the workspace switcher and My Work show a role only from a membership the database confirms
+  in the request's security context (`MembershipReader`, proposed contract `lib/contracts/memberships.ts`, adapter
+  `lib/adapters/identity/v13-memberships.ts`: own persona via `current_persona_id()`, active workspace, valid now).
+  Session roles are never shown; no confirmed role gives an empty switcher role and "No role confirmed in this
+  workspace" on My Work; a read failure shows no role (fail closed). Needs ARCH + SEC ACCEPT (contracts) — IN_PROGRESS
+  (PR waits on UX making `WorkspaceOption.role` optional so an empty role renders no "as" line).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -140,6 +146,7 @@ Updated: 2026-10-31 23:12 UTC · Branch: fix/V13-FE-007-not-found-landmark-and-f
 | FE-006 part 1, SEC CHANGES 150d54a (integration access negatives, all NOT_FOUND with no notification, event or audit row): Alpha on 0002 and 0005, Alpha and Gamma on restricted 0009, unknown UUID, Gamma (Investigations) on 0008 (visible only in other workspaces), Delta (role): `pnpm db:reset` + `pnpm test:db` (FE draft suite 16) | pass | 405 | FE-006 head |
 | FE-006 part 1: committed `tests/e2e/scenario-e-notification-draft.spec.ts` (ARCH: rides #51, QA reviews; SEC condition 2 with relative counts): `pnpm db:reset` + `pnpm test:e2e`; then `db:reset` + the spec with `--repeat-each=2 --workers=1` (second pass on a database the first wrote to). A second server start without `db:reset` fails every e2e suite with CLAIMS_KEY_MISMATCH (migration 0007, known local constraint), not this spec | pass | 103 / 4 | FE-006 head |
 | FE-006 part 2 after merging develop 65a251d (#51; records.ts keeps both bindings, contracts index keeps both exports): lint, typecheck / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 69 files, 1860 / 28 files, 447 / 150 | FE-006 part 2 head |
+| FE-008 on fix/V13-FE-008-confirmed-workspace-role (Epsilon expired and Zeta inactive negatives, session roles ignored, other workspace never fills this one, strict rows, read failure → none): lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` (memberships integration 5) / `pnpm db:reset` + `pnpm test:e2e` | pass | — / 74 files, 1920 / 456 / 179 | FE-008 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden

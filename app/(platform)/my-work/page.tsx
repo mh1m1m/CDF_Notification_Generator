@@ -8,6 +8,8 @@ import { ROLE_NAME_KEYS, translateKey, WORKSPACE_NAME_KEYS } from "@/lib/i18n";
 import { getTranslator } from "@/lib/i18n/server";
 import { requireRequestContext } from "@/lib/server/context";
 import { isAppError } from "@/lib/server/errors";
+import { confirmedMembershipsForRequest } from "@/lib/server/membership-records";
+import { confirmedRolesIn } from "@/lib/server/memberships";
 import { loadMyWork, type MyWorkView } from "@/lib/server/my-work";
 import { myWorkFor } from "@/lib/server/my-work-binding";
 import { MyWorkTable } from "./_components/MyWorkView";
@@ -47,9 +49,17 @@ export default async function MyWorkPage({
   }
   const { locale, t } = await getTranslator();
   const workspaceName = t(WORKSPACE_NAME_KEYS[session.identity.active_workspace]);
-  const roles = new Intl.ListFormat(locale, { type: "conjunction" }).format(
-    session.identity.roles.map((role) => t(ROLE_NAME_KEYS[role])),
+  // Only roles the database confirms in this request (V13-FE-008, OI-044), never the session's.
+  const confirmedRoles = confirmedRolesIn(
+    await confirmedMembershipsForRequest(),
+    session.identity.active_workspace,
   );
+  const roles =
+    confirmedRoles.length > 0
+      ? new Intl.ListFormat(locale, { type: "conjunction" }).format(
+          confirmedRoles.map((role) => t(ROLE_NAME_KEYS[role])),
+        )
+      : t("myWork.noConfirmedRole");
   // Outcome references from a redirect: only well-formed UUIDs are shown, anything else is ignored.
   const reference = UUID.test(one(params.ref) ?? "") ? (one(params.ref) as string) : null;
   const stale = UUID.test(one(params.stale) ?? "") ? (one(params.stale) as string) : null;
