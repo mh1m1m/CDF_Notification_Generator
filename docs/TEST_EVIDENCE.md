@@ -185,7 +185,7 @@ Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #2
 Every pinned action SHA resolved. Warnings: the pinned versions target Node.js 20 and ran on Node.js 24 (OI-021); the
 dependency cache could not be saved (GitHub service message), which does not affect results.
 
-### 4.1 `develop`: one push run per merge (read from GitHub Actions, 1 Nov 2026 00:02 UTC)
+### 4.1 `develop`: one push run per merge (read from GitHub Actions, 1 Nov 2026 00:32 UTC)
 
 Each merge rests on the PR run named in its merge commit: green CI on the head the independent reviewer accepted. The workflow cancels a running push run when a newer push to the same branch arrives (`concurrency`, `cancel-in-progress: true`), so a merge pushed within a minute of the next one shows a cancelled push run. The next successful push run contains that merge and verifies the combination; it is named in the last column. When `develop` moved after a PR's run, ARCH merges on that run only if `develop` changed none of the PR's files (ARCH ruling, 31 Oct). Since #24, ARCH also runs typecheck, lint, format, unit, test:db and Playwright on the combined tree locally before the merge, because a test already on `develop` can exercise behaviour the PR changes; the counts are in the merge commit and in the last column. A PR run checks out the PR head merged into `develop` as `develop` was when the run started (`refs/pull/<n>/merge`; the checkout step's log names both commits), so a PR run that started after the last `develop` move already covers the merged tree.
 
@@ -264,9 +264,13 @@ Each merge rests on the PR run named in its merge commit: green CI on the head t
 | `a2be337` | #71 PROC-012 | [41253402064](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41253402064) | [41253950568](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41253950568) | cancelled; verified by [41253991593](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41253991593) (documentation only) |
 | `5153388` | #77 ARCH-011 | [41253682800](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41253682800) | [41253991593](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41253991593) | success (documentation only) |
 | `63d1271` | #63 FE-007 | [41252437758](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41252437758) | [41254619502](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41254619502) | success (combined tree: unit 1,906, test:db 447, e2e 173, no expected failures left: the OI-042 and OI-043 tests pass as ordinary tests) |
+| `d5b61b0` | #79 ARCH-002 | [41255160576](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41255160576) | [41255535753](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41255535753) | success (documentation only) |
+| `24616f6` | #78 QA-004 | [41255892985](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41255892985) | [41256429868](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41256429868) | cancelled; verified by [41256786723](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41256786723) (combined tree `develop` `d5b61b0` + #78 + #70, equal to `fddbff8`: unit 1,906, test:db 447, e2e 194) |
+| `fddbff8` | #70 SEC-007 | [41253475150](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41253475150) | [41256453203](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41256453203) | cancelled; verified by [41256786723](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41256786723) (the same combined tree as #78) |
+| `e9cd74d` | #76 UX-008 | [41255696874](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41255696874) | [41256786723](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41256786723) | success (combined tree: unit 1,922, test:db 447, e2e 194) |
 
 Run [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) on `develop` `b5ee5f4`: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build and Playwright all succeeded. Test counts are in each PR's evidence and in the job logs; this table records the job outcome only.
 
 ## 5. Deployment checks
 
-See `docs/DEPLOYMENT_STATUS.md`. No deployment has served the application yet.
+See `docs/DEPLOYMENT_STATUS.md`. Previews build and serve behind Vercel Authentication, but none has a database connection yet (OI-045): `/api/health` answers HTTP 503 `DB_NOT_CONFIGURED`.

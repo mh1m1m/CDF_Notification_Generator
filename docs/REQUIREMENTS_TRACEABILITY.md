@@ -93,11 +93,12 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 | QA | Playwright & Visual QA | 76 |
 | SEC | Security & Adversarial Testing | 39 |
 
-### 3.1 M1 coverage (V13-PROC-012)
+### 3.1 M1 coverage (V13-PROC-012, V13-PROC-013)
 
 The 280 rows with `Milestone` = M1, counted from this CSV. Their statuses were assessed against the merges up to
 `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026), plus #72 (REQ-SEC-002, REQ-GOV-001), #75 (REQ-ARCH-025) and #77
-(REQ-DOC-008). The status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
+(REQ-DOC-008) in V13-PROC-012, and the merges from `4cc72ec` to **`d5b61b0`** (#61, #63, #68, #69, #73) in V13-PROC-013.
+The status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
 merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
 merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief
 Architect's rulings on #71:
@@ -110,20 +111,20 @@ Architect's rulings on #71:
   found on develop `<sha>`".
 
 COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, were checked by SEC before merge. REQ-SEC-002 and REQ-GOV-001
-are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Later merges (#61, #68, #69 and onwards)
-were not re-assessed in this pass; their owners update their rows (§6).
+are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Merges after `d5b61b0` are
+assessed in the next pass; owners update their rows meanwhile (§6).
 
 **By status**
 
 | Status | Rows |
 |---|---|
 | COMPLETE | 68 |
-| IN_PROGRESS | 172 |
+| IN_PROGRESS | 178 |
 | — of which review-enforced standing rules | 51 |
-| — of which document or configuration evidence only, no test | 39 |
+| — of which document or configuration evidence only, no test | 45 |
 | BLOCKED | 16 |
 | PRODUCTION_SUBSTITUTION_REQUIRED | 1 |
-| NOT_STARTED | 23 |
+| NOT_STARTED | 17 |
 | **Total** | **280** |
 
 **By owner team**
@@ -131,11 +132,11 @@ were not re-assessed in this pass; their owners update their rows (§6).
 | Owner team | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
 |---|---|---|---|---|---|---|
 | ARCH | 105 | 9 | 82 | 12 | 0 | 2 |
-| QA | 51 | 9 | 24 | 4 | 0 | 14 |
+| QA | 51 | 9 | 26 | 4 | 0 | 12 |
 | DB | 33 | 15 | 17 | 0 | 1 | 0 |
 | FE | 31 | 12 | 19 | 0 | 0 | 0 |
 | SEC | 27 | 14 | 13 | 0 | 0 | 0 |
-| UX | 26 | 5 | 14 | 0 | 0 | 7 |
+| UX | 26 | 5 | 18 | 0 | 0 | 3 |
 | PROC | 7 | 4 | 3 | 0 | 0 | 0 |
 
 PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
@@ -150,19 +151,19 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | QG-04 | 11 | 5 | 6 | 0 | 0 | 0 |
 | QG-05 | 18 | 6 | 10 | 1 | 0 | 1 |
 | QG-06 | 23 | 4 | 16 | 2 | 0 | 1 |
-| QG-07 | 18 | 1 | 7 | 0 | 0 | 10 |
-| QG-08 | 17 | 3 | 10 | 0 | 0 | 4 |
-| QG-09 | 7 | 1 | 4 | 0 | 0 | 2 |
+| QG-07 | 18 | 1 | 11 | 0 | 0 | 6 |
+| QG-08 | 17 | 3 | 11 | 0 | 0 | 3 |
+| QG-09 | 7 | 1 | 5 | 0 | 0 | 1 |
 | QG-10 | 4 | 1 | 3 | 0 | 0 | 0 |
-| QG-11 | 14 | 0 | 11 | 2 | 0 | 1 |
+| QG-11 | 14 | 0 | 12 | 2 | 0 | 0 |
 | QG-12 | 15 | 0 | 4 | 10 | 0 | 1 |
 | QG-13 | 15 | 1 | 11 | 3 | 0 | 0 |
 | Gate A | 4 | 0 | 3 | 1 | 0 | 0 |
 | Gate B | 19 | 7 | 9 | 3 | 0 | 0 |
 | Gate C | 23 | 14 | 7 | 2 | 0 | 0 |
 | Gate D | 5 | 0 | 2 | 0 | 0 | 3 |
-| Gate E | 16 | 3 | 9 | 0 | 0 | 4 |
-| Gate F | 6 | 1 | 3 | 0 | 0 | 2 |
+| Gate E | 16 | 3 | 10 | 0 | 0 | 3 |
+| Gate F | 6 | 1 | 4 | 0 | 0 | 1 |
 | Gate G | 6 | 0 | 4 | 1 | 0 | 1 |
 | Gate H | 2 | 0 | 2 | 0 | 0 | 0 |
 | Gate I | 5 | 3 | 2 | 0 | 0 | 0 |
