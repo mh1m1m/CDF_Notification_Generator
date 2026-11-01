@@ -490,9 +490,11 @@ Next free number: **ADR-021**.
      as canonical lower-case UUIDs, the idempotency key, the session's issued-at and an expiry no later than the
      session's.
   3. **Verification.** Decode, check the length, compare in constant time, compare each field with the posted case and
-     the session claims, and only then run the authorisation pre-check and the command. Every failure gets the same
-     generic refusal with a correlation id; no command is called, the binding is never logged, and nothing tells the
-     caller which field failed.
+     the session claims, and only then run the authorisation pre-check and the command. The purpose tag must equal the
+     action's own tag, the issued-at must equal the current session's, and the expiry is checked against the server
+     clock. The command takes the case from the verified binding, never from the form, and a posted `case_id` that
+     differs from it is refused. Every failure gets the same generic refusal with a correlation id; no command is called,
+     the binding is never logged, and nothing tells the caller which field failed.
   4. **Other forms.** A later case-scoped form follows the same pattern under its own purpose tag, and binds its
      record's id once the record exists.
 - **Consequences.**
