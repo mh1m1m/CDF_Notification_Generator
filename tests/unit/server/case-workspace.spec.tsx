@@ -191,6 +191,7 @@ describe("Case Workspace markup", () => {
     expect(markup).toContain('data-case-ref="CDF-DEMO-2026-0001"');
     expect(markup).toContain('data-testid="case-header"');
     expect(markup).toContain('data-testid="case-number"');
+    expect(markup).toContain('data-testid="case-title"');
     expect(markup).toContain('data-stage="INVESTIGATION"');
     expect(markup).toContain('data-capacity="SECRETARY"');
     expect(markup).toContain("صفتك: أمين سر");
@@ -239,6 +240,8 @@ describe("Case Workspace markup", () => {
     const markup = html(await view("events"));
     expect(attrs(markup, "data-event-id")).toEqual([caseEventId(1, 2), caseEventId(1, 1)]);
     expect(markup).toContain('data-provenance="SEED_SYNTHETIC"');
+    expect(markup).toContain('data-testid="case-event-occurred"');
+    expect(markup).toContain('data-testid="case-event-recorded"');
     expect(markup).toContain("بيانات اصطناعية أولية");
     expect(markup).toContain("دون صفة مسجلة");
     expect(markup).not.toContain("data-epistemic");
@@ -259,6 +262,8 @@ describe("Case Workspace markup", () => {
     expect(markup).not.toContain(`data-testid="case-task-${caseTaskId(1, 1)}"`);
     expect(markup).toContain('data-testid="case-task-mine"');
     expect(markup).toContain('data-testid="case-last-events"');
+    // The Overview heading names the table; its caption is for assistive technology only (no visible repeat).
+    expect(markup).toContain('<caption id="case-my-tasks-caption"><span class="v13-sr-only">');
   });
 
   it("overview without own open tasks says so", async () => {

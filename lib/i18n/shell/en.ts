@@ -31,6 +31,7 @@ export const en: Record<keyof typeof ar, string> = {
   "case.stage": "Stage",
   "case.recordsState": "Records state",
   "case.capacity": "Your capacity: {capacity}",
+  "case.capacityNone": "You hold no recorded capacity on this case",
   "case.closedNotice": "This case is closed; it is shown for reference only.",
   "case.restricted": "Named access",
 };

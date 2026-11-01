@@ -924,7 +924,8 @@
     inline-size: 100%;
     border-collapse: collapse;
     background-color: var(--cdf-surface);
-    font-size: var(--cdf-text-body2);
+    /* Table data at the body size, like the rest of the page (QA on #85); 12 px (Body 2) is the floor for secondary
+       text only (DESIGN_SYSTEM §1.4). */
   }
 
   .v13-table caption {
@@ -956,6 +957,7 @@
   .v13-second-line {
     display: block;
     color: var(--cdf-text-secondary);
+    font-size: var(--cdf-text-body1);
     font-weight: 400;
   }
 
@@ -1056,7 +1058,8 @@
     font-weight: 600;
   }
 
-  .v13-timeline-times {
+  .v13-timeline-times,
+  .v13-timeline-details {
     display: flex;
     flex-wrap: wrap;
     gap: var(--cdf-space-1) var(--cdf-space-4);

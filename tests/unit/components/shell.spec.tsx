@@ -389,6 +389,7 @@ describe("CaseWorkspace and CaseHeader (ADR-013 case evidence)", () => {
     (l) => {
       const html = render(header(l));
       expect(html).toContain(`<bdi dir="ltr" data-testid="case-number">${CASE_1.ref}</bdi>`);
+      expect(html).toContain('<p class="v13-case-title" data-testid="case-title">Synthetic case title</p>');
       expect(html).toContain('<dd data-testid="case-stage"><span id="stage-badge"></span></dd>');
       expect(html).toContain('data-records-state="ACTIVE"');
       expect(html).toContain(msg(l)["common.records.active"]);
@@ -416,6 +417,23 @@ describe("CaseWorkspace and CaseHeader (ADR-013 case evidence)", () => {
       expect(html).toContain(tr(l)("shell.case.capacity", { capacity: msg(l)["persona.role.investigator"] }));
     },
   );
+
+  it.each(LOCALES)("stage and capacity codes; a persona without a capacity is told so (%s)", (l) => {
+    const held = render(header(l, { stageCode: "INVESTIGATION", capacity: "X", capacityCode: "SECRETARY" }));
+    expect(held).toContain('<dd data-testid="case-stage" data-stage="INVESTIGATION">');
+    expect(held).toContain('data-testid="case-capacity" data-capacity="SECRETARY"');
+    const none = render(header(l, { capacityCode: null }));
+    expect(none).toContain(
+      `data-testid="case-capacity" data-capacity="">${esc(msg(l)["shell.case.capacityNone"])}</span>`,
+    );
+    expect(render(header(l))).not.toContain("case-capacity");
+  });
+
+  it("the closed notice is a note", () => {
+    expect(render(header("en", { recordsState: "CLOSED" }))).toContain(
+      '<p role="note" class="v13-notice" data-testid="case-closed-notice">',
+    );
+  });
 
   it("refuses a display number as the key and a UUID as the display number", () => {
     expect(() =>

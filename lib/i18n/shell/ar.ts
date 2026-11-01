@@ -31,6 +31,7 @@ export const ar = {
   "case.stage": "المرحلة",
   "case.recordsState": "حالة السجل",
   "case.capacity": "صفتك: {capacity}",
+  "case.capacityNone": "لا صفة لك مسجلة في هذه القضية",
   "case.closedNotice": "هذه القضية مغلقة؛ العرض للاطلاع فقط.",
   "case.restricted": "وصول مسمّى",
 } as const;
