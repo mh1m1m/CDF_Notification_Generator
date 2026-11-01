@@ -96,6 +96,20 @@ test.describe("Notification Operations Center — Secretary and Governance Offic
     }
   });
 
+  test("a row opens its own notification's preview on its own case (FE-006 part 3)", async ({ page }) => {
+    await signInAs(page, "secretary-alpha");
+    await page.goto(`/notifications?case=${ref("0003")}`);
+    const row = page.locator('tr[data-testid^="notification-row-"]').first();
+    const id = await row.getAttribute("data-notification-id");
+    const caseId = await row.getAttribute("data-case-id");
+    await page.getByTestId(`notifications-open-${id}`).click();
+    await expect(page).toHaveURL(new RegExp(`/cases/${caseId}/notifications\\?n=${id}$`));
+    // the seed's rows carry database recipient classes, so the preview shows the OI-037 state for that row
+    await expect(page.getByTestId("case-preview")).toBeVisible();
+    await expect(page.getByTestId("case-preview-unmapped")).toHaveAttribute("data-notification-id", id!);
+    await expect(page.getByTestId(`case-notification-${id}`)).toHaveAttribute("data-selected", "true");
+  });
+
   test("an edited URL shows the generic invalid state with a reference, never details", async ({ page }) => {
     await signInAs(page, "secretary-alpha");
     const res = await page.goto("/notifications?status=DELIVERED");

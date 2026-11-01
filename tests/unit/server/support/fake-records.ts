@@ -93,6 +93,7 @@ function notificationsOf(i: number): CaseNotification[] {
       case_id: caseIdOf(i),
       template_code: "CASE-OPENED-NOTICE",
       template_version: 1,
+      template_name: { ar: "إشعار فتح القضية", en: "Case opened notice" },
       language: "ar",
       recipient_class: "CASE_TEAM",
       lifecycle_status: "DRAFT",
