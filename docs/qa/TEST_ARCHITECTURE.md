@@ -134,7 +134,18 @@ Detail and step tables go in `docs/qa/SCENARIOS.md` once the screens exist. Outl
 
 ## 7. Case Context Sentinel (QG-02, Gate B)
 
-Library `tests/sentinel/sentinel.ts`, called after every navigation in every scenario and by its own specs.
+Library `tests/sentinel/sentinel.ts`. Where each rule runs today (ARCH and SEC review of #84; the design aim is every
+navigation of every scenario, which C and E do not meet yet):
+
+| Rules | Runs in |
+| ----- | ------- |
+| S1–S8 (page) | `tests/e2e/scenario-a-case-switching.spec.ts`, `scenario-b-two-cases-two-tabs.spec.ts` and `scenario-d-search-filters.spec.ts` (through `expectCaseShown` in `tests/fixtures/scenario.ts`, and directly in A and D), `negative-personas-pinning.spec.ts`, SEC's `tests/security/e2e/case-pages.spec.ts`; proven by `tests/sentinel/planted-leak.spec.ts` |
+| P1–P2 (responses) | `scenario-a-case-switching.spec.ts`, `scenario-d-search-filters.spec.ts`, `negative-personas-pinning.spec.ts`; proven by `planted-leak.spec.ts` |
+| P3–P4 (requests) | `tests/sentinel/request-leak-app.spec.ts` only; proven by `tests/sentinel/planted-request-leak.spec.ts` |
+| D1–D4 (database) | `tests/sentinel/db.spec.ts` (five persona/workspace pairs, planted faults); read functions in `tests/sentinel/db-functions.spec.ts` |
+
+Scenarios C (`scenario-c-workspace-switch.spec.ts`) and E (`scenario-e-notification-draft.spec.ts`) do not call the
+Sentinel yet; C's switch and E's draft post are covered for P3–P4 by `request-leak-app.spec.ts`.
 
 - **UI layer.** Walks the DOM (including open dialogs and the preview frame): the rule of §5.1, plus every count on
   screen equals the database count for the persona and workspace, plus every `data-case-id` on the page is a case the
@@ -147,7 +158,9 @@ Library `tests/sentinel/sentinel.ts`, called after every navigation in every sce
   every same-origin POST, PUT, PATCH and DELETE the page sends, with the URL of the page that sent it, and names its
   kind: `server-action` (a `Next-Action` header), `form-post` (a plain form submission) or `fetch` (fetch, XHR,
   beacon). GET requests carry no body; what they bring back is P1's. **P3**: its URL and body (also percent-decoded, so Arabic-Indic digits in a form post are matched)
-  name no case id or reference but that page's own case; off a case page, none unless the test allows it. **P4**: a
+  name no case id or reference but that page's own case; off a case page, none unless the test allows it. P3 matches
+  case ids and `CDF-DEMO-YYYY-NNNN` references only, not child ids (task, notification, event ids): a post carrying
+  another case's task id passes P3. No M1 case-page post carries a child id; the server's command checks own that. **P4**: a
   body that was not handed over is never a pass. Playwright hands over every body Chromium sends (2 MB measured) and
   none for an empty one, so a request without a body is scanned by its URL alone, except a multipart request, which
   always has a body and is P4 without one. `planted-request-leak.spec.ts` plants (p)–(u) on fixture pages;
@@ -181,9 +194,9 @@ or content shown, returned, counted or readable in the context of another case, 
 not see that case. No severity downgrade, waiver or `test.fail()` pin applies to a leak; it is fixed before the PR
 merges and before any release. It is detected by:
 
-- the Case Context Sentinel on pages and payloads (`tests/sentinel/sentinel.ts`, rules S1–S8, P1–P4), run after every
-  step of Scenarios A–E (`tests/e2e/scenario-*.spec.ts`) and proven by `tests/sentinel/planted-leak.spec.ts` and
-  `tests/sentinel/planted-request-leak.spec.ts`;
+- the Case Context Sentinel on pages, responses and requests (`tests/sentinel/sentinel.ts`, rules S1–S8, P1–P4), in
+  the specs the table in §7 names (Scenarios A, B and D, the negative-persona pins, `request-leak-app.spec.ts`),
+  proven by `tests/sentinel/planted-leak.spec.ts` and `tests/sentinel/planted-request-leak.spec.ts`;
 - the Sentinel's database half (`tests/sentinel/db.spec.ts`, D1–D4, five persona/workspace pairs);
 - the negative-persona pins (`tests/e2e/negative-personas-pinning.spec.ts`: Epsilon and Zeta see nothing);
 - SEC's isolation suites: `tests/security/db/case-matrix.spec.ts` (SEC-DB-18, every case-keyed table) and
