@@ -388,7 +388,8 @@ export function recordPayloads(page: Page, origin: string, options: { bodyTimeou
           headers,
           maxRedirects: 0,
           maxRetries: REFETCH_MAX_RETRIES,
-          timeout: wait * 2,
+          // Never 0: Playwright reads a timeout of 0 as "no timeout", and a refetch that hangs must end as P2 (OI-051).
+          timeout: Math.max(wait, BODY_TIMEOUT_MS) * 2,
         });
         const againType = again.headers()["content-type"] ?? type;
         return {
