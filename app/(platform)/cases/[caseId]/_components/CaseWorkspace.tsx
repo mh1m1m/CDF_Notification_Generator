@@ -441,7 +441,7 @@ export function NotificationTable({
 
 /**
  * The in-case preview (V13-FE-006 part 3). Only the server-rendered HTML of the projected model reaches the page, inside
- * UX-006's sandboxed frame. The unmapped (OI-037) and unavailable states carry no notification content.
+ * UX-006's sandboxed frame, with its plain-text twin as escaped text below it (V13-FE-011). The unmapped (OI-037) and unavailable states carry no notification content.
  */
 export function NotificationPreviewSection({
   t,
@@ -470,6 +470,19 @@ export function NotificationPreviewSection({
             })}
             testId="case-notification-preview"
           />
+          {/* V13-FE-011 (REQ-NOTIF-011): the plain-text twin of the same rendering, as escaped text in the notice's
+              language. Closed by default; native <details>, so it works without JavaScript. The notice's lang is on the
+              notice's text only; the summary is a UI string in the page language (UXB-13). */}
+          <details className={styles.previewText} data-testid="case-preview-text">
+            <summary data-testid="case-preview-text-toggle">{t("case.preview.textSummary")}</summary>
+            <pre
+              lang={preview.lang}
+              dir={preview.lang === "ar" ? "rtl" : "ltr"}
+              data-testid="case-preview-text-body"
+            >
+              {preview.text}
+            </pre>
+          </details>
         </div>
       ) : null}
       {preview.kind === "unmapped" ? (
