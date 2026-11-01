@@ -21,7 +21,7 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-017]` | `feature/V13-DB-017-seed-lint` | OI-041: db:lint covers database/seed; seed bundle and db:reset refuse a seed with findings; transaction control inside DO/function bodies | COMPLETE — #62 merged (a9745ba), SEC ACCEPT 2fe462d |
 | `[V13-DB-018]` | `feature/V13-DB-018-rollback-register` | REQ-DATA-023: per-migration rollback register (DATA_MODEL.md §9) and its automated check | COMPLETE — #101 merged (85f7332), SEC ACCEPT 434c1c7 |
 | `[V13-DB-019]` | `feature/V13-DB-019-keyset-paged-reads` | REQ-PERF-003, OI-026: migration 0011, keyset-paged per-case reads | COMPLETE — #110 merged (800ab8a), CI 41269347309 6/6 |
-| `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note, audit outcome and policy version (no migration until ARCH accepts) | IN_PROGRESS — note PROPOSED, awaiting ARCH |
+| `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note (#115 merged 937cff3, ACCEPT c35d6c1), then migration 0012 on `feature/V13-DB-020-audit-outcome-policy-version` | IN_PROGRESS — 0012 PR open, SEC review pending |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -174,12 +174,26 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
   PASS.
 
 ## In progress: V13-DB-020 (REQ-AUD-005)
-- Design note `docs/teams/db/DB-020_AUDIT_RECORD_CONTENT.md` (PROPOSED): outcome column, access-policy version with a
-  fingerprint guard, hash version 2 with version-1 rows verifying unchanged. No migration until ARCH accepts it; the
-  migration would be 0012.
+- Design note `docs/teams/db/DB-020_AUDIT_RECORD_CONTENT.md`: ACCEPTED (c35d6c1, #115 merged 937cff3); §8 lists where
+  the build differs.
+- Migration 0012: `audit_event` + `hash_version` (default 2), `outcome` (SUCCEEDED/REFUSED), `policy_version` (FK),
+  catalogue-only; append-only owner-only `policy_version` register with `_policy_fingerprint()` and `_acl_canonical()`;
+  `_audit_row_hash_v2`; `_append_audit` and `verify_audit_chain()` replaced with the same signatures; first row
+  `V13-ACCESS-0012` computed on the applying server. No `api_*` command, grant or existing policy changes. Register §9.
+- Tests: `tests/integration/audit-outcome-policy-version.spec.ts` (30): columns and register, owner-only reach,
+  append-only register, writer (v2, SUCCEEDED, highest version, no override argument, V1501 with no version),
+  constraints, verifier negatives (rewritten outcome, rewritten version, relabelled downgrade, v1 row after v2),
+  fingerprint guard negatives (RLS off, RLS forced, table / column / function / schema grant, function body, policy
+  dropped, trigger off) each passing again once a row is recorded, no false positive, settings-independent; hosted
+  layout: a 0000–0011 ledger byte-identical through 0012, still valid, first v2 row chains to the last v1 row.
+  `fk-index-coverage` accepts `audit_event_policy_version_fk`; `hosted-resume` resumes 0006–0012; `catalog-audit` lists
+  the new owner-only functions.
+- `database/hosted/post_apply_checks.sql` P10 (fingerprint guard) in a separate commit for ARCH's path-owner ACCEPT.
+- Not in this step: refusals (V13-DB-021, own note and SEC threat review first); the disclosure policy version (M5,
+  REQ-AUD-003), so REQ-AUD-005 stays IN_PROGRESS for that part.
 
 ## Next
-- Next free migration: 0012.
+- Next free migration: 0013.
 
 ## Review given
 - #29 `[V13-SEC-002]`: `REVIEW: ACCEPT ede6f46`, re-confirmed `ACCEPT bc89156` after the develop merge (294/294).

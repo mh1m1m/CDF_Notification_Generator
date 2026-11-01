@@ -1,7 +1,7 @@
 # E03 — Enterprise data model (Milestone M1)
 
 **SYNTHETIC-DATA REFERENCE IMPLEMENTATION — not CDF production.** Owner: team DB. Schema `cdf_notifications_v13` in the
-shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0011`; seed in two parts:
+shared Supabase project CDF GC Review (ADR-012). Migrations `database/migrations/0001`–`0012`; seed in two parts:
 `database/seed/0001_m1_synthetic.sql` (identity: workspaces, personas, memberships; needs migration 0001 only; audit row
 `SEED_M1_LOADED`) and `database/seed/0002_m1_cases.sql` (cases and their history; needs 0001–0004; audit row
 `SEED_M1_CASES_LOADED`).
@@ -72,7 +72,7 @@ erDiagram
 | 0001 | `persona` | `id`, `code`, `email` unique | `@example.test` enforced by a check; `is_active`; `email` not readable by `cdf_v13_user` (column grants), own address via `current_persona()` |
 | 0001 | `persona_workspace_membership` | persona × workspace × role, `valid_from`/`valid_to` | active when `valid_from <= now() < valid_to` |
 | 0001 | `claims_key` | `key_version` = 1 | ipad/opad keys + sha256 of K; restrictive deny-all, no grant; cleared only by `database/hosted/reset_claims_key.sql` |
-| 0001 | `audit_event` | `id`, `seq` identity, `row_hash` unique | append-only, hash chain (`prev_hash` → `row_hash`), no reader grant |
+| 0001 | `audit_event` | `id`, `seq` identity, `row_hash` unique | append-only, hash chain (`prev_hash` → `row_hash`), no reader grant; 0012 adds `hash_version`, `outcome`, `policy_version` (§7) |
 | 0002 | `case_record` | `id`, `display_number` unique | stage, `is_restricted`, `records_state` ACTIVE/CLOSED (+`closed_at` consistency), `owning_workspace_id`, `source_system` = `V13_SYNTHETIC`, `source_ref` NOT NULL (pattern-checked; seed `seed:m1:NNNN`), `row_version`, `updated_at` |
 | 0002 | `case_workspace_visibility` | (`case_id`, `workspace_id`) | owning workspace inserted by trigger |
 | 0002 | `case_assignment` | persona × case × capacity, window | capacities LEAD_INVESTIGATOR, INVESTIGATOR, SECRETARY, GOVERNANCE_REVIEWER |
@@ -83,6 +83,7 @@ erDiagram
 | 0004 | `notification_template_version` | (`template_id`, `version`, `language`) unique | immutable; `content_sha256` computed by trigger; `basis` = source reference |
 | 0004 | `notification` | `id`; unique (`created_by_persona_id`, `idempotency_key`) (keys scoped to their author); unique (`id`, `case_id`) | lifecycle DRAFT…SUPERSEDED; `supersedes_id` same case |
 | 0004 | `notification_event` | `id`; FK (`notification_id`, `case_id`) | append-only; `provenance` COMMAND (default) / SEED_SYNTHETIC |
+| 0012 | `policy_version` | `version` (`V13-ACCESS-NNNN`) | append-only register of access-policy versions with their fingerprint (§7); restrictive deny-all, no grant |
 | 0004 | `dispatch_outbox` | `id`; FK (`notification_id`, `case_id`); unique per channel | content-free; restrictive deny-all, no grant (ADR-010, used from M5) |
 
 ## 4. Functions
@@ -112,8 +113,9 @@ erDiagram
 | `api_update_task_status(uuid, text, int)` | definer command | yes | §6 |
 | `api_create_notification_draft(uuid, uuid, text, text)` | definer command | yes | §6 |
 | `api_switch_workspace(uuid)` (migration 0005) | definer command | yes | §6; returns the target workspace id, code and the persona's role codes there |
-| `verify_audit_chain()` | definer | **no** (owner/administrator) | recomputes the chain; counts and first broken `seq` only |
-| `_append_audit`, `_audit_row_hash`, `_reject_mutation`, `_task_transition_allowed`, `_case_owning_visibility`, `_template_version_hash` | internal | no | — |
+| `verify_audit_chain()` | definer | **no** (owner/administrator) | recomputes the chain, each row by its hash version (0012); counts and first broken `seq` only |
+| `_policy_fingerprint()`, `_acl_canonical(aclitem[])` (migration 0012) | invoker, stable | **no** (owner/administrator) | sha256 of the V13 access policy (§7) |
+| `_append_audit`, `_audit_row_hash`, `_audit_row_hash_v2`, `_reject_mutation`, `_task_transition_allowed`, `_case_owning_visibility`, `_template_version_hash` | internal | no | — |
 | `_is_colleague(uuid)` | internal definer | yes (used inside the `persona` policy) | persona is active and has an active membership in the current workspace (an inactive persona is never listed as a colleague) |
 
 PUBLIC holds `EXECUTE` on no V13 function (default privileges from 0000; isolation check C11).
@@ -147,7 +149,7 @@ Seed visibility, measured on the local cluster (28 Oct 2026 ≈ 01:40 UTC, `sele
 Error codes (SQLSTATE class `V1`; the BFF maps them to a generic message with a correlation id): `V1401` no valid
 context · `V1404` not found (unknown **and** unauthorised) · `V1409` stale `row_version` or duplicate idempotency key ·
 `V1422` invalid input or transition · `V1423` case closed (raised only after access is proven) · `V1403` append-only
-violation · `V1500` audit append outside READ COMMITTED.
+violation · `V1500` audit append outside READ COMMITTED · `V1501` audit append with no access-policy version recorded.
 
 | Command | Who | Checks | Writes (one transaction) |
 | ------- | --- | ------ | ------------------------ |
@@ -170,12 +172,33 @@ decision right of the M5 approval command (REQ-DISP-009, REQ-GOV-014).
 
 ## 7. Audit ledger
 
-`row_hash = sha256(seq | occurred_at (UTC text, µs) | actor | workspace | action | entity_type | entity_id | case_id |
-correlation_id | metadata::jsonb text | prev_hash)`, genesis `prev_hash` = 64 zeros. Appends take
-`pg_advisory_xact_lock(hashtext('cdf_notifications_v13'), 1)` and require READ COMMITTED, so each append sees the latest
-committed row. Verified locally: the chain verifies under `TimeZone` Asia/Riyadh and America/New_York, and a row changed
-with the guard trigger disabled is reported as the first broken `seq`.
-`PRODUCTION_SUBSTITUTION_REQUIRED`: CDF SLS/SIEM export.
+Each row carries actor, workspace, action, target (`entity_type`, `entity_id`, `case_id`), `occurred_at`,
+`correlation_id`, and since 0012 (V13-DB-020, REQ-AUD-005) `outcome` and `policy_version`. Design and the Chief
+Architect's decisions: `docs/teams/db/DB-020_AUDIT_RECORD_CONTENT.md`.
+
+- **Hash version 1** (rows written before 0012): `row_hash = sha256(seq | occurred_at (UTC text, µs) | actor |
+  workspace | action | entity_type | entity_id | case_id | correlation_id | metadata::jsonb text | prev_hash)`.
+- **Hash version 2** (every row since 0012): `row_hash = sha256('v2' | seq | occurred_at | actor | workspace | action |
+  entity_type | entity_id | case_id | correlation_id | outcome | policy_version | metadata | prev_hash)`.
+- NULLs are written as `-`; genesis `prev_hash` = 64 zeros; `prev_hash` chains straight across the version boundary.
+  0012 added the columns with constant defaults, so no earlier row was rewritten. A check constraint pins a v1 row to
+  `SUCCEEDED` with no policy version, and requires a policy version on every v2 row. `verify_audit_chain()` recomputes
+  each row by its own version and fails when the version goes down along `seq`.
+- **Outcome**: `SUCCEEDED` (every committed command) or `REFUSED` (reserved for V13-DB-021, nothing writes it yet).
+- **Policy version**: the highest `policy_version.version`. Every migration that changes the access policy inserts its
+  own row as its last statement: `V13-ACCESS-<migration>`, with `_policy_fingerprint()` computed on the server that
+  applies it. The fingerprint covers, in schema `cdf_notifications_v13` only, the schema ACL; every table, view and
+  sequence (kind, RLS enabled and forced, ACL); column ACLs; every policy (command, permissive or restrictive, roles,
+  USING, WITH CHECK); user triggers and their enabled state; every function definition and ACL. The guard (the 0012
+  suite and `post_apply_checks.sql`) fails while the live fingerprint differs from the latest row's. The disclosure
+  policy version of a notification belongs on the notification record in M5 (REQ-AUD-003).
+- `_append_audit` chooses `outcome` and `policy_version` itself, inside the chain lock; no caller passes them.
+
+Appends take `pg_advisory_xact_lock(hashtext('cdf_notifications_v13'), 1)` and require READ COMMITTED, so each append
+sees the latest committed row. Verified locally: the chain verifies under `TimeZone` Asia/Riyadh and America/New_York,
+a row changed with the guard trigger disabled is reported as the first broken `seq`, and a ledger written by 0000–0011
+keeps every stored value byte-identical through 0012 and still verifies.
+`PRODUCTION_SUBSTITUTION_REQUIRED`: CDF SLS/SIEM export, with policy versions from CDF's policy management.
 
 ## 8. Production substitution
 
@@ -188,7 +211,8 @@ with the guard trigger disabled is reported as the first broken `seq`.
 
 A foreign key gets an index when its parent can be deleted or re-keyed, or when a read finds child rows by it. No V13
 parent key changes and no application path deletes a parent (append-only tables refuse UPDATE and DELETE), so 13 of the
-advisor's 14 unindexed-FK findings are **accepted**, each with its reason in `0009_fk_index_review.sql`. One is
+advisor's 14 unindexed-FK findings are **accepted**, each with its reason in `0009_fk_index_review.sql`. 0012 adds one
+more accepted key, `audit_event_policy_version_fk` (its parent `policy_version` is append-only and owner-only). One is
 **indexed**: `notification_event_notification_idx` becomes `(notification_id, case_id, occurred_at)`, leading with the
 FK `(notification_id, case_id)` while keeping the timeline order. `tests/integration/fk-index-coverage.spec.ts` fails
 on any new foreign key until it is indexed or added to the accepted list. Revisit when a reader by that key arrives
@@ -390,3 +414,22 @@ switches), which nothing can reload. Function, policy and index changes hold no 
 - **Local:** `pnpm db:reset`.
 - **Hosted:** a forward-fix migration that drops or recreates the three paged reads, `_page_limit` and the index, with
   their grants.
+
+### 0012_audit_outcome_policy_version.sql
+
+- **Creates:** `table policy_version`, `policy policy_version_deny_all`, `trigger policy_version_no_update_delete`,
+  `trigger policy_version_no_truncate`, `function _acl_canonical`, `function _policy_fingerprint`,
+  `function _audit_row_hash_v2`
+- **Replaces:** `function _append_audit`, `function verify_audit_chain`
+- **Drops:** none
+- **Alters:** `column hash_version on audit_event`, `column outcome on audit_event`, `column policy_version on audit_event`,
+  `constraint audit_event_outcome_check on audit_event`, `constraint audit_event_hash_version_check on audit_event`,
+  `constraint audit_event_policy_version_fk on audit_event`
+- **Data lost on revert:** the outcome and policy version of every row written since 0012 cannot be removed without
+  rewriting the append-only ledger, which is never done (ADR-011): those rows are hash version 2 and only a v2-aware
+  verifier can check them. A revert therefore keeps the columns, the register and `_audit_row_hash_v2`; it can only
+  restore the version 1 writer for new rows, which the verifier refuses (version going down). Rows written before 0012
+  are unchanged either way.
+- **Local:** `pnpm db:reset`.
+- **Hosted:** a forward-fix migration that corrects the writer, the verifier or the fingerprint and records a new
+  `policy_version` row; never a column drop or a ledger rewrite.

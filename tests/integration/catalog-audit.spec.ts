@@ -61,6 +61,10 @@ const OWNER_ONLY = [
   "_claim_uuid(text)",
   "verify_audit_chain()",
   "_reject_mutation()",
+  // 0012 (V13-DB-020)
+  "_audit_row_hash_v2(bigint, timestamptz, uuid, uuid, text, text, uuid, uuid, uuid, text, text, jsonb, text)",
+  "_policy_fingerprint()",
+  "_acl_canonical(aclitem[])",
 ];
 
 async function codeOf(promise: Promise<unknown>): Promise<string> {

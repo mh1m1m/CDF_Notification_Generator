@@ -83,6 +83,7 @@ export const ar = {
   "pagination.label": "صفحات القائمة",
   "pagination.previous": "السابق",
   "pagination.next": "التالي",
+  "preview.textSummary": "النسخة النصية",
   "preview.close": "إغلاق المعاينة",
   "preview.unmapped":
     "لا توجد معاينة: لم يُعتمد بعد ربط إفصاح لفئة المستلم هذه، لذا لا يُعرض لها شيء. هذا قرار مفتوح لدى المالك.",
