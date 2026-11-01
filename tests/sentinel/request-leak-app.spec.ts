@@ -121,25 +121,31 @@ test("negative: a draft form tampered to name hidden case 0002 is caught by P3, 
   expect(formatViolations(v)).toContain(`request carries case id ${caseId("02")}`);
 });
 
-test("negative: a draft form on 0004 tampered to name visible case 0001 is accepted by the server; P3 is what flags it (OI-049)", async ({
+test("negative: a draft form on 0004 tampered to name visible case 0001 is refused by the server; P3 still flags the request (OI-049)", async ({
   page,
   baseURL,
 }) => {
-  // Today's behaviour, pinned until OI-049 binds the draft to the route: the action takes case_id from the form, the
-  // command authorises Alpha on 0001 and writes the draft there. Only P3 tells the request was sent from 0004's page.
+  // V13-FE-012 binds the draft to the route's case: the action refuses a case_id that is not the page's, even one Alpha
+  // may draft on. P3 still flags the request, because it carries 0001 and was sent from 0004's page.
   await signInAs(page, "secretary-alpha");
   const requests = recordRequests(page, new URL(baseURL!).origin);
   await page.goto(`/cases/${caseId("04")}/notifications`);
   await page.getByTestId("draft-recipient").selectOption("WITNESS");
-  await page
-    .getByTestId("draft-form")
-    .locator('input[name="case_id"]')
-    .evaluate((el, id) => ((el as HTMLInputElement).value = id), caseId("01"));
+  const caseField = page.getByTestId("draft-form").locator('input[name="case_id"]');
+  await caseField.evaluate((el, id) => ((el as HTMLInputElement).value = id), caseId("01"));
   await page.getByTestId("draft-submit").click();
-  await expect(page).toHaveURL(new RegExp(`/cases/${caseId("01")}/notifications\\?created=`));
-  await expect(page.getByTestId("draft-created")).toBeVisible();
+  // refused: one generic refusal on the page the form was on, no ?created
+  await expect(page.getByTestId("draft-error")).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/cases/${caseId("04")}/notifications$`));
+  await expect(page.getByTestId("draft-created")).toHaveCount(0);
   const v = requests.violations(allow);
   expect(rulesOf(v)).toEqual(["P3"]);
   expect(formatViolations(v)).toContain(`request carries case id ${caseId("01")}`);
   expect(formatViolations(v)).toContain(`/cases/${caseId("04")}/notifications)`);
+  // Nothing was written on 0001, 0004 or anywhere: the idempotency key is unique per author across all cases, so the
+  // same form with its case id restored (the same key) creates its draft only if the refused post wrote none.
+  await caseField.evaluate((el, id) => ((el as HTMLInputElement).value = id), caseId("04"));
+  await page.getByTestId("draft-submit").click();
+  await expect(page.getByTestId("draft-created")).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/cases/${caseId("04")}/notifications\\?created=`));
 });

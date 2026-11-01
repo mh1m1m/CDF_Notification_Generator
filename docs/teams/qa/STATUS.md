@@ -1,6 +1,6 @@
 # QA status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 40af5ef)
+Updated: 2026-11-01 · Branch: test/V13-QA-010-reflow (base develop 373f19c)
 
 ## Completed
 - V13-QA-001 (design) — `docs/qa/TEST_ARCHITECTURE.md` — PR #1 — COMPLETE
@@ -30,7 +30,7 @@ Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 40
   functions, Epsilon/Zeta, CASE-014 triage, Scenario A history helper) — merged (24616f6).
 - V13-QA-007 (OI-048, REQ-QA-013) — PR #84 — merged (eee17f7): **D4** (a notification's recipient persona not on
   that case's team when it was created) and **P3/P4** (outbound request bodies: Server Actions, form posts, fetch).
-- V13-QA-008 (REQ-CASE-014, §7.1) — this branch — IN_PROGRESS (review): leak-suite guard G1–G4 (no pin, focus or
+- V13-QA-008 (REQ-CASE-014, §7.1) — PR #88 — merged (f683eb8): leak-suite guard G1–G4 (no pin, focus or
   unlisted skip on a leak-detection suite), planted negatives for every form. ARCH CHANGES on cd15ddf addressed:
   TypeScript-parser tokenising (a regex quote hid case-pages.spec.ts after line 30), a pin planted in all 135
   test/describe bodies of the 13 suites, Vitest `suite` and `test.step.skip`, `failOnFlakyTests` in CI, and the
@@ -42,6 +42,12 @@ Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 40
   objects, Vitest/Playwright retry options) with 19 planted negatives; SEC's notification-center and surface suites
   added (15 suites, 156 bodies planted). ARCH CHANGES on 488d93d: G6 (Vitest skip/only/todo/fails options,
   Playwright skip/fixme/fail annotations, any key form) and computed retry keys, one planted negative per form.
+- V13-QA-010 (register §4, WCAG 1.4.4 / 1.4.10 / 1.4.12) — PR #104 — this branch — IN_PROGRESS (review):
+  `tests/a11y/reflow.a11y.spec.ts`, 17 tests. Eight pages × ar/en × four conditions (640×450 = 200 % zoom,
+  320×256 = 400 %, text spacing at 1280 and at 320): no page scroll and no element past either inline edge (RTL
+  overflow past the start is invisible to `scrollWidth`, so boxes are measured), nav and case tabs in view, no
+  clipped text, every inline scroller a focusable named region; skip link first in tab order; workspace switcher
+  menu in view at 320 px and closes on Escape. Five planted faults (one per check) must be caught.
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |
@@ -63,10 +69,15 @@ Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 40
 | #74 FE-006 part 3 (re-review) | ACCEPT e8829ce | accessible names and the OI-037 notice fixed |
 | #85 UX-008b | ACCEPT 6caa174 | 48 page loads clean; note: table text 12 px (body2) |
 | #81 FE-008 | ACCEPT 5dbe293 | no role shown for Epsilon/Zeta anywhere; controls correct |
+| #90 UX-010 | ACCEPT bf4f53e | 12 px table text fixed: cells 16 px, secondary 14 px |
+| #82 FE-009 | ACCEPT 830c26d (merged 961197e) | notes: mixed-language frame title (UXB-13); scenario-e literal → i18n key in QA-009 |
+| #96 | ACCEPT cb2c5ee (merged 68a42b9) | |
+| #97 | CHANGES c24b31a → CHANGES d7b7ad6 → ACCEPT 745acdd (merged 2bccba2) | |
+| #98 FE-010 | ACCEPT 7a5b987 | 3 personas × visible cases × ar/en × 320/1280 clean; mutation of the version pin fails 2/44 |
 
 ## Changed files (this branch)
-- tests/critic/leak-suite-guard.ts, tests/sentinel/leak-suite-guard.spec.ts
-- docs/qa/TEST_ARCHITECTURE.md §7.1; docs/teams/qa/STATUS.md
+- tests/a11y/reflow.a11y.spec.ts
+- docs/qa/TEST_ARCHITECTURE.md §2, §10; docs/teams/qa/STATUS.md
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -76,9 +87,13 @@ Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 40
 | develop b5d810c + #51 74176da: unit / e2e | pass | 1775 / 141 | review |
 | develop b5d810c + #63 ab52116: unit / e2e | pass | 1725 / 138 | review |
 | develop b5d810c + #61 920e98a: unit / e2e | pass | 1802 / 144 | review |
+| #98 7a5b987: unit / test:db / e2e (incl. reflow) | pass | 2026 / 468 / 252 | review |
 
 ## Waiting / next
 - After #61 merges: a Center Back step in Scenario D.
+- V13-QA-009: Scenario E WITNESS preview withheld-field assertions with a disclosure oracle (next).
+- After SEC-012 merges: update the reason of surface's `!existsSync(root)` allow-list entry.
+- V13-QA-011: plain-literal annotation type rule; `playwright test --list` count vs body count.
 - Harness: axe excludes sandboxed srcdoc frames and scans the srcdoc separately (axe hangs on them today);
   preview-frame rule set per the ARCH ruling once PROC-011 exports the renderer's values; P2 for Server Action POST
   bodies Chromium drops after a redirect.
