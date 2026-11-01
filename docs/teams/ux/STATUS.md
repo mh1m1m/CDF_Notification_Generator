@@ -194,12 +194,12 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Tests: `tests/unit/components/controls.spec.ts` (14 tests fail on `61b57cf`). Local after merging develop `4f94b07`
   (#121, #122): lint 0, typecheck 0, unit 2,298/2,298, e2e 336/336. Browser, ar and en, 320 and 1280 px: fields 40 px with a 1 px `#5E646B` border
   (5.43:1), table links underlined on the case tab, Center, Portfolio and My Work, no page scroll at 320 px.
-- Split out: UXB-19 (LOW), the closed template select's code clip at 320 px in Arabic; not fixable in CSS, routed to
-  ARCH.
+- Split out: UXB-19 (LOW), the closed template select's code clip at 320 px in Arabic; not fixable in CSS. ARCH ruled
+  option (b): FE shows the selected code under the select in `<bdi>` (V13-FE-016).
 
 ## Unresolved defects
-- UXB-17 (MEDIUM) and UXB-18 (LOW) are IN_REVIEW in #128. UXB-19 (LOW) is OPEN, waiting on ARCH's choice of fix (FE
-  path). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
+- UXB-17 (MEDIUM) and UXB-18 (LOW) are IN_REVIEW in #128. UXB-19 (LOW) is OPEN, owned by FE as V13-FE-016
+  (ARCH ruling). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once
