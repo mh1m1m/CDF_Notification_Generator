@@ -131,6 +131,12 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 - Local note: the local PostgreSQL cluster can stop between runs; `pnpm db:local start` before `pnpm db:reset`.
 - V13-QA-014 — #140, merged into develop as 6401c45 — COMPLETE: screenshot library without baselines (design
   §2–§4); ARCH hunk `.env.example` (`V13_E2E_VISUAL`); the CI visual job (§8) is ARCH's.
+- V13-QA-015 — #145, merged into develop as f7adcda — COMPLETE: visual baselines (36,
+  committed only from the CI visual job's candidates) and guard G7 (`updateSnapshots` pinned, no update flag in
+  workflows or scripts). Evidence: guard spec 129/129, library-index 13/13, unit 2401/2401, e2e 401/401, lint and
+  typecheck clean; local baseline probes (missing → 9 fail + 36 candidates; candidates in place → 9/9 on three fresh
+  databases; swapped image → fail with diff); library 244/244, identical to V13-QA-014's 3a75a42 in two runs. No ARCH hunk; the CI visual job (`V13_E2E_VISUAL=baseline`, upload
+  `test-results/baseline-candidates/` and the Playwright output) is ARCH's.
 - V13-QA-020 — branch test/V13-QA-020-next-action-card — IN_REVIEW: Next Action Card browser test (6 tests, ar/en at
   320 px: the card first in the overview before the stage card, its :target link, NONE renders nothing, page 2 keeps
   the first page's task); four mutations caught; e2e 372/372, unit 2412/2412; card-first check 6/6 at 270af33.

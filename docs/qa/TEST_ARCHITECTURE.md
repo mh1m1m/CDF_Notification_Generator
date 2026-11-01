@@ -290,6 +290,15 @@ or a conditional `test.skip(({ browserName }) => …)` at file level) lists as e
 out of L1's reach (ARCH R1 on #136, probed with Playwright 1.63); review covers that. And `vitest list` leaves skipped suites out, so the
 Vitest suite `case-matrix.spec.ts` stays outside L1; for it the per-file scan and review apply.
 
+**G7** (V13-QA-015, design §5.2, D2) keeps visual baselines from being written by the runner, in CI or locally. In
+`playwright.config.ts` the `defineConfig` object holds exactly one `updateSnapshots`, its own property, written as the
+plain string `"none"` (Playwright's default is `"missing"`, so a missing key would write baselines; the earlier
+`process.env.CI ? "none" : "missing"` let a local run write sandbox images, ARCH B2 on #145). Any other mention of the name (a project-level key, a string key, a shorthand, an assignment), a computed
+key or element access whose name is not a written string or number, and a spread into the config that is not an object
+literal all fail G7. No line of a workflow or of `package.json` may hand the runner `--update-snapshots`,
+`--update-source-snapshots` or `-u`. Each form is planted into a synthetic config or workflow line in the guard spec,
+and a mutation of the real config (`updateSnapshots: "missing"`) fails at its line.
+
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 
 Library `tests/truth/inspector.ts`.
@@ -380,6 +389,21 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   test; `captureAttempts` goes to the manifest. Planted tests in `library-index.spec.ts` prove the retake, the failure
   after the last attempt and the control. Ten runs on fresh databases gave 244/244 identical images in the sandbox
   (the last six on this code, with no retake needed).
+- **Baselines (V13-QA-015, design §5)**: `baseline.spec.ts` compares the committed subset (`BASELINE_ROWS`: each
+  screen's data state and the open workspace switcher, desktop and mobile, ar and en, light; 36 images) with
+  `tests/visual/__screenshots__/` through `toMatchSnapshot` on the image the library's own capture path makes
+  (`captureCell`; threshold 0.2, `maxDiffPixels: 0`), in the
+  `visual-baseline` project (`V13_E2E_VISUAL=baseline`). Each cell is opened and proven exactly as the library does
+  (`capture.ts`, shared by both specs: status, language, state marker, frames in view and loaded, data check V1–V5), with the same masks and
+  capture style. No run writes a baseline (`updateSnapshots: "none"`, pinned by G7): a changed one fails with the
+  expected, actual and diff images; a missing one fails too, and because Playwright then writes no image, the spec
+  writes the candidate to `test-results/baseline-candidates/` with the same options. A new or changed baseline is a
+  candidate from the CI visual job, committed in a PR that lists each file; none is made in a sandbox (fonts). Probed
+  locally: with no baselines all 9 rows fail and 36 candidates are written; with those candidates in place a fresh
+  database gives 9/9 at zero differing pixels (three runs a minute apart); a swapped image fails with 52,635 differing
+  pixels. `toHaveScreenshot` was dropped because it captured the run-made draft's row without the capture style (its
+  time kept its own 174 px instead of 146 px), which made the preview's comparison depend on the clock. The PR that adds this
+  ships no images; the first CI visual job produces the candidates.
 
 ## 11. Evidence and reporting
 
