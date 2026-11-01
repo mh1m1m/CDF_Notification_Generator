@@ -137,7 +137,7 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   typecheck clean; local baseline probes (missing → 9 fail + 36 candidates; candidates in place → 9/9 on three fresh
   databases; swapped image → fail with diff); library 244/244, identical to V13-QA-014's 3a75a42 in two runs. No ARCH hunk; the CI visual job (`V13_E2E_VISUAL=baseline`, upload
   `test-results/baseline-candidates/` and the Playwright output) is ARCH's.
-- V13-QA-020 — branch test/V13-QA-020-next-action-card — IN_REVIEW: Next Action Card browser test (6 tests, ar/en at
+- V13-QA-020 — #150, merged into develop as 8536e7e — COMPLETE: Next Action Card browser test (6 tests, ar/en at
   320 px: the card first in the overview before the stage card, its :target link, NONE renders nothing, page 2 keeps
   the first page's task); four mutations caught; e2e 372/372, unit 2412/2412; card-first check 6/6 at 270af33.
 - V13-QA-021 — #148, merged into develop as d399987 — COMPLETE: Server
@@ -146,7 +146,14 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 - V13-QA-016 — branch test/V13-QA-016-firefox-webkit — IN_REVIEW (ARCH, SEC for the CI hunk): `firefox-ar` and
   `webkit-ar` projects only when `V13_E2E_BROWSERS` names them; `.github/workflows/cross-browser.yml` (ARCH hunk) on
   develop pushes and the `cross-browser` label; guard B1 keeps every Sentinel spec and leak suite on Chromium. The
-  engines cannot run in the Claude sandbox: their evidence is the workflow's first runs, which QA records here.
+  engines cannot run in the Claude sandbox: their evidence is the workflow's runs, recorded here.
+  - Run 41287885521 (39a6b03): Firefox 71/71; WebKit 25 passed, 44 failed, 2 not run: no session cookie (WebKit drops
+    the Secure `__Host-` cookie on plain-http localhost). Fixed by the TLS front (e65710e, d75a8a3).
+  - Run 41289100450 (d75a8a3): workflow load error (runner context in a job's env); fixed in eb7f76c.
+  - Run 41290376443 (348fa7a): Firefox 71/71; WebKit 66/71. The 5 failures are reflow check 1 on the case
+    Notifications tab (`/cases/<0001>/notifications`): the page scrolls inline (567–803 px at 320, 641 at 640) in ar
+    and en, while no measured element lies past an edge. A WebKit-only finding, not skipped; check 1 now names what
+    widens the page so the next run can route it to its owner.
 
 ## Unresolved defects
 - none open from QA

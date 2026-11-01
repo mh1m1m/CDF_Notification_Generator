@@ -69,6 +69,7 @@ jobs:
       # the paths go to GITHUB_ENV from RUNNER_TEMP.)
       - name: Throwaway certificate for the WebKit TLS front
         run: |
+          umask 077
           dir="$RUNNER_TEMP/e2e-tls"
           mkdir -p "$dir"
           openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=localhost" \
