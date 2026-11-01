@@ -140,6 +140,10 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   details line (actor, provenance). Ruling asked of ARCH (option A recommended and built; B = add to_status to the read).
 - Recorded task statuses on `StatusBadge` without a time, an untouched OPEN task a plain span (same rule as My Work).
 - Closes M1-06, M1-11 and M1-12 (Notifications tab excepted). M1-09 stays with FE-009.
+- FE CHANGES 9713e07: `case-title`, `case-event-occurred` and `case-event-recorded` restored (CaseHeader title id;
+  Timeline `timeTestIds`, `alwaysShowOccurred` so both times show as before). DataTable `captionVisuallyHidden`
+  (ARCH ruling: #90 before FE-009 #82); the Overview's task table uses it, so "My open tasks in this case" is shown
+  once (M1-09, QA decides). Unit 1,992/1,992, e2e 227/227 locally.
 - QA note on #85: table data was 12 px (Body 2); now the body size like the Notification Center, secondary lines
   Body 1. Checked in Arabic at 360 px (16 px cells, no page scroll). DESIGN_SYSTEM DataTable row updated.
 - Tests: unit 1,972/1,972 (new: record-only Timeline entries, data refusal, CaseHeader codes and no-capacity line,

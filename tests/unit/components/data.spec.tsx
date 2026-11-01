@@ -443,6 +443,30 @@ describe("DataTable", () => {
     expect(html).toContain('data-testid="empty-state"');
   });
 
+  it("a visually hidden caption still names the table and the scroll region", () => {
+    const html = render(
+      <DataTable
+        t={tr("en")}
+        testId="t"
+        caption="My open tasks"
+        captionId="t-caption"
+        captionVisuallyHidden
+        scope="case"
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.id}
+        rowCaseId={(r) => r.caseId}
+        rowCaseRef={(r) => r.caseRef}
+        empty={null}
+      />,
+    );
+    expect(html).toContain('aria-labelledby="t-caption"');
+    expect(html).toContain(
+      '<caption id="t-caption"><span class="v13-sr-only">My open tasks</span></caption>',
+    );
+    expect(html).not.toContain("v13-table-caption-text");
+  });
+
   it("refuses a case row whose identity is swapped or missing", () => {
     const bad = [{ ...rows[0]!, caseId: CASE_1.ref }];
     expect(() =>
@@ -522,6 +546,21 @@ describe("Timeline — record-only entries (UX-008(c))", () => {
     expect(html).toContain(
       esc(tr(l)("common.time.recorded", { time: formatDateTime(l, "2026-10-01T06:00:00Z") })),
     );
+  });
+
+  it("time test ids; alwaysShowOccurred shows an occurred time equal to the recorded one", () => {
+    const entry = {
+      ...record("en"),
+      timeTestIds: { occurred: "case-event-occurred", recorded: "case-event-recorded" },
+    };
+    const shown = render(
+      <Timeline t={tr("en")} locale="en" label="Events" entries={[entry]} alwaysShowOccurred />,
+    );
+    expect(shown).toContain('data-testid="case-event-occurred"');
+    expect(shown).toContain('data-testid="case-event-recorded"');
+    const plain = render(<Timeline t={tr("en")} locale="en" label="Events" entries={[entry]} />);
+    expect(plain).not.toContain("case-event-occurred");
+    expect(plain).toContain('data-testid="case-event-recorded"');
   });
 
   it("refuses data attributes that are not data-*", () => {

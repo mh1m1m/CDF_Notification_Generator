@@ -60,7 +60,9 @@ export function CaseHeader({
           {caseRef}
         </bdi>
       </p>
-      <p className="v13-case-title">{title}</p>
+      <p className="v13-case-title" data-testid="case-title">
+        {title}
+      </p>
       <dl className="v13-case-facts">
         <div>
           <dt>{t("shell.case.stage")}</dt>

@@ -389,6 +389,7 @@ describe("CaseWorkspace and CaseHeader (ADR-013 case evidence)", () => {
     (l) => {
       const html = render(header(l));
       expect(html).toContain(`<bdi dir="ltr" data-testid="case-number">${CASE_1.ref}</bdi>`);
+      expect(html).toContain('<p class="v13-case-title" data-testid="case-title">Synthetic case title</p>');
       expect(html).toContain('<dd data-testid="case-stage"><span id="stage-badge"></span></dd>');
       expect(html).toContain('data-records-state="ACTIVE"');
       expect(html).toContain(msg(l)["common.records.active"]);

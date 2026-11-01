@@ -138,6 +138,7 @@ function CaseTimeline({
       label={label}
       testId={testId}
       data={{ "data-count": events.length }}
+      alwaysShowOccurred
       entries={events.map((e) => ({
         eventId: e.id,
         caseId: summary.case_id,
@@ -146,6 +147,7 @@ function CaseTimeline({
         occurredAt: e.occurred_at,
         recordedAt: e.recorded_at,
         testId: "case-event",
+        timeTestIds: { occurred: "case-event-occurred", recorded: "case-event-recorded" },
         data: { "data-event-code": e.event_code },
         details: (
           <>
@@ -203,6 +205,7 @@ export function TaskTable({
   caseRef,
   tasks,
   caption,
+  captionVisuallyHidden = false,
   emptyText,
   testId,
 }: {
@@ -211,6 +214,8 @@ export function TaskTable({
   caseRef: string;
   tasks: readonly CaseTask[];
   caption: string;
+  /** The caption names the table for assistive technology only (a visible heading already says it). */
+  captionVisuallyHidden?: boolean;
   emptyText: string;
   testId: string;
 }) {
@@ -229,6 +234,7 @@ export function TaskTable({
       tableData={{ "data-count": tasks.length }}
       captionId={`${testId}-caption`}
       caption={caption}
+      captionVisuallyHidden={captionVisuallyHidden}
       rows={tasks}
       rowKey={(task) => task.id}
       rowTestId={(task) => `case-task-${task.id}`}
@@ -532,6 +538,7 @@ export function CaseTabContent({
             caseRef={view.summary.case_number}
             tasks={view.myTasks}
             caption={t("case.overview.myTasks")}
+            captionVisuallyHidden
             emptyText={t("case.overview.noMyTasks")}
             testId="case-my-tasks"
           />

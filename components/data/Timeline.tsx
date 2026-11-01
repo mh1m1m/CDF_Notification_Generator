@@ -26,6 +26,8 @@ export interface TimelineEntry {
   details?: ReactNode;
   /** Test id of the entry; default timeline-entry-<eventId>. */
   testId?: string;
+  /** Test ids of the entry's occurred and recorded times. */
+  timeTestIds?: { occurred: string; recorded: string };
   /** Extra data-* attributes of the entry (e.g. data-event-code); they never override the entry's own. */
   data?: BadgeData;
 }
@@ -39,6 +41,8 @@ export interface TimelineProps {
   testId?: string;
   /** Extra data-* attributes of the list (e.g. data-count). */
   data?: BadgeData;
+  /** Show the occurred time even when it equals the recorded time (pages whose tests read both). */
+  alwaysShowOccurred?: boolean;
 }
 
 function dataOnly(data: BadgeData | undefined): BadgeData {
@@ -47,7 +51,15 @@ function dataOnly(data: BadgeData | undefined): BadgeData {
   return data ?? {};
 }
 
-export function Timeline({ t, locale, label, entries, testId = "timeline", data }: TimelineProps) {
+export function Timeline({
+  t,
+  locale,
+  label,
+  entries,
+  testId = "timeline",
+  data,
+  alwaysShowOccurred = false,
+}: TimelineProps) {
   const ordered = [...entries].sort(
     (a, b) =>
       Date.parse(b.occurredAt) - Date.parse(a.occurredAt) ||
@@ -58,7 +70,7 @@ export function Timeline({ t, locale, label, entries, testId = "timeline", data 
       {ordered.map((entry) => {
         assertCaseIdentity(entry.caseId, entry.caseRef);
         if (!entry.eventId) throw new Error("Timeline: every entry needs its recorded event id");
-        const sameTime = entry.occurredAt === entry.recordedAt;
+        const hideOccurred = !alwaysShowOccurred && entry.occurredAt === entry.recordedAt;
         return (
           <li
             key={entry.eventId}
@@ -86,12 +98,12 @@ export function Timeline({ t, locale, label, entries, testId = "timeline", data 
               />
             ) : null}
             <p className="v13-timeline-times">
-              {sameTime ? null : (
-                <time dateTime={entry.occurredAt}>
+              {hideOccurred ? null : (
+                <time dateTime={entry.occurredAt} data-testid={entry.timeTestIds?.occurred}>
                   {t("common.time.occurred", { time: formatDateTime(locale, entry.occurredAt) })}
                 </time>
               )}
-              <time dateTime={entry.recordedAt}>
+              <time dateTime={entry.recordedAt} data-testid={entry.timeTestIds?.recorded}>
                 {t("common.time.recorded", { time: formatDateTime(locale, entry.recordedAt) })}
               </time>
             </p>
