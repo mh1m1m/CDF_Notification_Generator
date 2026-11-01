@@ -163,6 +163,7 @@ describe("NXA the persona's own open task is the only source (REQ-IA-009)", () =
       input([task(1)], { records_state: "ARCHIVED" }),
       input([task(1)], { my_capacity: "CHAIR", capacity: "CHAIR" }),
       { ...input([task(1)]), extra: true },
+      { ...input([task(1)]), case: { ...input([]).case, stage: "X" } },
       { ...input([task(1)]), records: { tasks: [task(1)], events: [] } },
       { ...input([task(1)]), records: { tasks: [{ ...task(1), assignee_persona_id: TASK(9) }] } },
       { case: input([]).case, capacity: "SECRETARY" },

@@ -75,13 +75,12 @@ nothing. The no-action state needs no wording: the page shows nothing in that pl
 does not import `lib/notifications/next-action`. FE's BFF calls it with what it has already read for the Case Workspace.
 
 ```ts
-import type { CaseHeader, CaseTask, RequestIdentity } from "@/lib/contracts";
+import type { CaseHeader, CaseTask } from "@/lib/contracts";
 
 export interface NextActionInput {
+  // No persona field (SEC INFO on #124): the database already applies the persona (`is_mine`).
   /** The case as CaseSourceAdapter.getCase returned it for this identity. */
   readonly case: Pick<CaseHeader, "case_id" | "is_restricted" | "records_state" | "my_capacity">;
-  /** The verified identity the reads ran under. Not used to widen anything. */
-  readonly persona: Pick<RequestIdentity, "persona_id">;
   /** The persona's capacity on this case (CaseHeader.my_capacity), null when it holds none. */
   readonly capacity: CaseHeader["my_capacity"];
   /** ProceduralRecordsReader.listTasks(identity, case_id), as read: RLS-filtered, ordered by
