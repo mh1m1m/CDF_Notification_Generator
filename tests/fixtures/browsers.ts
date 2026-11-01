@@ -57,8 +57,17 @@ export function selectedBrowsers(raw: string | undefined): CrossBrowserProject[]
   return out;
 }
 
-/** One cross-browser project: 1280 × 800, ar-SA, the engine-neutral suites only. */
-export function crossBrowserProject(name: CrossBrowserProject): PlaywrightTestProject {
+/** The projects that reach the app through the local TLS front (tests/fixtures/tls-front.mjs) when it runs. */
+export const TLS_PROJECTS: readonly CrossBrowserProject[] = ["webkit-ar"];
+
+/**
+ * One cross-browser project: 1280 × 800, ar-SA, the engine-neutral suites only. With `tlsBaseURL` (the TLS front is
+ * running) a TLS project uses it: Playwright's WebKit on Linux drops the `Secure` session cookie on plain-http
+ * localhost, so without the front no signed-in WebKit test can pass. The front's certificate is self-signed and
+ * throwaway, hence ignoreHTTPSErrors.
+ */
+export function crossBrowserProject(name: CrossBrowserProject, tlsBaseURL?: string): PlaywrightTestProject {
+  const tls = tlsBaseURL !== undefined && TLS_PROJECTS.includes(name);
   return {
     name,
     testMatch: CROSS_BROWSER_MATCH,
@@ -67,6 +76,7 @@ export function crossBrowserProject(name: CrossBrowserProject): PlaywrightTestPr
       ...devices[ENGINE[name]],
       viewport: { width: 1280, height: 800 },
       locale: "ar-SA",
+      ...(tls ? { baseURL: tlsBaseURL, ignoreHTTPSErrors: true } : {}),
     },
   };
 }

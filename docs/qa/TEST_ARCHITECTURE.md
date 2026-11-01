@@ -291,6 +291,16 @@ engine, a stale entry) and a planted Chromium `testIgnore` in a temporary config
 reads and CDP history steps), Scenario E (CSP console checks that match Chromium's text) and the negative-persona pin
 (the Sentinel).
 
+**WebKit over TLS (V13-QA-016).** Playwright's WebKit on Linux drops a `Secure` cookie on plain-http `localhost`, where
+Chromium and Firefox keep it, so the `__Host-` session cookie never reached WebKit (first cross-browser run 41287885521:
+Firefox 71/71; WebKit 44 signed-in tests failed with no session cookie). The app and its cookie stay as they are. When
+`webkit-ar` is selected and `V13_E2E_TLS_CERT` / `V13_E2E_TLS_KEY` name a certificate, the config starts
+`tests/fixtures/tls-front.mjs`, a loopback HTTPS front that forwards every request unchanged (Host included, plus
+`x-forwarded-proto: https`) to the same started app, and `webkit-ar` uses `https://127.0.0.1:3443` with
+`ignoreHTTPSErrors`. The CI job makes a one-day self-signed certificate with `openssl` in the runner's temp directory.
+Locally the front was proven with the `webkit-ar` settings run in Chromium: 71/71, with the Server Action POSTs and the
+`Secure` cookie through the front.
+
 ## 8. Procedural Truth Inspector (QG-04, Gate I — M1 scope)
 
 Library `tests/truth/inspector.ts`.

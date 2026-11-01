@@ -22,7 +22,12 @@ import { randomBytes } from "node:crypto";
 import { defineConfig, devices } from "@playwright/test";
 import { isLoopbackUrl, LOCAL_DATABASE, localPrimaryPort, V13_APP } from "./scripts/db/lib/migrations.mjs";
 import { DEFAULT_LOCAL_APP_PASSWORD } from "./scripts/db/reset-local.mjs";
-import { CHROMIUM_PROJECT, crossBrowserProject, selectedBrowsers } from "./tests/fixtures/browsers";
+import {
+  CHROMIUM_PROJECT,
+  crossBrowserProject,
+  selectedBrowsers,
+  TLS_PROJECTS,
+} from "./tests/fixtures/browsers";
 
 const PORT = 3100;
 const externalBaseUrl = process.env.V13_E2E_BASE_URL?.trim();
@@ -63,6 +68,18 @@ function e2eDatabaseUrl(env: Readonly<Record<string, string | undefined>>): stri
   return url;
 }
 const chromiumPath = process.env.PW_CHROMIUM_PATH?.trim();
+const browsers = selectedBrowsers(process.env.V13_E2E_BROWSERS);
+
+// The local TLS front for WebKit (V13-QA-016, tests/fixtures/tls-front.mjs): started only for a locally started app,
+// when a TLS project is selected and V13_E2E_TLS_CERT / V13_E2E_TLS_KEY name a throwaway certificate (the CI
+// cross-browser job makes one with openssl). It forwards to the same app; nothing about the app changes.
+const TLS_PORT = 3443;
+const tlsFront =
+  !externalBaseUrl &&
+  browsers.some((b) => TLS_PROJECTS.includes(b)) &&
+  Boolean(process.env.V13_E2E_TLS_CERT?.trim()) &&
+  Boolean(process.env.V13_E2E_TLS_KEY?.trim());
+const tlsBaseURL = tlsFront ? `https://127.0.0.1:${TLS_PORT}` : undefined;
 const isCI = process.env.CI === "true";
 
 export default defineConfig({
@@ -100,27 +117,46 @@ export default defineConfig({
         ...(chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {}),
       },
     },
-    ...selectedBrowsers(process.env.V13_E2E_BROWSERS).map(crossBrowserProject),
+    ...browsers.map((name) => crossBrowserProject(name, tlsBaseURL)),
   ],
   webServer: externalBaseUrl
     ? undefined
-    : {
-        command: `pnpm build && pnpm start --port ${PORT}`,
-        // /api/health answers 503 without a database; the sign-in page is the readiness signal.
-        url: `${baseURL}/sign-in`,
-        reuseExistingServer: false,
-        timeout: 300_000,
-        stdout: "ignore",
-        stderr: "pipe",
-        env: {
-          V13_PERSONA_SIGNIN: "enabled",
-          V13_SESSION_SECRET: sessionSecret,
-          // Set explicitly, so the app never inherits another V13_DATABASE_URL from the shell.
-          V13_DATABASE_URL: e2eDatabaseUrl(process.env),
-          // Playwright merges the runner's environment into the server's: the app gets no administrator URL.
-          V13_ADMIN_DATABASE_URL: "",
-          V13_HOSTED_SIM_SUPERUSER_URL: "",
-          NEXT_TELEMETRY_DISABLED: "1",
+    : [
+        {
+          command: `pnpm build && pnpm start --port ${PORT}`,
+          // /api/health answers 503 without a database; the sign-in page is the readiness signal.
+          url: `${baseURL}/sign-in`,
+          reuseExistingServer: false,
+          timeout: 300_000,
+          stdout: "ignore",
+          stderr: "pipe",
+          env: {
+            V13_PERSONA_SIGNIN: "enabled",
+            V13_SESSION_SECRET: sessionSecret,
+            // Set explicitly, so the app never inherits another V13_DATABASE_URL from the shell.
+            V13_DATABASE_URL: e2eDatabaseUrl(process.env),
+            // Playwright merges the runner's environment into the server's: the app gets no administrator URL.
+            V13_ADMIN_DATABASE_URL: "",
+            V13_HOSTED_SIM_SUPERUSER_URL: "",
+            NEXT_TELEMETRY_DISABLED: "1",
+          },
         },
-      },
+        ...(tlsFront
+          ? [
+              {
+                command: "node tests/fixtures/tls-front.mjs",
+                url: `${tlsBaseURL}/sign-in`,
+                ignoreHTTPSErrors: true,
+                reuseExistingServer: false,
+                timeout: 30_000,
+                stdout: "ignore" as const,
+                stderr: "pipe" as const,
+                env: {
+                  V13_E2E_TLS_PORT: String(TLS_PORT),
+                  V13_E2E_TLS_TARGET: `http://127.0.0.1:${PORT}`,
+                },
+              },
+            ]
+          : []),
+      ],
 });
