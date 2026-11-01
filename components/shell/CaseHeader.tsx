@@ -14,13 +14,23 @@ export interface CaseHeaderProps {
   caseRef: string;
   /** Localised synthetic case title. */
   title: string;
-  /** The stage as a recorded StatusBadge (V13-UX-003), supplied by the page. */
+  /**
+   * The stage, supplied by the page: a recorded StatusBadge (V13-UX-003) when the page has the event that set it,
+   * otherwise the plain label, which makes no epistemic claim.
+   */
   stage: ReactNode;
+  /** The stage code, written as data-stage for tests and the inspector. */
+  stageCode?: string;
   recordsState: RecordsState;
   /** Named access (restricted case). */
   restricted?: boolean;
   /** Localised capacity of the signed-in persona on this case, e.g. "Investigator". */
   capacity?: string;
+  /**
+   * The capacity code (data-capacity). When given, the capacity line is always shown: null means the persona holds no
+   * recorded capacity on the case, and the line says so.
+   */
+  capacityCode?: string | null;
 }
 
 export function CaseHeader({
@@ -32,6 +42,8 @@ export function CaseHeader({
   recordsState,
   restricted,
   capacity,
+  stageCode,
+  capacityCode,
 }: CaseHeaderProps) {
   assertCaseIdentity(caseId, caseRef);
   const closed = recordsState === "CLOSED";
@@ -52,7 +64,9 @@ export function CaseHeader({
       <dl className="v13-case-facts">
         <div>
           <dt>{t("shell.case.stage")}</dt>
-          <dd data-testid="case-stage">{stage}</dd>
+          <dd data-testid="case-stage" data-stage={stageCode}>
+            {stage}
+          </dd>
         </div>
         <div>
           <dt>{t("shell.case.recordsState")}</dt>
@@ -62,7 +76,7 @@ export function CaseHeader({
           </dd>
         </div>
       </dl>
-      {restricted || capacity ? (
+      {restricted || capacity || capacityCode !== undefined ? (
         <p className="v13-case-indicators">
           {restricted ? (
             <span className="v13-indicator v13-indicator-outline" data-testid="case-restricted">
@@ -70,13 +84,18 @@ export function CaseHeader({
               <span>{t("shell.case.restricted")}</span>
             </span>
           ) : null}
-          {capacity ? (
-            <span data-testid="case-capacity">{t("shell.case.capacity", { capacity })}</span>
+          {capacity || capacityCode !== undefined ? (
+            <span
+              data-testid="case-capacity"
+              data-capacity={capacityCode === undefined ? undefined : (capacityCode ?? "")}
+            >
+              {capacity ? t("shell.case.capacity", { capacity }) : t("shell.case.capacityNone")}
+            </span>
           ) : null}
         </p>
       ) : null}
       {closed ? (
-        <p className="v13-notice" data-testid="case-closed-notice">
+        <p role="note" className="v13-notice" data-testid="case-closed-notice">
           {t("shell.case.closedNotice")}
         </p>
       ) : null}

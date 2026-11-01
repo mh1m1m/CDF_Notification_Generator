@@ -12,12 +12,18 @@ import type { DraftFormView, DraftNotice } from "@/lib/server/notification-draft
 import { previewHref, type NotificationPreviewView } from "@/lib/server/notification-preview";
 import { NotificationPreviewFrame } from "@/components/data/NotificationPreviewFrame";
 import { DraftForm } from "../notifications/_components/DraftForm";
+import { DataTable } from "@/components/data/DataTable";
+import { StatusBadge, type Tone } from "@/components/data/StatusBadge";
+import { Timeline as UxTimeline } from "@/components/data/Timeline";
+import { formatDate } from "@/components/format";
 import { Breadcrumbs } from "@/components/shell/Breadcrumbs";
+import { CaseHeader } from "@/components/shell/CaseHeader";
+import { CaseTabs } from "@/components/shell/CaseTabs";
+import { CaseWorkspace as UxCaseWorkspace } from "@/components/shell/CaseWorkspace";
 import { ScrollRegion } from "../../../_components/ScrollRegion";
 import styles from "./case.module.css";
 import {
   CAPACITY_KEYS,
-  dateFormat,
   dateTimeFormat,
   eventLabel,
   notificationStatusLabel,
@@ -39,44 +45,21 @@ export function tabHref(caseId: string, tab: CaseTab): string {
   return tab === "overview" ? `/cases/${caseId}` : `/cases/${caseId}/${tab}`;
 }
 
+/** Task tones for the recorded badge; the glyph comes from StatusBadge (Layer A codes, else neutral). */
+const TASK_TONE: Readonly<Record<CaseTask["status"], Tone>> = {
+  OPEN: "neutral",
+  IN_PROGRESS: "info",
+  BLOCKED: "warning",
+  DONE: "success",
+  CANCELLED: "neutral",
+};
+
 function titleOf(locale: Locale, c: CaseSummary): string {
   if (c.synthetic_title) return c.synthetic_title[locale];
   return c.title_key ? translateKey(locale, c.title_key) : "";
 }
 
-function LockGlyph() {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      className={styles.glyph}
-    >
-      <rect x="3" y="7" width="10" height="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-function KeyGlyph() {
-  return (
-    <svg
-      aria-hidden="true"
-      focusable="false"
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      className={styles.glyph}
-    >
-      <circle cx="5" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M8 8h6M12 8v3" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-/** Header, notices and section links shared by every tab; `children` is the tab's own content. */
+/** Header, case sections and the tab heading shared by every tab; `children` is the tab's own content. */
 export function CaseFrame({
   t,
   locale,
@@ -90,7 +73,7 @@ export function CaseFrame({
 }) {
   const c = view.summary;
   return (
-    <section data-testid="case-workspace" data-case-id={c.case_id} data-case-ref={c.case_number}>
+    <UxCaseWorkspace caseId={c.case_id} caseRef={c.case_number}>
       <Breadcrumbs
         t={t}
         items={[
@@ -98,82 +81,48 @@ export function CaseFrame({
           { label: <bdi dir="ltr">{c.case_number}</bdi> },
         ]}
       />
-      <header
-        className={styles.header}
-        data-testid="case-header"
-        data-case-id={c.case_id}
-        data-case-ref={c.case_number}
-      >
-        <p className={styles.number} data-testid="case-number">
-          <bdi dir="ltr">{c.case_number}</bdi>
-        </p>
-        <p data-testid="case-title">{titleOf(locale, c)}</p>
-        <dl className={styles.facts}>
-          <div>
-            <dt>{t("case.header.stage")}</dt>
-            <dd data-testid="case-stage" data-stage={c.lifecycle_stage}>
-              {stageLabel(t, c.lifecycle_stage)}
-            </dd>
-          </div>
-          <div>
-            <dt>{t("case.header.records")}</dt>
-            <dd data-testid="case-records-state" data-records-state={c.records_state}>
-              {c.records_state === "CLOSED" ? <LockGlyph /> : null}
-              {t(c.records_state === "CLOSED" ? "case.records.closed" : "case.records.active")}
-            </dd>
-          </div>
-        </dl>
-        {c.is_restricted ? (
-          <p>
-            <span className={styles.flag} data-testid="case-restricted">
-              <KeyGlyph />
-              {t("case.restricted")}
-            </span>
-          </p>
-        ) : null}
-        <p className={styles.meta} data-testid="case-capacity" data-capacity={view.capacity ?? ""}>
-          {view.capacity
-            ? t("case.capacity", { capacity: t(CAPACITY_KEYS[view.capacity]) })
-            : t("case.capacity.none")}
-        </p>
-      </header>
-      {c.records_state === "CLOSED" ? (
-        <p role="note" className={styles.notice} data-testid="case-closed-notice">
-          {t("case.closedNotice")}
-        </p>
-      ) : null}
-      <nav aria-label={t("case.workspace.sections")} className={styles.tabs}>
-        <ul>
-          {CASE_TABS.map((tab) => (
-            <li key={tab}>
-              <Link
-                href={tabHref(c.case_id, tab)}
-                aria-current={tab === view.tab ? "page" : undefined}
-                data-testid={`case-tab-${tab}`}
-              >
-                {t(TAB_KEYS[tab])}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <CaseHeader
+        t={t}
+        caseId={c.case_id}
+        caseRef={c.case_number}
+        title={titleOf(locale, c)}
+        // The case read carries no event for the stage, so the stage is its label, with no epistemic claim.
+        stage={stageLabel(t, c.lifecycle_stage)}
+        stageCode={c.lifecycle_stage}
+        recordsState={c.records_state}
+        restricted={c.is_restricted}
+        capacity={view.capacity ? t(CAPACITY_KEYS[view.capacity]) : undefined}
+        capacityCode={view.capacity}
+      />
+      <CaseTabs
+        t={t}
+        current={view.tab}
+        tabs={CASE_TABS.map((tab) => ({ key: tab, href: tabHref(c.case_id, tab), label: t(TAB_KEYS[tab]) }))}
+      />
       <h1>{t(TAB_KEYS[view.tab])}</h1>
       {children}
-    </section>
+    </UxCaseWorkspace>
   );
 }
 
-/** Recorded events, newest first. Entries name their event; they are records, not statuses (no data-epistemic). */
-export function Timeline({
+/**
+ * Recorded events, newest first. Entries name their event; they are records, not statuses: the event read has no
+ * status field, so no entry carries a badge or data-epistemic (ARCH, UX-008(c)).
+ */
+function CaseTimeline({
   t,
   locale,
+  summary,
   events,
   testId = "case-timeline",
+  label,
 }: {
   t: Translator;
   locale: Locale;
+  summary: CaseSummary;
   events: readonly CaseEvent[];
   testId?: string;
+  label: string;
 }) {
   if (events.length === 0) {
     return (
@@ -182,23 +131,24 @@ export function Timeline({
       </p>
     );
   }
-  const when = dateTimeFormat(locale);
   return (
-    <ol className={styles.timeline} data-testid={testId} data-count={events.length}>
-      {events.map((e) => (
-        <li key={e.id} data-testid="case-event" data-event-id={e.id} data-event-code={e.event_code}>
-          <p>
-            <strong>{eventLabel(t, e.event_code)}</strong>
-          </p>
-          <p className={styles.metaRow}>
-            <time dateTime={e.occurred_at} data-testid="case-event-occurred">
-              {t("case.events.occurred", { time: when.format(new Date(e.occurred_at)) })}
-            </time>
-            <time dateTime={e.recorded_at} data-testid="case-event-recorded">
-              {t("case.events.recorded", { time: when.format(new Date(e.recorded_at)) })}
-            </time>
-          </p>
-          <p className={styles.metaRow}>
+    <UxTimeline
+      t={t}
+      locale={locale}
+      label={label}
+      testId={testId}
+      data={{ "data-count": events.length }}
+      entries={events.map((e) => ({
+        eventId: e.id,
+        caseId: summary.case_id,
+        caseRef: summary.case_number,
+        title: eventLabel(t, e.event_code),
+        occurredAt: e.occurred_at,
+        recordedAt: e.recorded_at,
+        testId: "case-event",
+        data: { "data-event-code": e.event_code },
+        details: (
+          <>
             <span data-testid="case-event-actor">
               {e.actor_capacity
                 ? t("case.events.actor", { capacity: t(CAPACITY_KEYS[e.actor_capacity]) })
@@ -207,19 +157,20 @@ export function Timeline({
             <span data-testid="case-event-provenance" data-provenance={e.provenance}>
               {t(PROVENANCE_KEYS[e.provenance])}
             </span>
-          </p>
-        </li>
-      ))}
-    </ol>
+          </>
+        ),
+      }))}
+    />
   );
 }
 
 /**
  * A task's status. A status set by a recorded event is a recorded fact: lib/domain's toBadgeEpistemic gives the
  * ADR-013 attributes, with the event id from the authorised case's own task row (DB-008), never from the URL or
- * client input. An untouched OPEN task has no event, so it carries no epistemic claim (ARCH, 31 Oct). Server only.
+ * client input; the task read has no status time, so the badge says "recorded" without one (ARCH, 1 Nov). An
+ * untouched OPEN task has no event, so it carries no epistemic claim (ARCH, 31 Oct). Server only.
  */
-function TaskStatus({ t, task }: { t: Translator; task: CaseTask }) {
+function TaskStatus({ t, locale, task }: { t: Translator; locale: Locale; task: CaseTask }) {
   const label = t(TASK_STATUS_KEYS[task.status]);
   if (task.status_event_id === null) {
     return (
@@ -229,23 +180,27 @@ function TaskStatus({ t, task }: { t: Translator; task: CaseTask }) {
     );
   }
   const badge = toBadgeEpistemic({ epistemic: "RECORDED_FACT", event_id: task.status_event_id });
+  if (badge.value !== "recorded") return null; // toBadgeEpistemic fails closed first; this narrows the type
   return (
-    <span
-      data-testid="case-task-status"
-      data-task-status={task.status}
-      data-epistemic={badge.value}
-      data-status-kind="task"
-      data-status={task.status}
-      data-event-id={badge.event_id}
-    >
-      {label}
-    </span>
+    <StatusBadge
+      t={t}
+      locale={locale}
+      testId="case-task-status"
+      data={{ "data-task-status": task.status }}
+      epistemic="recorded"
+      statusKind="task"
+      status={task.status}
+      label={label}
+      tone={TASK_TONE[task.status]}
+      evidence={{ eventId: badge.event_id }}
+    />
   );
 }
 
 export function TaskTable({
   t,
   locale,
+  caseRef,
   tasks,
   caption,
   emptyText,
@@ -253,6 +208,7 @@ export function TaskTable({
 }: {
   t: Translator;
   locale: Locale;
+  caseRef: string;
   tasks: readonly CaseTask[];
   caption: string;
   emptyText: string;
@@ -265,57 +221,69 @@ export function TaskTable({
       </p>
     );
   }
-  const day = dateFormat(locale);
   return (
-    <ScrollRegion className={styles.scroll} labelledBy={`${testId}-caption`}>
-      <table className={styles.table} data-testid={testId} data-count={tasks.length}>
-        <caption id={`${testId}-caption`}>{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("case.tasks.column.task")}</th>
-            <th scope="col">{t("case.tasks.column.assignee")}</th>
-            <th scope="col">{t("case.tasks.column.due")}</th>
-            <th scope="col">{t("case.tasks.column.status")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map((task) => (
-            <tr
-              key={task.id}
-              data-testid={`case-task-${task.id}`}
-              data-task-id={task.id}
-              data-task-code={task.task_code}
-              data-mine={task.is_mine ? "true" : "false"}
-            >
-              <th scope="row">{task.title[locale]}</th>
-              <td>
-                {task.assignee_capacity
-                  ? t(CAPACITY_KEYS[task.assignee_capacity])
-                  : t("case.tasks.unassigned")}
-                {task.is_mine ? (
-                  <>
-                    {" "}
-                    <span className={styles.flag} data-testid="case-task-mine">
-                      {t("case.tasks.mine")}
-                    </span>
-                  </>
-                ) : null}
-              </td>
-              <td className={styles.nowrap}>
-                {task.due_date ? (
-                  <time dateTime={task.due_date}>{day.format(new Date(`${task.due_date}T00:00:00Z`))}</time>
-                ) : (
-                  t("case.tasks.noDue")
-                )}
-              </td>
-              <td>
-                <TaskStatus t={t} task={task} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable<CaseTask>
+      t={t}
+      scope="case"
+      testId={testId}
+      tableData={{ "data-count": tasks.length }}
+      captionId={`${testId}-caption`}
+      caption={caption}
+      rows={tasks}
+      rowKey={(task) => task.id}
+      rowTestId={(task) => `case-task-${task.id}`}
+      rowData={(task) => ({
+        "data-task-id": task.id,
+        "data-task-code": task.task_code,
+        "data-mine": task.is_mine ? "true" : "false",
+      })}
+      rowCaseId={(task) => task.case_id}
+      rowCaseRef={() => caseRef}
+      empty={null}
+      columns={[
+        {
+          key: "task",
+          header: t("case.tasks.column.task"),
+          rowHeader: true,
+          cell: (task) => task.title[locale],
+        },
+        {
+          key: "assignee",
+          header: t("case.tasks.column.assignee"),
+          cell: (task) => (
+            <>
+              {task.assignee_capacity ? t(CAPACITY_KEYS[task.assignee_capacity]) : t("case.tasks.unassigned")}
+              {task.is_mine ? (
+                <>
+                  {" "}
+                  <span className={styles.flag} data-testid="case-task-mine">
+                    {t("case.tasks.mine")}
+                  </span>
+                </>
+              ) : null}
+            </>
+          ),
+        },
+        {
+          key: "due",
+          header: t("case.tasks.column.due"),
+          cell: (task) =>
+            task.due_date ? (
+              // Noon in Riyadh is the same calendar day in Riyadh whatever the server's zone.
+              <time dateTime={task.due_date} className="v13-nowrap">
+                {formatDate(locale, `${task.due_date}T12:00:00+03:00`)}
+              </time>
+            ) : (
+              t("case.tasks.noDue")
+            ),
+        },
+        {
+          key: "status",
+          header: t("case.tasks.column.status"),
+          cell: (task) => <TaskStatus t={t} locale={locale} task={task} />,
+        },
+      ]}
+    />
   );
 }
 
@@ -561,13 +529,21 @@ export function CaseTabContent({
           <TaskTable
             t={t}
             locale={locale}
+            caseRef={view.summary.case_number}
             tasks={view.myTasks}
             caption={t("case.overview.myTasks")}
             emptyText={t("case.overview.noMyTasks")}
             testId="case-my-tasks"
           />
           <h2>{t("case.overview.lastEvents")}</h2>
-          <Timeline t={t} locale={locale} events={view.events} testId="case-last-events" />
+          <CaseTimeline
+            t={t}
+            locale={locale}
+            summary={view.summary}
+            events={view.events}
+            testId="case-last-events"
+            label={t("case.overview.lastEvents")}
+          />
           <p>
             <Link href={tabHref(view.summary.case_id, "events")} data-testid="case-all-events">
               {t("case.tab.events")}
@@ -576,12 +552,21 @@ export function CaseTabContent({
         </div>
       );
     case "events":
-      return <Timeline t={t} locale={locale} events={view.events} />;
+      return (
+        <CaseTimeline
+          t={t}
+          locale={locale}
+          summary={view.summary}
+          events={view.events}
+          label={t("case.tab.events")}
+        />
+      );
     case "tasks":
       return (
         <TaskTable
           t={t}
           locale={locale}
+          caseRef={view.summary.case_number}
           tasks={view.tasks}
           caption={t("case.tasks.caption")}
           emptyText={t("case.tasks.empty")}

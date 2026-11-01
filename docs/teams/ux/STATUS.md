@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `feature/V13-UX-008-lists` · Base: `develop` `e9cd74d`
+Updated: 2026-11-01 · Branch: `feature/V13-UX-008-case-workspace` · Base: `develop` `f45f192`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -114,7 +114,7 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Closes M1-08 and M1-10; the interim `.v13-nav-list` styles (M1-01) are removed. S4 rows M1-15 to M1-19 registered.
 - ARCH agreement (31 Oct 23:19): one line in `tests/e2e/smoke.spec.ts` opens the persona menu before sign-out.
 
-## V13-UX-008(b): Portfolio and My Work on the shared components (IN_REVIEW once its PR is open; FE ACCEPTs `app/**`, QA reviews)
+## V13-UX-008(b): Portfolio and My Work on the shared components. PR #85, merged into `develop` as `f45f192`
 - Both tables on `DataTable` (case scope: `data-case-id`/`data-case-ref` per row, new `captionId`, `rowTestId`,
   `rowData`, `tableData`, per-column `cellData`; only `data-*` attributes pass, checked at render). Every e2e test id kept.
 - Dates through `components/format.ts` (long month, Riyadh). My Work due dates on `DeadlineText`, which now also takes
@@ -129,11 +129,25 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
 - Tests: unit 1,925/1,925 (new: undated recorded badge in ar and en; data passthrough and refusal), lint, typecheck,
   e2e 194/194 locally. Visual check at 360/768/1280 in ar and en with a scratch spec (deleted): no page scroll, caption
   inside the region, no broken case numbers.
-- Next: UX-008(c) Case Workspace.
+
+## V13-UX-008(c): Case Workspace on the shared components (IN_REVIEW once its PR is open; FE ACCEPTs `app/**`, QA reviews)
+- Overview, Recorded events and Tasks use `CaseWorkspace`, `Breadcrumbs`, `CaseHeader`, `CaseTabs`, `Timeline`,
+  `DataTable` and `StatusBadge`; dates through `components/format.ts`. The Notifications tab is unchanged (brief).
+- `CaseHeader`: `stageCode` (data-stage), `capacityCode` (data-capacity, with a "no recorded capacity" line when
+  null), closed notice is `role="note"`. The stage is the plain label: the case read has no event for it.
+- `Timeline`: an entry's `status` is optional. The event read has no status field, so case events are records only:
+  no badge, no data-epistemic, data-status-kind or data-status (as before). Entries take a test id, data-* and a
+  details line (actor, provenance). Ruling asked of ARCH (option A recommended and built; B = add to_status to the read).
+- Recorded task statuses on `StatusBadge` without a time, an untouched OPEN task a plain span (same rule as My Work).
+- Closes M1-06, M1-11 and M1-12 (Notifications tab excepted). M1-09 stays with FE-009.
+- QA note on #85: table data was 12 px (Body 2); now the body size like the Notification Center, secondary lines
+  Body 1. Checked in Arabic at 360 px (16 px cells, no page scroll). DESIGN_SYSTEM DataTable row updated.
+- Tests: unit 1,972/1,972 (new: record-only Timeline entries, data refusal, CaseHeader codes and no-capacity line,
+  closed notice role), lint, typecheck, format, e2e 224/224 locally. Visual check at 360/768/1280 in ar and en
+  (overview, events, tasks, closed case): no page scroll, tab row on one line, no broken case numbers.
 
 ## Unresolved defects
-- QA nit from #74: the preview frame title reads "إسناد التحقيق — DESIGN_PREVIEW". The raw code is in PROC's renderer
-  (`lib/notifications/render/platform.ts` title), not a UX path; raised with ARCH.
+- QA nit from #74 (preview frame title "— DESIGN_PREVIEW"): routed by ARCH to FE-009 (#82); no UX change.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once

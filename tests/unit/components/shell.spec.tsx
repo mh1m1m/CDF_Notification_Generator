@@ -417,6 +417,23 @@ describe("CaseWorkspace and CaseHeader (ADR-013 case evidence)", () => {
     },
   );
 
+  it.each(LOCALES)("stage and capacity codes; a persona without a capacity is told so (%s)", (l) => {
+    const held = render(header(l, { stageCode: "INVESTIGATION", capacity: "X", capacityCode: "SECRETARY" }));
+    expect(held).toContain('<dd data-testid="case-stage" data-stage="INVESTIGATION">');
+    expect(held).toContain('data-testid="case-capacity" data-capacity="SECRETARY"');
+    const none = render(header(l, { capacityCode: null }));
+    expect(none).toContain(
+      `data-testid="case-capacity" data-capacity="">${esc(msg(l)["shell.case.capacityNone"])}</span>`,
+    );
+    expect(render(header(l))).not.toContain("case-capacity");
+  });
+
+  it("the closed notice is a note", () => {
+    expect(render(header("en", { recordsState: "CLOSED" }))).toContain(
+      '<p role="note" class="v13-notice" data-testid="case-closed-notice">',
+    );
+  });
+
   it("refuses a display number as the key and a UUID as the display number", () => {
     expect(() =>
       render(

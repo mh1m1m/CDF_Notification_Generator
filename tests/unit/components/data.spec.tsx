@@ -491,6 +491,47 @@ describe("Pagination", () => {
   });
 });
 
+describe("Timeline — record-only entries (UX-008(c))", () => {
+  const record = (l: Locale): TimelineEntry => ({
+    eventId: EVT_1,
+    caseId: CASE_1.id,
+    caseRef: CASE_1.ref,
+    title: l === "ar" ? "تسجيل البلاغ" : "Report registered",
+    occurredAt: "2026-10-01T06:00:00Z",
+    recordedAt: "2026-10-01T06:00:00Z",
+    testId: "case-event",
+    data: { "data-event-code": "REPORT_REGISTERED" },
+    details: <span data-testid="case-event-provenance">Synthetic seed</span>,
+  });
+
+  it.each(LOCALES)("an entry without a status is a record: no badge, no epistemic claim (%s)", (l) => {
+    const html = render(
+      <Timeline t={tr(l)} locale={l} label="Events" entries={[record(l)]} data={{ "data-count": 1 }} />,
+    );
+    expect(html).toContain('data-count="1"');
+    expect(html).toContain(
+      `data-event-code="REPORT_REGISTERED" class="v13-timeline-entry" data-testid="case-event" data-event-id="${EVT_1}" data-case-id="${CASE_1.id}" data-case-ref="${CASE_1.ref}"`,
+    );
+    expect(html).not.toContain("data-epistemic");
+    expect(html).not.toContain("data-status");
+    expect(html).not.toContain("v13-badge");
+    expect(html).toContain(
+      '<p class="v13-muted v13-timeline-details"><span data-testid="case-event-provenance">',
+    );
+    // The record still shows when it was recorded.
+    expect(html).toContain(
+      esc(tr(l)("common.time.recorded", { time: formatDateTime(l, "2026-10-01T06:00:00Z") })),
+    );
+  });
+
+  it("refuses data attributes that are not data-*", () => {
+    const bad = { ...record("en"), data: { onclick: "x" } as unknown as Record<`data-${string}`, string> };
+    expect(() => render(<Timeline t={tr("en")} locale="en" label="Events" entries={[bad]} />)).toThrow(
+      /data-\* attributes only/,
+    );
+  });
+});
+
 describe("Timeline and ExpectedSteps", () => {
   const entries = (l: Locale): TimelineEntry[] => [
     {
