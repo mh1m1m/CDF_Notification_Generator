@@ -73,6 +73,30 @@ describe("case list cursor", () => {
     expect(() => decodeCaseListCursor("events", cursor)).toThrow(InvalidCursorError);
   });
 
+  // SEC CHANGES 5254893: cursors that decode to the right values but are not in the form this module issues. Each is
+  // refused only by the canonical re-encoding check.
+  it.each([
+    [
+      "its keys reordered",
+      (p: Record<string, unknown>) => JSON.stringify({ id: p.id, at: p.at, k: p.k, v: p.v }),
+    ],
+    ["whitespace in the JSON", (p: Record<string, unknown>) => JSON.stringify(p, null, 1)],
+    ["an escaped character", (p: Record<string, unknown>) => JSON.stringify(p).replace('"k"', '"\\u006b"')],
+  ])("refuses a non-canonical cursor with %s that still decodes", (_n, text) => {
+    const position = { at: AT.events, id: ID };
+    const canonical = encodeCaseListCursor("events", position);
+    const payload = JSON.parse(Buffer.from(canonical, "base64url").toString("utf8")) as Record<
+      string,
+      unknown
+    >;
+    const odd = Buffer.from(text(payload), "utf8").toString("base64url");
+    expect(odd).not.toBe(canonical);
+    // it decodes to the same values…
+    expect(JSON.parse(Buffer.from(odd, "base64url").toString("utf8"))).toEqual(payload);
+    // …and is refused
+    expect(() => decodeCaseListCursor("events", odd)).toThrow(InvalidCursorError);
+  });
+
   it("refuses a valid cursor with a character appended that base64url decoding would skip", () => {
     const c = encodeCaseListCursor("events", { at: AT.events, id: ID });
     expect(() => decodeCaseListCursor("events", `${c}A`)).toThrow(InvalidCursorError);

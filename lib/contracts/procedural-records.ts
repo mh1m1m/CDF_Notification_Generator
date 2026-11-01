@@ -69,9 +69,9 @@ export interface ProceduralRecordsReader {
   /** Tasks, by due date (nulls last), task code, id. */
   listTasks(identity: RequestIdentity, caseId: CaseId): Promise<readonly CaseTask[]>;
   /**
-   * listEvents one page at a time, same order (V13-FE-013, case_events_page). A cursor the reader did not issue, or
-   * that does not decode, throws InvalidCursorError before any read; a well-formed cursor of another case, a stale
-   * one, an unknown case and an unauthorised case all give an empty page.
+   * listEvents one page at a time, same order (V13-FE-013, case_events_page). A cursor that does not decode to this
+   * list's shape throws InvalidCursorError before any read; a well-formed cursor of another case, a stale one, an
+   * unknown case and an unauthorised case all give an empty page (the database decides).
    */
   listEventsPage(
     identity: RequestIdentity,

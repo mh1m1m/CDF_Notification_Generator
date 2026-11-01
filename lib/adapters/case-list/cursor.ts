@@ -51,10 +51,6 @@ export function decodeCaseListCursor(
   } catch {
     throw new InvalidCursorError("bad cursor");
   }
-  // base64url decoding skips foreign characters, so the round trip must give back exactly what was passed.
-  if (Buffer.from(JSON.stringify(value), "utf8").toString("base64url") !== cursor) {
-    throw new InvalidCursorError("bad cursor");
-  }
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new InvalidCursorError("bad cursor");
   const v = value as Record<string, unknown>;
   if (
@@ -67,5 +63,9 @@ export function decodeCaseListCursor(
   ) {
     throw new InvalidCursorError("bad cursor");
   }
-  return { at: v.at, id: v.id };
+  // Only the canonical form this module issues is accepted: base64url decoding skips foreign characters, and JSON
+  // accepts other key orders and whitespace, so the decoded value must re-encode to exactly what was passed.
+  const position = { at: v.at, id: v.id };
+  if (encodeCaseListCursor(kind, position) !== cursor) throw new InvalidCursorError("bad cursor");
+  return position;
 }

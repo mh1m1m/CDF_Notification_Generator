@@ -1,6 +1,6 @@
 # FE status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 04:23 UTC · Branch: feature/V13-FE-013-case-lists-paged (develop abdd885 merged in; #112 FE-012 merged; FE-011 is #116) · Head: see PR
+Updated: 2026-11-01 04:42 UTC · Branch: feature/V13-FE-013-case-lists-paged (develop abdd885 merged in; #112 FE-012 merged; FE-011 is #116) · Head: see PR
 
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
@@ -206,6 +206,7 @@ Updated: 2026-11-01 04:23 UTC · Branch: feature/V13-FE-013-case-lists-paged (de
 | FE-012 after SEC CHANGES 8c07746 (workspace-only binding: Delta signed in Governance / Alpha signed in Governance, posted in Secretariat; crafted payload with another workspace's id; FE integration Alpha in Governance) and QA's P3 hunk 7971547: lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e`. Mutation: without the workspace comparison 4 unit and 1 integration tests fail | pass | 85 files, 2103 / 480 / 313 of 313 | FE-012 head |
 | FE-013 on develop 937cff3: lint, typecheck, format:check / `pnpm test` (case-list-adapter 29: cursor round trip per list, cross-list refusal, malformed shapes, limit + 1 and next cursor, refusals before any read, foreign-case row and bad page_cursor refuse the page; case-list-paging 33: URL parse and tampered forms, links and trail bound, 60-row walk per tab, tampered URL reads nothing, refused cursor → empty state, other failures propagate, hidden case NOT_FOUND before any read, overview one page of five, pager markup without counts, preview / close keep the page) / `pnpm db:reset` + `pnpm test:db` (FE integration case-records-paged 9: every page with limits 1, 2, 25 equals the unpaged read; another case's cursor, another list's cursor, forged and malformed cursors, unknown / hidden / restricted / other-workspace cases) / `pnpm db:reset` + `pnpm test:e2e` (Scenario E: no pager on one page, six tampered or forged cursors show the empty state, first-page link). Mutation: next cursor from the extra row fails 1 integration + 1 unit; dropping the cursor fallback fails 4 unit; dropping the tampered-URL guard fails 3 unit | pass | 86 files, 2117 / 494 / 313 of 313 | FE-013 head |
 | FE-013 after merging develop abdd885 (#112): commands as above | pass | 88 files, 2172 / 506 / 333 of 333 | FE-013 head |
+| FE-013 after SEC CHANGES 5254893 (the cursor must re-encode to exactly what was passed: keys reordered, whitespace, an escaped character are refused; ARCH's listEventsPage wording): commands as above. Mutation: without the canonical check the 3 new tests fail | pass | 88 files, 2175 / 506 / 333 of 333 | FE-013 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
