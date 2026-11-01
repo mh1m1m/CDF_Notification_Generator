@@ -87,7 +87,7 @@ Updated: 1 Nov 2026 · Branch: `docs/V13-SEC-014-status-reviews` · `develop` no
   CHANGES `5d2413e` then ACCEPT `e2b8317`; #111 PROC-020 ACCEPT `40ca2c3`; #112 FE-012 CHANGES `8c07746` then ACCEPT
   `c2021cf`; #113 PROC-022 CHANGES `7925815` (getter probe: subject, text and HTML read more than once) then ACCEPT
   `a62eb00`; #116 FE-011 ACCEPT `51e63c6`
-- Reviews 1 Nov (to 05:40 UTC): #117 ARCH-002 ACCEPT `4deedad`; #120 DB-021 design note ACCEPT `f1eb959`
+- Reviews 1 Nov (to 05:39 UTC): #117 ARCH-002 ACCEPT `4deedad`; #120 DB-021 design note ACCEPT `f1eb959`
   (R1–R7), `26024a9`; #114 QA-009 ACCEPT `f96def3`; #119 DB-020 migration 0012 ACCEPT `c3c1411`; #118 PROC-023 ACCEPT
   `11d9bd6` (INFO: quote test titles exactly); #121 FE-013 CHANGES `5254893` then ACCEPT `0b00bb8`; #123 ARCH-002
   CHANGES `d388c54` then ACCEPT `ccfe02c`; #124 PROC-025 ACCEPT `a578228` (INFO: no `persona` input; title escaped in
@@ -95,7 +95,9 @@ Updated: 1 Nov 2026 · Branch: `docs/V13-SEC-014-status-reviews` · `develop` no
   `321051c`; #133 ARCH-012 ACCEPT `0df0f9e` (INFO: tag protection for `v*` is an owner step; `--prerelease` for
   versions with a `-` part); #129 DB-022 migration 0014 ACCEPT `07dc591` (8/8 mutations killed, SEC-DB-17 needs the
   registry line); #130 PROC-026 ACCEPT `926360d` (INFO: no extra-field test inside `case`; §4 sketch still lists
-  `persona`); #132 QA-013 design note ACCEPT `c778049` (D1: mask; five INFO for the CI hunks)
+  `persona`), then ACCEPT `b188076` (both INFOs fixed; the `case` strictness mutation now fails N7); #132 QA-013 design
+  note ACCEPT `c778049` (D1: mask; five INFO for the CI hunks), then ACCEPT `5c22fbd` (delta folds in ARCH's D1–D4
+  rulings; INFO 6: `pull_request`, never `pull_request_target`; event text to a shell only through `env:`)
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
