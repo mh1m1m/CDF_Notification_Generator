@@ -108,11 +108,14 @@ Updated: 2026-11-01 · Branch: test/V13-QA-012-witness-twin-and-bodies (base dev
 | #98 7a5b987: unit / test:db / e2e (incl. reflow) | pass | 2026 / 468 / 252 | review |
 | QA-012 on develop 0bc2542 + #116 0bbc7c2 (tree = develop 61b57cf + QA-012): lint, typecheck, format:check; `pnpm db:reset && pnpm test:e2e` | pass | e2e 335/335 | QA-012 |
 | QA-012 mutations (build + start, `db:reset` each): RSC bodies dropped → "frame document in the click's payload"; RSC body unreadable → unread check; case number appended to the plain-text version → "case_number … in the plain-text version"; own marking appended → own-marking check; Scenario E twice on one database | fail ×4 as expected; 11/11 twice | | QA-012 |
+| QA-011 guard spec (`tests/sentinel/leak-suite-guard.spec.ts`), lint, typecheck, format:check | pass | 104/104 | QA-011 |
+| QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
+- V13-QA-011 — branch test/V13-QA-011-guard-followups — IN_REVIEW (ARCH): G6 plain-literal annotation `type`;
+  L1 `playwright test --list` per guarded Playwright suite vs its own test calls (helpers in other files caught);
+  surface allow-list reason updated after V13-SEC-012. TEST_ARCHITECTURE §7.1.
 - After #61 merges: a Center Back step in Scenario D.
-- After SEC-012 merges: update the reason of surface's `!existsSync(root)` allow-list entry.
-- V13-QA-011: plain-literal annotation type rule; `playwright test --list` count vs body count.
 - Harness: axe excludes sandboxed srcdoc frames and scans the srcdoc separately (axe hangs on them today);
   preview-frame rule set per the ARCH ruling once PROC-011 exports the renderer's values; P2 for Server Action POST
   bodies Chromium drops after a redirect.

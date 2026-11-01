@@ -17,16 +17,21 @@
 //   G6  the runners' options-object and annotation forms (ARCH, review of 488d93d): an object property `skip`,
 //       `only`, `todo` or `fails` (Vitest: it/describe(name, { skip: true }) skips, { only } focuses, { todo } makes a
 //       todo, { fails } expects a failure), and a property `type` whose value is "skip", "fixme" or "fail" (Playwright:
-//       test(name, { annotation: { type: "skip" } }) skips, "fixme" skips, "fail" inverts), however the key is written
+//       test(name, { annotation: { type: "skip" } }) skips, "fixme" skips, "fail" inverts), however the key is written;
+//       and (V13-QA-011, SEC's INFO on #88) any annotation the parser cannot read as plain literals: an `annotation`
+//       option that is not an object or array literal, a spread or computed key in one, a `type` that is not a plain
+//       string literal (`"sk" + "ip"`, a variable, a template with a substitution), and `annotations` reached other
+//       than by `.push(` of such object literals
 // The source is tokenised by the TypeScript parser and comments and string, template and regular-expression literals
 // are blanked before matching, so prose that names test.fail() is not a hit and a quote inside a regular expression
 // cannot hide the rest of a file. G5 and G6 work on the syntax tree. Limit: a helper defined in another file that pins or
-// skips is out of reach of a per-file scan (TEST_ARCHITECTURE.md §7.1).
+// skips is out of reach of a per-file scan (TEST_ARCHITECTURE.md §7.1); the listing check below (L1, V13-QA-011) closes
+// it for the Playwright suites by comparing what the runner registers with the file's own test calls.
 // Pure functions over source text: the planted-negative self-test feeds them synthetic sources. SYNTHETIC only.
 import ts from "typescript";
 
 export interface GuardViolation {
-  rule: "G1" | "G2" | "G3" | "G4" | "G5" | "G6";
+  rule: "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "L1";
   file: string;
   line: number;
   detail: string;
@@ -92,8 +97,9 @@ export const SKIP_ALLOWANCES: readonly SkipAllowance[] = [
     file: "tests/security/e2e/surface.spec.ts",
     call: /^test\.skip\(!existsSync\(root\), "",? ?\)$/,
     reason:
-      "runs after the LOCAL_BUILD skip, where playwright.config.ts has just built the app, so .next/static exists; " +
-      "a build-state condition, not an environment one (SEC may make it fail instead, as SEC-010 did for the database)",
+      "since V13-SEC-012 a missing .next/static fails the test before this line whenever a truthy CI, " +
+      "GITHUB_ACTIONS=true or V13_DB_TESTS_REQUIRED=1 is set (requireBuildWhenSignalled), so the skip applies only " +
+      "to a local run without a build",
   },
 ];
 
@@ -225,6 +231,18 @@ function keyText(name: ts.PropertyName): string | null {
   return null;
 }
 
+/** `x.annotations` or `x["annotations"]`: the run-time annotation list of a test. */
+function isAnnotationsAccess(
+  node: ts.Node,
+): node is ts.PropertyAccessExpression | ts.ElementAccessExpression {
+  return (
+    (ts.isPropertyAccessExpression(node) && node.name.text === "annotations") ||
+    (ts.isElementAccessExpression(node) &&
+      ts.isStringLiteralLike(node.argumentExpression) &&
+      node.argumentExpression.text === "annotations")
+  );
+}
+
 /** The innermost expression a member or call chain starts from (`a` in `a.b().c["d"]!`). */
 function chainRoot(e: ts.Expression): ts.Expression {
   for (;;) {
@@ -269,6 +287,22 @@ export function scanForms(file: string, src: string): GuardViolation[] {
       line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1,
       detail: `${what}: ${brief(node.getText(sf).replace(/\s+/g, " "))}`,
     });
+  /** An annotation must be an object literal of plain properties whose `type` is a plain string literal. */
+  const checkAnnotation = (item: ts.Node) => {
+    const bad = (why: string, at: ts.Node) =>
+      out.push({ ...lineAt(at), rule: "G6", detail: `${why}: ${text(at)}` });
+    if (!ts.isObjectLiteralExpression(item)) return bad("an annotation that is not an object literal", item);
+    for (const prop of item.properties) {
+      if (!ts.isPropertyAssignment(prop)) {
+        bad("an annotation property that is not a plain key: value", prop);
+        continue;
+      }
+      const key = keyText(prop.name);
+      if (key === null) bad("an annotation key the parser cannot read", prop);
+      else if (key === "type" && !ts.isStringLiteralLike(prop.initializer))
+        bad("an annotation type that is not a plain string literal", prop);
+    }
+  };
   const visit = (node: ts.Node) => {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier) && node.importClause) {
       const from = node.moduleSpecifier.text;
@@ -353,6 +387,36 @@ export function scanForms(file: string, src: string): GuardViolation[] {
           rule: "G6",
           detail: `a "${node.initializer.text}" annotation (skips or pins): ${text(node)}`,
         });
+      if (key === "annotation") {
+        if (!ts.isPropertyAssignment(node))
+          out.push({
+            ...lineAt(node),
+            rule: "G6",
+            detail: `an annotation that is not an object or array literal: ${text(node)}`,
+          });
+        else {
+          const value = node.initializer;
+          const items = ts.isArrayLiteralExpression(value) ? [...value.elements] : [value];
+          for (const item of items) checkAnnotation(item);
+        }
+      }
+    }
+    if (isAnnotationsAccess(node)) {
+      const push = node.parent;
+      const call = push.parent;
+      const pushed =
+        ts.isPropertyAccessExpression(push) &&
+        push.expression === node &&
+        push.name.text === "push" &&
+        ts.isCallExpression(call) &&
+        call.expression === push;
+      if (!pushed)
+        out.push({
+          ...lineAt(node),
+          rule: "G6",
+          detail: `annotations reached other than by .push( of object literals: ${text(push)}`,
+        });
+      else for (const arg of call.arguments) checkAnnotation(arg);
     }
     ts.forEachChild(node, visit);
   };
@@ -389,3 +453,111 @@ export function guardLeakSuites(
 
 export const formatGuardViolations = (vs: readonly GuardViolation[]) =>
   vs.map((v) => `${v.rule} ${v.file}:${v.line} ${v.detail}`).join("\n");
+
+// L1 (V13-QA-011): what the runner registers must be exactly the file's own test calls. The per-file scan cannot see a
+// helper defined in another file that pins, skips or declares tests (its stated limit). `playwright test --list
+// --reporter=json` reports every test the runner would run, with the file and line of the call that declared it, its
+// expected status and its static annotations. For each Playwright leak suite:
+//   - every registered test is declared in that file, on the line of one of its own plain test( calls;
+//   - every one of those calls registers at least one test (none sits in dead code or behind a condition);
+//   - every registered test is expected to pass, with no skip, fixme or fail annotation.
+// The Vitest suite (SEC's case matrix) is out of L1's reach: `vitest list` leaves out a skipped suite instead of
+// reporting it, so it is guarded by G1–G6 and SEC's own fail-in-CI rule (V13-SEC-010/011).
+
+/** One test as `playwright test --list --reporter=json` reports it. */
+export interface ListedTest {
+  /** Repository-relative path of the file whose call declared it. */
+  readonly file: string;
+  readonly line: number;
+  readonly title: string;
+  readonly expectedStatus: string;
+  readonly annotations: readonly { readonly type: string }[];
+}
+
+interface JsonSpec {
+  title: string;
+  file: string;
+  line: number;
+  tests: { expectedStatus: string; annotations: { type: string }[] }[];
+}
+interface JsonSuite {
+  file: string;
+  specs?: JsonSpec[];
+  suites?: JsonSuite[];
+}
+
+/** The listing's tests per top-level file, paths made repository-relative (`testDir` is `tests/`). */
+export function listedTests(json: { suites: JsonSuite[] }, testDir = "tests/"): Map<string, ListedTest[]> {
+  const out = new Map<string, ListedTest[]>();
+  const walk = (suite: JsonSuite, into: ListedTest[]) => {
+    for (const spec of suite.specs ?? [])
+      for (const t of spec.tests)
+        into.push({
+          file: testDir + spec.file,
+          line: spec.line,
+          title: spec.title,
+          expectedStatus: t.expectedStatus,
+          annotations: t.annotations,
+        });
+    for (const child of suite.suites ?? []) walk(child, into);
+  };
+  for (const top of json.suites) {
+    const list: ListedTest[] = [];
+    walk(top, list);
+    out.set(testDir + top.file, [...(out.get(testDir + top.file) ?? []), ...list]);
+  }
+  return out;
+}
+
+/** The lines of the file's own plain `test(` / `it(` calls that declare a test (a title, then a body). */
+export function testCallLines(src: string): Set<number> {
+  const sf = ts.createSourceFile("guarded.ts", src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const lines = new Set<number>();
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      (node.expression.text === "test" || node.expression.text === "it") &&
+      node.arguments.length >= 2
+    )
+      lines.add(sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1);
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return lines;
+}
+
+/** True when the suite runs on Playwright (L1 applies), from its own import. */
+export const isPlaywrightSuite = (src: string) => /from\s+["']@playwright\/test["']/.test(src);
+
+const NOT_RUN = new Set(["skip", "fixme", "fail"]);
+
+/** L1 over a listing: what the runner registers equals the suites' own test calls, all expected to pass. */
+export function checkListing(
+  listing: ReadonlyMap<string, readonly ListedTest[]>,
+  read: (file: string) => string | null,
+  suites: readonly string[],
+): GuardViolation[] {
+  const out: GuardViolation[] = [];
+  const hit = (file: string, line: number, detail: string) => out.push({ rule: "L1", file, line, detail });
+  for (const file of suites) {
+    const src = read(file);
+    if (src === null || !isPlaywrightSuite(src)) continue;
+    const calls = testCallLines(src);
+    const listed = listing.get(file) ?? [];
+    const seen = new Set<number>();
+    for (const t of listed) {
+      if (t.file !== file) hit(file, 0, `"${t.title}" is declared in another file: ${t.file}:${t.line}`);
+      else if (!calls.has(t.line))
+        hit(file, t.line, `"${t.title}" is declared other than by one of the file's own test( calls`);
+      else seen.add(t.line);
+      if (t.expectedStatus !== "passed")
+        hit(file, t.line, `"${t.title}" is registered as expected to be ${t.expectedStatus}`);
+      for (const a of t.annotations)
+        if (NOT_RUN.has(a.type)) hit(file, t.line, `"${t.title}" carries a "${a.type}" annotation`);
+    }
+    for (const line of [...calls].sort((a, b) => a - b))
+      if (!seen.has(line)) hit(file, line, "a test( call the runner does not register");
+  }
+  return out.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+}
