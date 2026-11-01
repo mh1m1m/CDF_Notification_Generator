@@ -10,6 +10,7 @@ import { translateKey, type Locale, type MessageKey, type Translator } from "@/l
 import { CASE_TABS, type CaseTab, type CaseWorkspaceView } from "@/lib/server/case-workspace";
 import type { DraftFormView, DraftNotice } from "@/lib/server/notification-draft";
 import { DraftForm } from "../notifications/_components/DraftForm";
+import { Breadcrumbs } from "@/components/shell/Breadcrumbs";
 import { ScrollRegion } from "../../../_components/ScrollRegion";
 import styles from "./case.module.css";
 import {
@@ -86,18 +87,13 @@ export function CaseFrame({
   const c = view.summary;
   return (
     <section data-testid="case-workspace" data-case-id={c.case_id} data-case-ref={c.case_number}>
-      <nav aria-label={t("case.breadcrumb")} className={styles.crumbs}>
-        <ol>
-          <li>
-            <Link href="/portfolio" data-testid="case-crumb-portfolio">
-              {t("portfolio.heading")}
-            </Link>
-          </li>
-          <li aria-current="page">
-            <bdi dir="ltr">{c.case_number}</bdi>
-          </li>
-        </ol>
-      </nav>
+      <Breadcrumbs
+        t={t}
+        items={[
+          { href: "/portfolio", label: t("portfolio.heading"), testId: "case-crumb-portfolio" },
+          { label: <bdi dir="ltr">{c.case_number}</bdi> },
+        ]}
+      />
       <header
         className={styles.header}
         data-testid="case-header"

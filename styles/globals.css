@@ -248,36 +248,6 @@
     margin-block: var(--cdf-space-4) var(--cdf-space-6);
   }
 
-  /* V13-UX-007 (M1 design review, finding M1-01): PlatformNav's interim list, until the platform layout moves to the
-     TopBar + SideNav frame. A wrapping row of links, separated from the page heading. */
-  .v13-nav-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--cdf-space-1) var(--cdf-space-2);
-    margin-block: 0 var(--cdf-space-6);
-    padding: 0 0 var(--cdf-space-2);
-    list-style: none;
-    border-block-end: var(--cdf-border-hairline) solid var(--cdf-border);
-  }
-
-  .v13-nav-list a {
-    display: inline-flex;
-    align-items: center;
-    min-block-size: var(--cdf-touch-min);
-    padding-inline: var(--cdf-space-3);
-    color: var(--cdf-text);
-    border-radius: var(--cdf-radius-control);
-  }
-
-  .v13-nav-list a:hover {
-    background-color: var(--cdf-hover-bg);
-  }
-
-  .v13-nav-list a[aria-current="page"] {
-    font-weight: 700;
-    background-color: var(--cdf-selected-bg);
-  }
-
   /* V13-UX-007 (M1-02): card list (the /workspaces page). One column at 360 px, more as the width allows. */
   .v13-card-list {
     display: grid;
@@ -483,6 +453,18 @@
     box-shadow: var(--cdf-elevation);
   }
 
+  /* V13-UX-008 (QA on #76): the workspace switcher is the TopBar's first control. When the controls wrap under the
+     brand it sits at the inline start of the row, so its panel opens from its inline start; the persona menu (last
+     control) keeps the inline-end anchor. Neither panel is ever wider than the viewport's content width. */
+  .v13-workspace-switcher > .v13-disclosure-panel {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+  }
+
+  .v13-disclosure-panel {
+    max-inline-size: calc(100vw - 2 * var(--cdf-space-4));
+  }
+
   /* V13-UX-007 (M1-03): under 768 px an anchored 16rem panel can cross the viewport edge, so the panel joins the flow
      under its button and takes the row's width. */
   @media (max-width: 767.98px) {
@@ -651,6 +633,13 @@
     padding-block-start: var(--cdf-space-4);
     padding-inline: var(--cdf-space-4);
     font-size: var(--cdf-text-body1);
+  }
+
+  /* A page that renders its own crumbs inside <main> (the case pages) already has main's gutter. */
+  .v13-main .v13-breadcrumbs {
+    max-inline-size: none;
+    margin-block-end: var(--cdf-space-3);
+    padding: 0;
   }
 
   .v13-breadcrumbs ol {
