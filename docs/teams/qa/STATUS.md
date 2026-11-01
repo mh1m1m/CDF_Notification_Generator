@@ -40,7 +40,8 @@ Updated: 2026-11-01 · Branch: test/V13-QA-008-leak-suite-guard (base develop 40
   already did), and the refetch timeout is never 0 (Playwright reads 0 as none). After: 0/600. SEC CHANGES on bf063a9:
   G5 (alias, renamed/namespace import, element access, `?.`, `!`, parentheses, redeclaration, pin methods on other
   objects, Vitest/Playwright retry options) with 19 planted negatives; SEC's notification-center and surface suites
-  added (15 suites, 156 bodies planted).
+  added (15 suites, 156 bodies planted). ARCH CHANGES on 488d93d: G6 (Vitest skip/only/todo/fails options,
+  Playwright skip/fixme/fail annotations, any key form) and computed retry keys, one planted negative per form.
 
 ## Reviews (all on a seeded local database, build + start, Sentinel + payloads + Truth + axe)
 | PR | Verdict | Notes |

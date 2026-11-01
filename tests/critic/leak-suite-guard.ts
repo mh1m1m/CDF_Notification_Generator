@@ -14,15 +14,19 @@
 //       (`test["fail"]`), `?.`, `!`, parentheses, a redeclaration, or an import from anywhere but @playwright/test or
 //       vitest; a pin, focus or skip method called on anything else (`const info = test.info(); info.fail()`); and a
 //       `retry` / `retries` option, so neither runner can turn an intermittent leak green
+//   G6  the runners' options-object and annotation forms (ARCH, review of 488d93d): an object property `skip`,
+//       `only`, `todo` or `fails` (Vitest: it/describe(name, { skip: true }) skips, { only } focuses, { todo } makes a
+//       todo, { fails } expects a failure), and a property `type` whose value is "skip", "fixme" or "fail" (Playwright:
+//       test(name, { annotation: { type: "skip" } }) skips, "fixme" skips, "fail" inverts), however the key is written
 // The source is tokenised by the TypeScript parser and comments and string, template and regular-expression literals
 // are blanked before matching, so prose that names test.fail() is not a hit and a quote inside a regular expression
-// cannot hide the rest of a file. G5 works on the syntax tree. Limit: a helper defined in another file that pins or
+// cannot hide the rest of a file. G5 and G6 work on the syntax tree. Limit: a helper defined in another file that pins or
 // skips is out of reach of a per-file scan (TEST_ARCHITECTURE.md §7.1).
 // Pure functions over source text: the planted-negative self-test feeds them synthetic sources. SYNTHETIC only.
 import ts from "typescript";
 
 export interface GuardViolation {
-  rule: "G1" | "G2" | "G3" | "G4" | "G5";
+  rule: "G1" | "G2" | "G3" | "G4" | "G5" | "G6";
   file: string;
   line: number;
   detail: string;
@@ -211,6 +215,15 @@ const RUNNER_NAMES = new Set(["test", "it", "describe", "suite"]);
 const RUNNER_MODULES = new Set(["@playwright/test", "vitest"]);
 const GUARDED_METHODS = new Set(["fail", "fails", "fixme", "only", "todo", "skip", "skipIf", "runIf"]);
 const RETRY_OPTIONS = new Set(["retry", "retries"]);
+const OPTION_KEYS = new Set(["skip", "only", "todo", "fails"]);
+const ANNOTATION_TYPES = new Set(["skip", "fixme", "fail"]);
+
+/** An object property's key as text, however it is written (`a`, `"a"`, `["a"]`, `[`a`]`), or null. */
+function keyText(name: ts.PropertyName): string | null {
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name) || ts.isNumericLiteral(name)) return name.text;
+  if (ts.isComputedPropertyName(name) && ts.isStringLiteralLike(name.expression)) return name.expression.text;
+  return null;
+}
 
 /** The innermost expression a member or call chain starts from (`a` in `a.b().c["d"]!`). */
 function chainRoot(e: ts.Expression): ts.Expression {
@@ -240,10 +253,15 @@ function isNameSlot(id: ts.Identifier): boolean {
   );
 }
 
-/** G5: the forms a textual match cannot see, found on the syntax tree. */
+/** G5 and G6: the forms a textual match cannot see, found on the syntax tree. */
 export function scanForms(file: string, src: string): GuardViolation[] {
   const sf = ts.createSourceFile("guarded.ts", src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const out: GuardViolation[] = [];
+  const text = (node: ts.Node) => brief(node.getText(sf).replace(/\s+/g, " "));
+  const lineAt = (node: ts.Node) => ({
+    file,
+    line: sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1,
+  });
   const hit = (node: ts.Node, what: string) =>
     out.push({
       rule: "G5",
@@ -310,11 +328,32 @@ export function scanForms(file: string, src: string): GuardViolation[] {
       }
     }
     if (
-      (ts.isPropertyAssignment(node) || ts.isShorthandPropertyAssignment(node)) &&
-      (ts.isIdentifier(node.name) || ts.isStringLiteral(node.name)) &&
-      RETRY_OPTIONS.has(node.name.text)
-    )
-      hit(node, "a retry option on a leak-detection suite");
+      (ts.isPropertyAssignment(node) ||
+        ts.isShorthandPropertyAssignment(node) ||
+        ts.isMethodDeclaration(node)) &&
+      ts.isObjectLiteralExpression(node.parent)
+    ) {
+      const key = keyText(node.name);
+      if (key !== null && RETRY_OPTIONS.has(key)) hit(node, "a retry option on a leak-detection suite");
+      if (key !== null && OPTION_KEYS.has(key)) {
+        out.push({
+          ...lineAt(node),
+          rule: "G6",
+          detail: `a ${key} option (skips, focuses or pins): ${text(node)}`,
+        });
+      }
+      if (
+        key === "type" &&
+        ts.isPropertyAssignment(node) &&
+        ts.isStringLiteralLike(node.initializer) &&
+        ANNOTATION_TYPES.has(node.initializer.text)
+      )
+        out.push({
+          ...lineAt(node),
+          rule: "G6",
+          detail: `a "${node.initializer.text}" annotation (skips or pins): ${text(node)}`,
+        });
+    }
     ts.forEachChild(node, visit);
   };
   visit(sf);

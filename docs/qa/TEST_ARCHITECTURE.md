@@ -214,13 +214,17 @@ runner reached any other way than a plain dotted chain or call: an alias (`const
 argument), a renamed, namespace or default import, an import of `test`/`it`/`describe`/`suite` from anywhere but
 `@playwright/test` or `vitest`, a redeclaration, element access (`test["fail"]`), `?.`, `!` or parentheses; a pin,
 focus or skip method called on anything else (`const info = test.info(); info.fail()`, a renamed `testInfo`); and a
-`retry`/`retries` option, so neither runner can turn an intermittent leak green. The allow-list holds only conditional
+`retry`/`retries` option (however its key is written), so neither runner can turn an intermittent leak green; and
+**G6** the runners' options-object and annotation forms: an object property `skip`, `only`, `todo` or `fails` (Vitest's
+`it(name, { skip: true }, …)` and the like skip, focus or pin), and a property `type` whose value is `"skip"`,
+`"fixme"` or `"fail"` (Playwright's `{ annotation: { type: "skip" } }` skips, `"fixme"` skips, `"fail"` inverts),
+however the key is written. The allow-list holds only conditional
 skips, each with its reason: the session-secret skips in `negative-personas-pinning.spec.ts` and Scenario C (they apply
 only against an external `V13_E2E_BASE_URL`), SEC's `describe.skipIf(!present)` in `case-matrix.spec.ts` (since
 V13-SEC-010/011 a database that is not ready fails, not skips, in CI), and SEC's local-build skips in
 `surface.spec.ts`. An unconditional skip can never be allow-listed. G1–G3 match the source after the TypeScript parser
 has tokenised it and comments and string, template and regular-expression literals are blanked, so a quote inside a
-regular expression cannot hide the rest of a file; G5 works on the syntax tree. Every form is planted into a synthetic
+regular expression cannot hide the rest of a file; G5 and G6 work on the syntax tree. Every form is planted into a synthetic
 source in the same spec, and a `test.fixme()` is planted inside every test and describe body of every guarded suite
 (156 bodies) and must be found at its line. The same spec pins that the worker has the session secret whenever no
 external `V13_E2E_BASE_URL` is set, so the allow-listed skips cannot fire in a locally started or CI run, and that CI

@@ -177,6 +177,34 @@ test.describe("planted negatives are refused", () => {
     ["Vitest retry on a describe", `describe("d", { retry: 3 }, () => {});`, "G5"],
     ["Vitest retry on a test", `it("t", { retry: 2 }, () => {});`, "G5"],
     ["Playwright retries in configure", `test.describe.configure({ retries: 2 });`, "G5"],
+    ["retries under a computed key", `test.describe.configure({ ["retries"]: 1 });`, "G5"],
+    // G6: the runners' options-object and annotation forms (ARCH, review of 488d93d; Vitest 5.0.3, Playwright 1.63.0)
+    // Vitest: it(name, { skip: true }) is skipped
+    ["Vitest { skip: true } on a test", `it("t", { skip: true }, () => {});`, "G6"],
+    // Vitest: describe(name, { skip: true }) skips everything inside
+    ["Vitest { skip: true } on a describe", `describe("d", { skip: true }, () => {});`, "G6"],
+    // Vitest: { only: true } focuses, written here as a shorthand property
+    ["Vitest { only } shorthand", `const only = true;\ndescribe("d", { only }, () => {});`, "G6"],
+    // Vitest: { todo: true } turns the test into a todo, written here with a string key
+    ["Vitest { 'todo': true }", `it("t", { "todo": true }, () => {});`, "G6"],
+    // Vitest: { fails: true } turns a throwing body into an expected failure, written with a computed key
+    ["Vitest { ['fails']: true }", `it("t", { ["fails"]: true }, () => {});`, "G6"],
+    // Playwright: an annotation of type "skip" skips the test
+    ["Playwright annotation skip", `test("t", { annotation: { type: "skip" } }, async () => {});`, "G6"],
+    // Playwright: an annotation of type "fixme" skips it too, here in an array with a template string
+    ["Playwright annotation fixme", 'test("t", { annotation: [{ type: `fixme` }] }, async () => {});', "G6"],
+    // Playwright: an annotation of type "fail" turns a throwing body into a pass, here on a describe, computed key
+    [
+      "Playwright annotation fail on a describe",
+      `test.describe("d", { annotation: { ["type"]: "fail" } }, () => {});`,
+      "G6",
+    ],
+    // Playwright: an annotation pushed at run time
+    [
+      "a skip annotation pushed at run time",
+      `test("t", async () => {\n  test.info().annotations.push({ type: "skip" });\n});`,
+      "G6",
+    ],
   ];
   for (const [form, body, rule] of cases)
     test(`${form} → ${rule}`, () => {
@@ -219,7 +247,7 @@ test.describe("what is not a pin, focus or skip", () => {
 
   test("identifiers that only end in test/it are not hits (contest.skip, latest.only, submit.fail)", () => {
     const src = wrap(
-      `const contest = { skip: 1 }; contest.skip; const latest = { only: 1 }; latest.only; submit.fail;`,
+      `declare const contest: { skip: number }; contest.skip; declare const latest: any; latest.only; submit.fail;`,
     );
     expect(scanSuite(FILE, src, [])).toEqual([]);
     // calling such a method is G5 in a guarded suite, whatever the object (only test/it/describe/suite may be pinned)
@@ -245,6 +273,13 @@ test.describe("what is not a pin, focus or skip", () => {
   test("codeOnly keeps line numbers", () => {
     const src = "a\n// x\n'b\nc'\n/* d\ne */\nf\n`g\n${h}\ni`\n/j\\//;\nk";
     expect(codeOnly(src).split("\n")).toHaveLength(src.split("\n").length);
+  });
+
+  test("an annotation of another type and a property named like a type are not hits", () => {
+    const src = wrap(
+      `test("t", { annotation: { type: "issue", description: "skip" } }, async () => {});\nconst x = { kind: "fixme" };`,
+    );
+    expect(scanSuite(FILE, src, [])).toEqual([]);
   });
 
   test("an unescaped regular expression that names the forms is not a hit", () => {
