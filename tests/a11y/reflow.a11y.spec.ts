@@ -92,8 +92,13 @@ async function measure(page: Page, edges: boolean): Promise<Finding[]> {
           `${name(el)} (overflow-x ${getComputedStyle(el).overflowX}) content ${el.scrollWidth} in ${el.clientWidth}${where(el)}; children: ${[
             ...el.children,
           ]
-            .map((c) => `${name(c)} ${Math.round(c.getBoundingClientRect().width)}/${c.scrollWidth}`)
-            .slice(0, 8)
+            // Hidden inputs (React adds several to a Server Action form) have no box and would fill the list.
+            .filter((c) => c.getClientRects().length > 0)
+            .map((c) => {
+              const b = c.getBoundingClientRect();
+              return `${name(c)} ${Math.round(b.left)}…${Math.round(b.right)} ${Math.round(b.width)}/${c.scrollWidth}`;
+            })
+            .slice(0, 10)
             .join(", ")}`,
         ]);
       const top = (xs: [number, string][]) =>
