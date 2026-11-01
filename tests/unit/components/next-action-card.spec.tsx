@@ -13,6 +13,7 @@ const HREF = `/cases/${CASE_ID}/tasks?task=${TASK_ID}`;
 
 const task = (over: Partial<NextActionCardTask> = {}): NextActionCardTask => ({
   taskId: TASK_ID,
+  taskCode: "PREPARE_EVIDENCE_SUMMARY",
   title: { ar: "إعداد ملخص الأدلة", en: "Prepare the evidence summary" },
   status: <span data-testid="case-task-status">OPEN</span>,
   due: { date: "2026-11-03", days: 2 },
@@ -47,6 +48,8 @@ describe("NextActionCard: a task", () => {
       expect(html).toContain(`<dt>${status}</dt><dd data-testid="next-action-status">`);
       expect(html).toContain(`<dt>${due}</dt><dd data-testid="next-action-due">`);
       expect(html).toContain(`data-task-id="${TASK_ID}"`);
+      expect(html).toContain('data-task-code="PREPARE_EVIDENCE_SUMMARY"');
+      expect(html.replace(/data-task-code="[^"]*"/, "")).not.toContain("PREPARE_EVIDENCE_SUMMARY");
     },
   );
 

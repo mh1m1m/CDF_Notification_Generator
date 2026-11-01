@@ -206,7 +206,7 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   status, day count and a link that shows the task on any page of the Tasks tab); QA checks it on the page then.
 
 ## Unresolved defects
-- UXB-17 (MEDIUM) and UXB-18 (LOW) are fixed by #128 (`772e26d`), DONE once re-checked on `develop`. UXB-19 (LOW) is OPEN, owned by FE as V13-FE-016
+- UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is OPEN, owned by FE as V13-FE-016
   (ARCH ruling). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests

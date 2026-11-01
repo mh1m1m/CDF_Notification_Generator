@@ -105,9 +105,14 @@ authorised action is the first thing after the header. Built on PROC's contract 
   The title link is underlined. Facts wrap; nothing scrolls sideways at 320 px.
 - **Never on the card.** Another persona, another task, a count, a reason for NONE, an action from the authority model,
   a stage or journey step, a procedural deadline (PROC §3).
-- **Test ids.** `next-action-card` (with `data-task-id`), `next-action-link`, `next-action-status`, `next-action-due`.
-- **Component.** `components/data/NextActionCard.tsx` (UX); FE wires it (calls `nextActionForCase`, passes the status
-  element, the day count and the link).
+- **Only what the function returns.** Task code (as `data-task-code`, not shown, as in the Tasks tab), title, status
+  and the one due date. No controls: the status is changed where it is today (Tasks tab, My Work), with the
+  `.v13-control` and `.v13-btn` rules; the card adds no form.
+- **Widths and tokens.** Checked in ar and en at 320 px and up; colours, borders and spacing from tokens only.
+- **Test ids.** `next-action-card` (with `data-task-id`, `data-task-code`), `next-action-link`, `next-action-status`,
+  `next-action-due`.
+- **Component.** `components/data/NextActionCard.tsx` (UX). FE wires it as V13-FE-015, after FE-014: it calls PROC's
+  `nextActionForCase` (V13-PROC-026), passes the status element, the `deadlineOf` day count (Asia/Riyadh) and the link.
 
 **Overview tab.** Next Action Card (above) · stage card (current stage, `recorded`, with the event that set it and when) · "Next expected step"
 card (Layer B, expected variant only — never a completed glyph; M1 shows it only when PROC supplies it, otherwise the

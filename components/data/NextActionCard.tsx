@@ -12,6 +12,8 @@ import type { Locale, Translator } from "@/lib/i18n";
 export interface NextActionCardTask {
   /** The task's id (UUID), from the authorised task row. */
   readonly taskId: string;
+  /** The task's code, as the Tasks tab carries it: an attribute for tests, never shown as text. */
+  readonly taskCode: string;
   /** The task's recorded title in both languages; shown in the page language as text. */
   readonly title: { readonly ar: string; readonly en: string };
   /** The task's existing status rendering from FE (label from the task status catalogue, recorded badge). */
@@ -39,6 +41,7 @@ export function NextActionCard({ t, locale, action }: NextActionCardProps) {
       aria-labelledby={HEADING_ID}
       data-testid="next-action-card"
       data-task-id={action.taskId}
+      data-task-code={action.taskCode}
     >
       <h2 id={HEADING_ID} className="v13-next-action-heading">
         {t("common.nextAction.heading")}
