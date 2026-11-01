@@ -2,6 +2,7 @@
 
 Updated: 2026-11-01 04:42 UTC · Branch: feature/V13-FE-013-case-lists-paged (develop abdd885 merged in; #112 FE-012 merged; FE-011 is #116) · Head: see PR
 Updated: 2026-11-01 05:56 UTC · Branch: feature/V13-FE-014-overview-open-tasks (from develop c3ccac6; #121 FE-013 and #129 DB-022 merged; FE-016 is #131) · Head: see PR
+Updated: 2026-11-01 07:07 UTC · Branch: feature/V13-FE-017-case-access-audit (stacked on #142 DB-023 b231e28, develop 00fac16 merged in; FE-015 is #141, FE-016 is #131) · Head: see PR
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
 - V13-FE-001 (part 1) — `lib/authz` pre-check, `lib/server` (errors, request context, case read services, case source
@@ -111,7 +112,17 @@ Updated: 2026-11-01 05:56 UTC · Branch: feature/V13-FE-014-overview-open-tasks 
   Same rows, order, labels and test ids; the persona is the verified one, never an argument. The adapter refuses the
   page if a row is not the caller's or not open (fail closed). Its own cursor kind (`myOpenTasks`); a pager under the
   list appears only past 25 rows; a tampered URL or refused cursor shows the empty state with a first-page link while
-  the last five events stay — IN_REVIEW (QA, SEC).
+  the last five events stay — COMPLETE: merged into develop as 00fac16 (#138).
+- V13-FE-017 Case-access audit through DB-023 (migration 0015) — opening a case route and a notification preview write
+  their access record in the read's own transaction. New port methods (`lib/contracts` hunk for ARCH + SEC):
+  `CaseSourceAdapter.openCase` (api_record_access('CASE') first, then case_header, one transaction; a refusal V1401 /
+  V1404 / V1422 answers null and reads nothing → NOT_FOUND; anything else, V1500 included, throws → generic error with
+  the correlation id) and `NotificationPreviewReader.getForCaseRecorded` (api_record_access('NOTIFICATION_PREVIEW'),
+  then the preview read; a refusal → "unavailable"). getCaseForRoute is openCase's only caller; the preview loader uses
+  only the recorded read; the draft command's transaction never calls it. Found on a production build and fixed: the
+  case tab's document title was built from the case, and Next.js resolves metadata on every link prefetch (7 rows from
+  the portfolio alone) and apart from the page (2 rows per page). The title now names the tab only ("Case · Overview",
+  new key `case.documentTitle`); the case number stays on the page — IN_REVIEW (DB, SEC, ARCH).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -148,6 +159,13 @@ Updated: 2026-11-01 05:56 UTC · Branch: feature/V13-FE-014-overview-open-tasks 
   procedural-records/v13-procedural-records.ts}, lib/server/case-workspace.ts, app/(platform)/cases/[caseId]/_components/
   {CaseWorkspace,render}.tsx, tests/unit/server/{v13-records-readers,case-list-adapter,case-list-paging,case-workspace}
   specs, tests/unit/server/support/fake-records.ts, tests/integration/fe/case-records-paged.spec.ts
+- FE-017: lib/contracts/{ports,notification-preview}.ts (port methods, ARCH + SEC), lib/adapters/case-source/
+  {access-record,v13-records}.ts, lib/adapters/notification-records/v13-notification-preview.ts,
+  lib/server/{cases,notification-preview}.ts, app/(platform)/cases/[caseId]/_components/render.tsx,
+  lib/i18n/case/{ar,en}.ts, tests/unit/server/{case-access-record,case-metadata}.spec.ts(x) (new),
+  tests/unit/server/{cases,case-workspace,notification-preview}.spec, tests/unit/server/support/{fake-case-source,
+  fake-notification-preview}.ts, tests/unit/contracts.spec.ts (the in-memory adapter gains openCase; ARCH path, with
+  the contract hunk), tests/integration/fe/{case-access-audit.spec.ts (new),notification-preview.spec.ts}
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -228,6 +246,7 @@ Updated: 2026-11-01 05:56 UTC · Branch: feature/V13-FE-014-overview-open-tasks 
 | FE-013 after SEC CHANGES 5254893 (the cursor must re-encode to exactly what was passed: keys reordered, whitespace, an escaped character are refused; ARCH's listEventsPage wording): commands as above. Mutation: without the canonical check the 3 new tests fail | pass | 88 files, 2175 / 506 / 333 of 333 | FE-013 head |
 | FE-013 after merging develop 61b57cf (#116 FE-011; conflicts in case.module.css, case i18n, Scenario E and STATUS kept both sides): commands as above | pass | 88 files, 2182 / 540 / 336 of 336 | FE-013 head |
 | FE-014 on develop c3ccac6: lint, typecheck, format:check / `pnpm test` (v13-records-readers 10 new: only case_my_open_tasks_page with case and cursor bound, limit + 1, no persona argument; own cursor kind, the tasks cursor refused before any read; not mine, DONE, CANCELLED, another case, missing or wrong page_cursor refuse the page; case-list-paging 4 new: overview reads events page + own open tasks page and never listTasks, 60-row walk, tampered / refused cursor, pager markup; case-workspace overview reads updated) / `pnpm db:reset` + `pnpm test:db` (FE integration case-records-paged: the fourth list walks with limits 1, 2, 25 equal the old filter of listTasks; own-only check for Alpha, Gamma, Delta on all ten cases; all cross-case, cross-list, forged and hidden-case negatives) / `pnpm db:reset` + `pnpm test:e2e`. Mutation: without the adapter's own / open check 4 unit tests fail | pass | 89 files, 2353 / 610 / 336 of 336 | FE-014 head |
+| FE-017 on #142 b231e28 + develop 00fac16: lint, typecheck, format:check / `pnpm test` (case-access-record 29: record first then read in ONE transaction with bound kind/case/notification; V1401/V1404/V1422 → null with no read; V1500, unknown code, no row, two rows, extra column throw; route uses openCase only; preview uses getForCaseRecorded only; case-metadata 9: the title reads nothing, same title for any id) / `pnpm db:reset` + `pnpm test:db` (FE integration case-access-audit 14: one CASE_OPENED row per request on every tab, ids only, metadata {}; second open in the window adds no row and counts; paged request; restricted 0009 one RESTRICTED_CASE_OPENED per request; preview CASE_OPENED + NOTIFICATION_PREVIEW_OPENED; unknown / other-workspace / restricted-unassigned → NOT_FOUND with one id-less COMMAND_REFUSED V1404 and no access row; another case's notification → unavailable, no preview row; malformed ?n= no command; draft transaction writes no access row) / `pnpm db:reset` + `pnpm test:e2e`. Production build (`pnpm build`, `next start`, Playwright, ledger read by the administrator): portfolio + my-work with 7 case links in view and hovered → 0 rows (before the title fix: 7); full load of a case → 1 row, access_window suppressed 0 (before: 2 opens); restricted 0009 full load → 1 row (before: 2); raw requests: document 1, RSC navigation 1, prefetch 0, segment tree 0, segment page 0 (no content); back / forward re-request the page (each counted in the window, no new row). Mutation: openCase without the record fails 13 integration + 4 unit; the preview on the unrecorded read fails 2 integration + 4 unit; the route on getCase fails 13 integration + 6 unit; the title calling the load fails 9 unit | pass | 94 files, 2439 / 649 / 363 of 363 | FE-017 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
@@ -264,6 +283,11 @@ Updated: 2026-11-01 05:56 UTC · Branch: feature/V13-FE-014-overview-open-tasks 
 - FE-006 part 2 known gaps: the template filter is a code text field (no template catalogue read for the Center yet);
   status and recipient labels live in `notifications.status.*` / `notifications.recipient.*` until PROC's catalogue
   (OI-029); rows link to the case's Notifications tab until the in-case preview (part 3, after #51 and UX #54).
+
+- FE-017: a refused case URL (unknown, hidden, malformed) now answers 404 with the not-found page but the title "Case ·
+  <tab>" instead of the unknown route's title, because the title no longer reads the case. Unknown and unauthorised
+  cases still look identical to each other. Closing the gap needs a case read in metadata (it would run on every
+  prefetch); left for SEC / UX to rule on.
 
 ## Dependencies and requests
 - DB-010 (my_work_tasks columns, migration 0008): merged on develop b5ee5f4; FE-005 reads it.
