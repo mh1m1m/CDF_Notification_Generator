@@ -176,7 +176,7 @@ Mutation checks (not committed, each reverted and rebuilt before the final run):
 
 ## 4. CI
 
-Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #26 (V13-DB-006) it has six jobs: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build, end-to-end (Playwright). On pull requests the Vercel preview is a seventh check.
+Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #26 (V13-DB-006) it has six jobs: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build, end-to-end (Playwright). Since #156 (V13-ARCH-014) a seventh, visual baselines (Playwright), compares the committed baselines or, while none is committed, makes the candidates and passes only through `scripts/ci/visual-candidates.mjs`. On pull requests the Vercel preview is one more check.
 
 | Run                                                                                              | Commit    | Result                                                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -185,7 +185,7 @@ Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #2
 Every pinned action SHA resolved. Warnings: the pinned versions target Node.js 20 and ran on Node.js 24 (OI-021); the
 dependency cache could not be saved (GitHub service message), which does not affect results.
 
-### 4.1 `develop`: one push run per merge (read from GitHub Actions, 1 Nov 2026 10:51 UTC)
+### 4.1 `develop`: one push run per merge (read from GitHub Actions, 1 Nov 2026 11:31 UTC)
 
 Each merge rests on the PR run named in its merge commit: green CI on the head the independent reviewer accepted. The workflow cancels a running push run when a newer push to the same branch arrives (`concurrency`, `cancel-in-progress: true`), so a merge pushed within a minute of the next one shows a cancelled push run. The next successful push run contains that merge and verifies the combination; it is named in the last column. When `develop` moved after a PR's run, ARCH merges on that run only if `develop` changed none of the PR's files (ARCH ruling, 31 Oct). Since #24, ARCH also runs typecheck, lint, format, unit, test:db and Playwright on the combined tree locally before the merge, because a test already on `develop` can exercise behaviour the PR changes; the counts are in the merge commit and in the last column. A PR run checks out the PR head merged into `develop` as `develop` was when the run started (`refs/pull/<n>/merge`; the checkout step's log names both commits), so a PR run that started after the last `develop` move already covers the merged tree.
 
@@ -341,8 +341,15 @@ Each merge rests on the PR run named in its merge commit: green CI on the head t
 | `8536e7e` | #150 QA-020 | [41289530346](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41289530346) | [41290182724](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41290182724) | success (combined tree `f7adcda` + #150, equal to `8536e7e`: unit 2,414, test:db 610, e2e 418) |
 | `43552f7` | #142 DB-023 | [41281040635](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41281040635) | [41290691127](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41290691127) | success (combined tree `8536e7e` + #142, equal to `43552f7`: unit 2,414, test:db 635, e2e 418) |
 | `6be1802` | #147 FE-017 | [41291247750](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41291247750) | [41291869722](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41291869722) | success (combined tree `43552f7` + #147, equal to `6be1802`: unit 2,452, test:db 649, e2e 418) |
+| `f2d013a` | #153 UX-018 | [41300529469](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41300529469) | [41301337238](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301337238) | success (combined tree `6be1802` + #153, equal to `f2d013a`: unit 2,455, test:db 649, e2e 418) |
+| `56a8079` | #156 ARCH-014 | [41300689909](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41300689909) | [41301795889](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301795889) | cancelled; verified by [41301822994](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301822994) (combined tree `f2d013a` + #156, equal to `56a8079`: unit 2,462, test:db 649, e2e 418) |
+| `029a22e` | #155 ARCH-002 | [41299576957](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41299576957) | [41301822994](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301822994) | success (documentation only) |
 
 Run [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) on `develop` `b5ee5f4`: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build and Playwright all succeeded. Test counts are in each PR's evidence and in the job logs; this table records the job outcome only.
+
+### 4.2 The visual job (V13-ARCH-014), read from GitHub Actions, 1 Nov 2026 11:31 UTC
+
+The `visual` job's PR run on #156 ([41300689909](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41300689909), job 124830780482) and its first `develop` run ([41301822994](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301822994), job 124834450632) found no committed baseline under `tests/visual/__screenshots__/`, ran the nine baseline tests (36 cells), and the candidate check passed: 36 candidates, one PNG per missing snapshot, and nothing written under the baselines folder. Fonts installed (Ubuntu 24.04 archive): fonts-crosextra-carlito 20230309-2, fonts-dejavu-core 2.37-8, fonts-liberation 1:2.1.5-3, fonts-noto-core 20201225-2. The candidates are in the job's artifact `visual-results` (kept 14 days), which a Claude sandbox cannot download (OI-058), so no baseline is committed yet (V13-QA-015).
 
 ## 5. Deployment checks
 

@@ -12,7 +12,7 @@ for looking only, never baselines (fonts differ by machine).
 
 Matrix: desktop 1280 × 800, tablet 768 × 1024, mobile 360 × 780; ar, en; light, dark. 244 images per run.
 Browser clock fixed at 2026-10-15T09:00:00.000Z; reduced motion; animations disabled; caret hidden; mask colour #FF00FF.
-Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; }`
+Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; } [data-deadline-state] { display: inline-block; inline-size: 14rem; white-space: nowrap; overflow: hidden; vertical-align: top; }`
 
 ## Captured
 
@@ -45,7 +45,7 @@ Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-t
 | Mask | Selector | Reason |
 | --- | --- | --- |
 | correlationId | `[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"]` | a new correlation id per request; during the capture only, the masked box gets a fixed width (CAPTURE_STYLE), because its glyph widths change with the id |
-| deadline | `[data-deadline-state]` | deadline words (DeadlineText) count days on the server clock, which the browser clock cannot reach (D1) |
+| deadline | `[data-deadline-state]` | deadline words (DeadlineText) count days on the server clock, which the browser clock cannot reach (D1); during the capture only, the masked box gets a fixed width (CAPTURE_STYLE), because the words' width changes with the day |
 | deadlineCounts | `[data-testid="count-my-work-overdue"], [data-testid="count-my-work-due-week"]` | My Work's overdue and due-this-week counts are taken on the server clock (D1) |
 | draftCreated | `[data-testid="case-notification-{draft}"] time` | the created time of the draft the run makes (server clock) |
 | noticeReference | in `[data-testid="case-notification-preview-frame"]`: `[data-field="notice_reference"]` | the notice reference of the draft the run makes (derived from its new id) |

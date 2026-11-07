@@ -125,6 +125,24 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   each; document load, tab change and reload of 0001 → exactly one open each (rows + carried + window change).
   Mutations: case-tab metadata loading the case again → test 1 fails (4 rows); the page opening the case twice →
   test 2 fails (2 rows). Ledger read as the local administrator, read-only (`ledger()` in `tests/fixtures/db.ts`).
+  Chromium only: listed in `CHROMIUM_ONLY` (tests/fixtures/browsers.ts) with its reason, so the cross-browser
+  projects never run it.
+- V13-QA-015 adoption — #159, merged into develop as 15f938d — COMPLETE: the 36 baselines committed under
+  `tests/visual/__screenshots__/`, taken from CI only (ARCH's decision, 7 Nov): artifact 13574858048
+  (`visual-results`) of #159's own pull_request CI run 42374093449, job 128408023113, at 0b40b1a (the capture-style
+  fix). In that run every one of the 9 tests failed on missing snapshots alone, and each candidate is byte-identical to
+  Playwright's actual image. The PR lists every file's sha256. Design §8 now describes the visual job as built
+  (ARCH-014). The first images (artifact 13081138200, develop run 41301822994, 1 Nov) were withdrawn: their first
+  comparison (#159 run 42372979341, 7 Nov) passed 6/9, my-work, case-overview and workspace-switcher failed.
+  Cause: the masked deadline words count days on the server clock, so their width changed between 1 Nov (candidates)
+  and 7 Nov and moved My Work's columns and the overview's mask edge. Fix: CAPTURE_STYLE gives `[data-deadline-state]`
+  a fixed width during the capture only (masked boxes only). Local probe: deadline words rewritten between two captures
+  of the three screens, ar and en: byte-identical with the fix, different on all three without it. Second local probe
+  (asked by ARCH): every task's due_date moved back 1, 7 and 14 days on a fresh local database, the three screens recaptured in
+  ar and en, desktop and mobile. With a ch width my-work ar desktop still moved (an overdue deadline is bold, and ch
+  follows the weight), so the width is now 14rem; then my-work and workspace-switcher were byte-identical at every
+  shift. case-overview differed only in its open-tasks row, whose plain due date (unmasked) the probe itself rewrote; a
+  real clock never changes that date. Restored with `pnpm db:reset`. Both probes are local, not CI evidence.
 - V13-QA-011 — branch test/V13-QA-011-guard-followups — IN_REVIEW (ARCH): G6 plain-literal annotation `type`;
   L1 `playwright test --list` per guarded Playwright suite vs its own test calls (helpers in other files caught at load time; run-time skips from helpers stay a stated limit, review covers them);
   surface allow-list reason updated after V13-SEC-012. TEST_ARCHITECTURE §7.1.
@@ -144,12 +162,23 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   typecheck clean; local baseline probes (missing → 9 fail + 36 candidates; candidates in place → 9/9 on three fresh
   databases; swapped image → fail with diff); library 244/244, identical to V13-QA-014's 3a75a42 in two runs. No ARCH hunk; the CI visual job (`V13_E2E_VISUAL=baseline`, upload
   `test-results/baseline-candidates/` and the Playwright output) is ARCH's.
-- V13-QA-020 — branch test/V13-QA-020-next-action-card — IN_REVIEW: Next Action Card browser test (6 tests, ar/en at
+- V13-QA-020 — #150, merged into develop as 8536e7e — COMPLETE: Next Action Card browser test (6 tests, ar/en at
   320 px: the card first in the overview before the stage card, its :target link, NONE renders nothing, page 2 keeps
   the first page's task); four mutations caught; e2e 372/372, unit 2412/2412; card-first check 6/6 at 270af33.
 - V13-QA-021 — #148, merged into develop as d399987 — COMPLETE: Server
   Action forms with JavaScript off (sign-in, workspace switch), same-origin `Origin` pinned; fails on `no-referrer`
   (2 tests, `Origin: "null"`), passes on the fix; the no-JS sign-in observation from the FE-016 review is closed by it.
+- V13-QA-016 — branch test/V13-QA-016-firefox-webkit — IN_REVIEW (ARCH, SEC for the CI hunk): `firefox-ar` and
+  `webkit-ar` projects only when `V13_E2E_BROWSERS` names them; `.github/workflows/cross-browser.yml` (ARCH hunk) on
+  develop pushes and the `cross-browser` label; guard B1 keeps every Sentinel spec and leak suite on Chromium. The
+  engines cannot run in the Claude sandbox: their evidence is the workflow's runs, recorded here.
+  - Run 41287885521 (39a6b03): Firefox 71/71; WebKit 25 passed, 44 failed, 2 not run: no session cookie (WebKit drops
+    the Secure `__Host-` cookie on plain-http localhost). Fixed by the TLS front (e65710e, d75a8a3).
+  - Run 41289100450 (d75a8a3): workflow load error (runner context in a job's env); fixed in eb7f76c.
+  - Run 41290376443 (348fa7a): Firefox 71/71; WebKit 66/71. The 5 failures are reflow check 1 on the case
+    Notifications tab (`/cases/<0001>/notifications`): the page scrolls inline (567–803 px at 320, 641 at 640) in ar
+    and en, while no measured element lies past an edge. A WebKit-only finding, not skipped; check 1 now names what
+    widens the page so the next run can route it to its owner.
 
 ## Unresolved defects
 - none open from QA

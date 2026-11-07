@@ -73,8 +73,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: visual-results
+          # Named paths only (SEC's INFO 2 on #156, V13-ARCH-015): the library's images and manifest, and the HTML report.
           path: |
-            test-results/
+            test-results/library/
             playwright-report/
           if-no-files-found: ignore
           retention-days: 14

@@ -4,8 +4,8 @@
 //
 // While no baseline is committed under tests/visual/__screenshots__/, the `visual-baseline` project has nothing to
 // compare with: every cell fails with "A snapshot doesn't exist" and tests/visual/baseline.spec.ts writes the cell's
-// image to test-results/baseline-candidates/. .github/workflows/visual.yml then runs this check, which passes that run
-// only when
+// image to test-results/baseline-candidates/. The `visual` job of .github/workflows/ci.yml then runs this check, which
+// passes that run only when
 //   - the runner exited 1 (failures), never 0 and never another code (a crash, an interrupted run);
 //   - at least one test ran, none was skipped or flaky, and every test failed only with missing snapshots;
 //   - test-results/baseline-candidates/ holds exactly one PNG per missing snapshot, under the snapshot's own name, and
@@ -16,7 +16,8 @@
 //
 //   node scripts/ci/visual-candidates.mjs <runner exit code> <json report> <candidates dir> <screenshots dir>
 //
-// Once baselines are committed, the job compares instead and this check is not used.
+// Once baselines are committed, the job compares instead and this check is not used; scripts/ci/visual-mode.mjs picks
+// the mode, and refuses candidate mode when every baseline has been deleted (V13-ARCH-015).
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
