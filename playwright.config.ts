@@ -29,9 +29,10 @@ import {
   selectedBrowsers,
   TLS_PROJECTS,
 } from "./tests/fixtures/browsers";
+import { externalBaseUrl as externalBaseUrlOf } from "./tests/fixtures/skip-conditions";
 
 const PORT = 3100;
-const externalBaseUrl = process.env.V13_E2E_BASE_URL?.trim();
+const externalBaseUrl = externalBaseUrlOf();
 const baseURL = externalBaseUrl || `http://localhost:${PORT}`;
 const sessionSecret = process.env.V13_E2E_SESSION_SECRET?.trim() || randomBytes(32).toString("base64url");
 // Workers inherit the environment: tests that mint a negative-test persona's session read the same secret.
@@ -93,6 +94,8 @@ const BASELINE_SPEC = "visual/baseline.spec.ts";
 // browser test: no other spec opens a case for that persona while it counts. If a desktop-ar test fails, Playwright
 // does not start this project and the run is already red.
 const ACCESS_AUDIT_SPEC = "e2e/case-access-audit.spec.ts";
+/** The run-time half of the leak-suite guard; registered in every run, CI and local (V13-QA-019). */
+const LEAK_SKIP_REPORTER = "./tests/critic/leak-skip-reporter.ts";
 /** The visual projects write no failure screenshot, trace or video: nothing the data check refused, and no cookie. */
 const visualUse = {
   ...devices["Desktop Chrome"],
@@ -161,9 +164,16 @@ export default defineConfig({
   // changed one fails; the baseline spec writes a missing one's candidate to test-results/baseline-candidates/, and
   // Playwright writes a changed one's actual and diff images. Pinned by G7 in tests/sentinel/leak-suite-guard.spec.ts.
   updateSnapshots: "none",
+  // The leak-skip reporter (V13-QA-019) fails the run when a leak-detection test ends skipped without a holding
+  // allowance or with no result: the run-time half of the leak-suite guard (TEST_ARCHITECTURE.md §7.1).
   reporter: isCI
-    ? [["list"], ["junit", { outputFile: "test-results/e2e-junit.xml" }], ["html", { open: "never" }]]
-    : [["list"]],
+    ? [
+        ["list"],
+        ["junit", { outputFile: "test-results/e2e-junit.xml" }],
+        ["html", { open: "never" }],
+        [LEAK_SKIP_REPORTER],
+      ]
+    : [["list"], [LEAK_SKIP_REPORTER]],
   use: {
     baseURL,
     trace: "retain-on-failure",

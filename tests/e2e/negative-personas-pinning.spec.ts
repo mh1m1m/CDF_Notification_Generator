@@ -7,6 +7,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { formatViolations, inspectCaseContext, recordPayloads } from "../sentinel/sentinel";
 import { mintSession, signInAs } from "../fixtures/personas";
+import { sessionSecretMissing } from "../fixtures/skip-conditions";
 
 const SEEDED = Array.from({ length: 10 }, (_, i) => String(i + 1).padStart(2, "0"));
 const caseId = (n: string) => `0c000000-0000-4000-8000-0000000000${n}`;
@@ -23,10 +24,7 @@ async function expectNoCaseContext(page: Page) {
 for (const slug of ["secretary-epsilon", "persona-zeta"]) {
   test.describe(`${slug} (minted session)`, () => {
     test.beforeEach(async ({ context }) => {
-      test.skip(
-        !process.env.V13_E2E_SESSION_SECRET,
-        "needs the run's session secret (locally started build)",
-      );
+      test.skip(sessionSecretMissing(), "needs the run's session secret (locally started build)");
       await mintSession(context, test.info().project.use.baseURL!, slug, "SECRETARIAT");
     });
 

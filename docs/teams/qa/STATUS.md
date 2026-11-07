@@ -118,7 +118,18 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
-- V13-QA-023 — branch test/V13-QA-023-mask-width-probe — IN_REVIEW (ARCH; #158 merged): the mask width
+- V13-QA-019 — branch test/V13-QA-019-runtime-skip-check — IN_REVIEW (ARCH; SEC for the
+  `tests/security/e2e/surface.spec.ts` hunk): the run-time half of the leak-suite guard (TEST_ARCHITECTURE §7.1).
+  `tests/critic/leak-skip-reporter.ts`, registered in playwright.config.ts for every run, fails the run when a test
+  in a leak suite ends "skipped" without a holding allowance or has no result; a run where no test began (`--list`)
+  is not judged. Allowed skips call one function from `tests/fixtures/skip-conditions.ts`
+  (`sessionSecretMissing`, `externalDeployment`, `localBuildMissing`), and the reporter calls the same function at
+  the end of the run. The non-Playwright leak suites are pinned to exactly `tests/security/db/case-matrix.spec.ts`
+  (its test:db half is ARCH's). Planted runs (temp config, no webServer, no DB): a helper's run-time skip fails;
+  an allowance whose condition does not hold fails; `--max-failures=1` reports "no result"; `--list` exits 0.
+  Mutations M1–M6 (reporter dropped from the local list; "skipped" ignored; "no result" ignored; allowance widened;
+  `--list` not exempt; status not overridden) each fail the guard.
+- V13-QA-023 — #162, merged into develop as f0f8437 — COMPLETE: the mask width
   probe (TEST_ARCHITECTURE §10). Found while building: the capture style never reached the sandboxed preview frame
   (now put into every frame for the capture; the 4 notification-preview baselines change and are replaced from the PR's
   own CI artifact), and the overdue glyph's fallback font can make the deadline's line taller (`block-size: 1lh`).

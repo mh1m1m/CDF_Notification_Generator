@@ -6,14 +6,15 @@
 //  - no secret name, connection string, role or claims setting reaches the client bundle or the HTML;
 //  - nothing about the session or the persona is kept in browser storage.
 // SYNTHETIC DATA ONLY.
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type APIResponse, type Page } from "@playwright/test";
 import { DEFAULT_LOCAL_APP_PASSWORD } from "../../../scripts/db/reset-local.mjs";
+import { externalDeployment, localBuildMissing } from "../../fixtures/skip-conditions";
 import { requireBuildWhenSignalled } from "../build-readiness";
 
 const SESSION_COOKIE = "__Host-v13_session";
-const LOCAL_BUILD = !process.env.V13_E2E_BASE_URL?.trim();
+const LOCAL_BUILD = !externalDeployment();
 
 const REQUIRED_HEADERS: Record<string, string> = {
   "x-content-type-options": "nosniff",
@@ -236,7 +237,7 @@ test.describe("SEC-APP-10 generic errors (TM-I10)", () => {
 
 test.describe("SEC-APP-13 nothing secret reaches the client (TM-I8)", () => {
   test("a local run knows its own session secret and app password, so the value checks below are not empty", () => {
-    test.skip(!LOCAL_BUILD, "an external deployment's values are not known to this runner");
+    test.skip(externalDeployment(), "an external deployment's values are not known to this runner");
     expect(SECRET_VALUES.map(([label]) => label)).toEqual([
       "the session secret value",
       "the app database password",
@@ -244,11 +245,11 @@ test.describe("SEC-APP-13 nothing secret reaches the client (TM-I8)", () => {
   });
 
   test("no secret name, connection string, role or claims setting in the client bundle", () => {
-    test.skip(!LOCAL_BUILD, "scans the local build's .next/static");
+    test.skip(externalDeployment(), "scans the local build's .next/static");
     const root = join(process.cwd(), ".next", "static");
     // V13-SEC-012: in CI a missing build fails here; only a local run reaches the allow-listed skip below.
-    requireBuildWhenSignalled("SEC-APP-13 bundle scan", existsSync(root));
-    test.skip(!existsSync(root), "no local build");
+    requireBuildWhenSignalled("SEC-APP-13 bundle scan", !localBuildMissing());
+    test.skip(localBuildMissing(), "no local build");
     const walk = (dir: string): string[] =>
       readdirSync(dir).flatMap((n) => {
         const p = join(dir, n);
