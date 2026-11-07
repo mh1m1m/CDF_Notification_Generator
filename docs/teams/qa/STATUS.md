@@ -235,5 +235,16 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
     and en, while no measured element lies past an edge. A WebKit-only finding, not skipped; check 1 now names what
     widens the page so the next run can route it to its owner.
 
+- V13-QA-025 — branch test/V13-QA-025-firefox-sign-in-load — IN_REVIEW (ARCH): the Firefox hang in `signInAs`
+  (CI 42390906101, 42394923906: `page.goto("/sign-in")` waiting for `load` hit 30 s on attempt 1, passed on retry).
+  The failure screenshot shows the page fully painted, so `load` was held by a subresource: the page loads only
+  same-origin `/_next/static` chunks and one stylesheet. Firefox cannot be installed in the QA sandbox, so the stalled
+  request is not yet named. `openSignIn` (tests/fixtures/personas.ts) now waits for the document, not `load` (the
+  persona buttons are Server Action forms that work before hydration), and when `load` lags more than 5 s it attaches
+  `navigation-stall` and prints one log line with the pending requests (paths only), so the next occurrence names the
+  resource. `tests/e2e/sign-in-stall.spec.ts` holds a script back for the whole test: sign-in still reaches My Work
+  and the held path is named; the control has no attachment. Mutations: waiting for `load` again (planted test times
+  out), no attachment, finished requests not removed: each caught. Unit 2609/2609, e2e 471 passed.
+
 ## Unresolved defects
 - none open from QA
