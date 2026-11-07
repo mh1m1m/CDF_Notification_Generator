@@ -13,8 +13,11 @@
 //     pass for ligatures. That is why QA-018's probe found F-01 in English only. Colours come from the same tokens in
 //     both languages, so the English scans of each screen stand for its contrast; UT pins the token pairs and M-18
 //     is the manual check. The last planted test pins this, so a new axe that tests Arabic shows up here.
-// Chromium only (tests/fixtures/browsers.ts CHROMIUM_ONLY): in Firefox and WebKit the planted tests fail, so there the
-// sweep could pass without seeing a fault.
+// Chromium only, by the engines' testIgnore (CHROMIUM_ONLY in tests/fixtures/browsers.ts; pinned by
+// tests/unit/qa/a11y-engines.spec.ts), never by a skip. Cross-browser 42400335710 on 88eaa1f: in Firefox the dark
+// emulation did not reach prefers-color-scheme (24 tests failed on that check) and color-contrast missed a planted
+// fault; in WebKit color-contrast missed a planted fault once. There the sweep could pass without seeing a fault, so
+// axe results in Firefox and WebKit are not claimed. The Firefox gap is open as OI-061.
 // Run after `pnpm db:reset`. SYNTHETIC personas and cases only.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";

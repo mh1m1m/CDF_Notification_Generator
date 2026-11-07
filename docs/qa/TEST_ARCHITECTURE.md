@@ -414,8 +414,12 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   as `a11y-violations`. S08 is scanned without its sandboxed preview frame (axe cannot be injected into it). Planted
   tests show the scan sees dark-theme contrast, target size and a minor-impact rule. axe-core 4.14.0 does not test
   contrast on Arabic-script text (its icon-ligature check skips joined Arabic letters), so the English scans stand for
-  each screen's contrast; a planted test pins this. Chromium only (`CHROMIUM_ONLY` in `tests/fixtures/browsers.ts`):
-  in Firefox and WebKit the planted tests failed, so there the sweep could pass without seeing a fault.
+  each screen's contrast; a planted test pins this. Chromium only, by the engines' `testIgnore` (`CHROMIUM_ONLY` in
+  `tests/fixtures/browsers.ts`, pinned by `tests/unit/qa/a11y-engines.spec.ts`), never a skip. Cross-browser
+  42400335710 on 88eaa1f: in Firefox the dark emulation did not reach `prefers-color-scheme` (24 tests failed on that
+  check) and `color-contrast` missed a planted fault; in WebKit `color-contrast` missed a planted fault once. axe
+  results in Firefox and WebKit are not claimed. The Firefox gap is OI-061. The reflow suite runs in all three
+  engines.
 - **Keyboard**: Tab order reaches the switcher, navigation, table rows and primary actions; focus is visible; dialogs
   trap and return focus; Escape closes.
 - **RTL**: `html[dir=rtl][lang=ar]`; logical layout — start-side elements have the larger x in RTL; no element

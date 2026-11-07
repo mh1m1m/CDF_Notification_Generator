@@ -41,9 +41,9 @@ are executed tests as the unit job's JUnit report records them (a loop that defi
 confirmed by a local CI-mode run on 58b2fa4, where these files are unchanged); Playwright counts are from
 `playwright test --list` on 6046ab1. AX-3 and RF's 27 are executed counts from V13-QA-026 (#181): CI run
 [42400335718](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42400335718) on 88eaa1f, every job
-green; its end-to-end job 128486516354 ran 532 tests, 53 in AX-3 and 27 in RF, all passed. AX-3 runs in Chromium only:
-in Firefox and WebKit its planted tests failed (Cross-browser run 42400335710), so there it could pass without seeing
-a fault (`tests/fixtures/browsers.ts` `CHROMIUM_ONLY`).
+green; its end-to-end job 128486516354 ran 532 tests, 53 in AX-3 and 27 in RF, all passed. AX-3 runs in Chromium only, by the engines' `testIgnore`
+(`tests/fixtures/browsers.ts` `CHROMIUM_ONLY`, pinned by `tests/unit/qa/a11y-engines.spec.ts`), never a skip.
+Cross-browser 42400335710 on 88eaa1f: in Firefox the dark emulation did not reach `prefers-color-scheme` (24 tests failed on that check) and `color-contrast` missed a planted fault; in WebKit `color-contrast` missed a planted fault once. axe results in Firefox and WebKit are not claimed. The Firefox gap is OI-061. RF runs in all three engines.
 
 | Id | Suite | Tests | What it checks |
 | --- | --- | --- | --- |

@@ -260,8 +260,9 @@ Updated: 2026-11-07 · Branch: test/V13-QA-026-axe-sweep (base develop 75e2fe2)
 - V13-QA-026 — PR #181 — IN_REVIEW (ARCH): QA-018's F-02 and F-03. `tests/a11y/sweep.a11y.spec.ts` runs axe-core
   4.14.0 with every WCAG A/AA tag (`wcag22aa` included), every impact, on S01–S12 in ar and en, light and dark (48
   tests; S08 without its sandboxed frame), with 5 planted tests (dark contrast, target size, a minor-impact rule, the
-  frame exclusion, Arabic contrast); Chromium only, since its plants failed in Firefox and WebKit (Cross-browser
-  42400335710). `tests/a11y/reflow.a11y.spec.ts` adds checks 1–4 on S01, S08 and S12 (27 tests).
+  frame exclusion, Arabic contrast); Chromium only by testIgnore, since its plants failed in Firefox and WebKit
+  (Cross-browser 42400335710; ARCH accepted on four conditions; `tests/unit/qa/a11y-engines.spec.ts` pins it, 2 mutations
+  caught; axe results in Firefox and WebKit are not claimed; the Firefox dark-emulation gap is OI-061). `tests/a11y/reflow.a11y.spec.ts` adds checks 1–4 on S01, S08 and S12 (27 tests).
   Found: axe-core 4.14.0 does not test contrast on Arabic-script text (its icon-ligature check skips it), which is why
   F-01 showed in English only; a planted test pins it. With FE-019 reverted, S04 and S06 fail in English dark;
   dropping `wcag22aa` or counting serious and critical only fails a plant. The audit records AX-3, F-01 fixed
