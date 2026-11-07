@@ -118,6 +118,11 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
+- V13-QA-015 adoption — branch test/V13-QA-015-adopt-baselines — IN_REVIEW: the 36 baselines committed under
+  `tests/visual/__screenshots__/`, taken from CI only: artifact 13081138200 (`visual-results`) of develop push run
+  41301822994 on 029a22e, downloaded 7 Nov after OI-058 was cleared. In that run every one of the 9 tests failed on
+  missing snapshots alone (36 errors), and each candidate is byte-identical to Playwright's actual image. The PR lists
+  every file's sha256. Design §8 now describes the visual job as built (ARCH-014).
 - V13-QA-011 — branch test/V13-QA-011-guard-followups — IN_REVIEW (ARCH): G6 plain-literal annotation `type`;
   L1 `playwright test --list` per guarded Playwright suite vs its own test calls (helpers in other files caught at load time; run-time skips from helpers stay a stated limit, review covers them);
   surface allow-list reason updated after V13-SEC-012. TEST_ARCHITECTURE §7.1.

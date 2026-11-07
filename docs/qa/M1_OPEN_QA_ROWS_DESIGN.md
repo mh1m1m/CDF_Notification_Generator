@@ -193,9 +193,9 @@ revisited.
 
 | Item | Design |
 | --- | --- |
-| Visual job | a `visual` job in `ci.yml`: the same database service and steps as `e2e`, plus `fonts-liberation fonts-dejavu-core fonts-crosextra-carlito fonts-noto-core` installed explicitly (a line in `docs/DEPENDENCIES.md` with the reason), their versions written to the manifest, and `pnpm exec playwright test --project=visual-*` |
-| When | the baseline subset (§5.1) on every PR; the full library on PRs labelled `visual-library`; the before/after run on PRs labelled `visual-before-after` (§5.3), with the PR's base as "before" |
-| Artifacts | `visual-results` (diffs, library, manifest), retention 14 days like the other jobs; the before/after artifact 30 days, so a design review can link it |
+| Visual job | as built by ARCH-014 (#156): the baseline comparison is a `visual` job in `ci.yml` ("Visual baselines (Playwright)") on every PR, with the same database service and steps as `e2e`, plus `fonts-liberation fonts-dejavu-core fonts-crosextra-carlito fonts-noto-core` installed explicitly (a line in `docs/DEPENDENCIES.md` with the reason) and their versions printed; it runs `--project=visual-baseline`. With no baseline committed it ran in candidate mode (`scripts/ci/visual-candidates.mjs`: missing snapshots alone, one PNG candidate each, nothing under `__screenshots__`). The library is a separate workflow, `visual-library.yml` (`pull_request` `labeled` / `synchronize`, label `visual-library`), because a labelled trigger in `ci.yml` would re-run all of CI and a label-triggered baseline workflow would let another label cancel a run and leave a skipped check on the head |
+| When | the baseline subset (§5.1) on every PR (`ci.yml`); the full library on PRs labelled `visual-library` (`visual-library.yml`); the before/after run on PRs labelled `visual-before-after` (§5.3), with the PR's base as "before" |
+| Artifacts | `visual-results` (candidates, diffs, the JSON report), retention 14 days like the other jobs; the library and before/after artifacts as their workflows name them, before/after 30 days, so a design review can link it |
 | Guard | G7 (§5.2) runs in the existing e2e job; no workflow passes `--update-snapshots` |
 | Cross-browser workflow | §9.3 |
 | Report | §10.2 |
