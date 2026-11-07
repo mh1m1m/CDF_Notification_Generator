@@ -123,6 +123,12 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   41301822994 on 029a22e, downloaded 7 Nov after OI-058 was cleared. In that run every one of the 9 tests failed on
   missing snapshots alone (36 errors), and each candidate is byte-identical to Playwright's actual image. The PR lists
   every file's sha256. Design §8 now describes the visual job as built (ARCH-014).
+  First comparison (#159 run 42372979341, 7 Nov): 6/9 passed, my-work, case-overview and workspace-switcher failed.
+  Cause: the masked deadline words count days on the server clock, so their width changed between 1 Nov (candidates)
+  and 7 Nov and moved My Work's columns and the overview's mask edge. Fix: CAPTURE_STYLE gives `[data-deadline-state]`
+  a fixed width during the capture only (masked boxes only). Local probe: deadline words rewritten between two captures
+  of the three screens, ar and en: byte-identical with the fix, different on all three without it. The 36 images were
+  removed, so the next CI run makes fresh candidates at the fix head; those replace them.
 - V13-QA-011 — branch test/V13-QA-011-guard-followups — IN_REVIEW (ARCH): G6 plain-literal annotation `type`;
   L1 `playwright test --list` per guarded Playwright suite vs its own test calls (helpers in other files caught at load time; run-time skips from helpers stay a stated limit, review covers them);
   surface allow-list reason updated after V13-SEC-012. TEST_ARCHITECTURE §7.1.
