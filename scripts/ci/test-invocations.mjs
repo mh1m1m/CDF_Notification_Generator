@@ -6,8 +6,12 @@
 //     `--config`/`-c` or Vitest's `--root`/`--dir` (another config), or a filter: a test-name or title filter (`-t`,
 //     `--testNamePattern`, `-g`, `--grep`, `--grep-invert`, `--allowOnly`) or a file filter (a file argument,
 //     `--exclude`, `--changed`, `--shard`, `--last-failed`, `--only-changed`, `--test-list`, `--test-list-invert`,
-//     `vitest related`). The visual runs, whose projects hold no leak suite, may pass `--reporter`: the candidate run
-//     reads Playwright's JSON report (V13-ARCH-014);
+//     `vitest related`, Playwright's `--no-deps`). The visual runs, whose projects hold no leak suite, may pass
+//     `--reporter`: the candidate run reads Playwright's JSON report (V13-ARCH-014);
+//   - no run, the visual runs included, passes a snapshot option (V13-ARCH-019, SEC's INFOs 1 and 3 on #170): `-u`,
+//     `--update-snapshots` or Vitest's `--update` rewrites the snapshots the run compares against (the config's
+//     `updateSnapshots: "none"` keeps a visual run from accepting a changed baseline), and `--ignore-snapshots` skips
+//     the screenshot and snapshot assertions;
 //   - V13_DB_TESTS_REQUIRED, which turns the skip guard on, is set only by an `env:` key, to "1", and the database run's
 //     job or step sets it;
 //   - the runs ARCH's merge rule rests on exist (REQUIRED_RUNS): the database job runs the integration project, the e2e
@@ -29,7 +33,7 @@
  * @typedef {{ tool: "vitest" | "playwright", file: string, line: number, job: string | null, step: string | null,
  *   via: string, args: Word[], projects: string[] }} Invocation
  */
-/** @typedef {"reporter" | "config" | "filter" | "flag" | "missing run"} InvocationRule */
+/** @typedef {"reporter" | "config" | "filter" | "snapshot" | "flag" | "missing run"} InvocationRule */
 /** @typedef {{ file: string, line: number, rule: InvocationRule, detail: string }} InvocationFinding */
 /**
  * @typedef {{ file: string, job: string, tool: "vitest" | "playwright", projects: readonly string[], flag?: boolean,
@@ -87,6 +91,8 @@ const BANNED = {
     "--exclude": ["filter", "a file filter"],
     "--changed": ["filter", "a file filter"],
     "--shard": ["filter", "a file filter"],
+    "-u": ["snapshot", "rewrites the snapshots the run compares against"],
+    "--update": ["snapshot", "rewrites the snapshots the run compares against"],
   },
   playwright: {
     "--reporter": ["reporter", "replaces the configured reporters, the leak-skip reporter with them"],
@@ -100,6 +106,10 @@ const BANNED = {
     "--shard": ["filter", "a file filter"],
     "--test-list": ["filter", "a file filter"],
     "--test-list-invert": ["filter", "a file filter"],
+    "--no-deps": ["filter", "leaves out the projects the run depends on"],
+    "-u": ["snapshot", "rewrites the snapshots the run compares against"],
+    "--update-snapshots": ["snapshot", "rewrites the snapshots the run compares against"],
+    "--ignore-snapshots": ["snapshot", "skips the screenshot and snapshot assertions"],
   },
 };
 
@@ -152,6 +162,20 @@ const TAKES_VALUE = {
     "--test-list-invert",
   ]),
 };
+
+/**
+ * Options whose value is optional: the next word is the option's own only when it is one of these values (the CLIs'
+ * `-u [type]` and `-u, --update-snapshots [mode]`); any other next word is read on its own.
+ * @type {Record<"vitest" | "playwright", Record<string, ReadonlySet<string>>>}
+ */
+const OPTIONAL_VALUE = (() => {
+  const types = new Set(["true", "false", "new", "all", "none"]);
+  const modes = new Set(["all", "changed", "missing", "none"]);
+  return {
+    vitest: { "-u": types, "--update": types },
+    playwright: { "-u": modes, "--update-snapshots": modes },
+  };
+})();
 
 /** Words that open a shell construct before the command itself. */
 const SHELL_PREFIX = new Set([
@@ -468,7 +492,9 @@ export function argumentFindings(run) {
       const ban = banned[name];
       if (ban && !(ban[0] === "reporter" && visualOnly))
         out.push({ file: word.file, line: word.line, rule: ban[0], detail: `${where}: ${t} ${ban[1]}` });
-      if (!attached && takesValue.has(name)) n++;
+      const next = run.args[n + 1]?.text;
+      const optional = OPTIONAL_VALUE[run.tool][name];
+      if (!attached && (takesValue.has(name) || (next !== undefined && optional?.has(next)))) n++;
       continue;
     }
     out.push({
