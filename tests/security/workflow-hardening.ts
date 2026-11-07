@@ -28,7 +28,11 @@
 //          script, `exit` without a non-zero literal status, `exec`, `return`, `trap` and a function definition;
 //        - a package script that runs a test joining commands with anything but `&&` (pnpm runs it with `sh -c`, no -e,
 //          no pipefail), or holding an early exit; `.npmrc`'s `script-shell` and `shell-emulator` keys.
-//      (ARCH's R1–R4 and INFO on #172.)
+//      (ARCH's R1–R4 and INFO on #172.) V13-SEC-017 (ARCH's INFOs on 9a6a94b): only `exit` 1–255 is a failure;
+//      `command`/`builtin` prefixes are seen through; `eval`, `source`, `.`, `alias`, `shopt … expand_aliases` and
+//      `set -n` are early exits; `npm_config_script_shell`/`npm_config_shell_emulator` (any case) and the
+//      `script-shell`/`shell-emulator`/`scriptShell`/`shellEmulator` settings are refused in a workflow (env:,
+//      $GITHUB_ENV, export) and in pnpm-workspace.yaml. A runtime proof of each required run is V13-ARCH-020.
 // A finding names the rule, the file and the line.
 //
 // No YAML dependency (ARCH): a line reader that tracks indentation gives each line its key path (jobs › tag › steps ›
@@ -71,7 +75,8 @@ export function stripComment(raw: string): string {
       continue;
     }
     if (c === "'" || c === '"') quote = c;
-    else if (c === "#" && (i === 0 || /\s/.test(raw[i - 1]!))) return raw.slice(0, i).trimEnd();
+    // YAML (and bash) count only space and tab as blanks before a comment's `#` (ARCH's R1 on #174).
+    else if (c === "#" && (i === 0 || /[ \t]/.test(raw[i - 1]!))) return raw.slice(0, i).trimEnd();
   }
   return raw.trimEnd();
 }
@@ -268,8 +273,31 @@ function runsATest(text: string, scripts: Readonly<Record<string, PackageScript>
   return findInvocations({ workflows: [{ file: "-", lines: [line] }], scripts }).length > 0;
 }
 
-/** The text with the contents of its quoted strings emptied, so that words inside quotes are not read as commands. */
-const unquoted = (text: string) => text.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => q[0]! + q[0]!);
+/**
+ * The text with the contents of its quoted strings emptied, so that words inside quotes are not read as commands. An
+ * escape outside quotes (`\'`, `\;`) becomes `\\`: it opens no string and is no operator (ARCH's R3 on #174).
+ */
+const unquoted = (text: string) => text.replace(/\\.|"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => q[0]! + q[0]!);
+
+/** Words bash allows in front of a command (ARCH's R3 on #174); `command -v` / `-V` stop at the option, run nothing. */
+function commandWord(words: string[]): string[] {
+  for (;;) {
+    const w = words[0];
+    if (w === undefined) return words;
+    if (
+      ["!", "if", "elif", "while", "until"].includes(w) ||
+      /^[A-Za-z_][A-Za-z0-9_]*(\[[^\]]*\])?\+?=/.test(w)
+    )
+      words.shift();
+    else if (w === "time") {
+      words.shift();
+      while (words[0] === "-p" || words[0] === "--") words.shift();
+    } else if (w === "command" || w === "builtin") {
+      words.shift();
+      while (words[0] === "-p" || words[0] === "--") words.shift();
+    } else return words;
+  }
+}
 
 /**
  * What in a test step's script line can end the step early with success, or turn a failure into one (ARCH's R4 on
@@ -277,21 +305,57 @@ const unquoted = (text: string) => text.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q
  * the runner).
  */
 export function earlyExits(text: string): string[] {
-  const bare = unquoted(text);
+  // Quoted text emptied, then a shell comment (an unquoted `#` after a space or tab: bash's only blanks) removed.
+  const bare = unquoted(text).replace(/(^|[ \t])#.*$/, "$1");
   const out: string[] = [];
   if (/(^|[;&|{(\s])(function\s+[A-Za-z_][\w-]*|[A-Za-z_][\w-]*\s*\(\s*\))/.test(bare))
     out.push("a function definition");
   for (const segment of bare.split(/;|&&|\|\||\|&|\||&|\(|\)|\{|\}|\bthen\b|\bdo\b|\belse\b/)) {
-    const words = segment
-      .trim()
-      .split(/\s+/)
-      .filter((w) => w !== "!");
+    const words = commandWord(
+      segment
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w !== ""),
+    );
     const [first, second] = words;
-    if (first === "exit" && !(second !== undefined && /^[1-9][0-9]*$/.test(second)))
+    // A command word that bash builds at run time (a quote, an escape, `$` or a backtick in it) cannot be read here.
+    if (first !== undefined && /["'\\$`]/.test(first)) {
+      out.push(`a command word built at run time (\`${first}\`)`);
+      continue;
+    }
+    // The shell keeps the status modulo 256, so only 1–255 is a failure (`exit 256` exits 0).
+    if (first === "exit" && !(second !== undefined && EXIT_FAILURE.test(second)))
       out.push(`\`exit${second === undefined ? "" : ` ${second}`}\``);
-    else if (first === "exec" || first === "return" || first === "trap") out.push(`\`${first}\``);
+    else if (first !== undefined && EARLY_WORDS.has(first)) out.push(`\`${first}\``);
+    else if (
+      first === "set" &&
+      words.slice(1).some((w) => /^-[A-Za-z]*n[A-Za-z]*$/.test(w) || w === "noexec")
+    )
+      out.push("`set -n` (noexec)");
+    else if (first === "shopt" && words.includes("expand_aliases")) out.push("`shopt expand_aliases`");
   }
   return out;
+}
+
+const EXIT_FAILURE = /^([1-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$/;
+/** Words that end the step or run text the checker cannot see (SEC-017: `eval`, `source`, `.`, `alias`). */
+const EARLY_WORDS = new Set(["exec", "return", "trap", "eval", "source", ".", "alias"]);
+
+/**
+ * SEC-017: settings that change the shell pnpm runs package scripts in, by environment or pnpm configuration:
+ * `npm_config_script_shell` / `npm_config_shell_emulator` (any case, in `env:`, a `$GITHUB_ENV` write or an
+ * `export`), and `script-shell` / `shell-emulator` / `scriptShell` / `shellEmulator` named anywhere else.
+ */
+const SCRIPT_SHELL =
+  /npm_config_(script[-_]shell|shell[-_]emulator)|(^|[^\w-])(script-shell|shell-emulator|scriptShell|shellEmulator)([^\w-]|$)/i;
+
+/** Every line of a file (its comment removed) that names a script-shell setting, as W7 findings. */
+function scriptShellLines(file: string, source: string, detail: string): WorkflowFinding[] {
+  return source
+    .split(/\r?\n/)
+    .flatMap((l, i) =>
+      SCRIPT_SHELL.test(stripComment(l)) ? [{ rule: "W7", file, line: i + 1, detail }] : [],
+    );
 }
 
 /**
@@ -333,6 +397,16 @@ export function checkNpmrc(npmrc: string): WorkflowFinding[] {
           ]
         : [],
     );
+}
+
+/** pnpm 10 reads `scriptShell` and `shellEmulator` from pnpm-workspace.yaml as well (SEC-017). */
+export function checkPnpmWorkspace(path: string): WorkflowFinding[] {
+  if (!existsSync(path)) return [];
+  return scriptShellLines(
+    "pnpm-workspace.yaml",
+    readFileSync(path, "utf8"),
+    "a setting that changes the shell package scripts run in",
+  );
 }
 
 /** W7 over one workflow's lines. */
@@ -431,7 +505,11 @@ function checkTestExitCodes(
       if (ERREXIT_OFF.test(text))
         hit("W7", r.line, "`set +e`, `set +o errexit` or `set +o pipefail` in a step that runs a test");
       if (PIPEFAIL_ON.test(text)) pipefail = true;
-      for (const e of earlyExits(text))
+      // runLines joins a backslash-newline continuation with a space, from lines trimmed of their indentation. Bash
+      // joins with nothing (`ex\` + `it 0` is `exit 0`), or with the extra indentation, so read both joins (ARCH's R3
+      // on #174).
+      const tight = r.pieces.map((p) => p.text).join("");
+      for (const e of new Set([...earlyExits(text), ...earlyExits(tight)]))
         hit("W7", r.line, `${e} in a step that runs a test can end it with success before or after the run`);
       if (!testLines.has(`${job}\u0000${step}\u0000${r.line}`)) continue;
       const ops = shellOperators(text);
@@ -480,6 +558,13 @@ export function checkWorkflow(
   const hit = (rule: string, line: number, detail: string) => out.push({ rule, file, line, detail });
   const lines = readWorkflow(source);
   const keyed = lines.filter((l) => l.scalarOf === null);
+  // W7 (SEC-017): no workflow changes the shell pnpm runs package scripts in.
+  for (const f of scriptShellLines(
+    file,
+    source,
+    "a setting that changes the shell package scripts run in (`npm_config_script_shell`, `script-shell`, …)",
+  ))
+    hit(f.rule, f.line, f.detail);
 
   // W0: the reader understands block style only. Outside block scalars, once the `${{ … }}` expressions are removed,
   // no `{` or `}` may remain (a flow mapping, also inside a list item or a flow sequence), and a flow sequence may hold
@@ -616,13 +701,17 @@ export function checkWorkflowDir(
     ...workflowFiles(dir).flatMap((f) => checkWorkflow(f, readFileSync(join(dir, f), "utf8"), scripts)),
     ...checkTestScripts(scripts),
     ...checkNpmrc(join(dir, "..", "..", ".npmrc")),
+    ...checkPnpmWorkspace(join(dir, "..", "..", "pnpm-workspace.yaml")),
   ];
 }
+
+/** Findings in the repository root's files; every other file is a workflow under .github/workflows. */
+const ROOT_FILES = new Set(["package.json", ".npmrc", "pnpm-workspace.yaml"]);
 
 export const formatWorkflowFindings = (f: readonly WorkflowFinding[]) =>
   f
     .map(
       (x) =>
-        `${x.rule} ${/\.ya?ml$/.test(x.file) ? `.github/workflows/${x.file}` : x.file}:${x.line} ${x.detail}`,
+        `${x.rule} ${ROOT_FILES.has(x.file) ? x.file : `.github/workflows/${x.file}`}:${x.line} ${x.detail}`,
     )
     .join("\n") || "(none)";

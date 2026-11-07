@@ -3,6 +3,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+/** The PR quality report (tests/report/pr-report.mjs, V13-QA-017) reads this attachment for its axe section. */
+const A11Y_ATTACHMENT = "a11y-violations";
+
 // OI-028: after a client-side navigation (the persona sign-in lands on /my-work without a page load), Next.js removes
 // the old <title> and streams the new page's metadata a little later. For 4-129 ms (local probe, 40 runs) the URL is
 // already the new one and the document has no <title>; an axe scan started in that gap reports document-title
@@ -13,9 +16,20 @@ async function seriousViolations(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
-  return results.violations
-    .filter((v) => v.impact === "serious" || v.impact === "critical")
-    .map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
+  const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
+  if (serious.length)
+    await test.info().attach(A11Y_ATTACHMENT, {
+      contentType: "application/json",
+      body: JSON.stringify(
+        serious.map((v) => ({
+          rule: v.id,
+          impact: v.impact,
+          page: new URL(page.url()).pathname,
+          nodes: v.nodes.length,
+        })),
+      ),
+    });
+  return serious.map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
 }
 
 test("sign-in page in Arabic", async ({ page }) => {

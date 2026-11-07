@@ -175,6 +175,9 @@ async function measure(page: Page, edges: boolean): Promise<Finding[]> {
   }, edges);
 }
 
+/** The PR quality report (tests/report/pr-report.mjs, V13-QA-017) reads this attachment for its UX section. */
+const REFLOW_ATTACHMENT = "reflow-findings";
+
 const format = (fs: readonly Finding[]) => fs.map((f) => `check ${f.check}: ${f.detail}`).join("\n");
 
 async function open(page: Page, path: string, spacing: boolean) {
@@ -195,12 +198,19 @@ for (const locale of LOCALES) {
         await signInAs(page, "secretary-alpha");
         await page.setViewportSize({ width: c.width, height: c.height });
         const found: string[] = [];
+        const rows: { page: string; language: string; condition: string; check: number; detail: string }[] =
+          [];
         for (const path of PAGES) {
           await open(page, path, c.spacing);
           await expect(page.locator("html")).toHaveAttribute("lang", locale);
           const f = await measure(page, c.width === 320);
           if (f.length) found.push(`${path}\n${format(f)}`);
+          for (const x of f) rows.push({ page: path, language: locale, condition: c.name, ...x });
         }
+        if (rows.length)
+          await test
+            .info()
+            .attach(REFLOW_ATTACHMENT, { contentType: "application/json", body: JSON.stringify(rows) });
         expect(found, found.join("\n")).toEqual([]);
       });
     }

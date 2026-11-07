@@ -52,8 +52,9 @@ Configuration rules: `executablePath` from `PW_CHROMIUM_PATH` when set (Claude s
 but tests that write data run against a per-worker transaction-free design (§5.3). `trace: 'retain-on-failure'`,
 `screenshot: 'only-on-failure'` for functional projects; the visual projects take their screenshots explicitly.
 `webServer` starts `pnpm build && pnpm start` on port 3100 with `V13_PERSONA_SIGNIN=enabled` against the local
-database (CLAUDE.md §8); the reporter writes `list`, `html` (`test-results/html`) and `json`
-(`test-results/results.json`).
+database (CLAUDE.md §8); in CI the reporters are `list`, `junit` (`test-results/e2e-junit.xml`), `json`
+(`test-results/playwright-results.json`, the PR quality report's input, §11), `html` and the leak-skip reporter;
+locally `list` and the leak-skip reporter.
 
 ## 4. Personas and sign-in
 
@@ -504,8 +505,33 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
 
 ## 11. Evidence and reporting
 
-Every run writes `test-results/results.json`; QA records command, commit, project and real pass/fail/flaky counts in
-`docs/teams/qa/STATUS.md` and sends them to ARCH for `docs/TEST_EVIDENCE.md`. Screenshots contain only synthetic data.
+In CI, Playwright writes `test-results/playwright-results.json` (JSON), `test-results/e2e-junit.xml` and the HTML
+report, and Vitest writes `test-results/vitest-junit.xml`; QA records command, commit, project and real
+pass/fail/flaky counts in `docs/teams/qa/STATUS.md` and sends them to ARCH for `docs/TEST_EVIDENCE.md`. Screenshots
+contain only synthetic data.
+
+**PR quality report (V13-QA-017, REQ-CICD-002; design §10).** `tests/report/pr-report.mjs` (plain ESM, `// @ts-check`,
+no dependency) builds one Markdown report per CI job from that job's own reports, with nothing generated: failed and
+flaky tests (title, file:line, first error line); screenshot comparisons (expected, actual and diff image paths in the
+artifact); UX findings from the reflow checks; axe findings by rule, impact, page and node count; performance changes
+("not measured in M1": no baseline or budget exists, so that row stays open); and recommended corrections from a fixed
+table in the builder, with a fallback that routes anything unlisted to `docs/design/reviews/UX_BACKLOG.md`. The axe and
+reflow findings come from JSON attachments the a11y specs add when they find something (`a11y-violations`,
+`reflow-findings`). The unit, database, e2e and visual jobs run it in an `if: always()` step with every input passed
+through `env` (never `${{ }}` inside `run:`); it appends the report to the job's step summary and writes
+`test-results/pr-report.md` into the job's artifact. A missing input is named, and when none was produced the report
+says its empty sections prove nothing; an input that is cut short or not valid is named as unreadable instead of
+stopping the report. The job's status reaches it as `PR_REPORT_JOB_STATUS: ${{ job.status }}` in `env:` (the one
+expression the step holds): when no test is listed and the status is not `success`, "Failed tests" says the job failed
+outside the listed tests and points to the log, never "None." Errors outside any test (global setup, the web server, a
+spec file that did not load) come from the Playwright report's top-level `errors` and get their own section. A Vitest
+failure's file:line comes from its first `❯` frame in the test's own file. Credentials are redacted in every cell
+(SEC's rule on #132; ARCH Q2 on #173): connection strings, credentials in URLs, `key=value` forms (libpq
+`password=…`, `PGPASSWORD=…`, any key ending in password, passwd, secret, token or api key), quoted object forms
+(`password: '…'`, `"password":"…"`) and `Bearer`/`Basic` values. It posts no PR comment and uses no token.
+`tests/unit/report/pr-report.spec.ts` covers the readers, the sections, each redaction form, the job-status wording, a
+planted Playwright run read through its real JSON report, a planted run whose spec file does not load, a cut-short
+input, and the CI wiring.
 
 **Manual checklist and audit (V13-QA-018; REQ-A11Y-003, REQ-A11Y-014; design §6–§7).**
 `docs/qa/A11Y_MANUAL_CHECKLIST.md` holds one row per check, screen and language, each NOT_RUN until a person at a real
