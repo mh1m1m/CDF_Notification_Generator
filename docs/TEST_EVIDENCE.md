@@ -395,7 +395,7 @@ and the `develop` run on `357e574` ([42378248517](https://github.com/mh1m1m/CDF_
 not merged): its run [42377612701](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42377612701) failed at that step (job 128418329898: `refused: the first parent commit
 holds 36 baselines and this commit holds none`), and every other job of that run succeeded.
 
-### 4.3 Firefox and WebKit (V13-QA-016), read from GitHub Actions, 7 Nov 2026 13:52 UTC
+### 4.3 Firefox and WebKit (V13-QA-016, V13-ARCH-016), read from GitHub Actions, 7 Nov 2026 14:38 UTC
 
 Workflow `.github/workflows/cross-browser.yml` (#152), one job, "End-to-end in Firefox and WebKit (Playwright)": the
 projects `firefox-ar` and `webkit-ar` (the e2e scenarios and smoke, and `tests/a11y`; the Sentinel, the Truth
@@ -408,9 +408,14 @@ Chromium/Firefox/WebKit emulation, never real-device testing.
 | [42376944803](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376944803) | push | `6083ee4` | cancelled by the next push, 23 s later |
 | [42376971833](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376971833) | push | `1f7b685` | success, 154 passed |
 | [42378248623](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42378248623) | push | `357e574` | success, 154 passed |
+| [42379900156](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42379900156) | push | `2172fca` | success, 154 passed |
+| [42380558412](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42380558412) | push | `119bea6` | success, 154 passed |
+| [42381717273](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42381717273) | push | `f0f8437` | success, 154 passed |
 
-Two green `develop` runs in a row so far. After five, ARCH makes the workflow a required check on every PR and in the
-merge rule (`docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` §9.3).
+Five green `develop` runs in a row (`1f7b685` to `f0f8437`); in between, the pull-request runs of PRs without the label
+ended skipped at the job's `if`. So, as `docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` §9.3 set out, V13-ARCH-016 runs the
+workflow on every PR, and a green run on the PR's head is part of ARCH's merge rule (`docs/AGENT_TASK_BOARD.md` §2
+rule 5). The repository has no branch protection (OPEN_ISSUES OI-016), so the rule is ARCH's, not GitHub's.
 
 ## 5. Deployment checks
 

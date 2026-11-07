@@ -2,7 +2,8 @@
 // documented names without values. Two belong to the `visual` job of .github/workflows/ci.yml: the candidate check
 // (V13-ARCH-014: a run without committed baselines passes only when it failed on missing snapshots alone and wrote one
 // PNG candidate for each, and no baseline), and the mode (V13-ARCH-015: candidate mode is refused once baselines have
-// been committed, so deleting every baseline fails the job).
+// been committed, so deleting every baseline fails the job). The last describe pins the trigger of
+// .github/workflows/cross-browser.yml (V13-ARCH-016): every pull request and every push to develop.
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -411,5 +412,74 @@ describe("visual-mode (V13-ARCH-015)", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("cross-browser trigger (V13-ARCH-016)", () => {
+  // Firefox and WebKit are part of ARCH's merge rule (docs/AGENT_TASK_BOARD.md §2 rule 5), so the workflow must start by
+  // itself on every pull request and every push to develop: no event-type or branch filter on pull_request, no label,
+  // no job condition. Comments may still name the old `cross-browser` label.
+  type Finding = { rule: "on" | "job-condition" | "label"; line: number };
+  const ON_BLOCK = ["on:", "  push:", "    branches: [develop]", "  pull_request:"];
+
+  const triggerFindings = (src: string): Finding[] => {
+    const lines = src.split("\n");
+    const start = lines.indexOf("on:");
+    const next = lines.findIndex((l, i) => i > start && /^\S/.test(l));
+    const block =
+      start < 0 ? [] : lines.slice(start, next < 0 ? lines.length : next).filter((l) => l.trim() !== "");
+    const findings: Finding[] = [];
+    if (block.join("\n") !== ON_BLOCK.join("\n")) findings.push({ rule: "on", line: start + 1 });
+    lines.forEach((l, i) => {
+      if (/^ {4}if:/.test(l)) findings.push({ rule: "job-condition", line: i + 1 });
+      if (!/^\s*#/.test(l) && /label/.test(l)) findings.push({ rule: "label", line: i + 1 });
+    });
+    return findings;
+  };
+
+  it("runs on every pull request and every push to develop, with no label and no job condition", () => {
+    const src = readFileSync(join(ROOT, ".github", "workflows", "cross-browser.yml"), "utf8");
+    expect(triggerFindings(src)).toEqual([]);
+  });
+
+  it("flags the label-gated form it replaced, a narrowed trigger and any job condition", () => {
+    const labelGated = [
+      "name: Cross-browser",
+      "on:",
+      "  push:",
+      "    branches: [develop]",
+      "  pull_request:",
+      "    types: [labeled, synchronize]",
+      "jobs:",
+      "  e2e:",
+      "    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'cross-browser')",
+      "",
+    ].join("\n");
+    expect(triggerFindings(labelGated)).toEqual([
+      { rule: "on", line: 2 },
+      { rule: "label", line: 6 },
+      { rule: "job-condition", line: 9 },
+      { rule: "label", line: 9 },
+    ]);
+
+    const ok = [
+      "# Not gated on the `cross-browser` label any more.",
+      ...ON_BLOCK,
+      "",
+      "jobs:",
+      "  e2e:",
+    ].join("\n");
+    expect(triggerFindings(ok)).toEqual([]);
+    expect(triggerFindings(`${ok}\n    if: github.actor != 'dependabot[bot]'`)).toEqual([
+      { rule: "job-condition", line: 9 },
+    ]);
+    expect(triggerFindings(ok.replace("  pull_request:", "  pull_request:\n    branches: [main]"))).toEqual([
+      { rule: "on", line: 2 },
+    ]);
+    expect(triggerFindings(ok.replace("    branches: [develop]\n", ""))).toEqual([{ rule: "on", line: 2 }]);
+    expect(triggerFindings(ok.replace("  pull_request:", "  pull_request_target:"))).toEqual([
+      { rule: "on", line: 2 },
+    ]);
+    expect(triggerFindings(ok.replace("on:\n", ""))).toEqual([{ rule: "on", line: 0 }]);
   });
 });
