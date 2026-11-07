@@ -28,7 +28,11 @@
 //          script, `exit` without a non-zero literal status, `exec`, `return`, `trap` and a function definition;
 //        - a package script that runs a test joining commands with anything but `&&` (pnpm runs it with `sh -c`, no -e,
 //          no pipefail), or holding an early exit; `.npmrc`'s `script-shell` and `shell-emulator` keys.
-//      (ARCH's R1–R4 and INFO on #172.)
+//      (ARCH's R1–R4 and INFO on #172.) V13-SEC-017 (ARCH's INFOs on 9a6a94b): only `exit` 1–255 is a failure;
+//      `command`/`builtin` prefixes are seen through; `eval`, `source`, `.`, `alias`, `shopt … expand_aliases` and
+//      `set -n` are early exits; `npm_config_script_shell`/`npm_config_shell_emulator` (any case) and the
+//      `script-shell`/`shell-emulator`/`scriptShell`/`shellEmulator` settings are refused in a workflow (env:,
+//      $GITHUB_ENV, export) and in pnpm-workspace.yaml. A runtime proof of each required run is V13-ARCH-020.
 // A finding names the rule, the file and the line.
 //
 // No YAML dependency (ARCH): a line reader that tracks indentation gives each line its key path (jobs › tag › steps ›
@@ -277,7 +281,8 @@ const unquoted = (text: string) => text.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q
  * the runner).
  */
 export function earlyExits(text: string): string[] {
-  const bare = unquoted(text);
+  // Quoted text emptied, then a shell comment (an unquoted `#` at a word start) removed.
+  const bare = unquoted(text).replace(/(^|\s)#.*$/, "$1");
   const out: string[] = [];
   if (/(^|[;&|{(\s])(function\s+[A-Za-z_][\w-]*|[A-Za-z_][\w-]*\s*\(\s*\))/.test(bare))
     out.push("a function definition");
@@ -286,12 +291,39 @@ export function earlyExits(text: string): string[] {
       .trim()
       .split(/\s+/)
       .filter((w) => w !== "!");
+    // `command exit 0` and `builtin exit 0` run the same builtin (SEC-017).
+    while (words[0] === "command" || words[0] === "builtin") words.shift();
     const [first, second] = words;
-    if (first === "exit" && !(second !== undefined && /^[1-9][0-9]*$/.test(second)))
+    // The shell keeps the status modulo 256, so only 1–255 is a failure (`exit 256` exits 0).
+    if (first === "exit" && !(second !== undefined && EXIT_FAILURE.test(second)))
       out.push(`\`exit${second === undefined ? "" : ` ${second}`}\``);
-    else if (first === "exec" || first === "return" || first === "trap") out.push(`\`${first}\``);
+    else if (first !== undefined && EARLY_WORDS.has(first)) out.push(`\`${first}\``);
+    else if (first === "set" && words.slice(1).some((w) => /^-[a-z]*n[a-z]*$/.test(w) || w === "noexec"))
+      out.push("`set -n` (noexec)");
+    else if (first === "shopt" && words.includes("expand_aliases")) out.push("`shopt expand_aliases`");
   }
   return out;
+}
+
+const EXIT_FAILURE = /^([1-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])$/;
+/** Words that end the step or run text the checker cannot see (SEC-017: `eval`, `source`, `.`, `alias`). */
+const EARLY_WORDS = new Set(["exec", "return", "trap", "eval", "source", ".", "alias"]);
+
+/**
+ * SEC-017: settings that change the shell pnpm runs package scripts in, by environment or pnpm configuration:
+ * `npm_config_script_shell` / `npm_config_shell_emulator` (any case, in `env:`, a `$GITHUB_ENV` write or an
+ * `export`), and `script-shell` / `shell-emulator` / `scriptShell` / `shellEmulator` named anywhere else.
+ */
+const SCRIPT_SHELL =
+  /npm_config_(script_shell|shell_emulator)|(^|[^\w-])(script-shell|shell-emulator|scriptShell|shellEmulator)([^\w-]|$)/i;
+
+/** Every line of a file (its comment removed) that names a script-shell setting, as W7 findings. */
+function scriptShellLines(file: string, source: string, detail: string): WorkflowFinding[] {
+  return source
+    .split(/\r?\n/)
+    .flatMap((l, i) =>
+      SCRIPT_SHELL.test(stripComment(l)) ? [{ rule: "W7", file, line: i + 1, detail }] : [],
+    );
 }
 
 /**
@@ -333,6 +365,16 @@ export function checkNpmrc(npmrc: string): WorkflowFinding[] {
           ]
         : [],
     );
+}
+
+/** pnpm 10 reads `scriptShell` and `shellEmulator` from pnpm-workspace.yaml as well (SEC-017). */
+export function checkPnpmWorkspace(path: string): WorkflowFinding[] {
+  if (!existsSync(path)) return [];
+  return scriptShellLines(
+    "pnpm-workspace.yaml",
+    readFileSync(path, "utf8"),
+    "a setting that changes the shell package scripts run in",
+  );
 }
 
 /** W7 over one workflow's lines. */
@@ -480,6 +522,13 @@ export function checkWorkflow(
   const hit = (rule: string, line: number, detail: string) => out.push({ rule, file, line, detail });
   const lines = readWorkflow(source);
   const keyed = lines.filter((l) => l.scalarOf === null);
+  // W7 (SEC-017): no workflow changes the shell pnpm runs package scripts in.
+  for (const f of scriptShellLines(
+    file,
+    source,
+    "a setting that changes the shell package scripts run in (`npm_config_script_shell`, `script-shell`, …)",
+  ))
+    hit(f.rule, f.line, f.detail);
 
   // W0: the reader understands block style only. Outside block scalars, once the `${{ … }}` expressions are removed,
   // no `{` or `}` may remain (a flow mapping, also inside a list item or a flow sequence), and a flow sequence may hold
@@ -616,13 +665,17 @@ export function checkWorkflowDir(
     ...workflowFiles(dir).flatMap((f) => checkWorkflow(f, readFileSync(join(dir, f), "utf8"), scripts)),
     ...checkTestScripts(scripts),
     ...checkNpmrc(join(dir, "..", "..", ".npmrc")),
+    ...checkPnpmWorkspace(join(dir, "..", "..", "pnpm-workspace.yaml")),
   ];
 }
+
+/** Findings in the repository root's files; every other file is a workflow under .github/workflows. */
+const ROOT_FILES = new Set(["package.json", ".npmrc", "pnpm-workspace.yaml"]);
 
 export const formatWorkflowFindings = (f: readonly WorkflowFinding[]) =>
   f
     .map(
       (x) =>
-        `${x.rule} ${/\.ya?ml$/.test(x.file) ? `.github/workflows/${x.file}` : x.file}:${x.line} ${x.detail}`,
+        `${x.rule} ${ROOT_FILES.has(x.file) ? x.file : `.github/workflows/${x.file}`}:${x.line} ${x.detail}`,
     )
     .join("\n") || "(none)";
