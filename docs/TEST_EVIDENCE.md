@@ -201,7 +201,7 @@ Mutation checks (not committed, each reverted and rebuilt before the final run):
 
 ## 4. CI
 
-Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #26 (V13-DB-006) it has six jobs: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build, end-to-end (Playwright). Since #156 (V13-ARCH-014) a seventh, visual baselines (Playwright), compares the committed baselines or, while none is committed, makes the candidates and passes only through `scripts/ci/visual-candidates.mjs`; since #160 (V13-ARCH-015) `scripts/ci/visual-mode.mjs` makes that choice from git (the checked-out commit and its first parent) and fails the job when every baseline is deleted (§4.2). Since #152 (V13-QA-016) a second workflow, `.github/workflows/cross-browser.yml`, runs the Firefox and WebKit projects on every push to `develop` and, since #164 (V13-ARCH-016), on every PR, where a green run on the head is part of ARCH's merge rule (§4.3). Since #166 (V13-ARCH-017) the database integration job also fails when an integration test ends skipped, todo or without a result, or a file collects no test (§4.4). Since #165 (V13-SEC-015) a test in the unit job reads every workflow and refuses the unsafe forms: wider permissions, `pull_request_target` and `workflow_run`, the `secrets` context, checkout credentials left in place, actions not pinned to a commit SHA, and expressions inside `run:`. Since #167 (V13-QA-019) every Playwright run, in CI and locally, carries a reporter that fails the run when a leak-detection test ends skipped, without a result or pinned to fail (§4.5). Since #170 (V13-ARCH-018) the database job's guard also fails when a test file under `tests/integration` or `tests/security/db` was not collected, and a unit test pins CI's test runs through `scripts/ci/test-invocations.mjs` (package.json scripts followed): no `--reporter`, `--config`, title, file or shard filter, `V13_DB_TESTS_REQUIRED` set to `"1"` only by an `env:` key, and the database, e2e and Firefox and WebKit runs present; since #171 (V13-ARCH-019) no run, the visual runs included, passes a snapshot-update option, `--ignore-snapshots` or `--no-deps`. Since #172 (V13-SEC-016) the workflow test also refuses what lets a test step pass when its test failed or did not run (§4.6). Since #173 (V13-QA-017) every test job writes a quality report of its own run to its step summary (§4.7). On pull requests the Vercel preview is one more check.
+Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #26 (V13-DB-006) it has six jobs: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build, end-to-end (Playwright). Since #156 (V13-ARCH-014) a seventh, visual baselines (Playwright), compares the committed baselines or, while none is committed, makes the candidates and passes only through `scripts/ci/visual-candidates.mjs`; since #160 (V13-ARCH-015) `scripts/ci/visual-mode.mjs` makes that choice from git (the checked-out commit and its first parent) and fails the job when every baseline is deleted (§4.2). Since #152 (V13-QA-016) a second workflow, `.github/workflows/cross-browser.yml`, runs the Firefox and WebKit projects on every push to `develop` and, since #164 (V13-ARCH-016), on every PR, where a green run on the head is part of ARCH's merge rule (§4.3). Since #166 (V13-ARCH-017) the database integration job also fails when an integration test ends skipped, todo or without a result, or a file collects no test (§4.4). Since #165 (V13-SEC-015) a test in the unit job reads every workflow and refuses the unsafe forms: wider permissions, `pull_request_target` and `workflow_run`, the `secrets` context, checkout credentials left in place, actions not pinned to a commit SHA, and expressions inside `run:`. Since #167 (V13-QA-019) every Playwright run, in CI and locally, carries a reporter that fails the run when a leak-detection test ends skipped, without a result or pinned to fail (§4.5). Since #170 (V13-ARCH-018) the database job's guard also fails when a test file under `tests/integration` or `tests/security/db` was not collected, and a unit test pins CI's test runs through `scripts/ci/test-invocations.mjs` (package.json scripts followed): no `--reporter`, `--config`, title, file or shard filter, `V13_DB_TESTS_REQUIRED` set to `"1"` only by an `env:` key, and the database, e2e and Firefox and WebKit runs present; since #171 (V13-ARCH-019) no run, the visual runs included, passes a snapshot-update option, `--ignore-snapshots` or `--no-deps`. Since #172 (V13-SEC-016) the workflow test also refuses what lets a test step pass when its test failed or did not run (§4.6). Since #173 (V13-QA-017) every test job writes a quality report of its own run to its step summary (§4.7). Since #174 (V13-SEC-017) the workflow test refuses more early exits in a test step, and since #182 (V13-ARCH-020) each required test job ends with a step that proves its run from the report the run wrote (§4.6). On pull requests the Vercel preview is one more check.
 
 | Run                                                                                              | Commit    | Result                                                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -210,7 +210,7 @@ Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #2
 Every pinned action SHA resolved. Warnings: the pinned versions target Node.js 20 and ran on Node.js 24 (OI-021); the
 dependency cache could not be saved (GitHub service message), which does not affect results.
 
-### 4.1 `develop`: one push run per merge (read from GitHub Actions, 7 Nov 2026 17:07 UTC)
+### 4.1 `develop`: one push run per merge (read from GitHub Actions, 7 Nov 2026 19:01 UTC)
 
 Each merge rests on the PR run named in its merge commit: green CI on the head the independent reviewer accepted, and since #164 (V13-ARCH-016) that head's green Firefox and WebKit run too (§4.3). The workflow cancels a running push run when a newer push to the same branch arrives (`concurrency`, `cancel-in-progress: true`), so a merge pushed within a minute of the next one shows a cancelled push run. The next successful push run contains that merge and verifies the combination; it is named in the last column. When `develop` moved after a PR's run, ARCH merges on that run only if `develop` changed none of the PR's files (ARCH ruling, 31 Oct). Since #24, ARCH also runs typecheck, lint, format, unit, test:db and Playwright on the combined tree locally before the merge, because a test already on `develop` can exercise behaviour the PR changes; the counts are in the merge commit and in the last column. A PR run checks out the PR head merged into `develop` as `develop` was when the run started (`refs/pull/<n>/merge`; the checkout step's log names both commits), so a PR run that started after the last `develop` move already covers the merged tree.
 
@@ -386,6 +386,14 @@ Each merge rests on the PR run named in its merge commit: green CI on the head t
 | `31626f7` | #171 ARCH-019 | [42391398479](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42391398479) | [42392146168](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42392146168) | success (combined tree `45de81f` + #171, equal to `31626f7`: unit 2,518, test:db 649 with the flag, e2e 469) |
 | `6046ab1` | #172 SEC-016 | [42392680900](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42392680900) | [42393111241](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42393111241) | success (combined tree `31626f7` + #172, equal to `6046ab1`: unit 2,562, test:db 649 with the flag, e2e 469) |
 | `c8878a7` | #173 QA-017 | [42393411907](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42393411907) | [42394116159](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42394116159) | success (combined tree `6046ab1` + #173, equal to `c8878a7`: unit 2,601, test:db 649 with the flag, e2e 469) |
+| `9291e65` | #174 SEC-017 | [42394923913](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42394923913) | [42395669997](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42395669997) | cancelled; verified by [42395699014](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42395699014) (combined tree `c8878a7` + #174, equal to `9291e65`: unit 2,609, test:db 649 with the flag, e2e 469) |
+| `58b2fa4` | #175 ARCH-002 | [42394894643](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42394894643) | [42395699014](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42395699014) | success (documentation only) |
+| `0b25e21` | #177 QA-018 | [42397600272](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42397600272) | [42398348940](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398348940) | success (combined tree `58b2fa4` + #177, equal to `0b25e21`: unit 2,617, test:db 649 with the flag, e2e 469) |
+| `8797649` | #180 FE-019 | [42397547527](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42397547527) | [42398724443](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398724443) | cancelled; verified by [42398759382](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398759382) (combined tree `0b25e21` + #180, equal to `8797649`: unit 2,626, test:db 649 with the flag, e2e 469) |
+| `0e331be` | #178 UX-019 | [42396469679](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42396469679) | [42398759382](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398759382) | success (documentation only) |
+| `75e2fe2` | #179 QA-025 | [42398415213](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398415213) | [42399342959](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42399342959) | success (combined tree `0e331be` + #179, equal to `75e2fe2`: unit 2,626, test:db 649 with the flag, e2e 471) |
+| `3a68162` | #176 PROC-028 | [42396409462](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42396409462) | [42401541616](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42401541616) | success (documentation only) |
+| `2aa4929` | #182 ARCH-020 | [42402999682](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42402999682) | [42403741841](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42403741841) | success (combined tree `3a68162` + #182, equal to `2aa4929`: unit 2,634, test:db 649 with the flag, e2e 471) |
 
 Run [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) on `develop` `b5ee5f4`: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build and Playwright all succeeded. Test counts are in each PR's evidence and in the job logs; this table records the job outcome only.
 
@@ -408,7 +416,7 @@ and the `develop` run on `357e574` ([42378248517](https://github.com/mh1m1m/CDF_
 not merged): its run [42377612701](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42377612701) failed at that step (job 128418329898: `refused: the first parent commit
 holds 36 baselines and this commit holds none`), and every other job of that run succeeded.
 
-### 4.3 Firefox and WebKit (V13-QA-016, V13-ARCH-016), read from GitHub Actions, 7 Nov 2026 17:07 UTC
+### 4.3 Firefox and WebKit (V13-QA-016, V13-ARCH-016), read from GitHub Actions, 7 Nov 2026 19:01 UTC
 
 Workflow `.github/workflows/cross-browser.yml` (#152), one job, "End-to-end in Firefox and WebKit (Playwright)": the
 projects `firefox-ar` and `webkit-ar` (the e2e scenarios and smoke, and `tests/a11y`; the Sentinel, the Truth
@@ -444,15 +452,33 @@ Chromium/Firefox/WebKit emulation, never real-device testing.
 | [42393111236](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42393111236) | push | `6046ab1` | success, 154 passed |
 | [42393411928](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42393411928) | PR #173 | `339bd9e` | success, 154 passed |
 | [42394116160](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42394116160) | push | `c8878a7` | success, 154 passed |
+| [42394923906](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42394923906) | PR #174 | `2527874` | success on its one re-run, 154 passed; the first attempt failed one Firefox test on the `/sign-in` load stall (OI-060) |
+| [42395670018](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42395670018) | push | `9291e65` | cancelled by the next push, 21 s later |
+| [42394894650](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42394894650) | PR #175 | `a3fffdd` | success, 154 passed |
+| [42395699011](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42395699011) | push | `58b2fa4` | success, 154 passed |
+| [42397600289](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42397600289) | PR #177 | `694a0b9` | success, 154 passed |
+| [42398349075](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398349075) | push | `0b25e21` | success, 154 passed |
+| [42397547538](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42397547538) | PR #180 | `3745c7a` | success, 154 passed |
+| [42398724441](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398724441) | push | `8797649` | cancelled by the next push, 26 s later |
+| [42396469481](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42396469481) | PR #178 | `1c2f6c4` | success, 154 passed |
+| [42398759413](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398759413) | push | `0e331be` | success, 154 passed |
+| [42398415210](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398415210) | PR #179 | `bb3c8ad` | success, 158 passed |
+| [42399343048](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42399343048) | push | `75e2fe2` | success, 158 passed |
+| [42396409396](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42396409396) | PR #176 | `ffb4954` | success, 154 passed (its run started before #179 merged) |
+| [42401541597](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42401541597) | push | `3a68162` | success, 158 passed |
+| [42402999609](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42402999609) | PR #182 | `db6d7ab` | success, 158 passed; the proof step passed |
+| [42403741756](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42403741756) | push | `2aa4929` | success, 158 passed; the proof step passed |
 
 Five green `develop` runs in a row (`1f7b685` to `f0f8437`); in between, the pull-request runs of PRs without the label
 ended skipped at the job's `if`. So, as `docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` §9.3 set out, V13-ARCH-016 runs the
 workflow on every PR, and a green run on the PR's head is part of ARCH's merge rule (`docs/AGENT_TASK_BOARD.md` §2
 rule 5). The repository has no branch protection (OPEN_ISSUES OI-016), so the rule is ARCH's, not GitHub's. Since #164
 the workflow starts on every PR by itself (its own PR run above had no label). The PR rows above are the accepted heads
-of the PRs merged since (#164 to #173), each green, and every `develop` push run since is green too.
+of the PRs merged since (#164 to #182), each green; #174's was green on ARCH's one re-run after the Firefox `/sign-in` load stall
+(OI-060). Every `develop` push run since that was not cancelled is green too. Since #179 the job runs 158 tests: QA-025's
+planted stall and its control in each engine.
 
-### 4.4 Database tests that do not run (V13-ARCH-017, V13-ARCH-018), read from GitHub Actions, 7 Nov 2026 17:07 UTC
+### 4.4 Database tests that do not run (V13-ARCH-017, V13-ARCH-018), read from GitHub Actions, 7 Nov 2026 19:01 UTC
 
 Since #166, CI's database integration job sets `V13_DB_TESTS_REQUIRED=1`, and `scripts/ci/vitest-skip-guard.mjs`, a
 Vitest reporter wired in `vitest.config.ts`, fails the run when an integration test ends skipped, todo or without a
@@ -484,7 +510,7 @@ and names each test at file:line. QA's planted runs for each cause are in `tests
 the skip conditions and SEC's truth tables are in `tests/fixtures/skip-conditions.ts`. ARCH's review planted runs
 through the real reporter (a helper's run-time `test.fail()`, `expectedStatus` set to failed, a status overwritten to
 passed, among others) until each failed the run, and six mutations of the reporter were caught. Every e2e job since
-ran with the reporter in place: 466, then 469 passed, no leak-skip finding (§4.1).
+ran with the reporter in place: 466, then 469, then 471 passed, no leak-skip finding (§4.1).
 
 ### 4.6 A test run's failure fails its job (V13-SEC-016)
 
@@ -496,16 +522,31 @@ line), `&&`, a pipe without pipefail, a background `&` and the run as a conditio
 non-zero literal status, `exec`, `return`, `trap` or a function definition in a test step; any operator but `&&` in a
 package script that runs a test (pnpm runs it with `sh -c`, without errexit or pipefail); `.npmrc`'s `script-shell` and
 `shell-emulator`. ARCH's probes planted each form into the real `ci.yml`, `package.json` or `.npmrc` before the merge;
-the real workflows and scripts give no finding. A static check cannot see every deliberate early exit (`eval`, an
-`alias`, a sourced file, `set -n`): V13-SEC-017 (in review) refuses more of those forms, and V13-ARCH-020 (not started) is to
-add a runtime proof that every required run left its report.
+the real workflows and scripts give no finding. Since #174 (V13-SEC-017) W7 also counts only an `exit` with a status
+from 1 to 255 as failing, sees through `command` and `builtin`, and reads a test step's command word the way bash does.
+It refuses `eval`, `source`, `.`, `alias`, `shopt … expand_aliases` and `set -n` in a test step, and npm's `script-shell`
+and `shell-emulator` settings in `env:`, a `$GITHUB_ENV` write, an `export`, a workflow or `pnpm-workspace.yaml`.
+
+A static check still cannot see every deliberate early exit. Since #182 (V13-ARCH-020) each required test job (unit,
+database, end-to-end, visual, and Firefox and WebKit) ends with a "Required run proof" step, `if: always()`, that runs
+`scripts/ci/required-runs.mjs` on the report its own run wrote (Vitest's JUnit XML, Playwright's JSON). It fails the job
+unless the report is there, complete and this run's, counts a test, records every test as run and passed (none failed,
+flaky, skipped, todo, without a result or pinned to fail) and no error outside the tests, and holds the run's own test
+files (Vitest) or projects (Playwright). In a Vitest run no test file may give a test a `retry`, because the JUnit report
+records a test that failed and then passed as passed (SEC's R1); ci-checks keeps `retry`, and tags that carry `retry` or
+`fails`, out of `vitest.config.ts` and its setup files. The throwaway PR #183, closed unmerged, planted one early exit in
+each job (`set -n`, an alias to a wrapper that swallows the exit code, `eval "exit 0"`, a sourced file that exits 0, a
+`pnpm` shadowed on the PATH): every planted test step ended green, and every job failed at its proof step (CI
+[42400781723](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42400781723), Cross-browser [42400781795](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42400781795)). The script's header names what the proof cannot see, first of all
+code that runs in the job, which can write any file, the report and the proof's own script included.
 
 ### 4.7 PR quality report (V13-QA-017)
 
 Since #173, every test job (unit, database, end-to-end and visual) runs `tests/report/pr-report.mjs` after its tests,
 whatever their result, and writes a Markdown report of that job's own run to its step summary and to
-`test-results/pr-report.md` in its artifact (REQ-CICD-002): the counts, each failed or flaky test with its file and
-line and first error line, screenshot comparisons, accessibility and reflow findings, errors outside any test, and a
+`test-results/pr-report.md` in its artifact (REQ-CICD-002): a count for each of its sections (failed, flaky, screenshot
+comparisons, UX findings, axe findings and errors outside any test; it gives no pass or fail total), each failed or flaky
+test with its file and line and first error line, screenshot comparisons, accessibility and reflow findings, errors outside any test, and a
 fixed table of usual corrections. When a job failed and no test is listed, the report says the job failed outside the
 listed tests and points to the log. Credentials are redacted in every cell. Performance changes read "not measured in
 M1": no baseline or budget exists, so that part of REQ-CICD-002 stays open. The report never decides a job's result.
