@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   checkNpmrc,
+  checkPnpmWorkspace,
   checkTestScripts,
   checkWorkflow,
   checkWorkflowDir,
@@ -711,6 +712,171 @@ jobs:
         expect(formatWorkflowFindings(checkWorkflowDir(dir))).toContain("W7 .npmrc:2 ");
         expect(checkNpmrc(join(root, "missing.npmrc"))).toEqual([]);
         expect(checkNpmrc(join(process.cwd(), ".npmrc")), "the repository's .npmrc").toEqual([]);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+  });
+
+  describe("V13-SEC-017: ARCH's INFOs on 9a6a94b", () => {
+    const before = "          echo start | tee start.log";
+    it("exit: only a literal 1–255 is a failure (the shell keeps the status modulo 256)", () => {
+      for (const ok of ["exit 1", "exit 2", "exit 99", "exit 199", "exit 249", "exit 255"])
+        expect(earlyExits(ok), ok).toEqual([]);
+      for (const bad of ["exit 0", "exit 256", "exit 512", "exit 300", "exit 00", "exit 01", "exit -1"])
+        expect(earlyExits(bad), bad).toEqual([`\`${bad}\``]);
+      const src = swap(before, '          [ -n "$X" ] || exit 256');
+      expect(w7(src)).toEqual([lineOf(src, "exit 256")]);
+    });
+    it("command, builtin, eval, source, ., alias, shopt expand_aliases and set -n in a test step", () => {
+      for (const [line, at] of [
+        ["command exit 0", "command exit"],
+        ["builtin exit 0", "builtin exit"],
+        ["command builtin exec true", "exec true"],
+        ["eval 'exit 0'", "eval"],
+        ["source ./ci.sh", "source"],
+        [". ./ci.sh", ". ./ci.sh"],
+        ["alias pnpm=true", "alias"],
+        ["shopt -s expand_aliases", "shopt"],
+        ["set -n", "set -n"],
+        ["set -en", "set -en"],
+        ["set -o noexec", "noexec"],
+      ] as const) {
+        const src = swap(before, `          ${line}`);
+        expect(w7(src), line).toEqual([lineOf(src, at)]);
+      }
+    });
+    it("allowed: set -euo pipefail, a dot inside a word or quotes, a comment, command -v", () => {
+      for (const line of [
+        "set -euo pipefail",
+        "set -eux",
+        "node ./scripts/x.mjs",
+        'echo "source . eval alias"',
+        "# exit 0 (see ARCH-015). source x",
+        "command -v jq",
+        "echo done. # ok",
+      ])
+        expect(w7(swap(before, `          ${line}`)), line).toEqual([]);
+    });
+    it("npm_config_script_shell / shell_emulator in env:, a $GITHUB_ENV write or an export, any case", () => {
+      for (const [from, to, at] of [
+        [
+          "  test:\n    runs-on: ubuntu-24.04\n",
+          "  test:\n    env:\n      npm_config_script_shell: /bin/true\n    runs-on: ubuntu-24.04\n",
+          "npm_config_script_shell",
+        ],
+        ["jobs:\n", "env:\n  NPM_CONFIG_SCRIPT_SHELL: /bin/true\njobs:\n", "NPM_CONFIG_SCRIPT_SHELL"],
+        [
+          "      - run: echo ready\n",
+          '      - run: echo "npm_config_shell_emulator=true" >> "$GITHUB_ENV"\n',
+          "GITHUB_ENV",
+        ],
+        [before, "          export npm_config_script_shell=/bin/true", "export"],
+        [before, "          pnpm config set script-shell /bin/true", "config set"],
+        [before, "          pnpm config set shellEmulator true", "config set"],
+      ] as const) {
+        const src = swap(from, to);
+        expect(
+          checkWorkflow("planted.yml", src, {})
+            .filter((f) => f.rule === "W7")
+            .map((f) => f.line),
+          to,
+        ).toEqual([lineOf(src, at)]);
+      }
+      // A comment that names it is not a setting.
+      expect(w7(swap(before, "          echo start # npm_config_script_shell is refused"))).toEqual([]);
+    });
+    it("R1 on #174: only space and tab start a comment (U+00A0 before # is part of a word, in bash and YAML)", () => {
+      const nbsp = "\u00a0";
+      for (const [line, at] of [
+        [`echo a${nbsp}#; exit 0`, "exit 0"],
+        [`echo a${nbsp}#; export npm_config_script_shell=/bin/true`, "export"],
+      ] as const) {
+        const src = swap(before, `          ${line}`);
+        expect(w7(src), line).toEqual([lineOf(src, at)]);
+      }
+      expect(stripComment(`a:${nbsp}# b`)).toBe(`a:${nbsp}# b`);
+      expect(stripComment("a:\t# b")).toBe("a:");
+      // A tab before # still starts a comment.
+      expect(w7(swap(before, "          echo a\t# ; exit 0"))).toEqual([]);
+    });
+    it("R2 on #174: command -p / --, builtin --, set -Cn, npm_config_script-shell", () => {
+      for (const [line, at] of [
+        ["command -p exit 0", "command -p"],
+        ["command -- exit 0", "command --"],
+        ["command -p -- exit 0", "command -p --"],
+        ["builtin -- exit 0", "builtin --"],
+        ["set -Cn", "set -Cn"],
+        ["export npm_config_script-shell=/bin/true", "export"],
+        ["export NPM_CONFIG_SHELL-EMULATOR=true", "export"],
+      ] as const) {
+        const src = swap(before, `          ${line}`);
+        expect(w7(src), line).toEqual([lineOf(src, at)]);
+      }
+      for (const line of ["command -v jq", "command -V pnpm", "command -pv jq"])
+        expect(w7(swap(before, `          ${line}`)), line).toEqual([]);
+      const env = swap(
+        "  test:\n    runs-on: ubuntu-24.04\n",
+        "  test:\n    env:\n      npm_config_script-shell: /bin/true\n    runs-on: ubuntu-24.04\n",
+      );
+      expect(w7(env)).toEqual([lineOf(env, "npm_config_script-shell")]);
+    });
+    it("R3 on #174: prefixes bash allows, words built at run time, escapes and backslash-newline", () => {
+      for (const [line, at] of [
+        ["if exit 0; then :; fi", "if exit"],
+        ["if true; then :; elif exit 0; then :; fi", "elif exit"],
+        ["while exit 0; do :; done", "while exit"],
+        ["until exit 0; do :; done", "until exit"],
+        ["time exit 0", "time exit"],
+        ["time -p exit 0", "time -p"],
+        ["X=1 exit 0", "X=1"],
+        ["A=1 B[2]=x C+=y exit 0", "A=1"],
+        ['"exit" 0', '"exit"'],
+        ["\\exit 0", "exit 0"],
+        ['e"x"it 0', 'e"x"it'],
+        ["echo \\'; exit 0; echo \\'", "echo \\'"],
+        ["x=exit; $x 0", "$x"],
+        ["`echo exit` 0", "`echo"],
+        ["$(echo exit) 0", "$(echo"],
+        // An escaped backslash: the `;` after it is an operator again.
+        ["echo \\\\; exit 0", "echo \\\\;"],
+      ] as const) {
+        const src = swap(before, `          ${line}`);
+        expect(w7(src), line).toEqual([lineOf(src, at)]);
+      }
+      const joined = swap(before, "          ex\\\n          it 0");
+      expect(w7(joined), "ex\\ + it 0").toEqual([lineOf(joined, "ex\\")]);
+      // Allowed: a quoted argument, an assignment alone, a variable as an argument, a continued test command.
+      for (const line of [
+        'mode="$(node x.mjs)"',
+        'echo "$X" \\"done\\"',
+        '[ "$mode" = compare ]',
+        "X=1 node x.mjs",
+        'if [ -n "$X" ]; then echo y; fi',
+        "echo a \\\n          b",
+        // An escaped `;` is a word, not an operator: bash echoes "; exit 0".
+        "echo \\; exit 0",
+      ])
+        expect(w7(swap(before, `          ${line}`)), line).toEqual([]);
+    });
+    it("pnpm-workspace.yaml scriptShell / shellEmulator, through checkWorkflowDir", () => {
+      const root = mkdtempSync(join(tmpdir(), "v13-w7-ws-"));
+      try {
+        const dir = join(root, ".github", "workflows");
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(join(dir, "a.yml"), W7);
+        expect(checkWorkflowDir(dir, SCRIPTS)).toEqual([]);
+        writeFileSync(
+          join(root, "pnpm-workspace.yaml"),
+          "packages:\n  - .\n# scriptShell is refused\nscriptShell: /bin/true\nshellEmulator: true\n",
+        );
+        expect(
+          checkPnpmWorkspace(join(root, "pnpm-workspace.yaml")).map((f) => `${f.file}:${f.line}`),
+        ).toEqual(["pnpm-workspace.yaml:4", "pnpm-workspace.yaml:5"]);
+        expect(formatWorkflowFindings(checkWorkflowDir(dir, SCRIPTS))).toContain("W7 pnpm-workspace.yaml:4 ");
+        expect(checkPnpmWorkspace(join(process.cwd(), "pnpm-workspace.yaml")), "the repository's").toEqual(
+          [],
+        );
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
