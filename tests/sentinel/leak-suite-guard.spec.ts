@@ -3,15 +3,26 @@
 // browser in the e2e job, before the suites it guards matter. Each forbidden form is planted into a synthetic source
 // first, so a guard that cannot see it fails here before it is trusted. SYNTHETIC data only.
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join, relative } from "node:path";
 import { expect, test } from "@playwright/test";
 import ts from "typescript";
 import {
+  checkEngineCoverage,
   checkListing,
   checkSnapshotConfig,
   checkSnapshotFlags,
   codeOnly,
+  type EngineCoverage,
+  filesPerProject,
   formatGuardViolations,
   guardLeakSuites,
   isPlaywrightSuite,
@@ -23,6 +34,7 @@ import {
   type SkipAllowance,
   testCallLines,
 } from "../critic/leak-suite-guard";
+import { CHROMIUM_ONLY, CHROMIUM_PROJECT, CROSS_BROWSER_PROJECTS } from "../fixtures/browsers";
 
 const ROOT = process.cwd();
 const read = (file: string) => {
@@ -386,9 +398,13 @@ test.describe("what is not a pin, focus or skip", () => {
 // L1 (V13-QA-011): the runner's own listing against the files' own test calls, which closes the per-file scan's
 // limit (a helper defined in another file). `--list` loads the files without a browser or a server.
 const PLAYWRIGHT_CLI = join(ROOT, "node_modules", "@playwright", "test", "cli.js");
-function playwrightList(args: readonly string[]): { suites: Parameters<typeof listedTests>[0]["suites"] } {
+function playwrightList(
+  args: readonly string[],
+  env: Readonly<Record<string, string>> = {},
+): { suites: Parameters<typeof listedTests>[0]["suites"] } {
   const out = execFileSync(process.execPath, [PLAYWRIGHT_CLI, "test", "--list", "--reporter=json", ...args], {
     cwd: ROOT,
+    env: { ...process.env, ...env },
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
     timeout: 120_000,
@@ -501,17 +517,65 @@ test.describe("G7: visual baselines are never written by the runner in CI (V13-Q
     `import { defineConfig } from "@playwright/test";\n${extra}export default defineConfig({\n  testDir: "tests",\n${props}\n});\n`;
   const PINNED = '  updateSnapshots: "none",';
 
+  // Every workflow file is read, so a workflow added later is scanned without a change here (ARCH finding on #152).
+  const flagFiles = (root: string): string[] => {
+    const dir = join(root, ".github", "workflows");
+    const workflows = existsSync(dir)
+      ? readdirSync(dir)
+          .filter((f) => /\.ya?ml$/.test(f))
+          .sort()
+          .map((f) => `.github/workflows/${f}`)
+      : [];
+    return [...workflows, "package.json"];
+  };
+  const scanFlagFiles = (root: string) =>
+    flagFiles(root).flatMap((f) => {
+      const path = join(root, f);
+      return existsSync(path) ? checkSnapshotFlags(f, readFileSync(path, "utf8")) : [];
+    });
+
   test("the real config, every workflow and package.json are clean", () => {
     const src = read(CONFIG);
     expect(src).not.toBeNull();
-    const v = [
-      ...checkSnapshotConfig(CONFIG, src!),
-      ...[".github/workflows/ci.yml", ".github/workflows/release.yml", "package.json"].flatMap((f) => {
-        const text = read(f);
-        return text === null ? [] : checkSnapshotFlags(f, text);
-      }),
-    ];
+    const files = flagFiles(ROOT);
+    expect(files).toEqual(
+      expect.arrayContaining([".github/workflows/ci.yml", ".github/workflows/release.yml", "package.json"]),
+    );
+    const v = [...checkSnapshotConfig(CONFIG, src!), ...scanFlagFiles(ROOT)];
     expect(v, formatGuardViolations(v)).toEqual([]);
+  });
+
+  test("a workflow file added under .github/workflows is scanned (.yml and .yaml) → G7, at its file and line", () => {
+    mkdirSync(join(ROOT, "test-results"), { recursive: true });
+    const dir = mkdtempSync(join(ROOT, "test-results", "guard-g7-"));
+    try {
+      mkdirSync(join(dir, ".github", "workflows"), { recursive: true });
+      writeFileSync(join(dir, ".github", "workflows", "ci.yml"), "name: ci\n      - run: pnpm test\n");
+      writeFileSync(
+        join(dir, ".github", "workflows", "zz-planted.yaml"),
+        "name: planted\n      - run: pnpm exec playwright test --update-snapshots\n",
+      );
+      writeFileSync(
+        join(dir, ".github", "workflows", "visual.yml"),
+        "name: visual\n\n        run: pnpm exec playwright test -u\n",
+      );
+      writeFileSync(join(dir, ".github", "workflows", "notes.md"), "playwright test -u\n");
+      writeFileSync(join(dir, "package.json"), '{ "scripts": { "test": "vitest" } }\n');
+      expect(flagFiles(dir)).toEqual([
+        ".github/workflows/ci.yml",
+        ".github/workflows/visual.yml",
+        ".github/workflows/zz-planted.yaml",
+        "package.json",
+      ]);
+      const v = scanFlagFiles(dir);
+      expect(rulesOf(v), formatGuardViolations(v)).toEqual(["G7"]);
+      expect(v.map((x) => `${x.file}:${x.line}`).sort()).toEqual([
+        ".github/workflows/visual.yml:3",
+        ".github/workflows/zz-planted.yaml:2",
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   test("the pinned form is clean (the control), including readable spreads and literal element access", () => {
@@ -614,5 +678,124 @@ test.describe("G7: visual baselines are never written by the runner in CI (V13-Q
       '    "test:e2e": "playwright test --grep-invert @slow-ui",',
     ].join("\n");
     expect(checkSnapshotFlags("ci.yml", text)).toEqual([]);
+  });
+});
+
+// B1 (V13-QA-016): the Firefox and WebKit projects' testIgnore never takes a leak suite away from Chromium. The listing
+// is the runner's own, with both engines selected; nothing is launched, so no Firefox or WebKit is needed here.
+test.describe("B1: Chromium runs every Sentinel spec and leak suite; the engines run none of the Chromium-only ones", () => {
+  // The visual projects are switched off here, so the listing's projects are exactly Chromium and the two engines in
+  // any job that runs this spec.
+  const ALL_ENGINES = { V13_E2E_BROWSERS: CROSS_BROWSER_PROJECTS.join(","), V13_E2E_VISUAL: "" };
+  const sentinelSpecs = readdirSync(join(ROOT, "tests", "sentinel"))
+    .filter((f) => f.endsWith(".spec.ts"))
+    .map((f) => `tests/sentinel/${f}`);
+  const coverage: EngineCoverage = {
+    chromium: CHROMIUM_PROJECT,
+    engines: CROSS_BROWSER_PROJECTS,
+    required: [...new Set([...sentinelSpecs, ...LEAK_SUITES.filter((f) => isPlaywrightSuite(read(f)!))])],
+    chromiumOnly: Object.keys(CHROMIUM_ONLY),
+  };
+
+  test("the real configuration, with both engines selected, is clean", () => {
+    expect(sentinelSpecs.length, "the Sentinel specs").toBeGreaterThanOrEqual(6);
+    const perProject = filesPerProject(playwrightList([], ALL_ENGINES));
+    expect([...perProject.keys()].sort()).toEqual([CHROMIUM_PROJECT, ...CROSS_BROWSER_PROJECTS].sort());
+    const v = checkEngineCoverage(perProject, read, coverage);
+    expect(v, formatGuardViolations(v)).toEqual([]);
+  });
+
+  test("without V13_E2E_BROWSERS only Chromium is listed (a plain run needs no other engine)", () => {
+    const perProject = filesPerProject(playwrightList([], { V13_E2E_BROWSERS: "", V13_E2E_VISUAL: "" }));
+    expect([...perProject.keys()]).toEqual([CHROMIUM_PROJECT]);
+  });
+
+  test("an unknown name in V13_E2E_BROWSERS is refused, never a quiet Chromium-only run", () => {
+    expect(() => playwrightList([], { V13_E2E_BROWSERS: "firefox" })).toThrow();
+  });
+
+  const SENTINEL = "tests/sentinel/planted-leak.spec.ts";
+  const LEAK_E2E = "tests/e2e/scenario-a-case-switching.spec.ts";
+  const ONLY = "tests/e2e/only.spec.ts";
+  const SMOKE = "tests/e2e/smoke.spec.ts";
+  const planted: EngineCoverage = {
+    chromium: "desktop-ar",
+    engines: ["firefox-ar", "webkit-ar"],
+    required: [SENTINEL, LEAK_E2E],
+    chromiumOnly: [ONLY],
+  };
+  const exists = (f: string) => ([SENTINEL, LEAK_E2E, ONLY, SMOKE].includes(f) ? "" : null);
+  const clean = (): Map<string, Set<string>> =>
+    new Map([
+      ["desktop-ar", new Set([SENTINEL, LEAK_E2E, ONLY, SMOKE])],
+      ["firefox-ar", new Set([SMOKE])],
+      ["webkit-ar", new Set([SMOKE])],
+    ]);
+  const b1 = (m: Map<string, Set<string>>, c = planted) => checkEngineCoverage(m, exists, c);
+
+  test("a listing that keeps every suite on Chromium is clean (the control)", () => {
+    expect(b1(clean())).toEqual([]);
+  });
+
+  const cases: [string, (m: Map<string, Set<string>>) => void, EngineCoverage?][] = [
+    ["Chromium no longer runs a Sentinel spec", (m) => m.get("desktop-ar")!.delete(SENTINEL)],
+    ["Chromium no longer runs an e2e leak suite", (m) => m.get("desktop-ar")!.delete(LEAK_E2E)],
+    ["the Chromium project is missing", (m) => m.delete("desktop-ar")],
+    ["an engine runs a Sentinel spec", (m) => m.get("firefox-ar")!.add(SENTINEL)],
+    [
+      "an engine runs SEC's browser security suite",
+      (m) => m.get("webkit-ar")!.add("tests/security/e2e/surface.spec.ts"),
+    ],
+    ["an engine runs a Chromium-only spec", (m) => m.get("webkit-ar")!.add(ONLY)],
+    ["an engine project lists nothing", (m) => m.set("firefox-ar", new Set())],
+    ["an engine project is missing", (m) => m.delete("webkit-ar")],
+    [
+      "a Chromium-only entry names no file",
+      () => {},
+      { ...planted, chromiumOnly: [ONLY, "tests/e2e/gone.spec.ts"] },
+    ],
+  ];
+  for (const [form, plant, c] of cases)
+    test(`${form} → B1`, () => {
+      const m = clean();
+      plant(m);
+      const v = b1(m, c);
+      expect(rulesOf(v), formatGuardViolations(v)).toEqual(["B1"]);
+    });
+
+  test("end to end: a testIgnore planted on the Chromium project is caught on the runner's listing", () => {
+    const dir = mkdtempSync(join(ROOT, "test-results", "guard-b1-"));
+    try {
+      writeFileSync(join(dir, "leak.spec.ts"), wrap('test("leak", async () => {});'));
+      writeFileSync(join(dir, "smoke.spec.ts"), wrap('test("smoke", async () => {});'));
+      writeFileSync(
+        join(dir, "pw.config.ts"),
+        [
+          'import { defineConfig } from "@playwright/test";',
+          "export default defineConfig({",
+          '  testDir: ".",',
+          '  testMatch: "*.spec.ts",',
+          "  projects: [",
+          '    { name: "desktop-ar", testIgnore: "leak.spec.ts" },',
+          '    { name: "firefox-ar", testMatch: "smoke.spec.ts" },',
+          "  ],",
+          "});",
+          "",
+        ].join("\n"),
+      );
+      const rel = `${relative(ROOT, dir)}/`;
+      const perProject = filesPerProject(playwrightList(["--config", join(dir, "pw.config.ts")]), rel);
+      expect(perProject.get("firefox-ar")).toEqual(new Set([`${rel}smoke.spec.ts`]));
+      const v = checkEngineCoverage(perProject, () => "", {
+        chromium: "desktop-ar",
+        engines: [],
+        required: [`${rel}leak.spec.ts`],
+        chromiumOnly: [],
+      });
+      expect(rulesOf(v), formatGuardViolations(v)).toEqual(["B1"]);
+      expect(v[0]!.detail).toMatch(/does not run this suite/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
