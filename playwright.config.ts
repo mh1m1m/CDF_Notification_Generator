@@ -170,6 +170,8 @@ export default defineConfig({
     ? [
         ["list"],
         ["junit", { outputFile: "test-results/e2e-junit.xml" }],
+        // the PR quality report's input (tests/report/pr-report.mjs, V13-QA-017): errors, attachments, file:line
+        ["json", { outputFile: "test-results/playwright-results.json" }],
         ["html", { open: "never" }],
         [LEAK_SKIP_REPORTER],
       ]

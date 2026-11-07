@@ -63,6 +63,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
+      # The PR quality report (V13-QA-017, REQ-CICD-002): built from this job's own test reports, appended to the
+      # step summary and kept in the artifact; inputs come only through env (never interpolated into run:), and
+      # connection strings are redacted (tests/report/pr-report.mjs).
+      - name: PR quality report
+        if: always()
+        env:
+          PR_REPORT_TITLE: Unit tests
+          PR_REPORT_JUNIT: test-results/vitest-junit.xml
+          PR_REPORT_OUT: test-results/pr-report.md
+          PR_REPORT_JOB_STATUS: ${{ job.status }}
+        run: node tests/report/pr-report.mjs
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -116,6 +127,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:reset
       - run: pnpm test:db
+      # The PR quality report (V13-QA-017, REQ-CICD-002): built from this job's own test reports, appended to the
+      # step summary and kept in the artifact; inputs come only through env (never interpolated into run:), and
+      # connection strings are redacted (tests/report/pr-report.mjs).
+      - name: PR quality report
+        if: always()
+        env:
+          PR_REPORT_TITLE: Database integration tests
+          PR_REPORT_JUNIT: test-results/vitest-junit.xml
+          PR_REPORT_OUT: test-results/pr-report.md
+          PR_REPORT_JOB_STATUS: ${{ job.status }}
+        run: node tests/report/pr-report.mjs
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -204,6 +226,17 @@ jobs:
       # Builds and starts the app on port 3100 with a session secret generated for this run and V13_DATABASE_URL set to
       # V13_E2E_DATABASE_URL (playwright.config.ts); the app installs its claims key at start (instrumentation.ts).
       - run: pnpm test:e2e
+      # The PR quality report (V13-QA-017, REQ-CICD-002): built from this job's own test reports, appended to the
+      # step summary and kept in the artifact; inputs come only through env (never interpolated into run:), and
+      # connection strings are redacted (tests/report/pr-report.mjs).
+      - name: PR quality report
+        if: always()
+        env:
+          PR_REPORT_TITLE: End-to-end (Playwright)
+          PR_REPORT_PLAYWRIGHT: test-results/playwright-results.json
+          PR_REPORT_OUT: test-results/pr-report.md
+          PR_REPORT_JOB_STATUS: ${{ job.status }}
+        run: node tests/report/pr-report.mjs
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -284,15 +317,27 @@ jobs:
             echo "visual mode: unexpected output: $mode" >&2
             exit 1
           fi
+      # The PR quality report (V13-QA-017, REQ-CICD-002): built from this job's own test reports, appended to the
+      # step summary and kept in the artifact; inputs come only through env (never interpolated into run:), and
+      # connection strings are redacted (tests/report/pr-report.mjs).
+      - name: PR quality report
+        if: always()
+        env:
+          PR_REPORT_TITLE: Visual baselines (Playwright)
+          PR_REPORT_PLAYWRIGHT: test-results/playwright-results.json,test-results/visual-baseline.json
+          PR_REPORT_OUT: test-results/pr-report.md
+          PR_REPORT_JOB_STATUS: ${{ job.status }}
+        run: node tests/report/pr-report.mjs
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: visual-results
-          # Named paths only (SEC's INFO 2 on #156): candidates, the candidate run's JSON report, the comparison's
-          # expected, actual and diff images, and the HTML report.
+          # Named paths only (SEC's INFO 2 on #156): candidates, the candidate run's JSON report, the PR quality report,
+          # the comparison's expected, actual and diff images, and the HTML report.
           path: |
             test-results/baseline-candidates/
             test-results/visual-baseline.json
+            test-results/pr-report.md
             test-results/playwright/**/*.png
             playwright-report/
           if-no-files-found: ignore
