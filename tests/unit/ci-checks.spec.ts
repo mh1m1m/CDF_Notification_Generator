@@ -3,12 +3,14 @@
 // (V13-ARCH-014: a run without committed baselines passes only when it failed on missing snapshots alone and wrote one
 // PNG candidate for each, and no baseline), and the mode (V13-ARCH-015: candidate mode is refused once baselines have
 // been committed, so deleting every baseline fails the job). Then the trigger of .github/workflows/cross-browser.yml
-// (V13-ARCH-016: every pull request and every push to develop), and the skip guard of CI's database job (V13-ARCH-017:
-// an integration test that did not run fails the run).
+// (V13-ARCH-016: every pull request and every push to develop), the skip guard of CI's database job (V13-ARCH-017:
+// an integration test that did not run fails the run), and the guards' own coverage (V13-ARCH-018: a database test file
+// the run did not collect fails it, and CI's test runs pass no reporter, config or filter that would keep a test from
+// its guard).
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { findReferencedEnvNames, parseEnvExample } from "@/scripts/ci/check-env-example.mjs";
@@ -16,11 +18,22 @@ import { findPhysicalClasses, findPhysicalCss } from "@/scripts/ci/check-logical
 import { checkCandidateRun, collectTests } from "@/scripts/ci/visual-candidates.mjs";
 import { decideVisualMode } from "@/scripts/ci/visual-mode.mjs";
 import {
+  checkTestInvocations,
+  findInvocations,
+  formatInvocationFindings,
+  splitCommands,
+} from "@/scripts/ci/test-invocations.mjs";
+import {
+  findUncollectedFiles,
   findUnrunTests,
+  formatFindings,
   GUARDED_PROJECTS,
+  GUARDED_ROOTS,
+  listTestFiles,
   SkipGuardReporter,
   skipGuardReporters,
 } from "@/scripts/ci/vitest-skip-guard.mjs";
+import { readWorkflow, workflowFiles } from "@/tests/security/workflow-hardening";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -586,7 +599,7 @@ describe("skip guard (V13-ARCH-017)", () => {
           `import { SkipGuardReporter } from ${JSON.stringify(guard)};`,
           "export default {",
           "  test: {",
-          '    reporters: ["default", new SkipGuardReporter()],',
+          '    reporters: ["default", new SkipGuardReporter({ roots: ["db"] })],',
           "    includeTaskLocation: true,",
           "    projects: [",
           '      { test: { name: "integration", include: ["db/*.spec.mjs"] } },',
@@ -612,7 +625,7 @@ describe("skip guard (V13-ARCH-017)", () => {
 
       const failed = run({ "db/ok.spec.mjs": ok, "db/planted.spec.mjs": planted });
       expect(failed.status, failed.stdout + failed.stderr).toBe(1);
-      expect(failed.stderr).toContain("skip guard (V13-ARCH-017): 4 tests in integration did not run");
+      expect(failed.stderr).toContain("skip guard (V13-ARCH-017, V13-ARCH-018): 4 findings in integration");
       for (const line of [
         "db/planted.spec.mjs:3 planted skip (skipped)",
         "db/planted.spec.mjs:5 planted skipIf > inner (skipped)",
@@ -632,5 +645,402 @@ describe("skip guard (V13-ARCH-017)", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("guard coverage (V13-ARCH-018)", () => {
+  // SEC's INFO on #166 and ARCH's I2 on #167. The skip guard walks tests/integration and tests/security/db itself, so a
+  // database test file that the run did not collect fails the run, whatever the include glob says. And CI's test runs,
+  // with the package.json scripts they run, pass no --reporter (which replaces the configured guards), no other config
+  // and no filter (scripts/ci/test-invocations.mjs).
+  const vitest = join(ROOT, "node_modules", "vitest", "vitest.mjs");
+  const guard = pathToFileURL(join(ROOT, "scripts", "ci", "vitest-skip-guard.mjs")).href;
+  const OK_SPEC = 'import { expect, it } from "vitest";\nit("runs", () => expect(1).toBe(1));\n';
+  /** A child Vitest's environment: none of this worker's Vitest variables, no CI reporters and no flag. */
+  const childEnv = (): NodeJS.ProcessEnv => {
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    for (const k of Object.keys(env)) if (k.startsWith("VITEST")) delete env[k];
+    delete env.CI;
+    delete env.V13_DB_TESTS_REQUIRED;
+    return env;
+  };
+  /** A temporary root under test-results/ with `files`, and a config whose integration project has the guard. */
+  const plant = (files: Record<string, string>, include: string[], roots: string[] = ["db"]) => {
+    mkdirSync(join(ROOT, "test-results"), { recursive: true });
+    const dir = mkdtempSync(join(ROOT, "test-results", "guard-coverage-"));
+    for (const [name, src] of Object.entries(files)) {
+      mkdirSync(join(dir, name, ".."), { recursive: true });
+      writeFileSync(join(dir, name), src);
+    }
+    writeFileSync(
+      join(dir, "vitest.config.mjs"),
+      [
+        `import { SkipGuardReporter } from ${JSON.stringify(guard)};`,
+        "export default {",
+        "  test: {",
+        `    reporters: ["default", new SkipGuardReporter({ roots: ${JSON.stringify(roots)} })],`,
+        "    projects: [",
+        `      { test: { name: "integration", include: ${JSON.stringify(include)} } },`,
+        '      { test: { name: "unit", include: ["unit/*.spec.mjs"] } },',
+        "    ],",
+        "  },",
+        "};",
+        "",
+      ].join("\n"),
+    );
+    return dir;
+  };
+  const plantedConfig = (dir: string) => ["--root", dir, "--config", join(dir, "vitest.config.mjs")];
+  /** The files the integration project collects, from `vitest list --filesOnly`, which imports no test file. */
+  const integrationFiles = (root: string, ...config: string[]): string[] => {
+    const run = spawnSync(
+      process.execPath,
+      [vitest, "list", "--project", "integration", "--filesOnly", "--json", ...config],
+      { cwd: ROOT, encoding: "utf8", env: childEnv() },
+    );
+    expect(run.status, run.stdout + run.stderr).toBe(0);
+    return (JSON.parse(run.stdout.slice(run.stdout.indexOf("["))) as { file: string; projectName: string }[])
+      .filter((f) => f.projectName === "integration")
+      .map((f) => relative(root, f.file).split(sep).join("/"));
+  };
+
+  it("walks the guarded directories itself: every test file by its name, and a directory that is gone", () => {
+    expect(GUARDED_ROOTS).toEqual(["tests/integration", "tests/security/db"]);
+    const dir = mkdtempSync(join(tmpdir(), "guard-walk-"));
+    try {
+      for (const f of [
+        "db/a.spec.ts",
+        "db/sub/b.test.mjs",
+        "db/sub/deep/c.spec.tsx",
+        "db/helper.ts",
+        "db/notes.md",
+        "other/x.spec.ts",
+      ]) {
+        mkdirSync(join(dir, f, ".."), { recursive: true });
+        writeFileSync(join(dir, f), "");
+      }
+      const walked = listTestFiles(dir, ["db", "gone"]);
+      expect(walked).toEqual({
+        files: ["db/a.spec.ts", "db/sub/b.test.mjs", "db/sub/deep/c.spec.tsx"],
+        missing: ["gone"],
+      });
+      expect(findUncollectedFiles(walked, ["db/a.spec.ts"])).toEqual([
+        { file: "gone", line: null, name: "", reason: "directory not found" },
+        { file: "db/sub/b.test.mjs", line: null, name: "", reason: "not collected" },
+        { file: "db/sub/deep/c.spec.tsx", line: null, name: "", reason: "not collected" },
+      ]);
+      // The control: every walked file collected (a file collected beyond the walk is no finding).
+      const all = ["db/a.spec.ts", "db/sub/b.test.mjs", "db/sub/deep/c.spec.tsx", "other/x.spec.ts"];
+      expect(findUncollectedFiles(listTestFiles(dir, ["db"]), all)).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("the real vitest.config.ts's integration project collects every test file under the guarded directories", () => {
+    const walked = listTestFiles(ROOT, GUARDED_ROOTS);
+    expect(walked.missing).toEqual([]);
+    expect(walked.files.length).toBeGreaterThan(0);
+    const found = findUncollectedFiles(walked, integrationFiles(ROOT));
+    expect(found, formatFindings(found)).toEqual([]);
+  }, 60_000);
+
+  it("a planted narrowed include glob drops a file, and the comparison names it without running a test", () => {
+    const dir = plant({ "db/ok.spec.mjs": OK_SPEC, "db/sub/deep.spec.mjs": OK_SPEC }, ["db/*.spec.mjs"]);
+    try {
+      const files = integrationFiles(dir, ...plantedConfig(dir));
+      expect(files).toEqual(["db/ok.spec.mjs"]);
+      expect(findUncollectedFiles(listTestFiles(dir, ["db"]), files)).toEqual([
+        { file: "db/sub/deep.spec.mjs", line: null, name: "", reason: "not collected" },
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
+
+  it("in a real Vitest run: a narrowed glob, a file named outside it, a file argument, a run without the integration project and a missing directory fail the run; a clean run passes", () => {
+    const cases: {
+      name: string;
+      files: Record<string, string>;
+      include: string[];
+      roots?: string[];
+      args?: string[];
+      status: number;
+      lines: string[];
+    }[] = [
+      {
+        name: "a narrowed glob",
+        files: { "db/ok.spec.mjs": OK_SPEC, "db/sub/deep.spec.mjs": OK_SPEC },
+        include: ["db/*.spec.mjs"],
+        status: 1,
+        lines: [
+          "skip guard (V13-ARCH-017, V13-ARCH-018): 1 finding in integration",
+          "db/sub/deep.spec.mjs (not collected)",
+        ],
+      },
+      {
+        name: "a file named outside the glob",
+        files: { "db/ok.spec.mjs": OK_SPEC, "db/other.test.mjs": OK_SPEC },
+        include: ["db/**/*.spec.mjs"],
+        status: 1,
+        lines: ["db/other.test.mjs (not collected)"],
+      },
+      {
+        name: "a file argument",
+        files: { "db/ok.spec.mjs": OK_SPEC, "db/two.spec.mjs": OK_SPEC },
+        include: ["db/**/*.spec.mjs"],
+        args: ["db/ok"],
+        status: 1,
+        lines: ["db/two.spec.mjs (not collected)"],
+      },
+      {
+        name: "a run without the integration project",
+        files: { "db/ok.spec.mjs": OK_SPEC, "unit/ok.spec.mjs": OK_SPEC },
+        include: ["db/**/*.spec.mjs"],
+        args: ["--project", "unit"],
+        status: 1,
+        lines: ["db/ok.spec.mjs (not collected)"],
+      },
+      {
+        name: "a missing directory",
+        files: { "db/ok.spec.mjs": OK_SPEC },
+        include: ["db/**/*.spec.mjs"],
+        roots: ["db", "gone"],
+        status: 1,
+        lines: ["gone (directory not found)"],
+      },
+      {
+        name: "a clean run (the control)",
+        files: { "db/ok.spec.mjs": OK_SPEC, "db/sub/deep.spec.mjs": OK_SPEC, "unit/ok.spec.mjs": OK_SPEC },
+        include: ["db/**/*.spec.mjs"],
+        status: 0,
+        lines: [],
+      },
+    ];
+    for (const c of cases) {
+      const dir = plant(c.files, c.include, c.roots);
+      try {
+        const run = spawnSync(process.execPath, [vitest, "run", ...(c.args ?? []), ...plantedConfig(dir)], {
+          encoding: "utf8",
+          env: childEnv(),
+        });
+        expect(run.status, `${c.name}\n${run.stdout}${run.stderr}`).toBe(c.status);
+        for (const line of c.lines) expect(run.stderr, c.name).toContain(line);
+        if (c.status === 0) expect(run.stderr, c.name).not.toContain("skip guard");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  }, 120_000);
+
+  const WORKFLOWS = join(ROOT, ".github", "workflows");
+  /** package.json's scripts, each with its line. */
+  const scriptsOf = (source: string) => {
+    const lines = source.split("\n");
+    const scripts = (JSON.parse(source) as { scripts: Record<string, string> }).scripts;
+    return Object.fromEntries(
+      Object.entries(scripts).map(([name, command]) => [
+        name,
+        { command, line: lines.findIndex((l) => l.trimStart().startsWith(`${JSON.stringify(name)}:`)) + 1 },
+      ]),
+    );
+  };
+
+  it("CI's test runs, and the scripts they run, pass no reporter, config or filter; the runs the merge rule rests on exist", () => {
+    const input = {
+      workflows: workflowFiles(WORKFLOWS).map((f) => ({
+        file: `.github/workflows/${f}`,
+        lines: readWorkflow(readFileSync(join(WORKFLOWS, f), "utf8")),
+      })),
+      scripts: scriptsOf(readFileSync(join(ROOT, "package.json"), "utf8")),
+    };
+    const findings = checkTestInvocations(input);
+    expect(findings, formatInvocationFindings(findings)).toEqual([]);
+    // What the check read: every Vitest and Playwright run in the workflows. A new run, or one the reader cannot
+    // see any more, shows here first.
+    expect(
+      findInvocations(input).map(
+        (r) => `${r.file} ${r.job} ${r.tool} ${r.projects.join(",") || "every project"} (${r.via})`,
+      ),
+    ).toEqual([
+      ".github/workflows/ci.yml unit vitest unit (pnpm test)",
+      ".github/workflows/ci.yml integration vitest integration (pnpm test:db)",
+      ".github/workflows/ci.yml e2e playwright every project (pnpm test:e2e)",
+      ".github/workflows/ci.yml visual playwright visual-baseline (pnpm exec playwright test --project=visual-baseline)",
+      ".github/workflows/ci.yml visual playwright visual-baseline (pnpm exec playwright test --project=visual-baseline --reporter=list,json --retries=0)",
+      ".github/workflows/cross-browser.yml e2e playwright firefox-ar,webkit-ar (pnpm exec playwright test --project=firefox-ar --project=webkit-ar --trace=off)",
+      ".github/workflows/visual-library.yml library playwright visual-library (pnpm exec playwright test --project=visual-library)",
+    ]);
+  });
+
+  it("reads a run line as the shell does: quotes, $( … ), redirections, operators and comments", () => {
+    const words = (text: string) =>
+      splitCommands([{ text, line: 1 }], "w.yml").map((c) => c.map((w) => w.text));
+    expect(
+      words(
+        `rc=0; FOO="a b" pnpm exec playwright test --project='x' 2>&1 >> out.log || rc=$? # a comment --grep`,
+      ),
+    ).toEqual([["rc=0"], ["FOO=a b", "pnpm", "exec", "playwright", "test", "--project=x"], ["rc=$?"]]);
+    expect(words(`mode="$(node scripts/ci/visual-mode.mjs dir)"`)).toEqual([
+      ["mode=$(node scripts/ci/visual-mode.mjs dir)"],
+    ]);
+    expect(words(`if [ "$mode" = compare ]; then`)).toEqual([
+      ["if", "[", "$mode", "=", "compare", "]"],
+      ["then"],
+    ]);
+    expect(words(`FOO=$(node a.mjs "x y") pnpm test:e2e`)).toEqual([
+      ['FOO=$(node a.mjs "x y")', "pnpm", "test:e2e"],
+    ]);
+  });
+
+  /** A planted CI workflow and cross-browser workflow, and the scripts they run; each case below changes one thing. */
+  const CI_WF = [
+    "name: CI",
+    "on:",
+    "  pull_request:",
+    "jobs:",
+    "  integration:",
+    "    runs-on: ubuntu-24.04",
+    "    env:",
+    '      V13_DB_TESTS_REQUIRED: "1"',
+    "    steps:",
+    "      - run: pnpm db:reset",
+    "      - run: pnpm test:db",
+    "  e2e:",
+    "    runs-on: ubuntu-24.04",
+    "    steps:",
+    "      - run: pnpm test:e2e",
+    "  visual:",
+    "    runs-on: ubuntu-24.04",
+    "    steps:",
+    "      - run: |",
+    "          pnpm exec playwright test --project=visual-baseline --reporter=list,json || rc=$?",
+    "",
+  ];
+  const CROSS_WF = [
+    "name: Cross-browser",
+    "on:",
+    "  pull_request:",
+    "jobs:",
+    "  e2e:",
+    "    runs-on: ubuntu-24.04",
+    "    steps:",
+    "      - run: pnpm exec playwright test --project=firefox-ar --project=webkit-ar --trace=off",
+    "",
+  ];
+  const SCRIPTS: Record<string, string> = {
+    "test:db": "vitest run --project integration",
+    "test:e2e": "playwright test",
+    "db:reset": "node scripts/db/reset.mjs",
+  };
+  /** The findings as `file:line rule`; the scripts sit on package.json's lines 20, 21 and 22. */
+  const planted = (ci: readonly string[], cross: readonly string[] = CROSS_WF, scripts = SCRIPTS) =>
+    checkTestInvocations({
+      workflows: [
+        { file: ".github/workflows/ci.yml", lines: readWorkflow(ci.join("\n")) },
+        { file: ".github/workflows/cross-browser.yml", lines: readWorkflow(cross.join("\n")) },
+      ],
+      scripts: Object.fromEntries(
+        Object.entries(scripts).map(([name, command], i) => [name, { command, line: 20 + i }]),
+      ),
+    }).map((f) => `${f.file.replace(".github/workflows/", "")}:${f.line} ${f.rule}`);
+  /** `src` with its line `n` (from 1) replaced by `lines`, or removed when there are none. */
+  const at = (src: readonly string[], n: number, ...lines: string[]) => [
+    ...src.slice(0, n - 1),
+    ...lines,
+    ...src.slice(n),
+  ];
+  const withoutJobFlag = [...CI_WF.slice(0, 6), ...CI_WF.slice(8)];
+
+  it("a planted reporter, config or filter in a workflow or a script fails at file:line, as do changes to the flag and to the runs the merge rule rests on", () => {
+    expect(planted(CI_WF)).toEqual([]);
+
+    // A filter, a reporter or another config in a workflow's run.
+    expect(planted(at(CI_WF, 15, "      - run: pnpm test:e2e --grep @smoke"))).toEqual(["ci.yml:15 filter"]);
+    expect(planted(at(CI_WF, 11, "      - run: pnpm test:db -t rls"))).toEqual(["ci.yml:11 filter"]);
+    expect(planted(at(CI_WF, 11, "      - run: pnpm test:db tests/integration/rls.spec.ts"))).toEqual([
+      "ci.yml:11 filter",
+    ]);
+    expect(planted(at(CI_WF, 11, "      - run: pnpm test:db --allowOnly"))).toEqual(["ci.yml:11 filter"]);
+    expect(
+      planted(at(CI_WF, 11, "      - run: npm run test:db -- --exclude=tests/integration/rls.spec.ts")),
+    ).toEqual(["ci.yml:11 filter"]);
+    expect(planted(at(CI_WF, 15, "      - run: pnpm test:e2e -c other.config.ts"))).toEqual([
+      "ci.yml:15 config",
+    ]);
+    const crossReporter =
+      "      - run: pnpm exec playwright test --project=firefox-ar --project=webkit-ar --reporter=dot";
+    expect(planted(CI_WF, at(CROSS_WF, 8, crossReporter))).toEqual(["cross-browser.yml:8 reporter"]);
+
+    // However the run is spelled.
+    expect(planted(at(CI_WF, 15, "      - run: xvfb-run -a npx playwright test -g leak"))).toEqual([
+      "ci.yml:15 filter",
+    ]);
+    expect(planted(at(CI_WF, 15, "      - run: npx playwright@1.63.0 test --grep leak"))).toEqual([
+      "ci.yml:15 filter",
+    ]);
+    expect(planted(at(CI_WF, 15, "      - run: pnpm --reporter silent test:e2e --grep leak"))).toEqual([
+      "ci.yml:15 filter",
+    ]);
+    expect(planted(at(CI_WF, 11, "      - run: pnpm test:db --reporter.0=dot"))).toEqual([
+      "ci.yml:11 reporter",
+    ]);
+    expect(
+      planted(at(CI_WF, 15, "      - run: node node_modules/@playwright/test/cli.js test e2e/")),
+    ).toEqual(["ci.yml:15 filter"]);
+    expect(
+      planted(at(CI_WF, 11, "      - run: pnpm exec vitest related lib/db/x.ts --project integration")),
+    ).toEqual(["ci.yml:11 filter", "ci.yml:11 filter"]);
+
+    // Across lines: a folded block, a plain value that continues, and a backslash in a literal block.
+    expect(
+      planted(
+        at(CI_WF, 15, "      - run: >-", "          pnpm exec playwright test", "          --grep leak"),
+      ),
+    ).toEqual(["ci.yml:17 filter"]);
+    expect(
+      planted(at(CI_WF, 15, "      - run: pnpm exec playwright test", "          --last-failed")),
+    ).toEqual(["ci.yml:16 filter"]);
+    expect(
+      planted(
+        at(CI_WF, 15, "      - run: |", "          pnpm exec playwright test \\", "            --shard=1/2"),
+      ),
+    ).toEqual(["ci.yml:17 filter"]);
+
+    // In a script a workflow runs: the finding names the script's line in package.json.
+    const dbReporter = { ...SCRIPTS, "test:db": "vitest run --project integration --reporter=dot" };
+    expect(planted(CI_WF, CROSS_WF, dbReporter)).toEqual(["package.json:20 reporter"]);
+    const e2eGrep = { ...SCRIPTS, "test:e2e": "playwright test --grep-invert @leak" };
+    expect(planted(CI_WF, CROSS_WF, e2eGrep)).toEqual(["package.json:21 filter"]);
+
+    // Only a run of visual projects alone may pass --reporter.
+    const mixed =
+      "          pnpm exec playwright test --project=visual-baseline --project=chromium-ar --reporter=list";
+    expect(planted(at(CI_WF, 20, mixed))).toEqual(["ci.yml:20 reporter"]);
+
+    // The flag: "1", set by an env: key of the database run's job or step, and never in a script.
+    expect(planted(at(CI_WF, 8, '      V13_DB_TESTS_REQUIRED: "0"'))).toEqual([
+      "ci.yml:8 flag",
+      "ci.yml:11 flag",
+    ]);
+    expect(planted(withoutJobFlag)).toEqual(["ci.yml:9 flag"]);
+    expect(planted(at(CI_WF, 11, "      - run: V13_DB_TESTS_REQUIRED=0 pnpm test:db"))).toEqual([
+      "ci.yml:11 flag",
+    ]);
+    const toEnvFile = '      - run: echo "V13_DB_TESTS_REQUIRED=0" >> "$GITHUB_ENV"';
+    expect(planted(at(CI_WF, 11, toEnvFile, "      - run: pnpm test:db"))).toEqual(["ci.yml:11 flag"]);
+    const stepFlag = ["      - run: pnpm test:db", "        env:", '          V13_DB_TESTS_REQUIRED: "1"'];
+    expect(planted(at(withoutJobFlag, 9, ...stepFlag))).toEqual([]);
+
+    // The runs the merge rule rests on.
+    expect(planted(at(CI_WF, 11))).toEqual(["ci.yml:5 missing run"]);
+    expect(planted(CI_WF, CROSS_WF, { ...SCRIPTS, "test:db": "vitest run --project unit" })).toEqual([
+      "ci.yml:5 missing run",
+    ]);
+    expect(planted(at(CI_WF, 15, "      - run: pnpm test:e2e --project=chromium-ar"))).toEqual([
+      "ci.yml:12 missing run",
+    ]);
+    const firefoxOnly = "      - run: pnpm exec playwright test --project=firefox-ar --trace=off";
+    expect(planted(CI_WF, at(CROSS_WF, 8, firefoxOnly))).toEqual(["cross-browser.yml:5 missing run"]);
   });
 });

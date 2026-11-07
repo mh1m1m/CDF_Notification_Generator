@@ -18,7 +18,8 @@ export default defineConfig({
   },
   test: {
     // CI also writes JUnit XML into test-results/ (uploaded as a workflow artifact). With V13_DB_TESTS_REQUIRED=1 (CI's
-    // database job) the skip guard fails the run when an integration test did not run (V13-ARCH-017).
+    // database job) the skip guard fails the run when an integration test did not run (V13-ARCH-017), or when a test
+    // file under tests/integration or tests/security/db was not collected (V13-ARCH-018).
     reporters: [
       ...(process.env.CI === "true" ? ["default", "junit"] : ["default"]),
       ...skipGuardReporters(process.env),
