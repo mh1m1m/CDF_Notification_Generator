@@ -5,7 +5,9 @@
 //   W1 the workflow has a top-level `permissions:` block that is exactly `contents: read`; a job-level `permissions:`
 //      block exists only in release.yml's `tag` job and is exactly `contents: write` (the reviewed exception);
 //   W2 no `pull_request_target` and no `workflow_run` trigger;
-//   W3 no `secrets.` (and no `secrets:` key) anywhere; `github.token` only in release.yml's `tag` job;
+//   W3 no `secrets.` (and no `secrets:` key) anywhere, and no reference to the `secrets` context inside an expression
+//      (`${{ … }}` or an `if:` value: `secrets['X']`, `toJSON(secrets)`); `github.token` (also `github['token']`) only
+//      in release.yml's `tag` job; the whole `github` context (`toJSON(github)`) nowhere, since it carries the token;
 //   W4 every actions/checkout step sets `persist-credentials: false`;
 //   W5 every `uses:` is pinned to a full 40-hex commit SHA (a trailing tag comment is fine);
 //   W6 no `${{ … }}` expression inside a `run:` script: event, ref and input text reaches a script only through `env:`
@@ -14,7 +16,8 @@
 //
 // No YAML dependency (ARCH): a line reader that tracks indentation gives each line its key path (jobs › tag › steps ›
 // [2] › with › persist-credentials) and knows which lines belong to a block scalar such as a `run: |` script. It covers
-// the block style these workflows use; flow-style mappings (`{ … }`) are refused as W0, so that nothing goes unread.
+// the block style these workflows use; flow-style mappings (`{ … }`, also inside a list item or a flow sequence) and
+// flow sequences that hold a mapping or span lines are refused as W0, so that nothing goes unread.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -131,6 +134,15 @@ export function readWorkflow(source: string): WorkflowLine[] {
   return out;
 }
 
+const EXPRESSION = /\$\{\{([\s\S]*?)\}\}/g;
+/** The text of each `${{ … }}` expression on a line. */
+export const expressionsOf = (text: string): string[] => [...text.matchAll(EXPRESSION)].map((m) => m[1]!);
+/** The line with its `${{ … }}` expressions removed. */
+export const withoutExpressions = (text: string): string => text.replace(EXPRESSION, "");
+/** The line with the contents of its quoted strings removed (the quotes stay). */
+const withoutQuoted = (text: string): string =>
+  text.replace(/"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'/g, (q) => q[0]! + q[0]!);
+
 const SHA_PIN = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+@[0-9a-f]{40}$/;
 
 /** The reviewed exception (W1, W3): release.yml's `tag` job. */
@@ -161,10 +173,18 @@ export function checkWorkflow(file: string, source: string): WorkflowFinding[] {
   const lines = readWorkflow(source);
   const keyed = lines.filter((l) => l.scalarOf === null);
 
-  // W0: the reader understands block style only.
-  for (const l of keyed)
-    if (/(^|:\s+)\{/.test(l.text) && !l.text.includes("${{"))
+  // W0: the reader understands block style only. Outside block scalars, once the `${{ … }}` expressions are removed,
+  // no `{` or `}` may remain (a flow mapping, also inside a list item or a flow sequence), and a flow sequence may hold
+  // neither a `key: value` pair nor run onto the next line.
+  for (const l of keyed) {
+    const bare = withoutQuoted(withoutExpressions(l.text));
+    if (/[{}]/.test(bare))
       hit("W0", l.line, "a flow-style mapping; write the block style so that every key is read");
+    const opens = (bare.match(/\[/g) ?? []).length;
+    const closes = (bare.match(/\]/g) ?? []).length;
+    if (opens !== closes || /\[[^\]]*:(\s|\]|,|$)/.test(bare))
+      hit("W0", l.line, "a flow sequence that holds a mapping or spans lines; write the block style");
+  }
 
   // W1: permissions.
   const top = keyed.find((l) => l.path.length === 1 && l.key === "permissions");
@@ -207,6 +227,18 @@ export function checkWorkflow(file: string, source: string): WorkflowFinding[] {
     if (l.scalarOf === null && l.key === "secrets") hit("W3", l.line, "a `secrets:` key is not allowed");
     if (/\bgithub\.token\b/.test(l.text) && !inReleaseTagJob(file, l.path))
       hit("W3", l.line, "`github.token` is read only in release.yml's tag job");
+    // Inside an expression (`${{ … }}`, or an `if:` value, which is an expression without delimiters): any reference
+    // to the `secrets` context; the token by index; the whole `github` context (it carries the token), anywhere.
+    const exprs = expressionsOf(l.text);
+    if (l.scalarOf === null && l.key === "if" && l.value && !l.value.includes("${{")) exprs.push(l.value);
+    for (const e of exprs) {
+      if (/(?<![\w.-])secrets\b/.test(e))
+        hit("W3", l.line, "the `secrets` context is not allowed in any workflow");
+      if (/(?<![\w.-])github\s*\[\s*(['"])token\1\s*\]/.test(e) && !inReleaseTagJob(file, l.path))
+        hit("W3", l.line, "`github.token` is read only in release.yml's tag job");
+      if (/(?<![\w.-])github\b(?!\s*[.[])/.test(e))
+        hit("W3", l.line, "the whole `github` context carries the token; name the field you need");
+    }
   }
 
   // W4 and W5: steps and their actions.
@@ -235,7 +267,13 @@ export function checkWorkflow(file: string, source: string): WorkflowFinding[] {
       hit("W6", l.line, "a `${{ }}` expression inside `run:`; pass the value through `env:`");
   }
 
-  return out.sort((a, b) => a.line - b.line || a.rule.localeCompare(b.rule));
+  const seen = new Set<string>();
+  return out
+    .filter((f) => {
+      const k = `${f.rule}\u0000${f.line}\u0000${f.detail}`;
+      return seen.has(k) ? false : (seen.add(k), true);
+    })
+    .sort((a, b) => a.line - b.line || a.rule.localeCompare(b.rule));
 }
 
 /** Every workflow file under `dir` (.yml and .yaml), by name. */

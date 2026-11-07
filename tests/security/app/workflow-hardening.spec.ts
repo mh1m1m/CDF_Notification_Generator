@@ -43,7 +43,11 @@ jobs:
         run: |
           printf '%s\\n' "$TITLE"
       - run: pnpm test
+      - if: contains(github.event.pull_request.labels.*.name, 'visual') && steps.github.outputs.ok == 'yes'
+        run: echo "{braces in quotes}" "[a: b]"
 `;
+
+const CHECKOUT = `      - uses: actions/checkout@${SHA} # v4.2.2\n        with:\n          persist-credentials: false\n`;
 
 const rules = (file: string, src: string) => checkWorkflow(file, src).map((f) => `${f.rule}:${f.line}`);
 
@@ -181,6 +185,62 @@ describe("V13-SEC-015: planted negatives, each reported at file:line", () => {
       "        with:\n          persist-credentials: false\n",
       "        with: { persist-credentials: false }\n",
     ],
+    // ARCH's review of f5e7282: flow mappings inside a sequence, and the secrets and token read another way.
+    ["W0: a flow mapping as a list item", "W0", `${CHECKOUT}`, "      - { uses: actions/checkout@v4 }\n"],
+    [
+      "W0: a flow sequence of flow mappings",
+      "W0",
+      `    steps:\n${CHECKOUT}`,
+      '    steps: [{ uses: "actions/checkout@v4" }]\n    more:\n',
+    ],
+    [
+      "W0: a flow sequence holding a key: value pair",
+      "W0",
+      `    steps:\n${CHECKOUT}`,
+      "    steps: [uses: actions/checkout@v4]\n    more:\n",
+    ],
+    [
+      "W0: a flow sequence that spans lines",
+      "W0",
+      `    steps:\n${CHECKOUT}`,
+      "    steps: [\n      uses: actions/checkout@v4 ]\n    more:\n",
+    ],
+    [
+      "W3: secrets by index",
+      "W3",
+      "      TITLE: ${{ github.event.pull_request.title }}",
+      "      TOKEN: ${{ secrets['NPM_TOKEN'] }}",
+    ],
+    [
+      "W3: the whole secrets context",
+      "W3",
+      "      TITLE: ${{ github.event.pull_request.title }}",
+      "      ALL: ${{ toJSON(secrets) }}",
+    ],
+    [
+      "W3: the token by index",
+      "W3",
+      "      TITLE: ${{ github.event.pull_request.title }}",
+      "      GH_TOKEN: ${{ github['token'] }}",
+    ],
+    [
+      "W3: the whole github context",
+      "W3",
+      "      TITLE: ${{ github.event.pull_request.title }}",
+      "      CTX: ${{ toJSON(github) }}",
+    ],
+    [
+      "W3: secrets in an if: without delimiters",
+      "W3",
+      "      - run: pnpm test",
+      "      - if: secrets.NPM_TOKEN != ''\n        run: pnpm test",
+    ],
+    [
+      "W3: the whole github context in an if:",
+      "W3",
+      "      - run: pnpm test",
+      "      - if: contains(toJSON(github), 'x')\n        run: pnpm test",
+    ],
   ];
 
   for (const [name, rule, from, to, at] of cases) {
@@ -231,5 +291,15 @@ jobs:
     expect(rules("release.yml", release("other", "write"))).toEqual(["W1:10", "W3:15"]);
     expect(rules("release.yml", release("tag", "read"))).toEqual(["W1:10"]);
     expect(rules("ci.yml", release("tag", "write"))).toEqual(["W1:10", "W3:15"]);
+    // The token by index is the same exception; the whole github context and the secrets context are not.
+    const indexed = release("tag", "write").replace("github.token", "github['token']");
+    expect(rules("release.yml", indexed)).toEqual([]);
+    expect(rules("ci.yml", indexed)).toEqual(["W1:10", "W3:15"]);
+    expect(rules("release.yml", release("tag", "write").replace("github.token", "toJSON(github)"))).toEqual([
+      "W3:15",
+    ]);
+    expect(rules("release.yml", release("tag", "write").replace("github.token", "secrets['X']"))).toEqual([
+      "W3:15",
+    ]);
   });
 });

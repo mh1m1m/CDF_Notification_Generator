@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 7 Nov 2026 · Branch: `security/V13-SEC-015-workflow-hardening` · `develop` at `f0f8437`
+Updated: 7 Nov 2026 · Branch: `security/V13-SEC-015-workflow-hardening` · `develop` at `11bf2e7`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -116,7 +116,12 @@ Updated: 7 Nov 2026 · Branch: `security/V13-SEC-015-workflow-hardening` · `dev
   `pull_request_target`, no `workflow_run`. W3: no `secrets.`, no `secrets:` key, `github.token` only in release.yml's
   `tag` job. W4: every actions/checkout sets `persist-credentials: false`. W5: every `uses:` pinned to a 40-hex SHA.
   W6: no `${{ }}` inside a `run:` script (stricter than ARCH's three expressions). W0: flow-style mappings refused, so
-  nothing is left unread. Planted negatives for each rule, reported at file:line — IN_REVIEW (reviewer: ARCH)
+  nothing is left unread. Planted negatives for each rule, reported at file:line. ARCH's CHANGES f5e7282
+  (two gaps) fixed: W0 now refuses any `{`/`}` left once expressions and quoted text are removed (a flow mapping as a
+  list item or inside a flow sequence), and a flow sequence that holds a `key: value` pair or spans lines; W3 now reads
+  every `${{ }}` expression and every `if:` value for the `secrets` context (`secrets['X']`, `toJSON(secrets)`), the
+  token by index (`github['token']`, release.yml's tag job only) and the whole `github` context (`toJSON(github)`,
+  nowhere) — IN_REVIEW (reviewer: ARCH)
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
@@ -139,6 +144,7 @@ Updated: 7 Nov 2026 · Branch: `security/V13-SEC-015-workflow-hardening` · `dev
 | Local, #129 head `07dc591`: `pnpm db:lint`, `pnpm db:reset`, `CI=true pnpm test:db`; eight mutations of migration 0014, one at a time, then restored; the registry line removed from `context-forgery.spec.ts` | db:lint 15 migrations, 0 findings; test:db **600/600** (34 files); every mutation fails tests or db:lint (grant to PUBLIC: `[forbidden-grantee]`); without the registry line SEC-DB-17 fails | 600 | `07dc591` |
 | Local, #130 head `926360d`: `pnpm typecheck`, eslint on the changed files, `vitest --project unit tests/unit/domain/next-action.spec.ts`; fifteen mutations of `lib/domain/next-action.ts` | typecheck 0, lint 0, **17/17**; 14 of 15 mutations fail tests; survivor: `case` not strict (INFO) | 17 | `926360d` |
 | Local, V13-SEC-015 on `develop` `f0f8437`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; twelve mutations of the checker and five of the real workflows (`contents: write` in cross-browser.yml, `persist-credentials: true` in ci.yml, `pull_request_target` in visual-library.yml, an extra job permission in release.yml, `upload-artifact@v4` in ci.yml), one at a time, then restored | lint 0, typecheck 0, format clean, unit **2494/2494** (96 files; the spec 28/28); every mutation fails at least one test | 28 | SEC-015 head |
+| Local, V13-SEC-015 fix for ARCH's CHANGES f5e7282, on `develop` `11bf2e7`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; nine mutations of the new W0/W3 checks, one at a time, then restored | lint 0, typecheck 0, unit **2506/2506** (96 files; the spec 38/38); all nine mutations fail at least one test | 38 | SEC-015 head |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.
