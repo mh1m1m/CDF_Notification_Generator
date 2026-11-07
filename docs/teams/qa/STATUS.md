@@ -219,5 +219,15 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
     and en, while no measured element lies past an edge. A WebKit-only finding, not skipped; check 1 now names what
     widens the page so the next run can route it to its owner.
 
+- V13-QA-018 — branch test/V13-QA-018-a11y-checklist-audit — IN_REVIEW (ARCH): the manual accessibility checklist
+  (`docs/qa/A11Y_MANUAL_CHECKLIST.md`, REQ-A11Y-003; 18 checks over 12 screens in ar and en, 324 rows, every one
+  NOT_RUN until a person runs it) and the WCAG 2.2 A/AA audit (`docs/qa/ACCESSIBILITY_AUDIT.md`, REQ-A11Y-014; 55
+  criteria, each with its automated suites from CI 42393111241 and its manual rows; no PASS today; 1.4.3 FAIL from
+  F-01; 7 NOT_APPLICABLE with reasons). `tests/unit/qa/a11y-docs.spec.ts` (8 tests) keeps both honest: no result
+  without who, tool and version, and date; every criterion once; the manual mapping cannot drift; no conformance
+  claim. Mutations: 8 of 8 caught. A local axe probe (wcag22aa, every impact, light and dark, 48 scans, not committed)
+  found F-01.
+
 ## Unresolved defects
-- none open from QA
+- F-01 (found by QA-018's probe, owner FE, to route through ARCH): SC 1.4.3 in the dark theme, the "mine" task flag
+  (`case-task-mine`, `case.module.css` `.flag`) at 1.1:1 and 1.5:1.

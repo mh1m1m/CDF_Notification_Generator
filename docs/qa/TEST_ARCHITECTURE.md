@@ -507,6 +507,13 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
 Every run writes `test-results/results.json`; QA records command, commit, project and real pass/fail/flaky counts in
 `docs/teams/qa/STATUS.md` and sends them to ARCH for `docs/TEST_EVIDENCE.md`. Screenshots contain only synthetic data.
 
+**Manual checklist and audit (V13-QA-018; REQ-A11Y-003, REQ-A11Y-014; design §6–§7).**
+`docs/qa/A11Y_MANUAL_CHECKLIST.md` holds one row per check, screen and language, each NOT_RUN until a person at a real
+screen reader and browser runs it. `docs/qa/ACCESSIBILITY_AUDIT.md` maps every WCAG 2.2 A and AA criterion to the
+automated suites (with the CI run) and to those rows, and is never a conformance claim.
+`tests/unit/qa/a11y-docs.spec.ts` refuses a result without who, tool and version, and date, a manual PASS whose rows
+were not all run and passed, a criterion missing or listed twice, and a drifting manual mapping.
+
 ## 12. Open points for ARCH
 
 1. Branch naming: QA uses the board convention (`docs/V13-QA-001-test-architecture`), not the generic session branch
