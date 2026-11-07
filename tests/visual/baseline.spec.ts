@@ -51,8 +51,10 @@ for (const c of BASELINE_ROWS) {
         const name = baselineFile(c, lang, viewport);
         // The one capture path the library uses (capture.ts): masks counted, frames painted, the same capture style.
         const { png } = await captureCell(page, c, draft);
-        if (!existsSync(test.info().snapshotPath(name, { kind: "snapshot" }))) {
-          // The candidate for review; the comparison below still fails, so a missing baseline is never green.
+        if (!existsSync(test.info().snapshotPath(name, { kind: "snapshot" })) && test.info().retry === 0) {
+          // The candidate for review; the comparison below still fails, so a missing baseline is never green. Only the
+          // first attempt writes it: a retry runs on the state the first attempt left (the draft row's second draft
+          // makes the preview about 100 px taller, CI run 42378737736), which a comparison never sees.
           mkdirSync(BASELINE_CANDIDATES_DIR, { recursive: true });
           writeFileSync(join(BASELINE_CANDIDATES_DIR, name), png);
         }

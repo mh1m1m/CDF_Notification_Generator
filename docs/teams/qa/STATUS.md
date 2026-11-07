@@ -122,6 +122,9 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   probe (TEST_ARCHITECTURE §10). Found while building: the capture style never reached the sandboxed preview frame
   (now put into every frame for the capture; the 4 notification-preview baselines change and are replaced from the PR's
   own CI artifact), and the overdue glyph's fallback font can make the deadline's line taller (`block-size: 1lh`).
+  CI run 42378737736 (9dd7d84): the 4 preview snapshots missing, nothing else failed, every probe variant identical.
+  Its retry made the candidates on the first attempt's leftover draft (about 100 px taller), so the 4 PNGs are the
+  first attempt's images from artifact 13576528654, and a candidate is now written on the first attempt only.
   Count tiles get a width rule on their value; all other 32 baselines stay byte-identical locally. Local: library
   244/244 images, 0 moved, every mask matched (deadline 136, counts 80, correlation id 24, draft time 12, notice
   reference 12); library-index 24/24.
