@@ -786,6 +786,79 @@ jobs:
       // A comment that names it is not a setting.
       expect(w7(swap(before, "          echo start # npm_config_script_shell is refused"))).toEqual([]);
     });
+    it("R1 on #174: only space and tab start a comment (U+00A0 before # is part of a word, in bash and YAML)", () => {
+      const nbsp = "\u00a0";
+      for (const [line, at] of [
+        [`echo a${nbsp}#; exit 0`, "exit 0"],
+        [`echo a${nbsp}#; export npm_config_script_shell=/bin/true`, "export"],
+      ] as const) {
+        const src = swap(before, `          ${line}`);
+        expect(w7(src), line).toEqual([lineOf(src, at)]);
+      }
+      expect(stripComment(`a:${nbsp}# b`)).toBe(`a:${nbsp}# b`);
+      expect(stripComment("a:\t# b")).toBe("a:");
+      // A tab before # still starts a comment.
+      expect(w7(swap(before, "          echo a\t# ; exit 0"))).toEqual([]);
+    });
+    it("R2 on #174: command -p / --, builtin --, set -Cn, npm_config_script-shell", () => {
+      for (const [line, at] of [
+        ["command -p exit 0", "command -p"],
+        ["command -- exit 0", "command --"],
+        ["command -p -- exit 0", "command -p --"],
+        ["builtin -- exit 0", "builtin --"],
+        ["set -Cn", "set -Cn"],
+        ["export npm_config_script-shell=/bin/true", "export"],
+        ["export NPM_CONFIG_SHELL-EMULATOR=true", "export"],
+      ] as const) {
+        const src = swap(before, `          ${line}`);
+        expect(w7(src), line).toEqual([lineOf(src, at)]);
+      }
+      for (const line of ["command -v jq", "command -V pnpm", "command -pv jq"])
+        expect(w7(swap(before, `          ${line}`)), line).toEqual([]);
+      const env = swap(
+        "  test:\n    runs-on: ubuntu-24.04\n",
+        "  test:\n    env:\n      npm_config_script-shell: /bin/true\n    runs-on: ubuntu-24.04\n",
+      );
+      expect(w7(env)).toEqual([lineOf(env, "npm_config_script-shell")]);
+    });
+    it("R3 on #174: prefixes bash allows, words built at run time, escapes and backslash-newline", () => {
+      for (const [line, at] of [
+        ["if exit 0; then :; fi", "if exit"],
+        ["if true; then :; elif exit 0; then :; fi", "elif exit"],
+        ["while exit 0; do :; done", "while exit"],
+        ["until exit 0; do :; done", "until exit"],
+        ["time exit 0", "time exit"],
+        ["time -p exit 0", "time -p"],
+        ["X=1 exit 0", "X=1"],
+        ["A=1 B[2]=x C+=y exit 0", "A=1"],
+        ['"exit" 0', '"exit"'],
+        ["\\exit 0", "exit 0"],
+        ['e"x"it 0', 'e"x"it'],
+        ["echo \\'; exit 0; echo \\'", "echo \\'"],
+        ["x=exit; $x 0", "$x"],
+        ["`echo exit` 0", "`echo"],
+        ["$(echo exit) 0", "$(echo"],
+        // An escaped backslash: the `;` after it is an operator again.
+        ["echo \\\\; exit 0", "echo \\\\;"],
+      ] as const) {
+        const src = swap(before, `          ${line}`);
+        expect(w7(src), line).toEqual([lineOf(src, at)]);
+      }
+      const joined = swap(before, "          ex\\\n          it 0");
+      expect(w7(joined), "ex\\ + it 0").toEqual([lineOf(joined, "ex\\")]);
+      // Allowed: a quoted argument, an assignment alone, a variable as an argument, a continued test command.
+      for (const line of [
+        'mode="$(node x.mjs)"',
+        'echo "$X" \\"done\\"',
+        '[ "$mode" = compare ]',
+        "X=1 node x.mjs",
+        'if [ -n "$X" ]; then echo y; fi',
+        "echo a \\\n          b",
+        // An escaped `;` is a word, not an operator: bash echoes "; exit 0".
+        "echo \\; exit 0",
+      ])
+        expect(w7(swap(before, `          ${line}`)), line).toEqual([]);
+    });
     it("pnpm-workspace.yaml scriptShell / shellEmulator, through checkWorkflowDir", () => {
       const root = mkdtempSync(join(tmpdir(), "v13-w7-ws-"));
       try {

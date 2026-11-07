@@ -142,7 +142,12 @@ Updated: 7 Nov 2026 · Branch: `security/V13-SEC-017-w7-shell-gaps` · `develop`
   `eval`, `source`, `.`, `alias`, `shopt … expand_aliases`, `set -n` / `noexec` refused in a test step (shell comments
   ignored); `npm_config_script_shell` / `npm_config_shell_emulator` (any case, in `env:`, `$GITHUB_ENV` or `export`)
   and `script-shell` / `shell-emulator` / `scriptShell` / `shellEmulator` refused in a workflow and in
-  `pnpm-workspace.yaml`. The class closes with ARCH-020's runtime proof — IN_REVIEW (reviewer: ARCH)
+  `pnpm-workspace.yaml`. Fix for ARCH's CHANGES `6256986`: R1 only space
+  and tab start a comment (U+00A0 is part of a word, in `earlyExits` and `stripComment`); R2 `command -p|--`,
+  `builtin --`, `set -Cn`, `npm_config_script-shell` / `shell-emulator`; R3 the prefixes bash allows before a command
+  (`!`, `if`, `elif`, `while`, `until`, `time [-p]`, `NAME=value`), a command word built at run time (a quote, an
+  escape, `$` or a backtick in it) refused, escapes outside quotes neutralised, a backslash-newline read with both
+  joins. The class closes with ARCH-020's runtime proof — IN_REVIEW (reviewer: ARCH)
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
@@ -169,6 +174,7 @@ Updated: 7 Nov 2026 · Branch: `security/V13-SEC-017-w7-shell-gaps` · `develop`
 | Local, V13-SEC-016 on `develop` `45de81f`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; 23 mutations of W7, one at a time, then restored; five W7 forms planted in the real ci.yml database step | lint 0, typecheck 0, format clean, unit **2548/2548** (96 files; the spec 69/69); all 23 mutations and all five plants fail at least one test | 69 | SEC-016 head |
 | Local, V13-SEC-016 fix for ARCH's CHANGES `b1c4af9` (R1–R4, `.npmrc`), on `develop` `45de81f`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; 18 mutations of the new checks, one at a time, then restored | lint 0, typecheck 0, format clean, unit **2561/2561** (96 files; the spec 82/82); all 18 mutations fail at least one test | 82 | SEC-016 head |
 | Local, V13-SEC-017 on `develop` `6046ab1`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; 20 mutations of the new checks, one at a time, then restored | lint 0, typecheck 0, format clean, unit **2567/2567** (96 files; the spec 87/87); all 20 mutations fail at least one test; the real workflows clean | 87 | SEC-017 head |
+| Local, V13-SEC-017 fix for ARCH's CHANGES `6256986` (R1–R3): `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; 26 mutations of the new code, one at a time, then restored (two survivors led to a simplification: the escape placeholder and a redundant `command -v` branch) | lint 0, typecheck 0, format clean, unit **2570/2570** (96 files; the spec 90/90); every mutation of the final code fails at least one test; the real workflows clean | 90 | SEC-017 head |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.
