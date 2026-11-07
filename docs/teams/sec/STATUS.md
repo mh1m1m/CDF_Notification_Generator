@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 7 Nov 2026 · Branch: `security/V13-SEC-015-workflow-hardening` · `develop` at `11bf2e7`
+Updated: 7 Nov 2026 · Branch: `security/V13-SEC-016-test-exit-codes` · `develop` at `45de81f`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -121,12 +121,25 @@ Updated: 7 Nov 2026 · Branch: `security/V13-SEC-015-workflow-hardening` · `dev
   list item or inside a flow sequence), and a flow sequence that holds a `key: value` pair or spans lines; W3 now reads
   every `${{ }}` expression and every `if:` value for the `secrets` context (`secrets['X']`, `toJSON(secrets)`), the
   token by index (`github['token']`, release.yml's tag job only) and the whole `github` context (`toJSON(github)`,
-  nowhere) — IN_REVIEW (reviewer: ARCH)
+  nowhere) — COMPLETE (#165, merged into `develop` as `9d5727b`, ARCH ACCEPT `792d2f9`)
+- Reviews 7 Nov (afternoon): #166 ARCH-017 ACCEPT `8f273c6` (six planted skip forms in `tests/security/db` and a `-t`
+  filter each exit 1); #167 QA-019 CHANGES `aca2f78` (an always-true `externalDeployment` silently skipped SEC-APP-13),
+  then ACCEPT `e2443d1` (truth table in, four predicate mutations caught); #168 ARCH-002 ACCEPT `78c2bf5` (21 runs, 7
+  jobs, 5 trees, 163 merges checked); #170 ARCH-018 ACCEPT `2e51f65` (the file walk names files outside the glob; 27
+  probes; INFOs became ARCH-019 and SEC-016)
+- V13-SEC-016 — a test run's failure fails its job (W7 in `tests/security/workflow-hardening.ts`, agreed with ARCH 7
+  Nov): a step runs a test when `findInvocations` (`scripts/ci/test-invocations.mjs`) finds a Vitest or Playwright run
+  in it, package.json scripts followed. Refused: `continue-on-error` anywhere; an `if:` on a test step, a test job or a
+  job a test job needs (transitively); a `shell:` or `defaults.run.shell` other than `bash`; on a test run's line `||`,
+  a pipe without pipefail (GitHub's default shell is `bash -e {0}`), a background `&`, the run as a condition; `set +e`,
+  `set +o errexit`, `set +o pipefail` in a test step. Two reviewed exceptions, exact text only: ci.yml's visual
+  candidate capture `… || rc=$?` handed on the next line to `visual-candidates.mjs`, and visual-library.yml's label
+  `if:` — IN_REVIEW (reviewer: ARCH)
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
   `tests/security/e2e/case-pages.spec.ts`, `tests/security/e2e/surface.spec.ts`, `docs/teams/sec/STATUS.md`
-- V13-SEC-015: `tests/security/workflow-hardening.ts`, `tests/security/app/workflow-hardening.spec.ts`
+- V13-SEC-015, V13-SEC-016: `tests/security/workflow-hardening.ts`, `tests/security/app/workflow-hardening.spec.ts`
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -145,6 +158,7 @@ Updated: 7 Nov 2026 · Branch: `security/V13-SEC-015-workflow-hardening` · `dev
 | Local, #130 head `926360d`: `pnpm typecheck`, eslint on the changed files, `vitest --project unit tests/unit/domain/next-action.spec.ts`; fifteen mutations of `lib/domain/next-action.ts` | typecheck 0, lint 0, **17/17**; 14 of 15 mutations fail tests; survivor: `case` not strict (INFO) | 17 | `926360d` |
 | Local, V13-SEC-015 on `develop` `f0f8437`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; twelve mutations of the checker and five of the real workflows (`contents: write` in cross-browser.yml, `persist-credentials: true` in ci.yml, `pull_request_target` in visual-library.yml, an extra job permission in release.yml, `upload-artifact@v4` in ci.yml), one at a time, then restored | lint 0, typecheck 0, format clean, unit **2494/2494** (96 files; the spec 28/28); every mutation fails at least one test | 28 | SEC-015 head |
 | Local, V13-SEC-015 fix for ARCH's CHANGES f5e7282, on `develop` `11bf2e7`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; nine mutations of the new W0/W3 checks, one at a time, then restored | lint 0, typecheck 0, unit **2506/2506** (96 files; the spec 38/38); all nine mutations fail at least one test | 38 | SEC-015 head |
+| Local, V13-SEC-016 on `develop` `45de81f`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; 23 mutations of W7, one at a time, then restored; five W7 forms planted in the real ci.yml database step | lint 0, typecheck 0, format clean, unit **2548/2548** (96 files; the spec 69/69); all 23 mutations and all five plants fail at least one test | 69 | SEC-016 head |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.
