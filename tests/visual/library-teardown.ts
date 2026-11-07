@@ -15,6 +15,7 @@ import {
   LIBRARY_DIR,
   MANIFEST_PARTS_DIR,
   MASK_COLOR,
+  MASKS,
 } from "./library-plan";
 
 function run(cmd: string, args: readonly string[]): string | null {
@@ -48,4 +49,28 @@ export default function libraryTeardown(): void {
     images,
   };
   writeFileSync(join(LIBRARY_DIR, "manifest.json"), JSON.stringify(manifest, null, 2));
+  maskCoverage(images as LibraryEntry[]);
+}
+
+export interface LibraryEntry {
+  file: string;
+  maskProbe?: { masks: Record<string, { matched: number; rewritten: number }> };
+}
+
+/**
+ * The mask width probe's coverage (V13-QA-023): every mask in MASKS matched an element in at least one captured cell,
+ * and every matched element was rewritten, so a selector that drifted can never pass silently. Thrown errors fail
+ * the run. Checked only when every planned image was written (a partial run already failed on its own tests).
+ */
+export function maskCoverage(images: LibraryEntry[], planned = imageCount()): void {
+  if (images.length !== planned) return;
+  for (const mask of Object.keys(MASKS)) {
+    const counts = images.map((e) => e.maskProbe?.masks[mask]).filter((n) => n !== undefined);
+    const matched = counts.reduce((sum, n) => sum + n.matched, 0);
+    const rewritten = counts.reduce((sum, n) => sum + n.rewritten, 0);
+    if (matched === 0)
+      throw new Error(`mask width probe: mask ${mask} matched no element in any library cell`);
+    if (rewritten !== matched)
+      throw new Error(`mask width probe: mask ${mask} matched ${matched} elements but rewrote ${rewritten}`);
+  }
 }

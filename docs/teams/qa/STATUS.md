@@ -118,7 +118,14 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
-- V13-QA-015 adoption — #159, branch test/V13-QA-015-adopt-baselines — IN_REVIEW: the 36 baselines committed under
+- V13-QA-023 — branch test/V13-QA-023-mask-width-probe — IN_PROGRESS (draft PR; merges after #158): the mask width
+  probe (TEST_ARCHITECTURE §10). Found while building: the capture style never reached the sandboxed preview frame
+  (now put into every frame for the capture; the 4 notification-preview baselines change and are replaced from the PR's
+  own CI artifact), and the overdue glyph's fallback font can make the deadline's line taller (`block-size: 1lh`).
+  Count tiles get a width rule on their value; all other 32 baselines stay byte-identical locally. Local: library
+  244/244 images, 0 moved, every mask matched (deadline 136, counts 80, correlation id 24, draft time 12, notice
+  reference 12); library-index 24/24.
+- V13-QA-015 adoption — #159, merged into develop as 15f938d — COMPLETE: the 36 baselines committed under
   `tests/visual/__screenshots__/`, taken from CI only (ARCH's decision, 7 Nov): artifact 13574858048
   (`visual-results`) of #159's own pull_request CI run 42374093449, job 128408023113, at 0b40b1a (the capture-style
   fix). In that run every one of the 9 tests failed on missing snapshots alone, and each candidate is byte-identical to
@@ -129,7 +136,7 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   and 7 Nov and moved My Work's columns and the overview's mask edge. Fix: CAPTURE_STYLE gives `[data-deadline-state]`
   a fixed width during the capture only (masked boxes only). Local probe: deadline words rewritten between two captures
   of the three screens, ar and en: byte-identical with the fix, different on all three without it. Second local probe
-  (ARCH): every task's due_date moved back 1, 7 and 14 days on a fresh local database, the three screens recaptured in
+  (asked by ARCH): every task's due_date moved back 1, 7 and 14 days on a fresh local database, the three screens recaptured in
   ar and en, desktop and mobile. With a ch width my-work ar desktop still moved (an overdue deadline is bold, and ch
   follows the weight), so the width is now 14rem; then my-work and workspace-switcher were byte-identical at every
   shift. case-overview differed only in its open-tasks row, whose plain due date (unmasked) the probe itself rewrote; a

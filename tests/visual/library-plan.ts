@@ -51,7 +51,9 @@ export const FONT_PACKAGES = [
  */
 export const CAPTURE_STYLE =
   '[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; } ' +
-  "[data-deadline-state] { display: inline-block; inline-size: 14rem; white-space: nowrap; overflow: hidden; vertical-align: top; }";
+  "[data-deadline-state] { display: inline-block; inline-size: 14rem; block-size: 1lh; white-space: nowrap; overflow: hidden; vertical-align: top; } " +
+  '[data-testid="count-my-work-overdue"] > :first-child, [data-testid="count-my-work-due-week"] > :first-child { inline-size: 4rem; white-space: nowrap; overflow: hidden; } ' +
+  '[data-field="notice_reference"] { display: inline-block; inline-size: 10rem; white-space: nowrap; overflow: hidden; vertical-align: top; }';
 
 /**
  * The same for the run-made draft's created time (masked): its text width changes with the time and moved the table's
@@ -161,6 +163,11 @@ const NOTIFICATION_0001 = "2f000000-0000-4000-8000-000000000001";
 const UNKNOWN_ID = "0c000000-0000-4000-8000-0000000000ff";
 
 const ALL_MASKS: readonly MaskName[] = ["correlationId", "deadline", "deadlineCounts"];
+/**
+ * A data state shows no correlation id (only error and refusal states do, components/data/States.tsx), so its rows do
+ * not name that mask: every mask a baseline row names must match an element in some baseline cell (V13-QA-023).
+ */
+const DATA_MASKS: readonly MaskName[] = ["deadline", "deadlineCounts"];
 
 export const CAPTURES: readonly Capture[] = [
   {
@@ -169,7 +176,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "investigator-beta",
     route: "/my-work",
     ready: '[data-testid^="my-work-case-"]',
-    masks: ALL_MASKS,
+    masks: DATA_MASKS,
     how: "seeded tasks assigned to Investigator Beta",
   },
   {
@@ -187,7 +194,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "secretary-alpha",
     route: "/portfolio",
     ready: '[data-testid^="portfolio-open-"]',
-    masks: ALL_MASKS,
+    masks: DATA_MASKS,
     how: "seeded cases visible to the Secretariat",
   },
   {
@@ -214,7 +221,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "secretary-alpha",
     route: `/cases/${CASE_0001}`,
     ready: '[data-testid="case-header"]',
-    masks: ALL_MASKS,
+    masks: DATA_MASKS,
     how: "case CDF-DEMO-2026-0001, Secretary Alpha on its team",
   },
   {
@@ -223,7 +230,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "secretary-alpha",
     route: `/cases/${CASE_0001}/events`,
     ready: '[data-testid="case-header"]',
-    masks: ALL_MASKS,
+    masks: DATA_MASKS,
     how: "seeded procedural events of CDF-DEMO-2026-0001",
   },
   {
@@ -232,7 +239,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "secretary-alpha",
     route: `/cases/${CASE_0001}/tasks`,
     ready: '[data-testid="case-header"]',
-    masks: ALL_MASKS,
+    masks: DATA_MASKS,
     how: "seeded tasks of CDF-DEMO-2026-0001",
   },
   {
@@ -241,7 +248,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "secretary-alpha",
     route: `/cases/${CASE_0001}/notifications`,
     ready: `[data-testid="case-notification-${NOTIFICATION_0001}"]`,
-    masks: ALL_MASKS,
+    masks: DATA_MASKS,
     how: "seeded draft 2f…01 of CDF-DEMO-2026-0001, with the draft form",
   },
   {
@@ -259,7 +266,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "secretary-alpha",
     route: "/notifications",
     ready: '[data-testid="notifications-table"]',
-    masks: ALL_MASKS,
+    masks: DATA_MASKS,
     how: "seeded drafts visible to Secretary Alpha",
   },
   {
@@ -296,7 +303,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "investigator-beta",
     route: `/cases/${CASE_0005}/notifications?n={draft}`,
     ready: '[data-testid="case-preview-ready"]',
-    masks: [...ALL_MASKS, "draftCreated", "noticeReference"],
+    masks: [...DATA_MASKS, "draftCreated", "noticeReference"],
     draftOnCase: CASE_0005,
     how: "a WITNESS draft the run makes on CDF-DEMO-2026-0005 through its draft form, in the sandboxed frame",
   },
@@ -342,7 +349,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "governance-officer-delta",
     route: "/my-work",
     ready: '[data-testid="workspace-switcher"]',
-    masks: ALL_MASKS,
+    masks: DATA_MASKS,
     openSwitcher: true,
     how: "Governance Officer Delta holds two workspaces; the menu is open",
   },
@@ -352,7 +359,7 @@ export const CAPTURES: readonly Capture[] = [
     persona: "secretary-alpha",
     route: "/my-work",
     ready: '[data-testid="platform-nav"]',
-    masks: ALL_MASKS,
+    masks: DATA_MASKS,
     element: '[data-testid="platform-nav"]',
     viewports: ["mobile"],
     how: "the side navigation at 360 px",

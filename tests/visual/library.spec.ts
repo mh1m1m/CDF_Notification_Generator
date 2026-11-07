@@ -6,10 +6,11 @@
 // Runs only in the `visual-library` project (V13_E2E_VISUAL=library; playwright.config.ts), after `pnpm db:reset`.
 // Images go to test-results/library/<screen>/<state>.<lang>.<viewport>.<theme>.png and are never committed; each test
 // writes its manifest part, and library-teardown.ts merges the parts into test-results/library/manifest.json. No
-// baseline is compared here (§5 adds the committed subset). SYNTHETIC personas and seeded cases only.
+// baseline is compared here (§5 adds the committed subset). Each cell also runs the mask width probe (V13-QA-023,
+// mask-probe.ts). SYNTHETIC personas and seeded cases only.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { captureCell, openCell, startRow } from "./capture";
 import {
   CAPTURES,
@@ -22,6 +23,7 @@ import {
   viewportsOf,
   withDraft,
 } from "./library-plan";
+import { probeMasks } from "./mask-probe";
 
 for (const c of CAPTURES) {
   test(`library: ${c.screen} / ${c.state}`, async ({ page, context, baseURL }) => {
@@ -40,6 +42,13 @@ for (const c of CAPTURES) {
           const { png, maskCounts, attempts } = await captureCell(page, c, draft);
           mkdirSync(dirname(path), { recursive: true });
           writeFileSync(path, png);
+          // The mask width probe (V13-QA-023, mask-probe.ts), as in the baseline job; library-teardown.ts fails the run
+          // when a mask in MASKS matched nothing in any cell.
+          const probe = await probeMasks(page, c, draft, lang, png);
+          for (const v of probe.variants)
+            expect
+              .soft(v.identical, `${file}: masked text "${v.name}" moved the page (mask width probe)`)
+              .toBe(true);
           entries.push({
             file,
             screen: c.screen,
@@ -58,6 +67,10 @@ for (const c of CAPTURES) {
               reason: MASKS[m].reason,
               count: maskCounts[i],
             })),
+            maskProbe: {
+              masks: probe.masks,
+              variants: probe.variants.map((v) => ({ name: v.name, identical: v.identical })),
+            },
           });
         }
       }
