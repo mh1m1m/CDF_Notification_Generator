@@ -1,6 +1,6 @@
 # UX status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: `fix/V13-UX-018-select-overflow` · Base: `develop` `6be1802`
+Updated: 2026-11-07 · Branch: `docs/V13-UX-019-uxb20-done` · Base: `develop` `58b2fa4`
 
 ## Completed
 - V13-UX-004: information architecture, screen specs, design-system spec and strings (`docs/design/`). PR #4. DONE.
@@ -220,7 +220,7 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   the badge's sr-only text). This complements QA's #150, which covers 320 px only.
 - Written up in `UX009_TEXT_RESIZE_REFLOW.md` §6, with a UX_BACKLOG.md source row. Docs only.
 
-## V13-UX-018: WebKit select overflow (UXB-20, UX-009 R-06; WCAG 1.4.10). IN_REVIEW once its PR is open; QA (UI, cross-browser label)
+## V13-UX-018: WebKit select overflow (UXB-20, UX-009 R-06; WCAG 1.4.10). PR #153, QA ACCEPT `478762d` (WebKit and Firefox re-proof on #154, run 41300637665), merged as `f2d013a`
 - QA's cross-browser run 41292116619 on #152: in WebKit only, the draft form's template select added its longest
   option label to the page's scrollable width (320 px ar/en, with and without spacing; 640 × 450 en).
 - Cause (QA's WebKit runs 41294868940 and 41297056455 on #154): WebKit counts the native menulist's longest option
@@ -236,9 +236,14 @@ The earlier merge brought develop's `lib/domain` badge module. `StatusBadge` tak
   block (each mutation fails a test). The WebKit proof is QA's run on #154.
 - Docs: UXB-20 and R-06 added; UXB-19 DONE (`f93e8e2`); §6 cites #150 (`8536e7e`) for the card's position.
 
+## V13-UX-019: UXB-20 marked DONE (docs only). IN_REVIEW once its PR is open; QA
+- UX_BACKLOG.md: UXB-20 DONE with `f2d013a` (#153) and develop Cross-browser run 42395699011 (`58b2fa4`, green).
+- QA's minor note on #153 stays open as a possible follow-up: the chevron's side follows any RTL ancestor
+  (`[dir="rtl"]`), so an LTR island inside an RTL page would put it on the wrong side. Only if such islands appear.
+
 ## Unresolved defects
 - UXB-17 (MEDIUM) and UXB-18 (LOW) are DONE (`772e26d`). UXB-19 (LOW) is DONE (`f93e8e2`, #131). UXB-20
-  (MEDIUM, WebKit select overflow) is IN_REVIEW in V13-UX-018. Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
+  (MEDIUM, WebKit select overflow) is DONE (`f2d013a`, #153; develop Cross-browser 42395699011 green). Other open items are in `docs/design/reviews/UX_BACKLOG.md`.
 
 ## Dependencies and requests
 - ARCH: the root layout's `<header class="v13-topbar">` and the TopBar `<header>` would make two banner landmarks once
