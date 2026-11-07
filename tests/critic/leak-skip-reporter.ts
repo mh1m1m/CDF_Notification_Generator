@@ -5,8 +5,14 @@
 // results. When the run ends it fails the run (Reporter.onEnd may override the status, so the exit code is non-zero)
 // for every test in a leak suite that:
 //   - ended "skipped", unless its file has an allowance whose condition (tests/fixtures/skip-conditions.ts, the same
-//     function the skipping test calls) holds at the end of the run;
-//   - has no result at all ("did not run": an interrupted run, max failures, a failed dependency).
+//     function the skipping test calls) holds at the end of the run AND every skip annotation of that result was
+//     made in the leak suite itself (its location), where the static guard allows only the allow-listed calls; a
+//     helper's skip in another file is never covered;
+//   - has no result at all ("did not run": an interrupted run, max failures, a failed dependency);
+//   - had an attempt pinned to fail at run time (test.fail(), test.fail(true, …) from a hook, or
+//     test.info().expectedStatus = "failed", in a helper): the attempt ran with an expected status other than
+//     "passed", so a failing leak assertion counted as expected. This is the run-time half of G1; no allowance covers it;
+//   - had an attempt that ended "passed" while carrying errors (a hook overwrote the status after a failed assertion).
 // If no test began (a `--list` run, or a run that ran nothing), there is nothing to judge and it does nothing.
 // Registered in playwright.config.ts for every run, CI and local. SYNTHETIC only; reads results, writes stdout.
 import { dirname, isAbsolute, relative } from "node:path";
@@ -28,10 +34,18 @@ export interface LeakTestOutcome {
   title: string;
   /** The test's last result's status, or null when it has none. */
   status: TestResult["status"] | null;
+  /** Repository-relative files where the last result's skip/fixme annotations were made ("" when one has none). */
+  skipFiles?: readonly string[];
+  /** Some attempt ran with an expected status other than "passed" (test.fail() or expectedStatus, at run time). */
+  pinned?: boolean;
+  /** Some attempt ended "passed" while carrying errors (its status was overwritten). */
+  passedWithErrors?: boolean;
 }
 
+export type LeakFindingCause = "skipped" | "no result" | "pinned to fail" | "passed with errors";
+
 export interface LeakSkipFinding {
-  cause: "skipped" | "no result";
+  cause: LeakFindingCause;
   file: string;
   line: number;
   title: string;
@@ -50,8 +64,8 @@ export function holdingConditions(
 }
 
 /**
- * Every leak test that ended skipped without a holding allowance, or with no result. `anyBegan` false (nothing ran,
- * e.g. `--list`) returns nothing.
+ * Every leak test that ended skipped without a holding allowance for a skip made in its own file, has no result, was
+ * pinned to fail, or passed with errors. `anyBegan` false (nothing ran, e.g. `--list`) returns nothing.
  */
 export function leakSkipFindings(
   outcomes: readonly LeakTestOutcome[],
@@ -64,8 +78,13 @@ export function leakSkipFindings(
   for (const o of outcomes) {
     const at = { file: o.file, line: o.line, title: o.title };
     if (o.status === null) out.push({ cause: "no result", ...at });
-    else if (o.status === "skipped" && holdingConditions(o.file, allow, conditions).length === 0)
-      out.push({ cause: "skipped", ...at });
+    else if (o.status === "skipped") {
+      const inOwnFile = (o.skipFiles ?? []).length > 0 && (o.skipFiles ?? []).every((f) => f === o.file);
+      if (!inOwnFile || holdingConditions(o.file, allow, conditions).length === 0)
+        out.push({ cause: "skipped", ...at });
+    }
+    if (o.pinned) out.push({ cause: "pinned to fail", ...at });
+    if (o.passedWithErrors) out.push({ cause: "passed with errors", ...at });
   }
   return out.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 }
@@ -89,6 +108,8 @@ export default class LeakSkipReporter implements Reporter {
   private readonly rootGiven: boolean;
   private tests: TestCase[] = [];
   private readonly last = new Map<TestCase, TestResult>();
+  private readonly pinned = new Set<TestCase>();
+  private readonly passedWithErrors = new Set<TestCase>();
   private began = false;
 
   constructor(options: LeakSkipReporterOptions = {}) {
@@ -114,27 +135,42 @@ export default class LeakSkipReporter implements Reporter {
   onTestEnd(test: TestCase, result: TestResult) {
     this.began = true;
     this.last.set(test, result);
+    // test.expectedStatus is this attempt's: a run-time test.fail() or expectedStatus assignment sets it to "failed"
+    if (result.status !== "skipped" && test.expectedStatus !== "passed") this.pinned.add(test);
+    if (result.status === "passed" && result.errors.length > 0) this.passedWithErrors.add(test);
   }
 
   async onEnd(result: FullResult): Promise<{ status: FullResult["status"] } | undefined> {
-    const outcomes = this.tests.map((t) => ({
-      file: this.fileOf(t),
-      line: t.location.line,
-      // titlePath: the root, the project and the file come first, then describes and the title
-      title: t.titlePath().slice(3).join(" › "),
-      status: this.last.get(t)?.status ?? null,
-    }));
+    const outcomes = this.tests.map((t): LeakTestOutcome => {
+      const last = this.last.get(t);
+      return {
+        file: this.fileOf(t),
+        line: t.location.line,
+        // titlePath: the root, the project and the file come first, then describes and the title
+        title: t.titlePath().slice(3).join(" › "),
+        status: last?.status ?? null,
+        skipFiles: (last?.annotations ?? [])
+          .filter((a) => a.type === "skip" || a.type === "fixme")
+          .map((a) => (a.location ? this.relativeFile(a.location.file) : "")),
+        pinned: this.pinned.has(t),
+        passedWithErrors: this.passedWithErrors.has(t),
+      };
+    });
     const findings = leakSkipFindings(outcomes, this.began, this.allowances);
     if (findings.length === 0) return undefined;
     process.stdout.write(
-      `\nLeak-skip check (V13-QA-019): ${findings.length} leak-detection test(s) did not run to a result ` +
+      `\nLeak-skip check (V13-QA-019): ${findings.length} leak-detection finding(s): a test did not run to a result ` +
+        `or was waived at run time ` +
         `(TEST_ARCHITECTURE.md §7.1):\n${formatLeakSkipFindings(findings)}\n`,
     );
     return { status: result.status === "interrupted" ? "interrupted" : "failed" };
   }
 
   private fileOf(t: TestCase) {
-    const f = t.location.file;
+    return this.relativeFile(t.location.file);
+  }
+
+  private relativeFile(f: string) {
     return (isAbsolute(f) ? relative(this.root, f) : f).split("\\").join("/");
   }
 }

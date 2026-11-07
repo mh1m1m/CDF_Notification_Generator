@@ -129,6 +129,12 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   an allowance whose condition does not hold fails; `--max-failures=1` reports "no result"; `--list` exits 0.
   Mutations M1–M6 (reporter dropped from the local list; "skipped" ignored; "no result" ignored; allowance widened;
   `--list` not exempt; status not overridden) each fail the guard.
+  Review round 1 (#167, ARCH 6708849007 R1 + SEC 6708813324 / ARCH R2, CHANGES aca2f78): a helper's `test.fail()`,
+  `expectedStatus = "failed"` or hook pin is now a "pinned to fail" finding, and an `afterEach` status overwrite a
+  "passed with errors" finding, neither ever allowed; an allowance covers only a skip whose annotation was made in the
+  suite's own file (ARCH I1); a truth table pins each skip condition, and a signalled run asserts no environment
+  condition holds. Mutations N1–N6 (pin ignored; passed-with-errors ignored; skip location ignored; each condition
+  made always true) each fail the guard.
 - V13-QA-023 — #162, merged into develop as f0f8437 — COMPLETE: the mask width
   probe (TEST_ARCHITECTURE §10). Found while building: the capture style never reached the sandboxed preview frame
   (now put into every frame for the capture; the 4 notification-preview baselines change and are replaced from the PR's

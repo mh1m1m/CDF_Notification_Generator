@@ -40,7 +40,14 @@ import {
   leakSkipFindings,
   type LeakTestOutcome,
 } from "../critic/leak-skip-reporter";
-import { SKIP_CONDITIONS, type SkipCondition } from "../fixtures/skip-conditions";
+import {
+  externalDeployment,
+  localBuildMissing,
+  sessionSecretMissing,
+  SKIP_CONDITIONS,
+  type SkipCondition,
+} from "../fixtures/skip-conditions";
+import { requiredBy } from "../security/db/readiness";
 import {
   ACCESS_AUDIT_PROJECT,
   CHROMIUM_ONLY,
@@ -831,15 +838,23 @@ test.describe("B1: Chromium runs every Sentinel spec and leak suite; the engines
   });
 });
 
-test.describe("R1: a leak-detection test that ends skipped or unrun fails the run (V13-QA-019, run-time half)", () => {
+test.describe("R1: a leak-detection test that ends skipped, unrun or waived fails the run (V13-QA-019, run-time half)", () => {
   // In order in one worker: the planted runs are Playwright subprocesses under test-results/.
   test.describe.configure({ mode: "default" });
   const SUITE = "tests/e2e/leak.spec.ts";
-  const at = (status: LeakTestOutcome["status"], file = SUITE, line = 3): LeakTestOutcome => ({
+  const at = (
+    status: LeakTestOutcome["status"],
+    file = SUITE,
+    line = 3,
+    more: Partial<LeakTestOutcome> = {},
+  ): LeakTestOutcome => ({
     file,
     line,
     title: `t${line}`,
     status,
+    // by default a skip was made in the suite's own file (an allow-listed call)
+    skipFiles: status === "skipped" ? [file] : [],
+    ...more,
   });
   const never: Record<SkipCondition, () => boolean> = {
     sessionSecretMissing: () => false,
@@ -890,6 +905,98 @@ test.describe("R1: a leak-detection test that ends skipped or unrun fails the ru
     expect(leakSkipFindings([at("skipped")], true, [{ file: SUITE }], always)).toHaveLength(1);
     // a missing result is never allowed, whatever holds
     expect(leakSkipFindings([at(null)], true, allow, always).map((x) => x.cause)).toEqual(["no result"]);
+  });
+
+  test("an allowance covers only a skip made in the suite's own file: a helper's skip, or one without a location, is not covered", () => {
+    const skippedFrom = (skipFiles: string[]) => at("skipped", SUITE, 3, { skipFiles });
+    expect(leakSkipFindings([skippedFrom([SUITE])], true, allow, always)).toEqual([]);
+    expect(leakSkipFindings([skippedFrom([SUITE, SUITE])], true, allow, always)).toEqual([]);
+    for (const files of [["tests/e2e/helper.ts"], [SUITE, "tests/e2e/helper.ts"], [""], []])
+      expect(
+        leakSkipFindings([skippedFrom(files)], true, allow, always).map((x) => x.cause),
+        JSON.stringify(files),
+      ).toEqual(["skipped"]);
+  });
+
+  test("an attempt pinned to fail, or one that passed with errors, is a finding of its own that no allowance covers", () => {
+    for (const status of ["passed", "failed", "timedOut"] as const)
+      expect(
+        leakSkipFindings([at(status, SUITE, 3, { pinned: true })], true, allow, always).map((x) => x.cause),
+        status,
+      ).toEqual(["pinned to fail"]);
+    expect(
+      leakSkipFindings([at("passed", SUITE, 3, { passedWithErrors: true })], true, allow, always).map(
+        (x) => x.cause,
+      ),
+    ).toEqual(["passed with errors"]);
+    // a pin on one attempt and a skip on the retry: both named
+    expect(
+      leakSkipFindings([at("skipped", SUITE, 3, { pinned: true })], true, [], never).map((x) => x.cause),
+    ).toEqual(["skipped", "pinned to fail"]);
+    expect(
+      formatLeakSkipFindings(leakSkipFindings([at("passed", SUITE, 3, { pinned: true })], true, [], never)),
+    ).toBe(`  pinned to fail: ${SUITE}:3 › t3`);
+  });
+
+  // R2 (SEC 6708813324, ARCH 6708849007): the test and the reporter share each condition, so a wrong condition would
+  // fool both. This table pins each function against the real environment and file system, never through itself.
+  const withEnv = (name: string, value: string | undefined, fn: () => void) => {
+    const saved = process.env[name];
+    try {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+      fn();
+    } finally {
+      if (saved === undefined) delete process.env[name];
+      else process.env[name] = saved;
+    }
+  };
+
+  test("truth table: sessionSecretMissing holds only when the secret is unset or empty", () => {
+    for (const [value, holds] of [
+      [undefined, true],
+      ["", true],
+      ["synthetic-test-value", false],
+    ] as const)
+      withEnv("V13_E2E_SESSION_SECRET", value, () =>
+        expect(sessionSecretMissing(), String(value)).toBe(holds),
+      );
+  });
+
+  test("truth table: externalDeployment holds only for a non-blank V13_E2E_BASE_URL", () => {
+    for (const [value, holds] of [
+      [undefined, false],
+      ["", false],
+      ["  ", false],
+      ["https://example.test", true],
+    ] as const)
+      withEnv("V13_E2E_BASE_URL", value, () =>
+        expect(externalDeployment(), JSON.stringify(value)).toBe(holds),
+      );
+  });
+
+  test("truth table: localBuildMissing holds only when the directory has no .next/static", () => {
+    const dir = mkdtempSync(join(ROOT, "test-results", "guard-r2-"));
+    try {
+      expect(localBuildMissing(dir), "no .next").toBe(true);
+      mkdirSync(join(dir, ".next"));
+      expect(localBuildMissing(dir), ".next without static").toBe(true);
+      mkdirSync(join(dir, ".next", "static"));
+      expect(localBuildMissing(dir), ".next/static present").toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("in a signalled run against the local build (CI), no environment skip condition holds", () => {
+    // CI's e2e job sets CI and no V13_E2E_BASE_URL; playwright.config.ts sets the session secret for that run. A
+    // condition made always true then fails here, in the very job whose skips it would hide. (localBuildMissing in
+    // CI is SEC-APP-22's requirement: requireBuildWhenSignalled fails before the skip.)
+    const signalled = requiredBy(process.env).length > 0 && !process.env.V13_E2E_BASE_URL?.trim();
+    expect(signalled ? [externalDeployment(), sessionSecretMissing()] : [false, false]).toEqual([
+      false,
+      false,
+    ]);
   });
 
   test("the reporter calls the real conditions: each allowance's function, as the test calls it", () => {
@@ -1000,17 +1107,58 @@ test.describe("R1: a leak-detection test that ends skipped or unrun fails the ru
     expect(r.out).toContain(`skipped: ${r.rel("leak.spec.ts")}:3 › checks`);
   });
 
-  test("end to end: an allowance whose condition is false does not cover a skip; while it holds, it does", () => {
+  test("end to end: an allowance never covers a helper's skip, whether or not its condition holds", () => {
     const files = {
       "helper.ts": HELPER,
       "leak.spec.ts": `${PW}import { onlyWhenReady } from "./helper";\ntest("checks", () => {\n  onlyWhenReady();\n});\n`,
     };
     const allow = [{ file: "leak.spec.ts", holds: "sessionSecretMissing" as const }];
-    const held = planted(files, { allow, env: { V13_E2E_SESSION_SECRET: "" } });
-    expect(held.code, held.out).toBe(0);
-    const notHeld = planted(files, { allow, env: { V13_E2E_SESSION_SECRET: "synthetic-test-value" } });
-    expect(notHeld.code, notHeld.out).not.toBe(0);
-    expect(notHeld.out).toContain("skipped: ");
+    for (const secret of ["", "synthetic-test-value"]) {
+      const r = planted(files, { allow, env: { V13_E2E_SESSION_SECRET: secret } });
+      expect(r.code, r.out).not.toBe(0);
+      expect(r.out).toContain(`skipped: ${r.rel("leak.spec.ts")}:3 › checks`);
+    }
+  });
+
+  test("end to end: a skip in the suite's own file fails while its allowance's condition does not hold", () => {
+    const r = planted(
+      { "leak.spec.ts": `${PW}test("checks", () => {\n  test.skip(true, "planted");\n});\n` },
+      {
+        allow: [{ file: "leak.spec.ts", holds: "sessionSecretMissing" }],
+        env: { V13_E2E_SESSION_SECRET: "synthetic-test-value" },
+      },
+    );
+    expect(r.code, r.out).not.toBe(0);
+    expect(r.out).toContain(`skipped: ${r.rel("leak.spec.ts")}:2 › checks`);
+  });
+
+  test("end to end: a helper pinning a leak test to fail, or a hook overwriting its failed status, fails the run", () => {
+    const LEAK = 'expect("leaked CDF-DEMO-2026-0002").not.toContain("CDF-DEMO-2026-0002");';
+    const r = planted({
+      "pins.ts":
+        'import { test } from "@playwright/test";\n' +
+        "export function knownIssue() {\n  test.fail();\n}\n" +
+        'export function expectFailure() {\n  test.info().expectedStatus = "failed";\n}\n' +
+        'export function knownInHook() {\n  test.fail(true, "known");\n}\n' +
+        'export function forgive() {\n  test.afterEach(({}, info) => {\n    info.status = "passed";\n  });\n}\n',
+      "leak-a.spec.ts":
+        'import { expect, test } from "@playwright/test";\n' +
+        'import { expectFailure, knownInHook, knownIssue } from "./pins";\n' +
+        `test("fail pin", () => {\n  knownIssue();\n  ${LEAK}\n});\n` +
+        `test("expected-status pin", () => {\n  expectFailure();\n  ${LEAK}\n});\n` +
+        `test.describe("hooked", () => {\n  test.beforeEach(() => knownInHook());\n  test("hook pin", () => {\n    ${LEAK}\n  });\n});\n`,
+      "leak-b.spec.ts":
+        'import { expect, test } from "@playwright/test";\n' +
+        'import { forgive } from "./pins";\n' +
+        "forgive();\n" +
+        `test("overwritten", () => {\n  ${LEAK}\n});\n`,
+    });
+    expect(r.code, r.out).not.toBe(0);
+    const a = r.rel("leak-a.spec.ts");
+    expect(r.out).toContain(`pinned to fail: ${a}:3 › fail pin`);
+    expect(r.out).toContain(`pinned to fail: ${a}:7 › expected-status pin`);
+    expect(r.out).toContain(`pinned to fail: ${a}:13 › hooked › hook pin`);
+    expect(r.out).toContain(`passed with errors: ${r.rel("leak-b.spec.ts")}:4 › overwritten`);
   });
 
   test("end to end: the real condition function in a planted test, skipping while it holds, passes", () => {

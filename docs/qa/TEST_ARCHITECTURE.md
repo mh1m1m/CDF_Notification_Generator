@@ -298,20 +298,37 @@ suites L1 leaves out to exactly that one file.
 
 **The run-time half (V13-QA-019).** `tests/critic/leak-skip-reporter.ts` is a Playwright reporter that
 `playwright.config.ts` registers for every run, CI and local. When the run ends it fails the run (a reporter's `onEnd`
-may override the run's status, so the exit code is non-zero) for every test in a Playwright leak suite that ended
-`skipped`, however the skip was made (in a body, a hook or a helper in another file), or that has no result at all
-(an interrupted run, max failures, a failed dependency). Each finding names its cause, `skipped` or `no result`, with
-`file:line › title`. A skip passes only when its file has an allow-list entry whose condition holds when the run ends.
-The conditions live in `tests/fixtures/skip-conditions.ts` (`sessionSecretMissing`, `externalDeployment`,
-`localBuildMissing`, and `externalBaseUrl`, which `playwright.config.ts` also reads): the skipping test calls the
-function and the reporter calls the same function, never a copy. When no test began (a `--list` run, or a run that ran
-nothing) it judges nothing. Guard **R1** checks the decision rules, the registration in both reporter lists, and that
-each Playwright allow-list entry's call is its condition's own function; planted runs of the real reporter in a
-Playwright subprocess (its own minimal configuration in a temporary directory, removed afterwards) prove that a
-helper's run-time skip fails the run, that an allow-list entry whose condition is false does not cover a skip while
-one that holds does, that a leak test left without a result is named, and that a clean run and a listing pass. The
-Vitest suite `case-matrix.spec.ts` is outside it; its `test:db` half is ARCH's row (vitest.config.ts is a root
-configuration).
+may override the run's status, so the exit code is non-zero) for every test in a Playwright leak suite that:
+
+- ended `skipped`, however the skip was made (in a body, a hook or a helper in another file), unless its file has an
+  allow-list entry whose condition holds when the run ends **and** every skip annotation of that result was made in
+  the leak suite itself (the annotation's location), where G1 allows only the allow-listed calls. A helper's skip in
+  another file is never covered;
+- has no result at all (an interrupted run, max failures, a failed dependency);
+- had an attempt **pinned to fail** at run time: `test.fail()`, `test.fail(true, …)` from a hook, or
+  `test.info().expectedStatus = "failed"`, in a helper G1 cannot see. The attempt ran with an expected status other
+  than `passed`, so a failing leak assertion counted as expected. This is the run-time half of G1's "no `test.fail()`
+  pin applies to a leak", and no allow-list entry covers it;
+- had an attempt that ended `passed` while carrying errors (a hook overwrote the status after a failed assertion).
+
+Each finding names its cause (`skipped`, `no result`, `pinned to fail` or `passed with errors`) with
+`file:line › title`. The conditions live in `tests/fixtures/skip-conditions.ts` (`sessionSecretMissing`,
+`externalDeployment`, `localBuildMissing`, and `externalBaseUrl`, which `playwright.config.ts` also reads): the
+skipping test calls the function and the reporter calls the same function, never a copy. Because the two then agree
+even when a function is wrong, a truth table pins each function against the real environment and file system (unset,
+empty, blank and set values; a temporary directory with and without `.next/static`), and in a signalled run against
+the local build (CI) the guard asserts that `externalDeployment()` and `sessionSecretMissing()` are both false, so a
+condition made always true fails in the very job whose skips it would hide (`localBuildMissing` there is SEC-APP-22's
+requirement). When no test began (a `--list` run, or a run that ran nothing) it judges nothing. Guard **R1** checks the
+decision rules, the truth table, the registration in both reporter lists, and that each Playwright allow-list entry's
+call is its condition's own function; planted runs of the real reporter in a Playwright subprocess (its own minimal
+configuration in a temporary directory, removed afterwards) prove that a helper's run-time skip fails the run whether
+or not the file's condition holds, that an in-file skip fails while its condition is false and passes while it holds,
+that a helper's `test.fail()`, `expectedStatus` assignment and hook pin, and an `afterEach` status overwrite, each fail
+the run with their named cause, that a leak test left without a result is named, and that a clean run and a listing
+pass. `--reporter` on the command line replaces the configured reporters; CI never passes one, and pinning that is
+ARCH's row (V13-ARCH-018). The Vitest suite `case-matrix.spec.ts` is outside it; its `test:db` half is ARCH's row
+(vitest.config.ts is a root configuration).
 
 **G7** (V13-QA-015, design §5.2, D2) keeps visual baselines from being written by the runner, in CI or locally. In
 `playwright.config.ts` the `defineConfig` object holds exactly one `updateSnapshots`, its own property, written as the
