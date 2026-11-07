@@ -118,6 +118,22 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
+- V13-QA-015 adoption — #159, branch test/V13-QA-015-adopt-baselines — IN_REVIEW: the 36 baselines committed under
+  `tests/visual/__screenshots__/`, taken from CI only (ARCH's decision, 7 Nov): artifact 13574858048
+  (`visual-results`) of #159's own pull_request CI run 42374093449, job 128408023113, at 0b40b1a (the capture-style
+  fix). In that run every one of the 9 tests failed on missing snapshots alone, and each candidate is byte-identical to
+  Playwright's actual image. The PR lists every file's sha256. Design §8 now describes the visual job as built
+  (ARCH-014). The first images (artifact 13081138200, develop run 41301822994, 1 Nov) were withdrawn: their first
+  comparison (#159 run 42372979341, 7 Nov) passed 6/9, my-work, case-overview and workspace-switcher failed.
+  Cause: the masked deadline words count days on the server clock, so their width changed between 1 Nov (candidates)
+  and 7 Nov and moved My Work's columns and the overview's mask edge. Fix: CAPTURE_STYLE gives `[data-deadline-state]`
+  a fixed width during the capture only (masked boxes only). Local probe: deadline words rewritten between two captures
+  of the three screens, ar and en: byte-identical with the fix, different on all three without it. Second local probe
+  (ARCH): every task's due_date moved back 1, 7 and 14 days on a fresh local database, the three screens recaptured in
+  ar and en, desktop and mobile. With a ch width my-work ar desktop still moved (an overdue deadline is bold, and ch
+  follows the weight), so the width is now 14rem; then my-work and workspace-switcher were byte-identical at every
+  shift. case-overview differed only in its open-tasks row, whose plain due date (unmasked) the probe itself rewrote; a
+  real clock never changes that date. Restored with `pnpm db:reset`. Both probes are local, not CI evidence.
 - V13-QA-011 — branch test/V13-QA-011-guard-followups — IN_REVIEW (ARCH): G6 plain-literal annotation `type`;
   L1 `playwright test --list` per guarded Playwright suite vs its own test calls (helpers in other files caught at load time; run-time skips from helpers stay a stated limit, review covers them);
   surface allow-list reason updated after V13-SEC-012. TEST_ARCHITECTURE §7.1.
