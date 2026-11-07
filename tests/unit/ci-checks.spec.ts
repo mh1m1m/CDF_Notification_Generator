@@ -1070,6 +1070,18 @@ describe("guard coverage (V13-ARCH-018)", () => {
     expect(planted(CI_WF, at(CROSS_WF, 8, crossIgnore))).toEqual(["cross-browser.yml:8 snapshot"]);
     expect(planted(at(CI_WF, 15, "      - run: pnpm test:e2e --no-deps"))).toEqual(["ci.yml:15 filter"]);
 
+    // A cluster of short options is read letter by letter, as the CLIs read it (SEC's CHANGES on #171).
+    expect(planted(visual(" -xu"))).toEqual(["ci.yml:20 snapshot"]);
+    expect(planted(at(CI_WF, 15, "      - run: pnpm test:e2e -xg leak"))).toEqual(["ci.yml:15 filter"]);
+    expect(planted(at(CI_WF, 15, "      - run: pnpm test:e2e -gleak"))).toEqual(["ci.yml:15 filter"]);
+    // In Playwright the rest of the word is -g's value, so this is a title filter for "u", not -u.
+    expect(planted(at(CI_WF, 15, "      - run: pnpm test:e2e -gu"))).toEqual(["ci.yml:15 filter"]);
+    expect(planted(at(CI_WF, 15, "      - run: pnpm test:e2e -xj 2"))).toEqual([]);
+    expect(planted(at(CI_WF, 11, "      - run: pnpm test:db -ut rls"))).toEqual([
+      "ci.yml:11 filter",
+      "ci.yml:11 snapshot",
+    ]);
+
     // Vitest: -u and --update, with or without a type, in a workflow or in a script it runs.
     expect(planted(at(CI_WF, 11, "      - run: pnpm test:db -u"))).toEqual(["ci.yml:11 snapshot"]);
     expect(planted(at(CI_WF, 11, "      - run: pnpm test:db --update new"))).toEqual(["ci.yml:11 snapshot"]);

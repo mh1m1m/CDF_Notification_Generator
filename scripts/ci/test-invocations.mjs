@@ -486,15 +486,50 @@ export function argumentFindings(run) {
     const where = `${tool} run "${run.via}"${word.file === run.file ? "" : ` (run by ${run.file}:${run.line})`}`;
     if (t === "--") continue;
     if (t.startsWith("-")) {
-      const long = t.startsWith("--");
-      const name = long ? /** @type {string} */ (t.split("=")[0]?.split(".")[0]) : t.slice(0, 2);
-      const attached = long ? t.includes("=") : t.length > 2;
-      const ban = banned[name];
-      if (ban && !(ban[0] === "reporter" && visualOnly))
-        out.push({ file: word.file, line: word.line, rule: ban[0], detail: `${where}: ${t} ${ban[1]}` });
       const next = run.args[n + 1]?.text;
-      const optional = OPTIONAL_VALUE[run.tool][name];
-      if (!attached && (takesValue.has(name) || (next !== undefined && optional?.has(next)))) n++;
+      /** @param {string} name */
+      const check = (name) => {
+        const ban = banned[name];
+        if (ban && !(ban[0] === "reporter" && visualOnly)) {
+          const shown =
+            name === t || t.startsWith(`${name}=`) || t.startsWith(`${name}.`) ? t : `${t} (${name})`;
+          out.push({
+            file: word.file,
+            line: word.line,
+            rule: ban[0],
+            detail: `${where}: ${shown} ${ban[1]}`,
+          });
+        }
+      };
+      /** Whether the next word is the value of `name`, which has nothing attached. */
+      const takesNext = (/** @type {string} */ name) =>
+        takesValue.has(name) || (next !== undefined && OPTIONAL_VALUE[run.tool][name]?.has(next) === true);
+      if (t.startsWith("--")) {
+        const name = /** @type {string} */ (t.split("=")[0]?.split(".")[0]);
+        check(name);
+        if (!t.includes("=") && takesNext(name)) n++;
+        continue;
+      }
+      // A cluster of short options, which both CLIs split (`-xu`, `-xg leak`, `-gleak`; SEC's CHANGES on #171).
+      if (run.tool === "playwright") {
+        // Playwright (commander): each letter is an option until one takes a value, which takes the rest of the word,
+        // or the next word when nothing is left.
+        for (let k = 1; k < t.length; k++) {
+          const name = `-${t[k]}`;
+          check(name);
+          if (takesValue.has(name) || OPTIONAL_VALUE.playwright[name] !== undefined) {
+            if (k === t.length - 1 && takesNext(name)) n++;
+            break;
+          }
+        }
+      } else {
+        // Vitest (cac, through mri): every letter up to a `=` is an option; only the last takes a value, after the `=`
+        // or as the next word.
+        const eq = t.indexOf("=");
+        const letters = eq < 0 ? t.slice(1) : t.slice(1, eq);
+        for (const letter of letters) check(`-${letter}`);
+        if (eq < 0 && letters.length > 0 && takesNext(`-${letters[letters.length - 1]}`)) n++;
+      }
       continue;
     }
     out.push({
