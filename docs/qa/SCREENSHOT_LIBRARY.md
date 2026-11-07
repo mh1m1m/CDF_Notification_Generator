@@ -12,7 +12,7 @@ for looking only, never baselines (fonts differ by machine).
 
 Matrix: desktop 1280 × 800, tablet 768 × 1024, mobile 360 × 780; ar, en; light, dark. 244 images per run.
 Browser clock fixed at 2026-10-15T09:00:00.000Z; reduced motion; animations disabled; caret hidden; mask colour #FF00FF.
-Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; } [data-deadline-state] { display: inline-block; inline-size: 14rem; block-size: 1lh; white-space: nowrap; overflow: hidden; vertical-align: top; } [data-testid="count-my-work-overdue"] > :first-child, [data-testid="count-my-work-due-week"] > :first-child { inline-size: 4rem; white-space: nowrap; overflow: hidden; } [data-field="notice_reference"] { display: inline-block; inline-size: 10rem; white-space: nowrap; overflow: hidden; vertical-align: top; }`
+Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; white-space: nowrap; overflow: hidden; vertical-align: top; } [data-deadline-state] { display: inline-block; inline-size: 14rem; block-size: 1lh; white-space: nowrap; overflow: hidden; vertical-align: top; } [data-testid="count-my-work-overdue"] > :first-child, [data-testid="count-my-work-due-week"] > :first-child { inline-size: 4rem; white-space: nowrap; overflow: hidden; } [data-field="notice_reference"] { display: inline-block; inline-size: 10rem; white-space: nowrap; overflow: hidden; vertical-align: top; }`
 
 ## Captured
 
