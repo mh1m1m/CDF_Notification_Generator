@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import { skipGuardReporters } from "./scripts/ci/vitest-skip-guard.mjs";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 
@@ -16,8 +17,12 @@ export default defineConfig({
     ],
   },
   test: {
-    // CI also writes JUnit XML into test-results/ (uploaded as a workflow artifact).
-    reporters: process.env.CI === "true" ? ["default", "junit"] : ["default"],
+    // CI also writes JUnit XML into test-results/ (uploaded as a workflow artifact). With V13_DB_TESTS_REQUIRED=1 (CI's
+    // database job) the skip guard fails the run when an integration test did not run (V13-ARCH-017).
+    reporters: [
+      ...(process.env.CI === "true" ? ["default", "junit"] : ["default"]),
+      ...skipGuardReporters(process.env),
+    ],
     outputFile: { junit: "test-results/vitest-junit.xml" },
     projects: [
       {
@@ -40,6 +45,8 @@ export default defineConfig({
           environment: "node",
           setupFiles: ["tests/support/next-runtime.ts"],
           fileParallelism: false,
+          // The skip guard names each test that did not run by file and line.
+          includeTaskLocation: true,
           testTimeout: dbTimeout,
           hookTimeout: 2 * dbTimeout,
         },
