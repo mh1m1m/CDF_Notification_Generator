@@ -1,6 +1,6 @@
 # SEC status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 1 Nov 2026 · Branch: `docs/V13-SEC-014-status-reviews` · `develop` now at `94fd0b7`
+Updated: 7 Nov 2026 · Branch: `security/V13-SEC-015-workflow-hardening` · `develop` at `f0f8437`
 
 ## Completed
 - Reviews: PR #5 (E02) ACCEPT `588021d`; PR #3 (PROC plan) CHANGES `1c9d826`; PR #6 (ARCH-001) ACCEPT `5c53ec4`
@@ -98,10 +98,30 @@ Updated: 1 Nov 2026 · Branch: `docs/V13-SEC-014-status-reviews` · `develop` no
   `persona`), then ACCEPT `b188076` (both INFOs fixed; the `case` strictness mutation now fails N7); #132 QA-013 design
   note ACCEPT `c778049` (D1: mask; five INFO for the CI hunks), then ACCEPT `5c22fbd` (delta folds in ARCH's D1–D4
   rulings; INFO 6: `pull_request`, never `pull_request_target`; event text to a shell only through `env:`)
+- Reviews 1–7 Nov: #134 SEC-014 merged `c770f53`; #137 DB-023 design note ACCEPT `1b32f87`; #138 FE-014 ACCEPT
+  `1800c91`; #139 PROC-027 ACCEPT `9a7dfad`; #141 FE-015 ACCEPT `209638d`; #143 ARCH-013 ACCEPT `6ad1e85`, `ddf928a`
+  (also path owner of `tests/security/e2e/surface.spec.ts`); #144 ARCH-002 ACCEPT `458943f`; #149 ARCH-002 ACCEPT
+  `a569dd8`; #142 DB-023 migration 0015 ACCEPT `b231e28` (12/12 mutations killed); #147 FE-017 ACCEPT `c143da1`,
+  re-confirmed `c5208b1` (6/6 killed); #152 QA-016 ACCEPT `39a6b03` (INFO: pin the `CHROMIUM_ONLY` keys), then
+  ACCEPT `93340b5` (TLS front loopback-only, app unchanged); #155 ARCH-002 ACCEPT `6cbd2cf`; #156 ARCH-014 ACCEPT
+  `f81376f` (8/8 candidate-check mutations killed; three INFO, now ARCH-015); #157 ARCH-002 ACCEPT `392b55d`; #160
+  ARCH-015 ACCEPT `a4cc14d` (6/6 mode-check mutations killed; #161 refused); #163 ARCH-002 ACCEPT `f51a37a` (INFO to
+  the owner: network access "Full" opens all egress); #158 QA-022 CHANGES `365ec74` (CI red: B1 did not know the
+  access-audit project), then ACCEPT `80324d8` (prefetch writes no row: FE's metadata defect re-planted is caught);
+  #164 ARCH-016 ACCEPT `ad6a3d5` (cross-browser on every PR adds no exposure beyond ci.yml's e2e job)
+- V13-SEC-015 — GitHub Actions workflow hardening (`tests/security/workflow-hardening.ts`,
+  `tests/security/app/workflow-hardening.spec.ts`; rules agreed with ARCH 7 Nov): every file under `.github/workflows`
+  (readdir, `.yml` and `.yaml`) is read line by line, without a YAML dependency. W1: top-level `permissions` exactly
+  `contents: read`, a job-level block only in release.yml's `tag` job and exactly `contents: write`. W2: no
+  `pull_request_target`, no `workflow_run`. W3: no `secrets.`, no `secrets:` key, `github.token` only in release.yml's
+  `tag` job. W4: every actions/checkout sets `persist-credentials: false`. W5: every `uses:` pinned to a 40-hex SHA.
+  W6: no `${{ }}` inside a `run:` script (stricter than ARCH's three expressions). W0: flow-style mappings refused, so
+  nothing is left unread. Planted negatives for each rule, reported at file:line — IN_REVIEW (reviewer: ARCH)
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
   `tests/security/e2e/case-pages.spec.ts`, `tests/security/e2e/surface.spec.ts`, `docs/teams/sec/STATUS.md`
+- V13-SEC-015: `tests/security/workflow-hardening.ts`, `tests/security/app/workflow-hardening.spec.ts`
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -118,6 +138,7 @@ Updated: 1 Nov 2026 · Branch: `docs/V13-SEC-014-status-reviews` · `develop` no
 | Local, V13-SEC-013 on `develop` `b396062`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; eleven mutations of `lib/notifications` / `lib/disclosure`, one at a time, then restored | lint 0, typecheck 0, unit **2032/2032** (82 files; SEC-APP-23 6/6); every mutation fails at least one SEC-APP-23 test (model-hash check, export projection gate, revision check, unknown-version fallback, render suppression, renderer bidi strip, `X-Unsent`, an added `To:`, projection keeping a withheld field, renderer showing withheld fields, SECURITY denial not written) | 6 | SEC-013 head |
 | Local, #129 head `07dc591`: `pnpm db:lint`, `pnpm db:reset`, `CI=true pnpm test:db`; eight mutations of migration 0014, one at a time, then restored; the registry line removed from `context-forgery.spec.ts` | db:lint 15 migrations, 0 findings; test:db **600/600** (34 files); every mutation fails tests or db:lint (grant to PUBLIC: `[forbidden-grantee]`); without the registry line SEC-DB-17 fails | 600 | `07dc591` |
 | Local, #130 head `926360d`: `pnpm typecheck`, eslint on the changed files, `vitest --project unit tests/unit/domain/next-action.spec.ts`; fifteen mutations of `lib/domain/next-action.ts` | typecheck 0, lint 0, **17/17**; 14 of 15 mutations fail tests; survivor: `case` not strict (INFO) | 17 | `926360d` |
+| Local, V13-SEC-015 on `develop` `f0f8437`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; twelve mutations of the checker and five of the real workflows (`contents: write` in cross-browser.yml, `persist-credentials: true` in ci.yml, `pull_request_target` in visual-library.yml, an extra job permission in release.yml, `upload-artifact@v4` in ci.yml), one at a time, then restored | lint 0, typecheck 0, format clean, unit **2494/2494** (96 files; the spec 28/28); every mutation fails at least one test | 28 | SEC-015 head |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.
