@@ -35,10 +35,10 @@ describe("SEC-APP-22 the bundle scan never skips silently in CI", () => {
 
   it("surface.spec.ts calls the fail-in-CI branch immediately before its missing-build skip", () => {
     const src = readFileSync(join(process.cwd(), "tests/security/e2e/surface.spec.ts"), "utf8").split("\n");
-    const skip = src.findIndex((l) => l.trim() === 'test.skip(!existsSync(root), "no local build");');
+    const skip = src.findIndex((l) => l.trim() === 'test.skip(localBuildMissing(), "no local build");');
     expect(skip, "the allow-listed skip is present, with its exact text").toBeGreaterThan(0);
     expect(src[skip - 1]?.trim()).toBe(
-      'requireBuildWhenSignalled("SEC-APP-13 bundle scan", existsSync(root));',
+      'requireBuildWhenSignalled("SEC-APP-13 bundle scan", !localBuildMissing());',
     );
     expect(src.filter((l) => l.includes("requireBuildWhenSignalled(")).length).toBe(1);
   });

@@ -6,6 +6,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { messagesFor } from "@/lib/i18n";
 import { mintSession, sessionCookie, SESSION_COOKIE, signInAs } from "../fixtures/personas";
+import { sessionSecretMissing } from "../fixtures/skip-conditions";
 
 const ar = messagesFor("ar");
 const DELTA = "governance-officer-delta";
@@ -171,7 +172,7 @@ test.describe("Scenario C — negatives leave the session unchanged", () => {
     context,
   }) => {
     test.skip(
-      !process.env.V13_E2E_SESSION_SECRET,
+      sessionSecretMissing(),
       "needs the run's session secret (set by playwright.config.ts for local builds)",
     );
     const token = await mintSession(

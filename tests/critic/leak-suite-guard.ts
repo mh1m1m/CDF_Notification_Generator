@@ -31,6 +31,7 @@
 // visible at load time and stays out of reach; review covers that.
 // Pure functions over source text: the planted-negative self-test feeds them synthetic sources. SYNTHETIC only.
 import ts from "typescript";
+import type { SkipCondition } from "../fixtures/skip-conditions";
 
 export interface GuardViolation {
   rule: "G1" | "G2" | "G3" | "G4" | "G5" | "G6" | "G7" | "L1" | "B1";
@@ -46,6 +47,11 @@ export interface SkipAllowance {
   call: RegExp;
   /** Why the skip is environment-conditional and cannot hide a leak in CI. */
   reason: string;
+  /**
+   * The condition the skip calls (tests/fixtures/skip-conditions.ts), for a Playwright suite: the leak-skip reporter
+   * calls the same function when the run ends and accepts a skip in this file only while it holds (V13-QA-019).
+   */
+  holds?: SkipCondition;
 }
 
 /** The suites TEST_ARCHITECTURE.md §7 and §7.1 name as leak detection (pages, payloads, requests, database). */
@@ -71,14 +77,16 @@ export const LEAK_SUITES: readonly string[] = [
 export const SKIP_ALLOWANCES: readonly SkipAllowance[] = [
   {
     file: "tests/e2e/negative-personas-pinning.spec.ts",
-    call: /^test\.skip\(!process\.env\.V13_E2E_SESSION_SECRET, "",? ?\)$/,
+    call: /^test\.skip\(sessionSecretMissing\(\), "",? ?\)$/,
+    holds: "sessionSecretMissing",
     reason:
       "minting Epsilon's and Zeta's sessions needs the run's session secret; playwright.config.ts sets it for every " +
       "locally started build (CI included), so the skip applies only against an external V13_E2E_BASE_URL",
   },
   {
     file: "tests/e2e/scenario-c-workspace-switch.spec.ts",
-    call: /^test\.skip\(!process\.env\.V13_E2E_SESSION_SECRET, "",? ?\)$/,
+    call: /^test\.skip\(sessionSecretMissing\(\), "",? ?\)$/,
+    holds: "sessionSecretMissing",
     reason: "the same session-secret condition, for Epsilon's minted session (Scenario C negative)",
   },
   {
@@ -90,14 +98,16 @@ export const SKIP_ALLOWANCES: readonly SkipAllowance[] = [
   },
   {
     file: "tests/security/e2e/surface.spec.ts",
-    call: /^test\.skip\(!LOCAL_BUILD, "",? ?\)$/,
+    call: /^test\.skip\(externalDeployment\(\), "",? ?\)$/,
+    holds: "externalDeployment",
     reason:
       "SEC-APP-13 knows the session secret and app password, and has a .next/static to scan, only for a locally " +
-      "started build; LOCAL_BUILD is false only against an external V13_E2E_BASE_URL (two calls)",
+      "started build; externalDeployment() holds only against an external V13_E2E_BASE_URL (two calls)",
   },
   {
     file: "tests/security/e2e/surface.spec.ts",
-    call: /^test\.skip\(!existsSync\(root\), "",? ?\)$/,
+    call: /^test\.skip\(localBuildMissing\(\), "",? ?\)$/,
+    holds: "localBuildMissing",
     reason:
       "since V13-SEC-012 a missing .next/static fails the test before this line whenever a truthy CI, " +
       "GITHUB_ACTIONS=true or V13_DB_TESTS_REQUIRED=1 is set (requireBuildWhenSignalled), so the skip applies only " +
