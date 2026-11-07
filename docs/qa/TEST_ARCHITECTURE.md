@@ -45,6 +45,7 @@ docs/qa/                   this file, SCENARIOS.md, SCREENSHOT_LIBRARY.md, repor
 | `firefox-ar`, `webkit-ar` | Firefox, WebKit | 1280×800 | `ar-SA` | `cross-browser.yml`: every push to `develop`, and PRs labelled `cross-browser` (V13-QA-016) | cross-engine emulation of tests/e2e and tests/a11y minus the Chromium-only specs; only when `V13_E2E_BROWSERS` names them; not in the Claude sandbox (only Chromium is installed there) |
 | `db-only` | none | — | — | every PR | Sentinel DB half and Truth DB half (no browser) |
 | `staging` | Chromium | 1280×800 | `ar-SA` | on demand / Gate J | read-only smoke + isolation against the staging preview (§9) |
+| `access-audit` | Chromium | 1280×720 | `ar-SA`, `rtl` | every PR, after `desktop-ar` (`dependencies`) | V13-QA-022: a prefetch records no access row, a page request exactly one (DB-023 D1); alone so no other spec opens a case for its persona while it counts |
 
 Configuration rules: `executablePath` from `PW_CHROMIUM_PATH` when set (Claude sandboxes:
 `/opt/pw-browsers/chromium`); CI uses the browsers of the pinned `@playwright/test` version. `fullyParallel: true`,
@@ -107,6 +108,10 @@ visibly distinct from `recorded` without colour alone (checked in `tests/a11y`: 
   `cdf_v13_app`, then per query `SET LOCAL ROLE cdf_v13_user` with the persona's claims — the same security context as
   the app (ADR-003). It never connects as the owner role except for the single expected-visibility read in §4, which
   runs in a read-only transaction.
+- The one administrator read (V13-QA-022): the audit ledger and `access_window` are deny-all to every application
+  role, so `ledger()` in `tests/fixtures/db.ts` reads them as the local administrator of `pnpm db:reset`
+  (`V13_ADMIN_DATABASE_URL`, loopback only, never against an external base URL), each read a `READ ONLY` transaction,
+  ids, actions and counts only.
 - A reset per CI job (not per test). Write tests (Scenario B, E) create their own rows through the app and assert on
   their own rows by id, so parallel workers never depend on each other's writes.
 
@@ -321,8 +326,9 @@ Firefox 71/71; WebKit 44 signed-in tests failed with no session cookie). The app
 `ignoreHTTPSErrors`. The CI job makes a one-day self-signed certificate with `openssl` in the runner's temp directory, key mode 0600;
 locally, make one the same way in the OS temp directory. Neither is ever committed or uploaded. The front listens on
 127.0.0.1 only, refuses any target but the started app on `http://127.0.0.1`, and stops with the web server; Chromium
-and Firefox stay on `http://localhost:3100`, and only `webkit-ar` has `ignoreHTTPSErrors`. WebKit itself is proven only
-by the next cross-browser run.
+and Firefox stay on `http://localhost:3100`, and only `webkit-ar` has `ignoreHTTPSErrors`. WebKit is proven through the
+front by the cross-browser runs: PR run 41301912994 (#152 head 93340b5) and, after the merge, every push to `develop`
+(first complete run 42376971833 on 1f7b685; then 42378248623 on 357e574), each Firefox and WebKit green.
 Locally the front was proven with the `webkit-ar` settings run in Chromium: 71/71, with the Server Action POSTs and the
 `Secure` cookie through the front.
 

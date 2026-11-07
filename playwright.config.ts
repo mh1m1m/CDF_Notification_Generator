@@ -19,10 +19,11 @@
 // PW_CHROMIUM_PATH points Playwright at a pre-installed Chromium in sandboxes without browser downloads; CI runs
 // `playwright install --with-deps chromium` instead.
 import { randomBytes } from "node:crypto";
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices, type PlaywrightTestProject } from "@playwright/test";
 import { isLoopbackUrl, LOCAL_DATABASE, localPrimaryPort, V13_APP } from "./scripts/db/lib/migrations.mjs";
 import { DEFAULT_LOCAL_APP_PASSWORD } from "./scripts/db/reset-local.mjs";
 import {
+  ACCESS_AUDIT_PROJECT,
   CHROMIUM_PROJECT,
   crossBrowserProject,
   selectedBrowsers,
@@ -88,6 +89,10 @@ const LIBRARY_SPEC = "visual/library.spec.ts";
 // The committed visual baselines (V13-QA-015, §5): the `visual-baseline` project, only with V13_E2E_VISUAL=baseline.
 const visualBaseline = process.env.V13_E2E_VISUAL === "baseline";
 const BASELINE_SPEC = "visual/baseline.spec.ts";
+// The case-access audit (V13-QA-022) counts one persona's ledger rows, so it runs in its own project after every other
+// browser test: no other spec opens a case for that persona while it counts. If a desktop-ar test fails, Playwright
+// does not start this project and the run is already red.
+const ACCESS_AUDIT_SPEC = "e2e/case-access-audit.spec.ts";
 /** The visual projects write no failure screenshot, trace or video: nothing the data check refused, and no cookie. */
 const visualUse = {
   ...devices["Desktop Chrome"],
@@ -98,6 +103,41 @@ const visualUse = {
   video: "off" as const,
 };
 const chromiumLaunch = chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {};
+
+/** Every project but the access audit, in the order the runner lists them. */
+const otherProjects: PlaywrightTestProject[] = [
+  {
+    name: CHROMIUM_PROJECT,
+    testIgnore: [LIBRARY_SPEC, BASELINE_SPEC, ACCESS_AUDIT_SPEC],
+    use: {
+      ...devices["Desktop Chrome"],
+      locale: "ar-SA",
+      ...chromiumLaunch,
+    },
+  },
+  ...(visualLibrary
+    ? [
+        {
+          name: "visual-library",
+          testMatch: LIBRARY_SPEC,
+          // A failed data check writes no image (§4), and no session cookie reaches the artifact (SEC on #132).
+          use: { ...visualUse, ...chromiumLaunch },
+        },
+      ]
+    : []),
+  ...(visualBaseline
+    ? [
+        {
+          name: "visual-baseline",
+          testMatch: BASELINE_SPEC,
+          // One Linux image set, committed: no browser or platform suffix in the file name (§3, §5.1).
+          snapshotPathTemplate: "{testDir}/visual/__screenshots__/{arg}{ext}",
+          use: { ...visualUse, ...chromiumLaunch },
+        },
+      ]
+    : []),
+  ...browsers.map((name) => crossBrowserProject(name, tlsBaseURL)),
+];
 
 export default defineConfig({
   testDir: "tests",
@@ -131,37 +171,24 @@ export default defineConfig({
   },
   ...(visualLibrary ? { globalTeardown: "./tests/visual/library-teardown.ts" } : {}),
   projects: [
-    {
-      name: CHROMIUM_PROJECT,
-      testIgnore: [LIBRARY_SPEC, BASELINE_SPEC],
-      use: {
-        ...devices["Desktop Chrome"],
-        locale: "ar-SA",
-        ...chromiumLaunch,
-      },
-    },
-    ...(visualLibrary
-      ? [
+    ...otherProjects,
+    // It reads the local ledger, so a run against an external deployment (staging) never lists it. It counts one
+    // persona's opens, so it starts only after every other project this run lists has finished (ARCH on #158): a
+    // local run with the engines or a visual project selected cannot open a case while it counts.
+    ...(externalBaseUrl
+      ? []
+      : [
           {
-            name: "visual-library",
-            testMatch: LIBRARY_SPEC,
-            // A failed data check writes no image (§4), and no session cookie reaches the artifact (SEC on #132).
-            use: { ...visualUse, ...chromiumLaunch },
+            name: ACCESS_AUDIT_PROJECT,
+            testMatch: ACCESS_AUDIT_SPEC,
+            dependencies: otherProjects.map((p) => p.name!),
+            use: {
+              ...devices["Desktop Chrome"],
+              locale: "ar-SA",
+              ...chromiumLaunch,
+            },
           },
-        ]
-      : []),
-    ...(visualBaseline
-      ? [
-          {
-            name: "visual-baseline",
-            testMatch: BASELINE_SPEC,
-            // One Linux image set, committed: no browser or platform suffix in the file name (§3, §5.1).
-            snapshotPathTemplate: "{testDir}/visual/__screenshots__/{arg}{ext}",
-            use: { ...visualUse, ...chromiumLaunch },
-          },
-        ]
-      : []),
-    ...browsers.map((name) => crossBrowserProject(name, tlsBaseURL)),
+        ]),
   ],
   webServer: externalBaseUrl
     ? undefined
