@@ -118,7 +118,16 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
-- V13-QA-024 — branch test/V13-QA-024-mask-rule-hardening — IN_REVIEW (ARCH): #162's two INFOs. The correlation id's
+- V13-QA-017 — branch test/V13-QA-017-pr-quality-report — IN_REVIEW (ARCH; SEC for the CI hunk): the PR quality
+  report (REQ-CICD-002, design §10, ruling D4). `tests/report/pr-report.mjs` builds one Markdown report per CI job
+  from its own Playwright JSON and Vitest JUnit reports (failed and flaky tests, screenshots, reflow findings, axe
+  findings, performance "not measured in M1", fixed corrections) and appends it to the step summary; the a11y specs
+  attach their findings as JSON; `playwright.config.ts` adds the `json` reporter in CI; ci.yml runs it in the unit,
+  database, e2e and visual jobs (`if: always()`, env only). Unit 17/17 including a planted Playwright run. Mutations:
+  URL redaction removed (4 fail), an expression in a step (1), `if: always()` dropped (1), the reflow attachment
+  renamed (1), flaky ignored (2); the final whole-report redaction alone is a second layer (every cell is already
+  redacted), so removing it changes nothing.
+- V13-QA-024 — #169, merged into develop as 4880d41 — COMPLETE (ARCH ACCEPT 3c929c6): #162's two INFOs. The correlation id's
   capture rule gets `white-space: nowrap; overflow: hidden; vertical-align: top` like every other width rule, and a
   static check pins that every width rule has nowrap and overflow hidden; the probe's long id is now the widest hex
   glyph (`d`) instead of the narrowest (`f`); the planted page gains a correlation id (its rule taken out → the probe

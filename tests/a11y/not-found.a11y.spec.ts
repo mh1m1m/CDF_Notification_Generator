@@ -5,12 +5,22 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { signInAs } from "../fixtures/personas";
 
+/** The PR quality report (tests/report/pr-report.mjs, V13-QA-017) reads this attachment for its axe section. */
+const A11Y_ATTACHMENT = "a11y-violations";
+
 async function expectOneMain(page: Page, path: string) {
   const res = await page.goto(path);
   expect(res?.status(), path).toBe(404);
   await expect(page.getByTestId("not-found-state"), path).toBeVisible();
   await expect(page, "the document has a non-empty <title> before the scan").toHaveTitle(/\S/);
   const results = await new AxeBuilder({ page }).analyze();
+  if (results.violations.length)
+    await test.info().attach(A11Y_ATTACHMENT, {
+      contentType: "application/json",
+      body: JSON.stringify(
+        results.violations.map((v) => ({ rule: v.id, impact: v.impact, page: path, nodes: v.nodes.length })),
+      ),
+    });
   const all = results.violations.map((v) => `${v.id} (${v.impact})`);
   expect(all, `${path}: no axe violation at any impact`).toEqual([]);
   await expect(page.locator("main"), path).toHaveCount(1);
