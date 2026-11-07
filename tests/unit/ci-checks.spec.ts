@@ -1,7 +1,8 @@
 // The repository checks in scripts/ci. Two run inside `pnpm lint`: logical CSS only (RTL/LTR), and .env.example holding
-// documented names without values. The third is the visual job's candidate check (V13-ARCH-014,
-// .github/workflows/visual.yml): a run without committed baselines passes only when it failed on missing snapshots alone
-// and wrote one PNG candidate for each, and no baseline.
+// documented names without values. Two belong to the `visual` job of .github/workflows/ci.yml: the candidate check
+// (V13-ARCH-014: a run without committed baselines passes only when it failed on missing snapshots alone and wrote one
+// PNG candidate for each, and no baseline), and the mode (V13-ARCH-015: candidate mode is refused once baselines have
+// been committed, so deleting every baseline fails the job).
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import { findReferencedEnvNames, parseEnvExample } from "@/scripts/ci/check-env-example.mjs";
 import { findPhysicalClasses, findPhysicalCss } from "@/scripts/ci/check-logical-css.mjs";
 import { checkCandidateRun, collectTests } from "@/scripts/ci/visual-candidates.mjs";
+import { decideVisualMode } from "@/scripts/ci/visual-mode.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -282,6 +284,130 @@ describe("visual-candidates (V13-ARCH-014)", () => {
       writeFileSync(reportFile, "{ not json");
       expect(exec("1").status).toBe(1);
       expect(spawnSync(process.execPath, [script, "1"], { encoding: "utf8" }).status).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("visual-mode (V13-ARCH-015)", () => {
+  const SHOTS_DIR = "tests/visual/__screenshots__";
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+  it("compares whenever the commit holds a baseline, whatever its first parent holds", () => {
+    expect(decideVisualMode({ headPngs: 36, parentPngs: 36 }).mode).toBe("compare");
+    // The change that adopts the first baselines.
+    expect(decideVisualMode({ headPngs: 36, parentPngs: 0 }).mode).toBe("compare");
+    // Some deleted: the comparison itself fails on each missing snapshot (updateSnapshots "none").
+    expect(decideVisualMode({ headPngs: 1, parentPngs: 36 }).mode).toBe("compare");
+    // No parent is needed to compare.
+    expect(decideVisualMode({ headPngs: 1, parentPngs: null }).mode).toBe("compare");
+  });
+
+  it("makes candidates only when neither the commit nor its first parent holds a baseline (the control)", () => {
+    expect(decideVisualMode({ headPngs: 0, parentPngs: 0 }).mode).toBe("candidates");
+  });
+
+  it("refuses candidate mode when every baseline was deleted, or when the first parent cannot be read", () => {
+    const deleted = decideVisualMode({ headPngs: 0, parentPngs: 36 });
+    expect(deleted.mode).toBe("refused");
+    expect(deleted.reason).toContain("deleting every baseline fails the job");
+    expect(decideVisualMode({ headPngs: 0, parentPngs: 1 }).mode).toBe("refused");
+    expect(decideVisualMode({ headPngs: 0, parentPngs: null }).mode).toBe("refused");
+  });
+
+  it("as a command on real git history: candidates, compare, refused after deleting every baseline (also in a pull request's merge commit and a shallow clone), usage 2", () => {
+    const dir = mkdtempSync(join(tmpdir(), "v13-visual-mode-"));
+    try {
+      const repo = join(dir, "repo");
+      mkdirSync(repo);
+      const git = (cwd: string, ...args: string[]) => {
+        const r = spawnSync(
+          "git",
+          [
+            "-c",
+            "user.name=Synthetic Tester",
+            "-c",
+            "user.email=tester@example.test",
+            "-c",
+            "commit.gpgsign=false",
+            ...args,
+          ],
+          { cwd, encoding: "utf8" },
+        );
+        expect(r.status, r.stderr).toBe(0);
+      };
+      const script = join(ROOT, "scripts", "ci", "visual-mode.mjs");
+      const mode = (cwd = repo, args = [SHOTS_DIR]) =>
+        spawnSync(process.execPath, [script, ...args], { cwd, encoding: "utf8" });
+      const expectMode = (expected: "compare" | "candidates", cwd = repo) => {
+        const r = mode(cwd);
+        expect(r.status, r.stderr).toBe(0);
+        expect(r.stdout).toBe(`${expected}\n`);
+      };
+      const expectRefused = (why: string, cwd = repo) => {
+        const r = mode(cwd);
+        expect(r.status).toBe(1);
+        expect(r.stdout).toBe("");
+        expect(r.stderr).toContain(why);
+      };
+
+      git(repo, "init", "-q", "--initial-branch=main");
+      writeFileSync(join(repo, "README.md"), "synthetic\n");
+      git(repo, "add", "README.md");
+      git(repo, "commit", "-q", "-m", "root");
+      // A root commit has no parent to read: fail closed.
+      expectRefused("cannot be read");
+      writeFileSync(join(repo, "README.md"), "synthetic, second\n");
+      git(repo, "commit", "-q", "-am", "no baseline yet");
+      expectMode("candidates");
+
+      mkdirSync(join(repo, SHOTS_DIR), { recursive: true });
+      for (const name of ["a-data-ar-desktop.png", "b-data-en-mobile.png"])
+        writeFileSync(join(repo, SHOTS_DIR, name), PNG);
+      git(repo, "add", SHOTS_DIR);
+      git(repo, "commit", "-q", "-m", "adopt baselines");
+      expectMode("compare");
+
+      // Only PNG files count: a folder left with another file is still a folder without baselines.
+      git(repo, "switch", "-q", "-c", "notes-only");
+      git(repo, "rm", "-q", "-r", SHOTS_DIR);
+      mkdirSync(join(repo, SHOTS_DIR), { recursive: true });
+      writeFileSync(join(repo, SHOTS_DIR, "NOTES.txt"), "synthetic\n");
+      git(repo, "add", SHOTS_DIR);
+      git(repo, "commit", "-q", "-m", "every baseline deleted, a note left");
+      expectRefused("holds 2 baselines and this commit holds none");
+      git(repo, "switch", "-q", "main");
+
+      // A pull request that deletes every baseline: GitHub's merge commit has the base as its first parent.
+      git(repo, "switch", "-q", "-c", "delete-all");
+      git(repo, "rm", "-q", "-r", SHOTS_DIR);
+      git(repo, "commit", "-q", "-m", "delete every baseline");
+      expectRefused("deleting every baseline fails the job");
+      git(repo, "switch", "-q", "main");
+      git(repo, "merge", "-q", "--no-ff", "-m", "merge commit", "delete-all");
+      expectRefused("holds 2 baselines and this commit holds none");
+
+      // The job's checkout fetches depth 2, so the first parent is there; at depth 1 it is not, and the run fails closed.
+      const depth2 = join(dir, "depth2");
+      git(dir, "clone", "-q", "--depth", "2", `file://${repo}`, depth2);
+      expectRefused("holds 2 baselines and this commit holds none", depth2);
+      const depth1 = join(dir, "depth1");
+      git(dir, "clone", "-q", "--depth", "1", `file://${repo}`, depth1);
+      expectRefused("cannot be read", depth1);
+      // A shallow clone of a commit that holds baselines compares without its parent.
+      git(repo, "switch", "-q", "-c", "keep-one", "HEAD^1");
+      git(repo, "rm", "-q", join(SHOTS_DIR, "a-data-ar-desktop.png"));
+      git(repo, "commit", "-q", "-m", "delete one baseline");
+      const keepOne = join(dir, "keep-one");
+      git(dir, "clone", "-q", "--depth", "1", "--branch", "keep-one", `file://${repo}`, keepOne);
+      expectMode("compare", keepOne);
+
+      expect(mode(repo, []).status).toBe(2);
+      expect(mode(repo, [SHOTS_DIR, "extra"]).status).toBe(2);
+      const notARepository = mode(dir);
+      expect(notARepository.status).toBe(1);
+      expect(notARepository.stderr).toContain("HEAD is not a commit");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
