@@ -118,7 +118,18 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
-- V13-QA-022 — branch test/V13-QA-022-prefetch-access-row — IN_REVIEW (SEC + ARCH): case-access audit in the
+- V13-QA-023 — branch test/V13-QA-023-mask-width-probe — IN_REVIEW (ARCH; #158 merged): the mask width
+  probe (TEST_ARCHITECTURE §10). Found while building: the capture style never reached the sandboxed preview frame
+  (now put into every frame for the capture; the 4 notification-preview baselines change and are replaced from the PR's
+  own CI artifact), and the overdue glyph's fallback font can make the deadline's line taller (`block-size: 1lh`).
+  CI run 42378737736 (9dd7d84): the 4 preview snapshots missing, nothing else failed, every probe variant identical.
+  Its retry made the candidates on the first attempt's leftover draft (about 100 px taller), so the 4 PNGs are the
+  first attempt's images from artifact 13576528654, and a candidate is now written on the first attempt only.
+  CI run 42379165277 (46bdb25): every job green, visual 10/10 in comparison mode, every probe variant identical.
+  Count tiles get a width rule on their value; all other 32 baselines stay byte-identical locally. Local: library
+  244/244 images, 0 moved, every mask matched (deadline 136, counts 80, correlation id 24, draft time 12, notice
+  reference 12); library-index 24/24.
+- V13-QA-022 — #158, merged into develop as 119bea6 — COMPLETE: case-access audit in the
   browser (DB-023 D1, REQ-AUD-001), project `access-audit` after `desktop-ar`. Beta views the portfolio and My Work
   with every case link in view and hovered → 0 access rows and no counted open (control: case routes really
   prefetched); document load, reload and client navigation to restricted 0009 → exactly one RESTRICTED_CASE_OPENED
@@ -127,6 +138,8 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   test 2 fails (2 rows). Ledger read as the local administrator, read-only (`ledger()` in `tests/fixtures/db.ts`).
   Chromium only: listed in `CHROMIUM_ONLY` (tests/fixtures/browsers.ts) with its reason, so the cross-browser
   projects never run it.
+  Guard B1 lists the local configuration and expects the exact project set (desktop-ar, access-audit, the engines
+  when selected); access-audit depends on every other project the run lists. CI 42379976804 at 80324d8 green.
 - V13-QA-015 adoption — #159, merged into develop as 15f938d — COMPLETE: the 36 baselines committed under
   `tests/visual/__screenshots__/`, taken from CI only (ARCH's decision, 7 Nov): artifact 13574858048
   (`visual-results`) of #159's own pull_request CI run 42374093449, job 128408023113, at 0b40b1a (the capture-style

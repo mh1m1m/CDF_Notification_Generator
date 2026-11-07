@@ -12,33 +12,33 @@ for looking only, never baselines (fonts differ by machine).
 
 Matrix: desktop 1280 × 800, tablet 768 × 1024, mobile 360 × 780; ar, en; light, dark. 244 images per run.
 Browser clock fixed at 2026-10-15T09:00:00.000Z; reduced motion; animations disabled; caret hidden; mask colour #FF00FF.
-Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; } [data-deadline-state] { display: inline-block; inline-size: 14rem; white-space: nowrap; overflow: hidden; vertical-align: top; }`
+Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; } [data-deadline-state] { display: inline-block; inline-size: 14rem; block-size: 1lh; white-space: nowrap; overflow: hidden; vertical-align: top; } [data-testid="count-my-work-overdue"] > :first-child, [data-testid="count-my-work-due-week"] > :first-child { inline-size: 4rem; white-space: nowrap; overflow: hidden; } [data-field="notice_reference"] { display: inline-block; inline-size: 10rem; white-space: nowrap; overflow: hidden; vertical-align: top; }`
 
 ## Captured
 
 | Screen | State | Persona | Route | Viewports | Masks | How the state is reached |
 | --- | --- | --- | --- | --- | --- | --- |
-| my-work | data | investigator-beta | `/my-work` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | seeded tasks assigned to Investigator Beta |
+| my-work | data | investigator-beta | `/my-work` | desktop, tablet, mobile | deadline, deadlineCounts | seeded tasks assigned to Investigator Beta |
 | my-work | empty | persona-zeta | `/my-work` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | Persona Zeta (inactive membership, minted session): no task |
-| portfolio | data | secretary-alpha | `/portfolio` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | seeded cases visible to the Secretariat |
+| portfolio | data | secretary-alpha | `/portfolio` | desktop, tablet, mobile | deadline, deadlineCounts | seeded cases visible to the Secretariat |
 | portfolio | empty | persona-zeta | `/portfolio` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | Persona Zeta: no visible case |
 | portfolio | empty-filter | secretary-alpha | `/portfolio?q=ZZZ-NO-MATCH` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | a search that matches no case |
-| case-overview | data | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | case CDF-DEMO-2026-0001, Secretary Alpha on its team |
-| case-events | data | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001/events` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | seeded procedural events of CDF-DEMO-2026-0001 |
-| case-tasks | data | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001/tasks` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | seeded tasks of CDF-DEMO-2026-0001 |
-| case-notifications | data | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001/notifications` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | seeded draft 2f…01 of CDF-DEMO-2026-0001, with the draft form |
+| case-overview | data | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001` | desktop, tablet, mobile | deadline, deadlineCounts | case CDF-DEMO-2026-0001, Secretary Alpha on its team |
+| case-events | data | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001/events` | desktop, tablet, mobile | deadline, deadlineCounts | seeded procedural events of CDF-DEMO-2026-0001 |
+| case-tasks | data | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001/tasks` | desktop, tablet, mobile | deadline, deadlineCounts | seeded tasks of CDF-DEMO-2026-0001 |
+| case-notifications | data | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001/notifications` | desktop, tablet, mobile | deadline, deadlineCounts | seeded draft 2f…01 of CDF-DEMO-2026-0001, with the draft form |
 | case-notifications | empty | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000004/notifications` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | CDF-DEMO-2026-0004 has no notification in the seed |
-| notification-center | data | secretary-alpha | `/notifications` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | seeded drafts visible to Secretary Alpha |
+| notification-center | data | secretary-alpha | `/notifications` | desktop, tablet, mobile | deadline, deadlineCounts | seeded drafts visible to Secretary Alpha |
 | notification-center | empty | persona-zeta | `/notifications` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | Persona Zeta: no notification |
 | notification-center | empty-filter | secretary-alpha | `/notifications?case=CDF-DEMO-2026-0004` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | a case filter on CDF-DEMO-2026-0004, which has no notification in the seed |
 | notification-center | error | secretary-alpha | `/notifications?status=DELIVERED` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | an edited URL with a status the filter does not offer: the generic invalid state with a reference |
-| notification-preview | data | investigator-beta | `/cases/0c000000-0000-4000-8000-000000000005/notifications?n={draft}` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts, draftCreated, noticeReference | a WITNESS draft the run makes on CDF-DEMO-2026-0005 through its draft form, in the sandboxed frame |
+| notification-preview | data | investigator-beta | `/cases/0c000000-0000-4000-8000-000000000005/notifications?n={draft}` | desktop, tablet, mobile | deadline, deadlineCounts, draftCreated, noticeReference | a WITNESS draft the run makes on CDF-DEMO-2026-0005 through its draft form, in the sandboxed frame |
 | notification-preview | no-mapping | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001/notifications?n=2f000000-0000-4000-8000-000000000001` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | seeded draft 2f…01 (CASE_TEAM): no disclosure mapping for its recipient class yet, so the app shows none |
 | notification-preview | error | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000001/notifications?n=0c000000-0000-4000-8000-0000000000ff` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | an id no notification has: the generic state with a correlation id |
 | not-found | error | secretary-alpha | `/cases/0c000000-0000-4000-8000-0000000000ff` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | a case id no case has |
 | not-found | restricted | secretary-alpha | `/cases/0c000000-0000-4000-8000-000000000009` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | restricted CDF-DEMO-2026-0009, Secretary Alpha not on its team: restricted = not found by design (CLAUDE.md §3) |
-| workspace-switcher | data | governance-officer-delta | `/my-work` | desktop, tablet, mobile | correlationId, deadline, deadlineCounts | Governance Officer Delta holds two workspaces; the menu is open |
-| mobile-navigation | data | secretary-alpha | `/my-work` | mobile | correlationId, deadline, deadlineCounts | the side navigation at 360 px |
+| workspace-switcher | data | governance-officer-delta | `/my-work` | desktop, tablet, mobile | deadline, deadlineCounts | Governance Officer Delta holds two workspaces; the menu is open |
+| mobile-navigation | data | secretary-alpha | `/my-work` | mobile | deadline, deadlineCounts | the side navigation at 360 px |
 
 ## Masks
 

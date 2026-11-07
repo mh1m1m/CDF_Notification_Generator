@@ -115,23 +115,65 @@ export function masksFor(page: Page, c: Capture, draft: string | null): Locator[
   });
 }
 
-/** Options shared by every capture and comparison of a row. */
-export function captureOptions(page: Page, c: Capture, draft: string | null) {
+/**
+ * Options shared by every capture and comparison of a row. `style` replaces the capture style: only the mask width
+ * probe's planted negative passes it (library-index.spec.ts), to prove the probe fails without the style.
+ */
+export function captureOptions(page: Page, c: Capture, draft: string | null, style = captureStyle(draft)) {
   return {
     animations: "disabled" as const,
     caret: "hide" as const,
     mask: masksFor(page, c, draft),
     maskColor: MASK_COLOR,
-    style: captureStyle(draft),
+    style,
   };
+}
+
+/** The id of the capture style put into each frame for the capture, and taken out again after it. */
+export const FRAME_STYLE_ID = "v13-capture-style";
+
+/**
+ * Playwright's screenshot `style` does not reach the sandboxed srcdoc preview frame (V13-QA-023: a narrowing rule left
+ * the frame's image unchanged, the notice reference kept its own width, and the mask width probe moved the preview).
+ * So for the capture only, the same style goes into every frame as a <style> element, and comes out again after it.
+ */
+async function withFrameStyle<T>(page: Page, style: string, capture: () => Promise<T>): Promise<T> {
+  const frames = page.frames().filter((f) => f !== page.mainFrame());
+  const put = (css: string | null) =>
+    Promise.all(
+      frames.map((f) =>
+        f.evaluate(
+          ({ id, css }) => {
+            document.getElementById(id)?.remove();
+            if (css === null) return;
+            const el = document.createElement("style");
+            el.id = id;
+            el.textContent = css;
+            document.head.append(el);
+          },
+          { id: FRAME_STYLE_ID, css },
+        ),
+      ),
+    );
+  await put(style);
+  try {
+    return await capture();
+  } finally {
+    await put(null);
+  }
 }
 
 /**
  * Captures the opened cell to memory: mask counts first (ARCH C3 on #140; a mask inside a frame must cover its
  * element), then the image, which must show every frame painted. The caller writes the image only after this returns.
  */
-export async function captureCell(page: Page, c: Capture, draft: string | null) {
-  const options = captureOptions(page, c, draft);
+export async function captureCell(
+  page: Page,
+  c: Capture,
+  draft: string | null,
+  override: { style?: string } = {},
+) {
+  const options = captureOptions(page, c, draft, override.style);
   const maskCounts = await Promise.all(options.mask.map((m) => m.count()));
   c.masks.forEach((m, i) => {
     if ((MASKS[m] as { frame?: string }).frame)
@@ -139,10 +181,8 @@ export async function captureCell(page: Page, c: Capture, draft: string | null) 
   });
   if (c.element) return { png: await page.locator(c.element).screenshot(options), maskCounts, attempts: 1 };
   // Retaken at most MAX_CAPTURE_ATTEMPTS times while a frame is unpainted; the last attempt's check fails (frames.ts).
-  const { png, attempts } = await captureWithPaintedFrames(
-    page,
-    () => page.screenshot({ ...options, fullPage: true }),
-    MASK_COLOR,
+  const { png, attempts } = await withFrameStyle(page, options.style, () =>
+    captureWithPaintedFrames(page, () => page.screenshot({ ...options, fullPage: true }), MASK_COLOR),
   );
   return { png, maskCounts, attempts };
 }

@@ -6,14 +6,16 @@
 //   - the data check (V1–V5) refuses each planted fault and passes a clean synthetic page;
 //   - an empty frame in a capture is retaken at most MAX_CAPTURE_ATTEMPTS times, then fails (frames.ts).
 import { readFileSync, writeFileSync } from "node:fs";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { PERSONAS } from "@/lib/contracts";
+import { captureCell } from "./capture";
 import { checkSynthetic, SYNTHETIC_PERSONA_NAMES } from "./data-check";
 import { captureWithPaintedFrames, MAX_CAPTURE_ATTEMPTS, settleFrames } from "./frames";
 import {
   BASELINE_ROWS,
   BASELINE_VIEWPORTS,
   baselineCount,
+  captureStyle,
   baselineFile,
   CAPTURES,
   imageCount,
@@ -23,7 +25,11 @@ import {
   NOT_APPLICABLE,
   renderIndex,
   VIEWPORTS,
+  withDraft,
+  type Capture,
 } from "./library-plan";
+import { maskCoverage, type LibraryEntry } from "./library-teardown";
+import { probeMasks } from "./mask-probe";
 
 const INDEX = "docs/qa/SCREENSHOT_LIBRARY.md";
 
@@ -147,5 +153,124 @@ test.describe("screenshot library: frames are painted before an image is kept (A
     await settleFrames(page);
     const { attempts } = await captureWithPaintedFrames(page, () => page.screenshot(), MASK_COLOR);
     expect(attempts).toBe(1);
+  });
+});
+
+test.describe("mask width probe (V13-QA-023): the capture style holds every mask's box, and the probe can fail", () => {
+  // Each captured mask needs a width rule in the capture style: a rule whose selector begins with each part of the
+  // mask's selector (a descendant of the masked box counts, as for the count tile's value) and sets inline-size.
+  test("every mask a captured row names has a width rule in the capture style", () => {
+    const DRAFT = "0d000000-0000-4000-8000-0000000000aa";
+    const rules = captureStyle(DRAFT)
+      .split("}")
+      .map((r) => r.split("{"))
+      .filter((r) => r.length === 2)
+      .map(([sel, decl]) => ({ selectors: sel!.split(",").map((x) => x.trim()), decl: decl! }));
+    const named = new Set(CAPTURES.flatMap((c) => c.masks));
+    expect(named.size).toBeGreaterThan(0);
+    for (const mask of named) {
+      for (const part of withDraft(MASKS[mask].selector, DRAFT)
+        .split(",")
+        .map((x) => x.trim())) {
+        const covered = rules.some(
+          (r) =>
+            /inline-size\s*:/.test(r.decl) && r.selectors.some((s) => s === part || s.startsWith(`${part} `)),
+        );
+        expect(covered, `mask ${mask}: "${part}" has a width rule in the capture style`).toBe(true);
+      }
+    }
+  });
+
+  // A page shaped like the app's: a table whose middle cell holds a deadline, two count tiles, and a sandboxed srcdoc
+  // frame with a notice reference followed by more text. Without a width rule, each mask's text moves what follows it.
+  const FRAME = [
+    "<p style='font:16px sans-serif'>Reference <bdi dir='ltr' data-field='notice_reference'>NTF-DEMO-0A1B2C3D</bdi>",
+    " for Witness Gamma, CDF-DEMO-2026-0001.</p>",
+  ].join("");
+  const PAGE = `<!doctype html><html lang="en"><head><style>
+      nav a { display: inline-flex; flex-direction: column; padding: 4px; border: 1px solid #333; }
+      nav a > :first-child { font: 700 24px sans-serif; }
+    </style></head><body style="margin:0;background:#fff;font:16px sans-serif">
+    <nav><a data-testid="count-my-work-overdue" href="#"><span>3</span><span>Late</span></a>
+      <a data-testid="count-my-work-due-week" href="#"><span>4</span><span>Week</span></a>
+      <a data-testid="count-my-work-open" href="#"><span>7</span><span>Open</span></a></nav>
+    <table><tr><td>Collect documents</td>
+      <td><span class="v13-deadline v13-deadline-upcoming" data-testid="deadline" data-deadline-state="upcoming"><time dateTime="2026-11-10">10 November 2026</time><span>In 3 days</span></span></td>
+      <td>Open</td></tr></table>
+    <iframe data-testid="case-notification-preview-frame" sandbox="" style="inline-size:600px;block-size:120px;border:0"
+      srcdoc="${FRAME}"></iframe>
+  </body></html>`;
+  const ROW: Capture = {
+    screen: "my-work",
+    state: "data",
+    persona: "investigator-beta",
+    route: "/fixture",
+    ready: "table",
+    masks: ["deadline", "deadlineCounts", "noticeReference"],
+    how: "planted fixture page (library-index.spec.ts)",
+  };
+
+  async function probe(page: Page, style?: string) {
+    await page.setContent(PAGE);
+    await settleFrames(page);
+    const { png } = await captureCell(page, ROW, null, { style });
+    return probeMasks(page, ROW, null, "en", png, { style });
+  }
+
+  test("with the capture style, every mask is rewritten and no image moves (the control)", async ({
+    page,
+  }) => {
+    const result = await probe(page);
+    for (const mask of ROW.masks) {
+      expect(result.masks[mask]!.matched, `${mask} matched`).toBeGreaterThan(0);
+      expect(result.masks[mask]!.rewritten, `${mask} rewritten`).toBe(result.masks[mask]!.matched);
+    }
+    expect(result.variants.length).toBe(5);
+    expect(result.variants.filter((v) => !v.identical).map((v) => v.name)).toEqual([]);
+  });
+
+  // The real capture path with one mask's width rules taken out of the real capture style: the probe must see a move.
+  for (const mask of ["deadline", "deadlineCounts", "noticeReference"] as const) {
+    test(`without the ${mask} width rule the probe fails (planted)`, async ({ page }) => {
+      const parts = MASKS[mask].selector.split(",").map((x) => x.trim());
+      const style = captureStyle(null)
+        .split("}")
+        .filter((r) => r.trim() !== "" && !parts.some((p) => r.trim().startsWith(p)))
+        .map((r) => `${r}}`)
+        .join("");
+      expect(style.length, "the rule was taken out").toBeLessThan(captureStyle(null).length);
+      const result = await probe(page, style);
+      expect(
+        result.variants.some((v) => !v.identical),
+        `the probe sees ${mask} move without its rule`,
+      ).toBe(true);
+    });
+  }
+});
+
+test.describe("mask width probe (V13-QA-023): the library run fails when a mask matched nothing", () => {
+  const entry = (counts: Record<string, [number, number]>): LibraryEntry => ({
+    file: "planted.png",
+    maskProbe: {
+      masks: Object.fromEntries(
+        Object.entries(counts).map(([m, [matched, rewritten]]) => [m, { matched, rewritten }]),
+      ),
+    },
+  });
+  const all = (n: number) =>
+    Object.fromEntries(Object.keys(MASKS).map((m) => [m, [n, n] as [number, number]]));
+
+  test("every mask matched and rewritten passes (the control)", () => {
+    expect(() => maskCoverage([entry(all(1)), entry(all(0))], 2)).not.toThrow();
+  });
+  test("a mask that matched nothing in any cell fails (planted)", () => {
+    expect(() => maskCoverage([entry({ ...all(1), correlationId: [0, 0] })], 1)).toThrow(
+      /correlationId matched no element/,
+    );
+  });
+  test("a matched element that was not rewritten fails (planted)", () => {
+    expect(() => maskCoverage([entry({ ...all(2), deadline: [2, 1] })], 1)).toThrow(
+      /deadline matched 2 elements but rewrote 1/,
+    );
   });
 });
