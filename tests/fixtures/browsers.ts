@@ -16,6 +16,12 @@ export type CrossBrowserProject = (typeof CROSS_BROWSER_PROJECTS)[number];
 export const CHROMIUM_PROJECT = "desktop-ar";
 
 /**
+ * The second Chromium project (V13-QA-022): only tests/e2e/case-access-audit.spec.ts, after desktop-ar, and only when
+ * the run starts the app itself (no V13_E2E_BASE_URL), since it reads the local ledger.
+ */
+export const ACCESS_AUDIT_PROJECT = "access-audit";
+
+/**
  * What the two engines run: specs directly under tests/e2e and tests/a11y. A regular expression on the absolute path,
  * not a glob: Playwright matches a glob such as `e2e/**` at any depth, which would add SEC's tests/security/e2e.
  */
@@ -30,6 +36,8 @@ export const CHROMIUM_ONLY: Readonly<Record<string, string>> = {
   "tests/e2e/scenario-e-notification-draft.spec.ts":
     "its CSP console checks match Chromium's message text; elsewhere they would pass without seeing a violation",
   "tests/e2e/negative-personas-pinning.spec.ts": "the Sentinel's response-body reads",
+  "tests/e2e/case-access-audit.spec.ts":
+    "it counts the local ledger's access rows for one browser's page loads and prefetches, in its own access-audit project after desktop-ar (V13-QA-022); another engine's loads would be counted twice",
 };
 
 const ENGINE: Record<CrossBrowserProject, string> = {

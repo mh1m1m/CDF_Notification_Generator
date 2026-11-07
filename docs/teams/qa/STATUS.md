@@ -118,7 +118,16 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
-- V13-QA-015 adoption — #159, branch test/V13-QA-015-adopt-baselines — IN_REVIEW: the 36 baselines committed under
+- V13-QA-022 — branch test/V13-QA-022-prefetch-access-row — IN_REVIEW (SEC + ARCH): case-access audit in the
+  browser (DB-023 D1, REQ-AUD-001), project `access-audit` after `desktop-ar`. Beta views the portfolio and My Work
+  with every case link in view and hovered → 0 access rows and no counted open (control: case routes really
+  prefetched); document load, reload and client navigation to restricted 0009 → exactly one RESTRICTED_CASE_OPENED
+  each; document load, tab change and reload of 0001 → exactly one open each (rows + carried + window change).
+  Mutations: case-tab metadata loading the case again → test 1 fails (4 rows); the page opening the case twice →
+  test 2 fails (2 rows). Ledger read as the local administrator, read-only (`ledger()` in `tests/fixtures/db.ts`).
+  Chromium only: listed in `CHROMIUM_ONLY` (tests/fixtures/browsers.ts) with its reason, so the cross-browser
+  projects never run it.
+- V13-QA-015 adoption — #159, merged into develop as 15f938d — COMPLETE: the 36 baselines committed under
   `tests/visual/__screenshots__/`, taken from CI only (ARCH's decision, 7 Nov): artifact 13574858048
   (`visual-results`) of #159's own pull_request CI run 42374093449, job 128408023113, at 0b40b1a (the capture-style
   fix). In that run every one of the 9 tests failed on missing snapshots alone, and each candidate is byte-identical to
@@ -129,7 +138,7 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   and 7 Nov and moved My Work's columns and the overview's mask edge. Fix: CAPTURE_STYLE gives `[data-deadline-state]`
   a fixed width during the capture only (masked boxes only). Local probe: deadline words rewritten between two captures
   of the three screens, ar and en: byte-identical with the fix, different on all three without it. Second local probe
-  (ARCH): every task's due_date moved back 1, 7 and 14 days on a fresh local database, the three screens recaptured in
+  (asked by ARCH): every task's due_date moved back 1, 7 and 14 days on a fresh local database, the three screens recaptured in
   ar and en, desktop and mobile. With a ch width my-work ar desktop still moved (an overdue deadline is bold, and ch
   follows the weight), so the width is now 14rem; then my-work and workspace-switcher were byte-identical at every
   shift. case-overview differed only in its open-tasks row, whose plain due date (unmasked) the probe itself rewrote; a

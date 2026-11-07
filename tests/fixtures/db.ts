@@ -14,6 +14,8 @@ import postgres from "postgres";
 import { sessionKey } from "@/lib/auth/session";
 import { WORKSPACE_IDS, type WorkspaceCode } from "@/lib/contracts";
 import {
+  adminUrl,
+  describeUrl,
   isLoopbackUrl,
   LOCAL_DATABASE,
   localPrimaryPort,
@@ -233,4 +235,111 @@ export function databaseEventOracle(db: ScenarioDb, slug: string, workspace: Wor
       return fact;
     },
   };
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The access-audit ledger as the browser tests read it (V13-QA-022, DB-023 D1, REQ-AUD-001). The audit ledger and the
+// access window are deny-all to every application role (migrations 0001, 0015), so no persona context can read them.
+// The ledger reader below is the one exception to "the persona's own context" above, and the only administrator
+// connection here: the same target `pnpm db:reset` writes (V13_ADMIN_DATABASE_URL, default
+// postgres@127.0.0.1:54329/v13_local). LOCAL AND CI ONLY: the URL must be a loopback address, the run must have started
+// the app itself (no V13_E2E_BASE_URL), and every read is a READ ONLY transaction, so it can never write, delete or
+// reset anything. It returns ids, actions and counts only.
+
+/** The three rows of migration 0015. */
+export const ACCESS_ACTIONS = [
+  "CASE_OPENED",
+  "RESTRICTED_CASE_OPENED",
+  "NOTIFICATION_PREVIEW_OPENED",
+] as const;
+export type AccessAction = (typeof ACCESS_ACTIONS)[number];
+
+export interface AccessRow {
+  seq: number;
+  action: string;
+  outcome: string;
+  actor_persona_id: string | null;
+  case_id: string | null;
+  entity_type: string;
+  entity_id: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface Ledger {
+  /** The highest ledger sequence number now: rows written later have a larger one. */
+  mark(): Promise<number>;
+  /** The persona's access rows after `mark` (every action of 0015), and its refused api_record_access rows. */
+  accessRowsSince(mark: number, personaId: string): Promise<AccessRow[]>;
+  /** The persona's suppressed count in the open window of (case, action, entity), 0 when there is none. */
+  windowSuppressed(
+    personaId: string,
+    caseId: string,
+    action: AccessAction,
+    entityId: string,
+  ): Promise<number>;
+  end(): Promise<void>;
+}
+
+function ledgerUrl(env: Readonly<Record<string, string | undefined>> = process.env): string {
+  if (env.V13_E2E_BASE_URL?.trim())
+    throw new Error("the ledger fixture needs the locally started app (V13_E2E_BASE_URL is set)");
+  const url = adminUrl(env);
+  if (!isLoopbackUrl(url))
+    throw new Error(`the ledger fixture reads a loopback database only: ${describeUrl(url)}`);
+  return url;
+}
+
+export function ledger(): Ledger {
+  const sql = postgres(ledgerUrl(), { max: 1, prepare: false, onnotice: () => {} });
+  const read = <T>(fn: (tx: postgres.TransactionSql) => Promise<T>): Promise<T> =>
+    sql.begin("read only", fn) as Promise<T>;
+  return {
+    mark: () =>
+      read(async (tx) => {
+        const [r] = await tx<{ m: string }[]>`
+          select coalesce(max(seq), 0)::text as m from cdf_notifications_v13.audit_event`;
+        return Number(r!.m);
+      }),
+    accessRowsSince: (mark, personaId) =>
+      read(async (tx) =>
+        (
+          await tx<(Omit<AccessRow, "seq"> & { seq: string })[]>`
+            select seq::text, action, outcome, actor_persona_id::text, case_id::text, entity_type, entity_id::text,
+                   metadata
+              from cdf_notifications_v13.audit_event
+             where seq > ${mark}
+               and actor_persona_id = ${personaId}::uuid
+               and (action in ${tx(ACCESS_ACTIONS)}
+                    or (action = 'COMMAND_REFUSED' and metadata ->> 'command' = 'api_record_access'))
+             order by seq`
+        ).map((r) => ({ ...r, seq: Number(r.seq) })),
+      ),
+    windowSuppressed: (personaId, caseId, action, entityId) =>
+      read(async (tx) => {
+        const [r] = await tx<{ suppressed: number }[]>`
+          select suppressed from cdf_notifications_v13.access_window
+           where persona_id = ${personaId}::uuid and case_id = ${caseId}::uuid and action = ${action}
+             and entity_id = ${entityId}::uuid`;
+        return r?.suppressed ?? 0;
+      }),
+    end: () => sql.end({ timeout: 5 }),
+  };
+}
+
+/**
+ * Opens of one (persona, case, action, entity) key between two readings, whatever the 300 s window did: each open
+ * either appends a row or adds one to the window's suppressed count; a row that ends a window carries that count in
+ * its metadata and resets the counter to 0 (migration 0015 §3). So opens = new rows + their carried counts + the
+ * counter's change, and every open counts exactly once.
+ */
+export function opensBetween(
+  rows: readonly AccessRow[],
+  suppressedBefore: number,
+  suppressedAfter: number,
+): number {
+  const carried = rows.reduce(
+    (n, r) => n + (typeof r.metadata.suppressed === "number" ? r.metadata.suppressed : 0),
+    0,
+  );
+  return rows.length + carried + (suppressedAfter - suppressedBefore);
 }
