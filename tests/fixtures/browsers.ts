@@ -36,6 +36,8 @@ export const CHROMIUM_ONLY: Readonly<Record<string, string>> = {
   "tests/e2e/scenario-e-notification-draft.spec.ts":
     "its CSP console checks match Chromium's message text; elsewhere they would pass without seeing a violation",
   "tests/e2e/negative-personas-pinning.spec.ts": "the Sentinel's response-body reads",
+  "tests/a11y/sweep.a11y.spec.ts":
+    "its planted tests fail in the other engines, so there the sweep would pass without seeing a fault: in Firefox (CI run 42400335710) the dark emulation did not reach prefers-color-scheme and color-contrast missed planted low-contrast text; in WebKit it missed it once (V13-QA-026)",
   "tests/e2e/case-access-audit.spec.ts":
     "it counts the local ledger's access rows for one browser's page loads and prefetches, in its own access-audit project after desktop-ar (V13-QA-022); another engine's loads would be counted twice",
 };

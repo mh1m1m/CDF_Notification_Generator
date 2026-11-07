@@ -27,7 +27,7 @@ tests/fixtures/            personas.ts, seed-facts.ts, db.ts, signin.ts, evidenc
 tests/e2e/                 smoke.spec.ts, scenario-a…e.spec.ts
 tests/sentinel/            sentinel.ts (library), ui.spec.ts, api.spec.ts, db.spec.ts, planted-leak.spec.ts
 tests/truth/               inspector.ts (library), truth.spec.ts, planted-badge.spec.ts
-tests/a11y/                axe.spec.ts, keyboard.spec.ts, reflow.a11y.spec.ts
+tests/a11y/                smoke.a11y.spec.ts, not-found.a11y.spec.ts, sweep.a11y.spec.ts, reflow.a11y.spec.ts
 tests/visual/              rtl.spec.ts, responsive.spec.ts, library.spec.ts (screenshot library, UXQA-05)
 tests/critic/              (M2; harness for the UX Design Critic)
 docs/qa/                   this file, SCENARIOS.md, SCREENSHOT_LIBRARY.md, reports per run
@@ -408,6 +408,18 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
 
 - **axe** (`@axe-core/playwright`, tags `wcag2a wcag2aa wcag21aa`) on the five screens in `desktop-ar`, `desktop-en`
   and `mobile-ar`: 0 serious/critical. Every violation is listed with rule, node and screen, never suppressed globally.
+- **axe sweep** (V13-QA-026; QA-018 F-02; `tests/a11y/sweep.a11y.spec.ts`): axe-core 4.14.0 with `wcag2a`, `wcag2aa`,
+  `wcag21a`, `wcag21aa` and `wcag22aa`, every impact, on each checklist screen S01–S12 in ar and en, light and dark
+  (48 tests). Each test checks the page's `lang` and `prefers-color-scheme` before it scans, and attaches what it found
+  as `a11y-violations`. S08 is scanned without its sandboxed preview frame (axe cannot be injected into it). Planted
+  tests show the scan sees dark-theme contrast, target size and a minor-impact rule. axe-core 4.14.0 does not test
+  contrast on Arabic-script text (its icon-ligature check skips joined Arabic letters), so the English scans stand for
+  each screen's contrast; a planted test pins this. Chromium only, by the engines' `testIgnore` (`CHROMIUM_ONLY` in
+  `tests/fixtures/browsers.ts`, pinned by `tests/unit/qa/a11y-engines.spec.ts`), never a skip. Cross-browser
+  42400335710 on 88eaa1f: in Firefox the dark emulation did not reach `prefers-color-scheme` (24 tests failed on that
+  check) and `color-contrast` missed a planted fault; in WebKit `color-contrast` missed a planted fault once. axe
+  results in Firefox and WebKit are not claimed. The Firefox gap is OI-061. The reflow suite runs in all three
+  engines.
 - **Keyboard**: Tab order reaches the switcher, navigation, table rows and primary actions; focus is visible; dialogs
   trap and return focus; Escape closes.
 - **RTL**: `html[dir=rtl][lang=ar]`; logical layout — start-side elements have the larger x in RTL; no element
@@ -417,7 +429,8 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
 - **Responsive**: 360, 768, 1280, 1920 px; no horizontal scroll; navigation reachable on mobile.
 - **Text resize, reflow, text spacing** (V13-QA-010; REQ-A11Y-010; WCAG 1.4.4, 1.4.10, 1.4.12;
   `tests/a11y/reflow.a11y.spec.ts`): the six checks of `docs/design/reviews/UX009_TEXT_RESIZE_REFLOW.md` §4 in ar and
-  en on Portfolio, My Work, the four Case Workspace tabs, the Operations Center and Workspaces, at 640 × 450 (200%),
+  en on Portfolio, My Work, the four Case Workspace tabs, the Operations Center and Workspaces, and (V13-QA-026, F-03)
+  the sign-in page signed out, the notification preview and the not-found page, at 640 × 450 (200%),
   320 × 256 (400%), and 1280 × 900 and 320 × 256 with the 1.4.12 spacing stylesheet: (1) no page-level inline scroll
   and no element outside a scroll region past either edge (the box check also catches RTL start overflow, which
   `scrollWidth` cannot see); (2) every `nav-*` and `case-tab-*` link inside the viewport at 320 px; (3) no clipped

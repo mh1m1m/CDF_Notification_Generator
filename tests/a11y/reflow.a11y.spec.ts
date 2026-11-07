@@ -16,6 +16,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { LOCALE_COOKIE } from "@/lib/i18n";
 import { signInAs } from "../fixtures/personas";
 import { caseId } from "../fixtures/scenario";
+import { makeWitnessDraft } from "../visual/capture";
 
 /** WCAG 2.2 SC 1.4.12: line height 1.5, paragraph spacing 2 × the font size, letter 0.12 em, word 0.16 em. */
 const SPACING = [
@@ -180,9 +181,9 @@ const REFLOW_ATTACHMENT = "reflow-findings";
 
 const format = (fs: readonly Finding[]) => fs.map((f) => `check ${f.check}: ${f.detail}`).join("\n");
 
-async function open(page: Page, path: string, spacing: boolean) {
+async function open(page: Page, path: string, spacing: boolean, status = 200) {
   const res = await page.goto(path);
-  expect(res?.status(), path).toBe(200);
+  expect(res?.status(), path).toBe(status);
   await expect(page, "the page has rendered its title").toHaveTitle(/\S/);
   if (spacing) await page.addStyleTag({ content: SPACING });
 }
@@ -202,6 +203,43 @@ for (const locale of LOCALES) {
           [];
         for (const path of PAGES) {
           await open(page, path, c.spacing);
+          await expect(page.locator("html")).toHaveAttribute("lang", locale);
+          const f = await measure(page, c.width === 320);
+          if (f.length) found.push(`${path}\n${format(f)}`);
+          for (const x of f) rows.push({ page: path, language: locale, condition: c.name, ...x });
+        }
+        if (rows.length)
+          await test
+            .info()
+            .attach(REFLOW_ATTACHMENT, { contentType: "application/json", body: JSON.stringify(rows) });
+        expect(found, found.join("\n")).toEqual([]);
+      });
+    }
+
+    // V13-QA-026 (QA-018 F-03): the screens the signed-in walk above does not open. S01 is measured signed out; S08
+    // with its sandboxed preview frame (the frame's box is measured; its document is the notice, checked by
+    // tests/unit/notifications/a11y.spec.ts); S12 is the unknown-route page, answered with 404.
+    for (const c of CONDITIONS) {
+      test(`checks 1–4 on sign-in, the notification preview and not found: ${c.name}`, async ({ page }) => {
+        await page.setViewportSize({ width: c.width, height: c.height });
+        const steps: [string, () => Promise<void>][] = [
+          ["/sign-in", () => open(page, "/sign-in", c.spacing)],
+          [
+            "/cases/<0005>/notifications?n=<draft>",
+            async () => {
+              await signInAs(page, "investigator-beta");
+              const id = await makeWitnessDraft(page, caseId("05"));
+              await open(page, `/cases/${caseId("05")}/notifications?n=${id}`, c.spacing);
+              await expect(page.getByTestId("case-preview-ready")).toBeVisible();
+            },
+          ],
+          ["/no-such-route", () => open(page, "/no-such-route", c.spacing, 404)],
+        ];
+        const found: string[] = [];
+        const rows: { page: string; language: string; condition: string; check: number; detail: string }[] =
+          [];
+        for (const [path, go] of steps) {
+          await go();
           await expect(page.locator("html")).toHaveAttribute("lang", locale);
           const f = await measure(page, c.width === 320);
           if (f.length) found.push(`${path}\n${format(f)}`);
