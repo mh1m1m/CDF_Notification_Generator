@@ -93,7 +93,9 @@ export function probeVariants(locale: Locale): ProbeVariant[] {
       name: `${deadline.state}-${long ? "long" : "short"}`,
       deadline,
       count: { raw, shown: formatNumber(locale, raw) },
-      id: long ? "ffffffff-ffff-4fff-bfff-ffffffffffff" : "0",
+      // the widest hex glyph ("d" in Noto Sans is wider than the digits; "f" is the narrowest), so a real UUID of
+      // any digits is no wider than the long variant (V13-QA-024)
+      id: long ? "dddddddd-dddd-4ddd-bddd-dddddddddddd" : "0",
       time: long ? timeLong : timeShort,
     };
   });

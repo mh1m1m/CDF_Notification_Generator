@@ -476,21 +476,26 @@ Results go to `docs/DEPLOYMENT_STATUS.md` (via ARCH) with deployment id, commit,
   takes up room; when its width changed the page moved around the mask and baselines went red (#159's first
   comparison: the deadline words count days on the server clock). `CAPTURE_STYLE` gives every masked box a fixed size
   during the capture only (rem, not ch, because an overdue deadline is bold; `block-size: 1lh` on the deadline, because
-  the overdue glyph's fallback font made the line 2 px taller in a planted page). Playwright's screenshot `style` does
+  the overdue glyph's fallback font made the line 2 px taller in a planted page). Every width rule also sets
+  `white-space: nowrap; overflow: hidden`, so a box holds for any value, not only the values the probe tries
+  (V13-QA-024; the correlation id's rule was the one without them). Playwright's screenshot `style` does
   not reach the sandboxed srcdoc preview frame, so `captureCell` puts the same style into every frame as a `<style>`
   element for the capture and takes it out after. After each cell's comparison (and after each library capture), every
   masked element is rewritten to values the app itself can show: each DeadlineText state (class and
   `data-deadline-state` together, the overdue glyph read from the component) with that state's longest and shortest
-  words in the language from `lib/i18n` (1–999 days); count tiles 0 and 999 as the app formats them; a 36- and a
-  1-character id; the longest and shortest date-time the app formats over a year. Inside a frame it evaluates in the
+  words in the language from `lib/i18n` (1–999 days); count tiles 0 and 999 as the app formats them; a 36-character id
+  of the widest hex glyph (`d`; `f` is the narrowest) and a 1-character id; the longest and shortest date-time the app formats over a year. Inside a frame it evaluates in the
   frame, and where the frame refuses that it rewrites the srcdoc; neither working fails. Every rewritten capture must be
   byte-identical to the cell's own. Each cell's matched and rewritten counts per mask go to the results JSON
   (`mask-probe` annotations) and the library manifest; the baseline job fails when a mask a baseline row names matched
   nothing in any cell, and the library run (`library-teardown.ts`) when any mask in `MASKS` did, so a selector that
   drifted never passes silently. Data rows name only the masks a data state can show (no correlation id). Planted
   tests in `library-index.spec.ts` run the real `captureStyle` and `captureCell` on a page shaped like the app's: with
-  the style no image moves; with one mask's rules taken out the probe fails, for each of deadline, counts and notice
-  reference; a mask without a width rule fails the static check; the library coverage fails on a mask that matched
+  the style no image moves; with one mask's rules taken out the probe fails, for each of correlation id, deadline,
+  counts and notice reference; with only the deadline's `block-size: 1lh` taken out, exactly the two overdue variants
+  move (the fixture plants a glyph box 2 px taller than the line, so the case does not depend on installed fonts); a
+  mask without a width rule fails the static check, and a width rule without `white-space: nowrap` and
+  `overflow: hidden` fails another; the library coverage fails on a mask that matched
   nothing or was not fully rewritten.
 - **Clock readers on the baseline screens (stated rule, V13-QA-023)**: only DeadlineText and the My Work counts read
   the server clock on the 9 baseline screens; stored dates (a task's due date, an event's time) never change with the

@@ -118,8 +118,17 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
-- V13-QA-019 — branch test/V13-QA-019-runtime-skip-check — IN_REVIEW (ARCH; SEC for the
-  `tests/security/e2e/surface.spec.ts` hunk): the run-time half of the leak-suite guard (TEST_ARCHITECTURE §7.1).
+- V13-QA-024 — branch test/V13-QA-024-mask-rule-hardening — IN_REVIEW (ARCH): #162's two INFOs. The correlation id's
+  capture rule gets `white-space: nowrap; overflow: hidden; vertical-align: top` like every other width rule, and a
+  static check pins that every width rule has nowrap and overflow hidden; the probe's long id is now the widest hex
+  glyph (`d`) instead of the narrowest (`f`); the planted page gains a correlation id (its rule taken out → the probe
+  fails) and a planted test takes out only the deadline's `block-size: 1lh` (exactly the two overdue variants move).
+  Local captures of the 9 baseline cells (36 images) are byte-identical between develop a82e12a and this branch, so no
+  baseline changes. Mutations: correlation rule without nowrap/overflow → the static check fails; `block-size: 1lh`
+  dropped → the control and the planted test fail; correlation rule dropped → 5 tests fail.
+- V13-QA-019 — #167, merged into develop as a82e12a — COMPLETE (ARCH and SEC ACCEPT e2443d1; SEC reviewed the
+  `tests/security/e2e/surface.spec.ts` and `build-readiness.spec.ts` hunks): the run-time half of the leak-suite guard
+  (TEST_ARCHITECTURE §7.1).
   `tests/critic/leak-skip-reporter.ts`, registered in playwright.config.ts for every run, fails the run when a test
   in a leak suite ends "skipped" without a holding allowance or has no result; a run where no test began (`--list`)
   is not judged. Allowed skips call one function from `tests/fixtures/skip-conditions.ts`

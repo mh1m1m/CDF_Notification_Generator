@@ -181,8 +181,25 @@ test.describe("mask width probe (V13-QA-023): the capture style holds every mask
     }
   });
 
-  // A page shaped like the app's: a table whose middle cell holds a deadline, two count tiles, and a sandboxed srcdoc
-  // frame with a notice reference followed by more text. Without a width rule, each mask's text moves what follows it.
+  // V13-QA-024 (ARCH INFO 1 on #162): a width rule alone holds a box only for the values the probe tries; with
+  // `white-space: nowrap; overflow: hidden` it holds for any value. Every width rule has both.
+  test("every width rule in the capture style keeps its text on one line and clips it", () => {
+    const rules = captureStyle("0d000000-0000-4000-8000-0000000000aa")
+      .split("}")
+      .map((r) => r.split("{"))
+      .filter((r) => r.length === 2 && /inline-size\s*:/.test(r[1]!));
+    expect(rules.length).toBeGreaterThanOrEqual(5);
+    for (const [sel, decl] of rules) {
+      expect(decl, `${sel!.trim()}: white-space: nowrap`).toMatch(/white-space\s*:\s*nowrap\s*;/);
+      expect(decl, `${sel!.trim()}: overflow: hidden`).toMatch(/overflow\s*:\s*hidden\s*;/);
+    }
+  });
+
+  // A page shaped like the app's: a table whose middle cell holds a deadline, two count tiles, a correlation id followed
+  // by more text, and a sandboxed srcdoc frame with a notice reference followed by more text. Without a width rule,
+  // each mask's text moves what follows it. The overdue glyph's box is made 2 px taller than the line here: the app's
+  // glyph gets that from its fallback font, which depends on the installed fonts, so the fixture plants it
+  // (V13-QA-024, ARCH INFO 2 on #162; without the plant, Chromium in this sandbox shows the same move).
   const FRAME = [
     "<p style='font:16px sans-serif'>Reference <bdi dir='ltr' data-field='notice_reference'>NTF-DEMO-0A1B2C3D</bdi>",
     " for Witness Gamma, CDF-DEMO-2026-0001.</p>",
@@ -190,6 +207,7 @@ test.describe("mask width probe (V13-QA-023): the capture style holds every mask
   const PAGE = `<!doctype html><html lang="en"><head><style>
       nav a { display: inline-flex; flex-direction: column; padding: 4px; border: 1px solid #333; }
       nav a > :first-child { font: 700 24px sans-serif; }
+      .v13-badge-glyph { display: inline-block; block-size: calc(1lh + 2px); }
     </style></head><body style="margin:0;background:#fff;font:16px sans-serif">
     <nav><a data-testid="count-my-work-overdue" href="#"><span>3</span><span>Late</span></a>
       <a data-testid="count-my-work-due-week" href="#"><span>4</span><span>Week</span></a>
@@ -197,6 +215,7 @@ test.describe("mask width probe (V13-QA-023): the capture style holds every mask
     <table><tr><td>Collect documents</td>
       <td><span class="v13-deadline v13-deadline-upcoming" data-testid="deadline" data-deadline-state="upcoming"><time dateTime="2026-11-10">10 November 2026</time><span>In 3 days</span></span></td>
       <td>Open</td></tr></table>
+    <p>Correlation id <code data-testid="correlation-id">3f2a9c1e-5b7d-4e8f-a0b1-c2d3e4f5a6b7</code> for support.</p>
     <iframe data-testid="case-notification-preview-frame" sandbox="" style="inline-size:600px;block-size:120px;border:0"
       srcdoc="${FRAME}"></iframe>
   </body></html>`;
@@ -206,7 +225,7 @@ test.describe("mask width probe (V13-QA-023): the capture style holds every mask
     persona: "investigator-beta",
     route: "/fixture",
     ready: "table",
-    masks: ["deadline", "deadlineCounts", "noticeReference"],
+    masks: ["correlationId", "deadline", "deadlineCounts", "noticeReference"],
     how: "planted fixture page (library-index.spec.ts)",
   };
 
@@ -230,7 +249,7 @@ test.describe("mask width probe (V13-QA-023): the capture style holds every mask
   });
 
   // The real capture path with one mask's width rules taken out of the real capture style: the probe must see a move.
-  for (const mask of ["deadline", "deadlineCounts", "noticeReference"] as const) {
+  for (const mask of ["correlationId", "deadline", "deadlineCounts", "noticeReference"] as const) {
     test(`without the ${mask} width rule the probe fails (planted)`, async ({ page }) => {
       const parts = MASKS[mask].selector.split(",").map((x) => x.trim());
       const style = captureStyle(null)
@@ -246,6 +265,16 @@ test.describe("mask width probe (V13-QA-023): the capture style holds every mask
       ).toBe(true);
     });
   }
+
+  test("without the deadline rule's block-size: 1lh alone, the overdue variants move (planted)", async ({
+    page,
+  }) => {
+    const style = captureStyle(null).replace(/block-size: 1lh; /, "");
+    expect(style, "the declaration was taken out").not.toBe(captureStyle(null));
+    expect(style).toContain("[data-deadline-state] { display: inline-block; inline-size: 14rem;");
+    const moved = (await probe(page, style)).variants.filter((v) => !v.identical).map((v) => v.name);
+    expect(moved, "only the variants with the overdue glyph move").toEqual(["overdue-short", "overdue-long"]);
+  });
 });
 
 test.describe("mask width probe (V13-QA-023): the library run fails when a mask matched nothing", () => {

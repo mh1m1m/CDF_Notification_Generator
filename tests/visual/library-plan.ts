@@ -47,10 +47,13 @@ export const FONT_PACKAGES = [
  * count days on the server clock ("in 3 days", "in 13 days", "overdue"), so their width changed from one day to the
  * next and moved My Work's columns and the overview's mask edge (#159's first comparison, run 42372979341, against
  * candidates made six days earlier). Its width is in rem, not ch: an overdue deadline is bold, and ch follows the
- * weight (a due-date shift probe moved the mask by 12 px with ch). It touches nothing that is not masked.
+ * weight (a due-date shift probe moved the mask by 12 px with ch). Every width rule also keeps its text on one line
+ * and clips it (`white-space: nowrap; overflow: hidden`), so the box holds for any value, not only for the values the
+ * probe tries (V13-QA-024; library-index.spec.ts pins this for every rule). The deadline's `block-size: 1lh` keeps the
+ * overdue glyph's fallback font from making the line taller (2 px). It touches nothing that is not masked.
  */
 export const CAPTURE_STYLE =
-  '[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; } ' +
+  '[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; white-space: nowrap; overflow: hidden; vertical-align: top; } ' +
   "[data-deadline-state] { display: inline-block; inline-size: 14rem; block-size: 1lh; white-space: nowrap; overflow: hidden; vertical-align: top; } " +
   '[data-testid="count-my-work-overdue"] > :first-child, [data-testid="count-my-work-due-week"] > :first-child { inline-size: 4rem; white-space: nowrap; overflow: hidden; } ' +
   '[data-field="notice_reference"] { display: inline-block; inline-size: 10rem; white-space: nowrap; overflow: hidden; vertical-align: top; }';
