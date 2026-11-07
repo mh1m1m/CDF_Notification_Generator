@@ -210,7 +210,7 @@ Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #2
 Every pinned action SHA resolved. Warnings: the pinned versions target Node.js 20 and ran on Node.js 24 (OI-021); the
 dependency cache could not be saved (GitHub service message), which does not affect results.
 
-### 4.1 `develop`: one push run per merge (read from GitHub Actions, 7 Nov 2026 19:01 UTC)
+### 4.1 `develop`: one push run per merge (read from GitHub Actions, 7 Nov 2026 23:57 UTC)
 
 Each merge rests on the PR run named in its merge commit: green CI on the head the independent reviewer accepted, and since #164 (V13-ARCH-016) that head's green Firefox and WebKit run too (§4.3). The workflow cancels a running push run when a newer push to the same branch arrives (`concurrency`, `cancel-in-progress: true`), so a merge pushed within a minute of the next one shows a cancelled push run. The next successful push run contains that merge and verifies the combination; it is named in the last column. When `develop` moved after a PR's run, ARCH merges on that run only if `develop` changed none of the PR's files (ARCH ruling, 31 Oct). Since #24, ARCH also runs typecheck, lint, format, unit, test:db and Playwright on the combined tree locally before the merge, because a test already on `develop` can exercise behaviour the PR changes; the counts are in the merge commit and in the last column. A PR run checks out the PR head merged into `develop` as `develop` was when the run started (`refs/pull/<n>/merge`; the checkout step's log names both commits), so a PR run that started after the last `develop` move already covers the merged tree.
 
@@ -394,6 +394,9 @@ Each merge rests on the PR run named in its merge commit: green CI on the head t
 | `75e2fe2` | #179 QA-025 | [42398415213](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42398415213) | [42399342959](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42399342959) | success (combined tree `0e331be` + #179, equal to `75e2fe2`: unit 2,626, test:db 649 with the flag, e2e 471) |
 | `3a68162` | #176 PROC-028 | [42396409462](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42396409462) | [42401541616](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42401541616) | success (documentation only) |
 | `2aa4929` | #182 ARCH-020 | [42402999682](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42402999682) | [42403741841](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42403741841) | success (combined tree `3a68162` + #182, equal to `2aa4929`: unit 2,634, test:db 649 with the flag, e2e 471) |
+| `c93c49d` | #184 ARCH-002 | [42404408951](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42404408951) | [42404836804](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42404836804) | success (documentation only) |
+| `ac5857e` | #181 QA-026 | [42403847719](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42403847719) | [42405248048](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42405248048) | success (combined tree `c93c49d` + #181, equal to `ac5857e`: unit 2,639, test:db 649 with the flag, e2e 532) |
+| `993b6a8` | #185 PROC-029 | [42406078039](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42406078039) | [42427118445](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42427118445) | success (documentation only) |
 
 Run [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) on `develop` `b5ee5f4`: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build and Playwright all succeeded. Test counts are in each PR's evidence and in the job logs; this table records the job outcome only.
 
@@ -416,11 +419,11 @@ and the `develop` run on `357e574` ([42378248517](https://github.com/mh1m1m/CDF_
 not merged): its run [42377612701](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42377612701) failed at that step (job 128418329898: `refused: the first parent commit
 holds 36 baselines and this commit holds none`), and every other job of that run succeeded.
 
-### 4.3 Firefox and WebKit (V13-QA-016, V13-ARCH-016), read from GitHub Actions, 7 Nov 2026 19:01 UTC
+### 4.3 Firefox and WebKit (V13-QA-016, V13-ARCH-016), read from GitHub Actions, 7 Nov 2026 23:57 UTC
 
 Workflow `.github/workflows/cross-browser.yml` (#152), one job, "End-to-end in Firefox and WebKit (Playwright)": the
 projects `firefox-ar` and `webkit-ar` (the e2e scenarios and smoke, and `tests/a11y`; the Sentinel, the Truth
-Inspector, SEC's browser suites and the Chromium-only specs stay in CI's Chromium e2e job). Results are
+Inspector, SEC's browser suites and the Chromium-only specs, since #181 the axe sweep among them (§4.8), stay in CI's Chromium e2e job). Results are
 Chromium/Firefox/WebKit emulation, never real-device testing.
 
 | Run | Event | Commit | Result |
@@ -468,17 +471,24 @@ Chromium/Firefox/WebKit emulation, never real-device testing.
 | [42401541597](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42401541597) | push | `3a68162` | success, 158 passed |
 | [42402999609](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42402999609) | PR #182 | `db6d7ab` | success, 158 passed; the proof step passed |
 | [42403741756](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42403741756) | push | `2aa4929` | success, 158 passed; the proof step passed |
+| [42404408908](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42404408908) | PR #184 | `e7e9efd` | success, 158 passed; the proof step passed |
+| [42404836865](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42404836865) | push | `c93c49d` | success, 158 passed; the proof step passed |
+| [42403847658](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42403847658) | PR #181 | `08d601e` | success, 174 passed; the proof step passed; no sweep test in the log |
+| [42405248041](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42405248041) | push | `ac5857e` | success, 174 passed; the proof step passed |
+| [42406078033](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42406078033) | PR #185 | `3236a26` | success, 174 passed; the proof step passed |
+| [42427118495](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42427118495) | push | `993b6a8` | success, 174 passed; the proof step passed |
 
 Five green `develop` runs in a row (`1f7b685` to `f0f8437`); in between, the pull-request runs of PRs without the label
 ended skipped at the job's `if`. So, as `docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` §9.3 set out, V13-ARCH-016 runs the
 workflow on every PR, and a green run on the PR's head is part of ARCH's merge rule (`docs/AGENT_TASK_BOARD.md` §2
 rule 5). The repository has no branch protection (OPEN_ISSUES OI-016), so the rule is ARCH's, not GitHub's. Since #164
 the workflow starts on every PR by itself (its own PR run above had no label). The PR rows above are the accepted heads
-of the PRs merged since (#164 to #182), each green; #174's was green on ARCH's one re-run after the Firefox `/sign-in` load stall
+of the PRs merged since (#164 to #185), each green; #174's was green on ARCH's one re-run after the Firefox `/sign-in` load stall
 (OI-060). Every `develop` push run since that was not cancelled is green too. Since #179 the job runs 158 tests: QA-025's
-planted stall and its control in each engine.
+planted stall and its control in each engine. Since #181 it runs 174: reflow's eight new tests in each engine (sign-in,
+the preview frame and the 404 page).
 
-### 4.4 Database tests that do not run (V13-ARCH-017, V13-ARCH-018), read from GitHub Actions, 7 Nov 2026 19:01 UTC
+### 4.4 Database tests that do not run (V13-ARCH-017, V13-ARCH-018), read from GitHub Actions, 7 Nov 2026 23:57 UTC
 
 Since #166, CI's database integration job sets `V13_DB_TESTS_REQUIRED=1`, and `scripts/ci/vitest-skip-guard.mjs`, a
 Vitest reporter wired in `vitest.config.ts`, fails the run when an integration test ends skipped, todo or without a
@@ -510,7 +520,7 @@ and names each test at file:line. QA's planted runs for each cause are in `tests
 the skip conditions and SEC's truth tables are in `tests/fixtures/skip-conditions.ts`. ARCH's review planted runs
 through the real reporter (a helper's run-time `test.fail()`, `expectedStatus` set to failed, a status overwritten to
 passed, among others) until each failed the run, and six mutations of the reporter were caught. Every e2e job since
-ran with the reporter in place: 466, then 469, then 471 passed, no leak-skip finding (§4.1).
+ran with the reporter in place: 466, then 469, 471 and 532 passed, no leak-skip finding (§4.1).
 
 ### 4.6 A test run's failure fails its job (V13-SEC-016)
 
@@ -552,6 +562,30 @@ listed tests and points to the log. Credentials are redacted in every cell. Perf
 M1": no baseline or budget exists, so that part of REQ-CICD-002 stays open. The report never decides a job's result.
 Each of the four test jobs of `develop` push run [42394116159](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42394116159) (`c8878a7`) ran it; its 39 unit tests are in
 `tests/unit/report/pr-report.spec.ts`.
+
+### 4.8 Accessibility sweep (V13-QA-026), read from GitHub Actions, 7 Nov 2026 23:57 UTC
+
+Since #181, the e2e job runs `tests/a11y/sweep.a11y.spec.ts`: axe-core 4.14.0 with the tags `wcag2a`, `wcag2aa`,
+`wcag21a`, `wcag21aa` and `wcag22aa`, every impact, on the twelve screens S01–S12 of the manual checklist in Arabic and
+English, light and dark. That is 48 scans, and each also checks that the page has the language and the colour scheme
+under test. A violation of any impact fails the test. Five planted tests check what the sweep sees: low-contrast text,
+two 10 px targets side by side, a deprecated ARIA role, a fault beside S08's preview frame (axe cannot enter the
+sandboxed frame, so the frame is the only part left out), and a pin that axe-core 4.14.0's contrast rule does not test
+Arabic-script text. Colours come from the same tokens in both languages, so the English scans stand for each screen's
+contrast, and M-18 is the manual check.
+
+The sweep runs in Chromium only. In Cross-browser [42400335710](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42400335710) on `88eaa1f` Firefox showed no dark theme under
+Playwright's emulation (OI-061), so the sweep is left out of `firefox-ar` and `webkit-ar` by the projects' `testIgnore`.
+`tests/unit/qa/a11y-engines.spec.ts` pins which engine runs what from the runner's own `--list`. Axe results in Firefox
+and WebKit are not claimed. The reflow suite runs in all three engines, 27 tests each.
+
+ARCH's review of `08d601e` (comment 6711823485) planted seven faults in that split, each alone: the sweep's entry
+renamed, the engines' `testIgnore` emptied, the sweep left out of `desktop-ar`, reflow made Chromium-only, one plant
+dropped, a `test.skip(false, …)` and a `browserName` return. Each failed the unit test. With FE-019's indicator fill
+taken out of the three CSS modules, the sweep failed exactly two scans, English dark S04 and S06, each on
+`color-contrast` (serious) at `.flag`: F-01. PR CI [42403847719](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42403847719) and the `develop` push run [42405248048](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42405248048) on
+`ac5857e` each passed 532 e2e tests, 53 of them the sweep's. No WCAG criterion is claimed as passed: the audit's
+manual rows stay NOT_RUN (OI-059).
 
 ## 5. Deployment checks
 
