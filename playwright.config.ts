@@ -19,7 +19,7 @@
 // PW_CHROMIUM_PATH points Playwright at a pre-installed Chromium in sandboxes without browser downloads; CI runs
 // `playwright install --with-deps chromium` instead.
 import { randomBytes } from "node:crypto";
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig, devices, type PlaywrightTestProject } from "@playwright/test";
 import { isLoopbackUrl, LOCAL_DATABASE, localPrimaryPort, V13_APP } from "./scripts/db/lib/migrations.mjs";
 import { DEFAULT_LOCAL_APP_PASSWORD } from "./scripts/db/reset-local.mjs";
 import {
@@ -104,6 +104,41 @@ const visualUse = {
 };
 const chromiumLaunch = chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {};
 
+/** Every project but the access audit, in the order the runner lists them. */
+const otherProjects: PlaywrightTestProject[] = [
+  {
+    name: CHROMIUM_PROJECT,
+    testIgnore: [LIBRARY_SPEC, BASELINE_SPEC, ACCESS_AUDIT_SPEC],
+    use: {
+      ...devices["Desktop Chrome"],
+      locale: "ar-SA",
+      ...chromiumLaunch,
+    },
+  },
+  ...(visualLibrary
+    ? [
+        {
+          name: "visual-library",
+          testMatch: LIBRARY_SPEC,
+          // A failed data check writes no image (§4), and no session cookie reaches the artifact (SEC on #132).
+          use: { ...visualUse, ...chromiumLaunch },
+        },
+      ]
+    : []),
+  ...(visualBaseline
+    ? [
+        {
+          name: "visual-baseline",
+          testMatch: BASELINE_SPEC,
+          // One Linux image set, committed: no browser or platform suffix in the file name (§3, §5.1).
+          snapshotPathTemplate: "{testDir}/visual/__screenshots__/{arg}{ext}",
+          use: { ...visualUse, ...chromiumLaunch },
+        },
+      ]
+    : []),
+  ...browsers.map((name) => crossBrowserProject(name, tlsBaseURL)),
+];
+
 export default defineConfig({
   testDir: "tests",
   // QA's suites (e2e, a11y, Sentinel, Truth Inspector, visual) and SEC's browser-level security suites.
@@ -136,23 +171,17 @@ export default defineConfig({
   },
   ...(visualLibrary ? { globalTeardown: "./tests/visual/library-teardown.ts" } : {}),
   projects: [
-    {
-      name: CHROMIUM_PROJECT,
-      testIgnore: [LIBRARY_SPEC, BASELINE_SPEC, ACCESS_AUDIT_SPEC],
-      use: {
-        ...devices["Desktop Chrome"],
-        locale: "ar-SA",
-        ...chromiumLaunch,
-      },
-    },
-    // It reads the local ledger, so a run against an external deployment (staging) never lists it.
+    ...otherProjects,
+    // It reads the local ledger, so a run against an external deployment (staging) never lists it. It counts one
+    // persona's opens, so it starts only after every other project this run lists has finished (ARCH on #158): a
+    // local run with the engines or a visual project selected cannot open a case while it counts.
     ...(externalBaseUrl
       ? []
       : [
           {
             name: ACCESS_AUDIT_PROJECT,
             testMatch: ACCESS_AUDIT_SPEC,
-            dependencies: [CHROMIUM_PROJECT],
+            dependencies: otherProjects.map((p) => p.name!),
             use: {
               ...devices["Desktop Chrome"],
               locale: "ar-SA",
@@ -160,28 +189,6 @@ export default defineConfig({
             },
           },
         ]),
-    ...(visualLibrary
-      ? [
-          {
-            name: "visual-library",
-            testMatch: LIBRARY_SPEC,
-            // A failed data check writes no image (§4), and no session cookie reaches the artifact (SEC on #132).
-            use: { ...visualUse, ...chromiumLaunch },
-          },
-        ]
-      : []),
-    ...(visualBaseline
-      ? [
-          {
-            name: "visual-baseline",
-            testMatch: BASELINE_SPEC,
-            // One Linux image set, committed: no browser or platform suffix in the file name (§3, §5.1).
-            snapshotPathTemplate: "{testDir}/visual/__screenshots__/{arg}{ext}",
-            use: { ...visualUse, ...chromiumLaunch },
-          },
-        ]
-      : []),
-    ...browsers.map((name) => crossBrowserProject(name, tlsBaseURL)),
   ],
   webServer: externalBaseUrl
     ? undefined

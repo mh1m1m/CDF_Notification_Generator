@@ -722,6 +722,18 @@ test.describe("B1: Chromium runs every Sentinel spec and leak suite; the engines
     expect([...perProject.keys()].sort()).toEqual([CHROMIUM_PROJECT, ACCESS_AUDIT_PROJECT].sort());
   });
 
+  test("the access audit starts only after every other project the run lists (selecting it pulls them all in)", () => {
+    for (const visual of ["", "baseline", "library"]) {
+      const env = { ...ALL_ENGINES, V13_E2E_VISUAL: visual };
+      const all = [...filesPerProject(playwrightList([], env)).keys()].sort();
+      const pulled = [
+        ...filesPerProject(playwrightList(["--project", ACCESS_AUDIT_PROJECT], env)).keys(),
+      ].sort();
+      expect(all, `V13_E2E_VISUAL=${visual || "(unset)"}`).toContain(ACCESS_AUDIT_PROJECT);
+      expect(pulled, `V13_E2E_VISUAL=${visual || "(unset)"}`).toEqual(all);
+    }
+  });
+
   test("an unknown name in V13_E2E_BROWSERS is refused, never a quiet Chromium-only run", () => {
     expect(() => playwrightList([], { V13_E2E_BROWSERS: "firefox" })).toThrow();
   });
