@@ -6,13 +6,17 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  checkNpmrc,
+  checkTestScripts,
   checkWorkflow,
   checkWorkflowDir,
+  earlyExits,
   formatWorkflowFindings,
   packageScripts,
   readWorkflow,
   shellOperators,
   stripComment,
+  W7_CAPTURE,
   workflowFiles,
 } from "../workflow-hardening";
 
@@ -462,6 +466,41 @@ jobs:
       "          set +o pipefail",
       "set +o pipefail",
     ],
+    // R1 on #172: `&&` joins the test run to a command that can end the step first.
+    ["&& on the test line", "          pnpm test 2>&1", "          pnpm test && echo ok", "&& echo ok"],
+    // R4 on #172: anything that can end the step with success before, or instead of, the test run.
+    [
+      '[ -z "$X" ] && exit 0 before the test run',
+      "          echo start | tee start.log",
+      '          [ -z "$X" ] && exit 0',
+      "exit 0",
+    ],
+    [
+      "a bare exit before the test run",
+      "          echo start | tee start.log",
+      "          exit",
+      "          exit",
+    ],
+    [
+      "exec true before the test run",
+      "          echo start | tee start.log",
+      "          exec true",
+      "exec true",
+    ],
+    [
+      "a function that shadows the runner",
+      "          echo start | tee start.log",
+      "          pnpm() { :; }",
+      "pnpm()",
+    ],
+    [
+      "a function keyword definition",
+      "          echo start | tee start.log",
+      "          function pnpm { :; }",
+      "function pnpm",
+    ],
+    ["trap 'exit 0' EXIT", "          echo start | tee start.log", "          trap 'exit 0' EXIT", "trap"],
+    ["return before the test run", "          echo start | tee start.log", "          return 0", "return 0"],
   ];
   for (const [name, from, to, at] of cases)
     it(`${name} → W7 at its line`, () => {
@@ -516,6 +555,17 @@ jobs:
     expect(w7(late)).toEqual([lineOf(late, "| tee test.log")]);
   });
 
+  it("R4: exit with a non-zero literal status and the words inside quotes are allowed", () => {
+    expect(w7(swap("          echo start | tee start.log", '          [ -n "$X" ] || exit 1'))).toEqual([]);
+    expect(
+      w7(swap("          echo start | tee start.log", '          echo "exit 0; exec true; f() {}"')),
+    ).toEqual([]);
+    expect(earlyExits("exit 2")).toEqual([]);
+    expect(earlyExits("exit $rc")).toEqual(["`exit $rc`"]);
+    expect(earlyExits("exit 0")).toEqual(["`exit 0`"]);
+    expect(earlyExits("echo 'exit 0' && printf exec")).toEqual([]);
+  });
+
   it("shellOperators: quotes, $( ), comments and redirections are not operators", () => {
     expect(shellOperators(`pnpm test 2>&1 >&2 &>/dev/null`)).toEqual([]);
     expect(shellOperators(`echo "a || b | c &" 'x;y' $(a || b) # || c`)).toEqual([]);
@@ -550,7 +600,7 @@ jobs:
       expect(w7(CAPTURE.replace("|| rc=$?", "|| true"), "ci.yml"), "not a capture").toEqual([at]);
       const unjudged = CAPTURE.replace(
         / {10}node scripts\/ci\/visual-candidates.mjs[^\n]*\n/,
-        "          exit 0\n",
+        "          echo no judge\n",
       );
       expect(w7(unjudged, "ci.yml"), "the code never reaches the judge").toEqual([at]);
       const later = CAPTURE.replace(
@@ -558,6 +608,14 @@ jobs:
         "          echo between\n          node scripts/ci",
       );
       expect(w7(later, "ci.yml"), "the judge not on the next line").toEqual([at]);
+      // R2 on #172: the judge line is compared whole, so nothing may follow it.
+      const judge = W7_CAPTURE.next;
+      for (const tail of [" || true", "; true", " | tee judge.log", " && exit 0"]) {
+        const src = CAPTURE.replace(judge, judge + tail);
+        expect(w7(src, "ci.yml"), `judge${tail}`).toContain(at);
+      }
+      const otherArgs = CAPTURE.replace(judge, judge.replace("tests/visual/__screenshots__", "/tmp"));
+      expect(w7(otherArgs, "ci.yml"), "a judge with other arguments").toEqual([at]);
     });
 
     const LIBRARY = `name: Visual library
@@ -596,6 +654,67 @@ jobs:
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  describe("R3: a package script that runs a test (pnpm runs it with sh -c: no -e, no pipefail)", () => {
+    const at = (scripts: Record<string, string>) =>
+      checkTestScripts(
+        Object.fromEntries(Object.entries(scripts).map(([n, c], i) => [n, { command: c, line: i + 10 }])),
+      ).map((f) => `${f.file}:${f.line}`);
+    it("only && may join its commands", () => {
+      expect(at({ test: "vitest run --project unit" })).toEqual([]);
+      expect(at({ test: "pnpm lint && vitest run --project unit" })).toEqual([]);
+      for (const bad of [
+        "vitest run || true",
+        "vitest run; echo done",
+        "vitest run | tee unit.log",
+        "vitest run |& tee unit.log",
+        "vitest run &",
+        "vitest run\necho done",
+        "exit 0 && vitest run",
+        "exec true && vitest run",
+      ])
+        expect(at({ test: bad }), bad).toEqual(["package.json:10"]);
+    });
+    it("follows a nested script, and leaves a script that runs no test alone", () => {
+      // The flaw is in the script that holds it; the one that only calls it is clean.
+      expect(at({ test: "pnpm unit", unit: "vitest run; exit 0" })).toEqual(["package.json:11"]);
+      expect(at({ test: "pnpm unit || true", unit: "vitest run" })).toEqual(["package.json:10"]);
+      expect(at({ lint: "eslint . || true", fmt: "prettier --check . | cat" })).toEqual([]);
+    });
+    it("the repository's scripts are clean", () => {
+      expect(
+        formatWorkflowFindings(checkTestScripts(packageScripts(join(process.cwd(), "package.json")))),
+      ).toBe("(none)");
+    });
+    it("checkWorkflowDir reports them at package.json:line, and .npmrc shell keys at .npmrc:line", () => {
+      const root = mkdtempSync(join(tmpdir(), "v13-w7-scripts-"));
+      try {
+        const dir = join(root, ".github", "workflows");
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(join(dir, "a.yml"), W7);
+        writeFileSync(
+          join(root, "package.json"),
+          JSON.stringify({ scripts: { lint: "eslint .", test: "vitest run || true" } }, null, 2),
+        );
+        expect(checkWorkflowDir(dir).map((f) => `${f.rule} ${f.file}:${f.line}`)).toEqual([
+          "W7 package.json:4",
+        ]);
+        writeFileSync(
+          join(root, ".npmrc"),
+          "engine-strict=true\nscript-shell = /bin/true\n shell-emulator=true\n",
+        );
+        expect(checkNpmrc(join(root, ".npmrc")).map((f) => `${f.file}:${f.line}`)).toEqual([
+          ".npmrc:2",
+          ".npmrc:3",
+        ]);
+        expect(formatWorkflowFindings(checkWorkflowDir(dir))).toContain("W7 .npmrc:2 ");
+        expect(checkNpmrc(join(root, "missing.npmrc"))).toEqual([]);
+        expect(checkNpmrc(join(process.cwd(), ".npmrc")), "the repository's .npmrc").toEqual([]);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
   });
 
   it("the real workflows: planting each form in ci.yml's database step is caught there", () => {

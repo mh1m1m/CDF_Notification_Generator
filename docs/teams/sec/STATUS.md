@@ -134,7 +134,10 @@ Updated: 7 Nov 2026 · Branch: `security/V13-SEC-016-test-exit-codes` · `develo
   a pipe without pipefail (GitHub's default shell is `bash -e {0}`), a background `&`, the run as a condition; `set +e`,
   `set +o errexit`, `set +o pipefail` in a test step. Two reviewed exceptions, exact text only: ci.yml's visual
   candidate capture `… || rc=$?` handed on the next line to `visual-candidates.mjs`, and visual-library.yml's label
-  `if:` — IN_REVIEW (reviewer: ARCH)
+  `if:`. Fix for ARCH's CHANGES `b1c4af9`: R1 `&&` on a test run's line refused; R2 the judge line compared whole;
+  R3 a package script that runs a test may join commands only with `&&` (pnpm runs it with `sh -c`), reported at
+  `package.json:line`; R4 an early exit in a test step (`exit` without a non-zero literal status, `exec`, `return`,
+  `trap`, a function definition); `.npmrc` `script-shell` / `shell-emulator` refused — IN_REVIEW (reviewer: ARCH)
 
 ## Changed files
 - `docs/security/THREAT_MODEL.md`, `docs/security/AUTHORIZATION_MATRIX.md`, `docs/security/APP_ADVERSARIAL_TESTS.md`,
@@ -159,6 +162,7 @@ Updated: 7 Nov 2026 · Branch: `security/V13-SEC-016-test-exit-codes` · `develo
 | Local, V13-SEC-015 on `develop` `f0f8437`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; twelve mutations of the checker and five of the real workflows (`contents: write` in cross-browser.yml, `persist-credentials: true` in ci.yml, `pull_request_target` in visual-library.yml, an extra job permission in release.yml, `upload-artifact@v4` in ci.yml), one at a time, then restored | lint 0, typecheck 0, format clean, unit **2494/2494** (96 files; the spec 28/28); every mutation fails at least one test | 28 | SEC-015 head |
 | Local, V13-SEC-015 fix for ARCH's CHANGES f5e7282, on `develop` `11bf2e7`: `pnpm lint`, `pnpm typecheck`, `pnpm test`; nine mutations of the new W0/W3 checks, one at a time, then restored | lint 0, typecheck 0, unit **2506/2506** (96 files; the spec 38/38); all nine mutations fail at least one test | 38 | SEC-015 head |
 | Local, V13-SEC-016 on `develop` `45de81f`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; 23 mutations of W7, one at a time, then restored; five W7 forms planted in the real ci.yml database step | lint 0, typecheck 0, format clean, unit **2548/2548** (96 files; the spec 69/69); all 23 mutations and all five plants fail at least one test | 69 | SEC-016 head |
+| Local, V13-SEC-016 fix for ARCH's CHANGES `b1c4af9` (R1–R4, `.npmrc`), on `develop` `45de81f`: `pnpm lint`, `pnpm typecheck`, `pnpm format:check`, `pnpm test`; 18 mutations of the new checks, one at a time, then restored | lint 0, typecheck 0, format clean, unit **2561/2561** (96 files; the spec 82/82); all 18 mutations fail at least one test | 82 | SEC-016 head |
 
 ## Unresolved defects
 - TM-S4 / OI-018: claims MAC (ADR-014 §4) built by DB and pinned by SEC-002 context-forgery suite.

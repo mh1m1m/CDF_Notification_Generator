@@ -23,7 +23,12 @@
 //          line to scripts/ci/visual-candidates.mjs), a pipe `|`/`|&` unless pipefail is on for the step (the default
 //          shell is `bash -e {0}`, without pipefail; `shell: bash` or an earlier `set -o pipefail` turns it on), a
 //          background `&`, and the run as a condition (`if`, `elif`, `while`, `until`, `!`);
-//        - `set +e`, `set +o errexit` or `set +o pipefail` anywhere in a test step's script.
+//        - `set +e`, `set +o errexit` or `set +o pipefail` anywhere in a test step's script;
+//        - on a test run's line, `&&` too (under -e only the list's last command fails the step); in a test step's
+//          script, `exit` without a non-zero literal status, `exec`, `return`, `trap` and a function definition;
+//        - a package script that runs a test joining commands with anything but `&&` (pnpm runs it with `sh -c`, no -e,
+//          no pipefail), or holding an early exit; `.npmrc`'s `script-shell` and `shell-emulator` keys.
+//      (ARCH's R1–R4 and INFO on #172.)
 // A finding names the rule, the file and the line.
 //
 // No YAML dependency (ARCH): a line reader that tracks indentation gives each line its key path (jobs › tag › steps ›
@@ -198,7 +203,7 @@ export const W7_CAPTURE = {
   file: "ci.yml",
   job: "visual",
   line: "pnpm exec playwright test --project=visual-baseline --reporter=list,json --retries=0 || rc=$?",
-  next: 'node scripts/ci/visual-candidates.mjs "$rc" ',
+  next: 'node scripts/ci/visual-candidates.mjs "$rc" test-results/visual-baseline.json test-results/baseline-candidates tests/visual/__screenshots__',
 } as const;
 
 /** The shell operators outside quotes, `$( … )` and a comment; redirections (`2>&1`, `&>`, `>&2`) are not operators. */
@@ -250,6 +255,86 @@ const CONDITION = new Set(["if", "elif", "while", "until", "!"]);
 const ERREXIT_OFF = /(^|[;&|\s])set\s+(\+[a-z]*e[a-z]*\b|\+o\s+(errexit|pipefail)\b)/;
 const PIPEFAIL_ON = /(^|[;&|\s])set\s+(-[a-z]*o\s+pipefail\b|-o\s+pipefail\b)/;
 
+/** Whether shell text runs a Vitest or Playwright test, by `findInvocations` (package.json scripts followed). */
+function runsATest(text: string, scripts: Readonly<Record<string, PackageScript>>): boolean {
+  const line = {
+    line: 1,
+    path: ["jobs", "j", "steps", "[0]", "run"],
+    key: "run",
+    value: text,
+    scalarOf: null,
+    text,
+  };
+  return findInvocations({ workflows: [{ file: "-", lines: [line] }], scripts }).length > 0;
+}
+
+/** The text with the contents of its quoted strings emptied, so that words inside quotes are not read as commands. */
+const unquoted = (text: string) => text.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, (q) => q[0]! + q[0]!);
+
+/**
+ * What in a test step's script line can end the step early with success, or turn a failure into one (ARCH's R4 on
+ * #172): `exit` without a non-zero literal status, `exec`, `return`, `trap`, and a function definition (which can shadow
+ * the runner).
+ */
+export function earlyExits(text: string): string[] {
+  const bare = unquoted(text);
+  const out: string[] = [];
+  if (/(^|[;&|{(\s])(function\s+[A-Za-z_][\w-]*|[A-Za-z_][\w-]*\s*\(\s*\))/.test(bare))
+    out.push("a function definition");
+  for (const segment of bare.split(/;|&&|\|\||\|&|\||&|\(|\)|\{|\}|\bthen\b|\bdo\b|\belse\b/)) {
+    const words = segment
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w !== "!");
+    const [first, second] = words;
+    if (first === "exit" && !(second !== undefined && /^[1-9][0-9]*$/.test(second)))
+      out.push(`\`exit${second === undefined ? "" : ` ${second}`}\``);
+    else if (first === "exec" || first === "return" || first === "trap") out.push(`\`${first}\``);
+  }
+  return out;
+}
+
+/**
+ * R3 on #172: pnpm runs a package script with `sh -c`, without errexit or pipefail, so a script that runs a test may
+ * hold only `&&` between its commands: `;`, `||`, `|`, `|&`, `&` or a newline would let it exit 0 when the test failed.
+ */
+export function checkTestScripts(scripts: Readonly<Record<string, PackageScript>>): WorkflowFinding[] {
+  const out: WorkflowFinding[] = [];
+  for (const [name, script] of Object.entries(scripts)) {
+    if (!runsATest(`pnpm ${name}`, scripts)) continue;
+    const bad = shellOperators(script.command).filter((o) => o !== "&&");
+    if (script.command.includes("\n")) bad.push("a newline");
+    const exits = earlyExits(script.command);
+    if (bad.length > 0 || exits.length > 0)
+      out.push({
+        rule: "W7",
+        file: "package.json",
+        line: script.line,
+        detail: `the script "${name}" runs a test with sh -c (no -e, no pipefail); only \`&&\` may join its commands, found ${[...new Set([...bad, ...exits])].join(", ")}`,
+      });
+  }
+  return out;
+}
+
+/** `.npmrc` keys that change the shell every package script runs in (ARCH's INFO on #172). */
+export function checkNpmrc(npmrc: string): WorkflowFinding[] {
+  if (!existsSync(npmrc)) return [];
+  return readFileSync(npmrc, "utf8")
+    .split(/\r?\n/)
+    .flatMap((l, i) =>
+      /^\s*(script-shell|shell-emulator)\s*=/.test(l)
+        ? [
+            {
+              rule: "W7",
+              file: ".npmrc",
+              line: i + 1,
+              detail: "a key that changes the shell package scripts run in",
+            },
+          ]
+        : [],
+    );
+}
+
 /** W7 over one workflow's lines. */
 function checkTestExitCodes(
   file: string,
@@ -260,25 +345,7 @@ function checkTestExitCodes(
   const keyed = lines.filter((l) => l.scalarOf === null);
   const workflow = { file, lines };
   const runs = findInvocations({ workflows: [workflow], scripts });
-  const runsATest = (text: string) =>
-    findInvocations({
-      workflows: [
-        {
-          file,
-          lines: [
-            {
-              line: 1,
-              path: ["jobs", "j", "steps", "[0]", "run"],
-              key: "run",
-              value: text,
-              scalarOf: null,
-              text,
-            },
-          ],
-        },
-      ],
-      scripts,
-    }).length > 0;
+
   const testJobs = new Set(runs.map((r) => r.job).filter((j): j is string => j !== null));
   const testSteps = new Set(runs.map((r) => `${r.job}\u0000${r.step}`));
   const testLines = new Set(runs.map((r) => `${r.job}\u0000${r.step}\u0000${r.line}`));
@@ -364,6 +431,8 @@ function checkTestExitCodes(
       if (ERREXIT_OFF.test(text))
         hit("W7", r.line, "`set +e`, `set +o errexit` or `set +o pipefail` in a step that runs a test");
       if (PIPEFAIL_ON.test(text)) pipefail = true;
+      for (const e of earlyExits(text))
+        hit("W7", r.line, `${e} in a step that runs a test can end it with success before or after the run`);
       if (!testLines.has(`${job}\u0000${step}\u0000${r.line}`)) continue;
       const ops = shellOperators(text);
       if (ops.includes("||")) {
@@ -371,10 +440,7 @@ function checkTestExitCodes(
           file === W7_CAPTURE.file &&
           job === W7_CAPTURE.job &&
           text === W7_CAPTURE.line &&
-          mine[n + 1]?.pieces
-            .map((p) => p.text)
-            .join(" ")
-            .startsWith(W7_CAPTURE.next) === true;
+          mine[n + 1]?.pieces.map((p) => p.text).join(" ") === W7_CAPTURE.next;
         if (!capture)
           hit(
             "W7",
@@ -385,10 +451,16 @@ function checkTestExitCodes(
       if ((ops.includes("|") || ops.includes("|&")) && !pipefail)
         hit("W7", r.line, "a pipe after a test run without pipefail exits with the last command's status");
       if (ops.includes("&")) hit("W7", r.line, "a test run in the background; its exit status is lost");
+      if (ops.includes("&&"))
+        hit(
+          "W7",
+          r.line,
+          "`&&` on a test run's line: under bash -e only the list's last command fails the step",
+        );
       const commands = text.split(/;|&&|\|\||\bthen\b|\bdo\b/);
       for (const c of commands) {
         const first = c.trim().split(/\s+/)[0] ?? "";
-        if (CONDITION.has(first) && runsATest(c.trim().slice(first.length).trim()))
+        if (CONDITION.has(first) && runsATest(c.trim().slice(first.length).trim(), scripts))
           hit("W7", r.line, `a test run as the condition of \`${first}\`; its failure only picks a branch`);
       }
     }
@@ -540,8 +612,17 @@ export function checkWorkflowDir(
   dir: string,
   scripts: Readonly<Record<string, PackageScript>> = packageScripts(join(dir, "..", "..", "package.json")),
 ): WorkflowFinding[] {
-  return workflowFiles(dir).flatMap((f) => checkWorkflow(f, readFileSync(join(dir, f), "utf8"), scripts));
+  return [
+    ...workflowFiles(dir).flatMap((f) => checkWorkflow(f, readFileSync(join(dir, f), "utf8"), scripts)),
+    ...checkTestScripts(scripts),
+    ...checkNpmrc(join(dir, "..", "..", ".npmrc")),
+  ];
 }
 
 export const formatWorkflowFindings = (f: readonly WorkflowFinding[]) =>
-  f.map((x) => `${x.rule} .github/workflows/${x.file}:${x.line} ${x.detail}`).join("\n") || "(none)";
+  f
+    .map(
+      (x) =>
+        `${x.rule} ${/\.ya?ml$/.test(x.file) ? `.github/workflows/${x.file}` : x.file}:${x.line} ${x.detail}`,
+    )
+    .join("\n") || "(none)";
