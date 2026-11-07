@@ -2,18 +2,25 @@
 // documented names without values. Two belong to the `visual` job of .github/workflows/ci.yml: the candidate check
 // (V13-ARCH-014: a run without committed baselines passes only when it failed on missing snapshots alone and wrote one
 // PNG candidate for each, and no baseline), and the mode (V13-ARCH-015: candidate mode is refused once baselines have
-// been committed, so deleting every baseline fails the job). The last describe pins the trigger of
-// .github/workflows/cross-browser.yml (V13-ARCH-016): every pull request and every push to develop.
+// been committed, so deleting every baseline fails the job). Then the trigger of .github/workflows/cross-browser.yml
+// (V13-ARCH-016: every pull request and every push to develop), and the skip guard of CI's database job (V13-ARCH-017:
+// an integration test that did not run fails the run).
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { describe, expect, it, vi } from "vitest";
 import { findReferencedEnvNames, parseEnvExample } from "@/scripts/ci/check-env-example.mjs";
 import { findPhysicalClasses, findPhysicalCss } from "@/scripts/ci/check-logical-css.mjs";
 import { checkCandidateRun, collectTests } from "@/scripts/ci/visual-candidates.mjs";
 import { decideVisualMode } from "@/scripts/ci/visual-mode.mjs";
+import {
+  findUnrunTests,
+  GUARDED_PROJECTS,
+  SkipGuardReporter,
+  skipGuardReporters,
+} from "@/scripts/ci/vitest-skip-guard.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -481,5 +488,149 @@ describe("cross-browser trigger (V13-ARCH-016)", () => {
       { rule: "on", line: 2 },
     ]);
     expect(triggerFindings(ok.replace("on:\n", ""))).toEqual([{ rule: "on", line: 0 }]);
+  });
+});
+
+describe("skip guard (V13-ARCH-017)", () => {
+  // CI's database job (V13_DB_TESTS_REQUIRED=1) fails when an integration test did not run: skipped, todo, skipped at
+  // run time, no result, or a file that collected none (scripts/ci/vitest-skip-guard.mjs).
+  const t = (name: string, line: number | null, state: string, mode = "run") => ({ name, line, state, mode });
+
+  it("finds every test that did not run, and a file that collected none", () => {
+    expect(
+      findUnrunTests([
+        {
+          file: "a.spec.ts",
+          tests: [
+            t("ran", 3, "passed"),
+            t("failed", 4, "failed"),
+            t("skip", 5, "skipped", "skip"),
+            t("todo", 6, "skipped", "todo"),
+            t("at run time", 7, "skipped"),
+            t("never ran", null, "pending"),
+          ],
+        },
+        { file: "empty.spec.ts", tests: [] },
+      ]),
+    ).toEqual([
+      { file: "a.spec.ts", line: 5, name: "skip", reason: "skipped" },
+      { file: "a.spec.ts", line: 6, name: "todo", reason: "todo" },
+      { file: "a.spec.ts", line: 7, name: "at run time", reason: "skipped" },
+      { file: "a.spec.ts", line: null, name: "never ran", reason: "no result" },
+      { file: "empty.spec.ts", line: null, name: "(no test collected)", reason: "no tests" },
+    ]);
+    // A failure is already a failed run; passing and failing tests are not findings (the control).
+    expect(
+      findUnrunTests([{ file: "a.spec.ts", tests: [t("ran", 3, "passed"), t("failed", 4, "failed")] }]),
+    ).toEqual([]);
+  });
+
+  it("is on only when V13_DB_TESTS_REQUIRED is exactly 1, and guards the integration project only", () => {
+    expect(GUARDED_PROJECTS).toEqual(["integration"]);
+    const on = skipGuardReporters({ V13_DB_TESTS_REQUIRED: "1" });
+    expect(on).toHaveLength(1);
+    expect(on[0]).toBeInstanceOf(SkipGuardReporter);
+    for (const v of [undefined, "", "0", "true", "yes", " 1"])
+      expect(skipGuardReporters({ V13_DB_TESTS_REQUIRED: v })).toEqual([]);
+  });
+
+  it("the real vitest.config.ts adds the guard only with the flag, and gives integration tests their lines", async () => {
+    const config = pathToFileURL(join(ROOT, "vitest.config.ts")).href;
+    type Config = {
+      test: { reporters: unknown[]; projects: { test: { name: string; includeTaskLocation?: boolean } }[] };
+    };
+    const load = async (flag: string, tag: string): Promise<Config> => {
+      vi.stubEnv("V13_DB_TESTS_REQUIRED", flag);
+      try {
+        return ((await import(/* @vite-ignore */ `${config}?skip-guard=${tag}`)) as { default: Config })
+          .default;
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    };
+    const on = await load("1", "on");
+    const off = await load("", "off");
+    expect(on.test.reporters.filter((r) => r instanceof SkipGuardReporter)).toHaveLength(1);
+    expect(off.test.reporters.filter((r) => r instanceof SkipGuardReporter)).toHaveLength(0);
+    const integration = on.test.projects.find((p) => p.test.name === "integration");
+    expect(integration?.test.includeTaskLocation).toBe(true);
+  });
+
+  it("in a real Vitest run: a skip, a todo and a run-time skip fail the run at file:line; a clean run and a skip outside the guarded project pass", () => {
+    mkdirSync(join(ROOT, "test-results"), { recursive: true });
+    const dir = mkdtempSync(join(ROOT, "test-results", "skip-guard-"));
+    const vitest = join(ROOT, "node_modules", "vitest", "vitest.mjs");
+    const guard = pathToFileURL(join(ROOT, "scripts", "ci", "vitest-skip-guard.mjs")).href;
+    // The child run must not inherit this worker's Vitest variables.
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    for (const k of Object.keys(env)) if (k.startsWith("VITEST")) delete env[k];
+    const run = (files: Record<string, string>) => {
+      rmSync(join(dir, "db"), { recursive: true, force: true });
+      rmSync(join(dir, "unit"), { recursive: true, force: true });
+      mkdirSync(join(dir, "db"));
+      mkdirSync(join(dir, "unit"));
+      for (const [name, src] of Object.entries(files)) writeFileSync(join(dir, name), src);
+      return spawnSync(
+        process.execPath,
+        [vitest, "run", "--root", dir, "--config", join(dir, "vitest.config.mjs")],
+        {
+          encoding: "utf8",
+          env,
+        },
+      );
+    };
+    try {
+      writeFileSync(
+        join(dir, "vitest.config.mjs"),
+        [
+          `import { SkipGuardReporter } from ${JSON.stringify(guard)};`,
+          "export default {",
+          "  test: {",
+          '    reporters: ["default", new SkipGuardReporter()],',
+          "    includeTaskLocation: true,",
+          "    projects: [",
+          '      { test: { name: "integration", include: ["db/*.spec.mjs"] } },',
+          '      { test: { name: "unit", include: ["unit/*.spec.mjs"] } },',
+          "    ],",
+          "  },",
+          "};",
+          "",
+        ].join("\n"),
+      );
+      const ok = 'import { expect, it } from "vitest";\nit("runs", () => expect(1).toBe(1));\n';
+      const planted = [
+        'import { describe, expect, it } from "vitest";',
+        'it("runs", () => expect(1).toBe(1));',
+        'it.skip("planted skip", () => {});',
+        'describe.skipIf(true)("planted skipIf", () => {',
+        '  it("inner", () => {});',
+        "});",
+        'it.todo("planted todo");',
+        'it("skips at run time", (ctx) => ctx.skip());',
+        "",
+      ].join("\n");
+
+      const failed = run({ "db/ok.spec.mjs": ok, "db/planted.spec.mjs": planted });
+      expect(failed.status, failed.stdout + failed.stderr).toBe(1);
+      expect(failed.stderr).toContain("skip guard (V13-ARCH-017): 4 tests in integration did not run");
+      for (const line of [
+        "db/planted.spec.mjs:3 planted skip (skipped)",
+        "db/planted.spec.mjs:5 planted skipIf > inner (skipped)",
+        "db/planted.spec.mjs:7 planted todo (todo)",
+        "db/planted.spec.mjs:8 skips at run time (skipped)",
+      ])
+        expect(failed.stderr).toContain(line);
+      expect(failed.stderr).not.toContain("db/ok.spec.mjs");
+
+      const clean = run({ "db/ok.spec.mjs": ok, "unit/ok.spec.mjs": ok });
+      expect(clean.status, clean.stdout + clean.stderr).toBe(0);
+      expect(clean.stderr).not.toContain("skip guard");
+
+      const unitSkip = run({ "db/ok.spec.mjs": ok, "unit/planted.spec.mjs": planted });
+      expect(unitSkip.status, unitSkip.stdout + unitSkip.stderr).toBe(0);
+      expect(unitSkip.stderr).not.toContain("skip guard");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
