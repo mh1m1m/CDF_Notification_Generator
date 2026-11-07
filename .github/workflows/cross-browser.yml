@@ -90,3 +90,9 @@ jobs:
             test-results/playwright/**/*.png
           if-no-files-found: ignore
           retention-days: 14
+      # V13-ARCH-020: the runtime proof of this job's required run, last and always. It fails the job unless the run's
+      # own report is there, complete and this run's, and records every test as run and passed
+      # (scripts/ci/required-runs.mjs).
+      - name: Required run proof
+        if: always()
+        run: node scripts/ci/required-runs.mjs cross-browser

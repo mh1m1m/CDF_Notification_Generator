@@ -6,17 +6,29 @@
 // (V13-ARCH-016: every pull request and every push to develop), the skip guard of CI's database job (V13-ARCH-017:
 // an integration test that did not run fails the run), and the guards' own coverage (V13-ARCH-018: a database test file
 // the run did not collect fails it, and CI's test runs pass no reporter, config or filter that would keep a test from
-// its guard).
+// its guard), and the runtime proof of each required run (V13-ARCH-020: the job's last step reads the run's own report
+// and fails unless every test ran and passed; its static half pins that step and keeps start-up variables out of the
+// workflows).
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { findReferencedEnvNames, parseEnvExample } from "@/scripts/ci/check-env-example.mjs";
 import { findPhysicalClasses, findPhysicalCss } from "@/scripts/ci/check-logical-css.mjs";
 import { checkCandidateRun, collectTests } from "@/scripts/ci/visual-candidates.mjs";
 import { decideVisualMode } from "@/scripts/ci/visual-mode.mjs";
+import {
+  checkProofSteps,
+  formatProofFindings,
+  formatStepFindings,
+  PLAYWRIGHT_REPORT,
+  PROOF_JOBS,
+  proveRun,
+  RUNS,
+  VITEST_REPORT,
+} from "@/scripts/ci/required-runs.mjs";
 import {
   checkTestInvocations,
   findInvocations,
@@ -36,6 +48,26 @@ import {
 import { readWorkflow, workflowFiles } from "@/tests/security/workflow-hardening";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
+const WORKFLOWS = join(ROOT, ".github", "workflows");
+/** package.json's scripts, each with its line. */
+const scriptsOf = (source: string) => {
+  const lines = source.split("\n");
+  const scripts = (JSON.parse(source) as { scripts: Record<string, string> }).scripts;
+  return Object.fromEntries(
+    Object.entries(scripts).map(([name, command]) => [
+      name,
+      { command, line: lines.findIndex((l) => l.trimStart().startsWith(`${JSON.stringify(name)}:`)) + 1 },
+    ]),
+  );
+};
+/** The repository's workflows as readWorkflow reads them, and package.json's scripts. */
+const repositoryInput = () => ({
+  workflows: workflowFiles(WORKFLOWS).map((f) => ({
+    file: `.github/workflows/${f}`,
+    lines: readWorkflow(readFileSync(join(WORKFLOWS, f), "utf8")),
+  })),
+  scripts: scriptsOf(readFileSync(join(ROOT, "package.json"), "utf8")),
+});
 
 describe("check-logical-css", () => {
   it("flags physical properties, values and direction-dependent shorthands", () => {
@@ -833,27 +865,8 @@ describe("guard coverage (V13-ARCH-018)", () => {
     }
   }, 120_000);
 
-  const WORKFLOWS = join(ROOT, ".github", "workflows");
-  /** package.json's scripts, each with its line. */
-  const scriptsOf = (source: string) => {
-    const lines = source.split("\n");
-    const scripts = (JSON.parse(source) as { scripts: Record<string, string> }).scripts;
-    return Object.fromEntries(
-      Object.entries(scripts).map(([name, command]) => [
-        name,
-        { command, line: lines.findIndex((l) => l.trimStart().startsWith(`${JSON.stringify(name)}:`)) + 1 },
-      ]),
-    );
-  };
-
   it("CI's test runs, and the scripts they run, pass no reporter, config or filter; the runs the merge rule rests on exist", () => {
-    const input = {
-      workflows: workflowFiles(WORKFLOWS).map((f) => ({
-        file: `.github/workflows/${f}`,
-        lines: readWorkflow(readFileSync(join(WORKFLOWS, f), "utf8")),
-      })),
-      scripts: scriptsOf(readFileSync(join(ROOT, "package.json"), "utf8")),
-    };
+    const input = repositoryInput();
     const findings = checkTestInvocations(input);
     expect(findings, formatInvocationFindings(findings)).toEqual([]);
     // What the check read: every Vitest and Playwright run in the workflows. A new run, or one the reader cannot
@@ -1090,5 +1103,569 @@ describe("guard coverage (V13-ARCH-018)", () => {
     expect(planted(CI_WF, CROSS_WF, dbUpdate)).toEqual(["package.json:20 snapshot"]);
     const e2eUpdate = { ...SCRIPTS, "test:e2e": "playwright test -u" };
     expect(planted(CI_WF, CROSS_WF, e2eUpdate)).toEqual(["package.json:21 snapshot"]);
+  });
+});
+
+describe("required run proof (V13-ARCH-020)", () => {
+  // The last step of each required job (`if: always()`) reads the run's own report and fails the job unless every test
+  // ran and passed (scripts/ci/required-runs.mjs). Its runtime half is tried on real Vitest and Playwright runs in
+  // temporary roots under test-results/, each fault planted; its static half on the repository's workflows and configs,
+  // and on planted workflows.
+  const vitestCli = join(ROOT, "node_modules", "vitest", "vitest.mjs");
+  const playwrightCli = join(ROOT, "node_modules", "@playwright", "test", "cli.js");
+  const proofCli = join(ROOT, "scripts", "ci", "required-runs.mjs");
+  /** Vitest's modifier for a test pinned to fail, spelled so that this file never holds it: the proof reads unit sources. */
+  const FAILS = ["", "fails"].join(".");
+  const VITEST_OK = 'import { expect, it } from "vitest";\nit("runs", () => expect(1).toBe(1));\n';
+  const PLAYWRIGHT_OK =
+    'import { expect, test } from "@playwright/test";\ntest("runs", () => expect(1).toBe(1));\n';
+  /** A child run's environment: none of this worker's Vitest or Playwright variables, and no CI. */
+  const childEnv = (): NodeJS.ProcessEnv => {
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    for (const k of Object.keys(env)) if (k.startsWith("VITEST") || k.startsWith("PLAYWRIGHT")) delete env[k];
+    delete env.CI;
+    delete env.V13_DB_TESTS_REQUIRED;
+    return env;
+  };
+  const made: string[] = [];
+  afterAll(() => {
+    for (const dir of made) rmSync(dir, { recursive: true, force: true });
+  });
+  /** A temporary root under test-results/ holding `files`. */
+  const plantRoot = (prefix: string, files: Record<string, string>) => {
+    mkdirSync(join(ROOT, "test-results"), { recursive: true });
+    const dir = mkdtempSync(join(ROOT, "test-results", `${prefix}-`));
+    made.push(dir);
+    for (const [name, src] of Object.entries(files)) {
+      mkdirSync(join(dir, name, ".."), { recursive: true });
+      writeFileSync(join(dir, name), src);
+    }
+    return dir;
+  };
+  /** The proof's findings for the run `name` in `dir`, as `where: problem`, sorted. */
+  const proof = (name: string, dir: string, now?: number) =>
+    proveRun(name, { root: dir, ...(now === undefined ? {} : { now }) })
+      .findings.map((f) => `${f.where}: ${f.problem}`)
+      .sort();
+  const proofCliRun = (dir: string, ...args: string[]) => {
+    const run = spawnSync(process.execPath, [proofCli, ...args], {
+      cwd: dir,
+      encoding: "utf8",
+      env: childEnv(),
+    });
+    return [run.status, run.stdout, run.stderr];
+  };
+  const failed = (name: string, n: number, lines: string) =>
+    `required run proof (V13-ARCH-020): "${name}" did not run and pass in full; ${n} finding${n === 1 ? "" : "s"}:\n${lines}\n`;
+
+  // Vitest as CI runs it: JUnit XML at VITEST_REPORT, the unit and integration projects over their directories.
+  const VITEST_CONFIG = [
+    "export default {",
+    "  test: {",
+    '    reporters: ["default", "junit"],',
+    `    outputFile: { junit: ${JSON.stringify(VITEST_REPORT)} },`,
+    "    projects: [",
+    '      { test: { name: "unit", include: ["tests/unit/**/*.spec.mjs", "tests/security/app/**/*.spec.mjs"] } },',
+    '      { test: { name: "integration", include: ["tests/integration/**/*.spec.mjs", "tests/security/db/**/*.spec.mjs"] } },',
+    "    ],",
+    "  },",
+    "};",
+    "",
+  ].join("\n");
+  const vitestRun = (dir: string, project: string) =>
+    spawnSync(
+      process.execPath,
+      [vitestCli, "run", "--project", project, "--root", dir, "--config", join(dir, "vitest.config.mjs")],
+      { cwd: dir, encoding: "utf8", env: childEnv() },
+    );
+
+  it("passes a Vitest run that ran and passed every test file of its directories, and refuses its report changed or gone", () => {
+    const dir = plantRoot("proof-vitest", {
+      "vitest.config.mjs": VITEST_CONFIG,
+      "tests/unit/a.spec.mjs": VITEST_OK,
+      "tests/security/app/b.spec.mjs": VITEST_OK,
+      "tests/integration/c.spec.mjs": VITEST_OK,
+      "tests/security/db/d.spec.mjs": VITEST_OK,
+    });
+    const run = vitestRun(dir, "unit");
+    expect(run.status, run.stdout + run.stderr).toBe(0);
+    const summary = `2 tests in 2 files passed (${VITEST_REPORT})`;
+    expect(proveRun("unit", { root: dir })).toEqual({ findings: [], summary });
+    expect(proofCliRun(dir, "unit")).toEqual([
+      0,
+      `required run proof (V13-ARCH-020): "unit": ${summary}\n`,
+      "",
+    ]);
+
+    const report = join(dir, VITEST_REPORT);
+    const xml = readFileSync(report, "utf8");
+    const started = [...xml.matchAll(/<testsuite [^>]*timestamp="([^"]+)"/g)].map((m) => m[1]!).sort()[0]!;
+    const withReport = (text: string) => (writeFileSync(report, text), dir);
+    expect(proof("unit", withReport(xml.slice(0, xml.lastIndexOf("</testsuites>"))))).toEqual([
+      `${VITEST_REPORT}: the report is cut short or is not a JUnit report`,
+    ]);
+    // Left in the workspace by an earlier run, or from a clock ahead of the check.
+    expect(proof("unit", withReport(xml), Date.parse(started) + 61 * 60_000)).toEqual([
+      `${VITEST_REPORT}: the run started at ${started}, more than an hour ago: not this job's report`,
+    ]);
+    expect(proof("unit", withReport(xml), Date.parse(started) - 6 * 60_000)).toEqual([
+      `${VITEST_REPORT}: the run started at ${started}, after the check`,
+    ]);
+    const dropped = xml.replace(
+      /<testcase classname="tests\/unit\/a\.spec\.mjs"[^>]*?(?:\/>|>[\s\S]*?<\/testcase>)/,
+      "",
+    );
+    expect(proof("unit", withReport(dropped))).toEqual([
+      `${VITEST_REPORT}: the report's total (2) differs from its test cases (1)`,
+      "tests/unit/a.spec.mjs: collected no test",
+      "tests/unit/a.spec.mjs: the file's total (1) differs from its test cases (0)",
+    ]);
+    // The unit report read as the integration run's.
+    expect(proof("integration", withReport(xml))).toEqual([
+      `${VITEST_REPORT}: the report holds none of this run's 2 test files: another run's report`,
+    ]);
+    rmSync(report);
+    const gone = `${VITEST_REPORT}: the run wrote no report: its tests did not run`;
+    expect(proof("unit", dir)).toEqual([gone]);
+    expect(proofCliRun(dir, "unit")).toEqual([1, "", failed("unit", 1, `  unit: ${gone}`)]);
+  }, 120_000);
+
+  it("names each test of a Vitest run that did not run and pass, each file it did not hold or collect, and each pinned to fail", () => {
+    const dir = plantRoot("proof-vitest-planted", {
+      "vitest.config.mjs": VITEST_CONFIG,
+      "tests/unit/mixed.spec.mjs": [
+        'import { expect, it } from "vitest";',
+        'it("passes", () => expect(1).toBe(1));',
+        'it.skip("skipped", () => {});',
+        'it.todo("todo");',
+        'it("skipped at run time", (ctx) => ctx.skip());',
+        'it.skipIf(true)("skipped by a condition", () => {});',
+        `it${FAILS}("pinned to fail", () => expect(1).toBe(2));`,
+        'it("fails", () => expect(1).toBe(2));',
+        "",
+      ].join("\n"),
+      "tests/unit/empty.spec.mjs": 'import "vitest";\n',
+      "tests/unit/broken.spec.mjs": 'throw new Error("broken at load");\n',
+      "tests/unit/left-out.test.mjs": VITEST_OK,
+      "tests/security/app/unhandled.spec.mjs": [
+        'import { it } from "vitest";',
+        'it("leaves a rejection behind", () => void Promise.reject(new Error("never handled")));',
+        "",
+      ].join("\n"),
+    });
+    const run = vitestRun(dir, "unit");
+    expect(run.status, run.stdout + run.stderr).toBe(1);
+    expect(proof("unit", dir)).toEqual(
+      [
+        `${VITEST_REPORT}: the report's totals record failures: 3, errors: 1`,
+        "tests/unit/left-out.test.mjs: a test file the report does not hold",
+        "tests/unit/broken.spec.mjs › tests/unit/broken.spec.mjs: failed",
+        "tests/unit/empty.spec.mjs › tests/unit/empty.spec.mjs: failed",
+        "tests/unit/mixed.spec.mjs › skipped: skipped or todo",
+        "tests/unit/mixed.spec.mjs › todo: skipped or todo",
+        "tests/unit/mixed.spec.mjs › skipped at run time: skipped or todo",
+        "tests/unit/mixed.spec.mjs › skipped by a condition: skipped or todo",
+        "tests/unit/mixed.spec.mjs › fails: failed",
+        // The JUnit report records the pinned test as passed: only the source shows it.
+        `tests/unit/mixed.spec.mjs:7: a test pinned to fail (\`${FAILS}\`), which the JUnit report records as passed`,
+        "vitest unhandled errors › Unhandled Rejection: never handled: an error",
+      ].sort(),
+    );
+  }, 120_000);
+
+  // Playwright as CI runs it: the JSON report at PLAYWRIGHT_REPORT, one retry, the projects each job selects.
+  const playwrightConfig = (projects: string) =>
+    [
+      "export default {",
+      '  testDir: "t",',
+      // Playwright's default outputDir is the package's test-results/, which a run empties first: never this repository's.
+      '  outputDir: "pw-out",',
+      "  retries: 1,",
+      `  reporter: [["json", { outputFile: ${JSON.stringify(PLAYWRIGHT_REPORT)} }]],`,
+      `  projects: [${projects}],`,
+      "};",
+      "",
+    ].join("\n");
+  const E2E_PROJECTS =
+    '{ name: "desktop-ar", testMatch: /main\\.spec\\.mjs$/ }, { name: "access-audit", testMatch: /audit\\.spec\\.mjs$/ }';
+  const playwrightRun = (dir: string) =>
+    spawnSync(process.execPath, [playwrightCli, "test", "-c", join(dir, "pw.config.mjs")], {
+      cwd: dir,
+      encoding: "utf8",
+      env: childEnv(),
+    });
+
+  it("passes a Playwright run whose selected projects all ran and passed, and refuses its report changed or gone", () => {
+    const dir = plantRoot("proof-playwright", {
+      "pw.config.mjs": playwrightConfig(E2E_PROJECTS),
+      "t/main.spec.mjs": PLAYWRIGHT_OK,
+      "t/audit.spec.mjs": PLAYWRIGHT_OK,
+    });
+    const run = playwrightRun(dir);
+    expect(run.status, run.stdout + run.stderr).toBe(0);
+    const summary = `2 tests in desktop-ar and access-audit passed (${PLAYWRIGHT_REPORT})`;
+    expect(proveRun("e2e", { root: dir })).toEqual({ findings: [], summary });
+    expect(proofCliRun(dir, "e2e")).toEqual([
+      0,
+      `required run proof (V13-ARCH-020): "e2e": ${summary}\n`,
+      "",
+    ]);
+
+    const report = join(dir, PLAYWRIGHT_REPORT);
+    const json = readFileSync(report, "utf8");
+    const started = (JSON.parse(json) as { stats: { startTime: string } }).stats.startTime;
+    const withReport = (text: string) => (writeFileSync(report, text), dir);
+    expect(proof("e2e", withReport(json.slice(0, -10)))).toEqual([
+      `${PLAYWRIGHT_REPORT}: the report is cut short or is not JSON`,
+    ]);
+    expect(proof("e2e", withReport("{}"))).toEqual([`${PLAYWRIGHT_REPORT}: not a Playwright JSON report`]);
+    expect(proof("e2e", withReport(json), Date.parse(started) + 61 * 60_000)).toEqual([
+      `${PLAYWRIGHT_REPORT}: the run started at ${started}, more than an hour ago: not this job's report`,
+    ]);
+    expect(proof("e2e", withReport(json), Date.parse(started) - 6 * 60_000)).toEqual([
+      `${PLAYWRIGHT_REPORT}: the run started at ${started}, after the check`,
+    ]);
+    // The e2e report read as the cross-browser run's.
+    expect(proof("cross-browser", withReport(json))).toEqual(
+      [
+        `${PLAYWRIGHT_REPORT}: no test of the project firefox-ar ran`,
+        `${PLAYWRIGHT_REPORT}: no test of the project webkit-ar ran`,
+        "t/main.spec.mjs:2 runs [desktop-ar]: a project this run does not select",
+        "t/audit.spec.mjs:2 runs [access-audit]: a project this run does not select",
+      ].sort(),
+    );
+    rmSync(report);
+    expect(proof("e2e", dir)).toEqual([
+      `${PLAYWRIGHT_REPORT}: the run wrote no report: its tests did not run`,
+    ]);
+  }, 120_000);
+
+  it("names each Playwright test that did not run and pass, a project not selected, one with no test, and an error outside the tests", () => {
+    const dir = plantRoot("proof-playwright-planted", {
+      "pw.config.mjs": playwrightConfig(
+        `${E2E_PROJECTS}, { name: "other", testMatch: /other\\.spec\\.mjs$/ }`,
+      ),
+      "t/main.spec.mjs": [
+        'import { expect, test } from "@playwright/test";',
+        'test("passes", () => expect(1).toBe(1));',
+        'test.skip("skipped", () => {});',
+        'test.fixme("fixme", () => {});',
+        'test("skipped at run time", () => test.skip());',
+        'test("pinned to fail", () => {',
+        "  test.fail();",
+        "  expect(1).toBe(2);",
+        "});",
+        'test("flaky", ({}, info) => expect(info.retry).toBe(1));',
+        'test("fails", () => expect(1).toBe(2));',
+        "",
+      ].join("\n"),
+      "t/other.spec.mjs": PLAYWRIGHT_OK,
+    });
+    const run = playwrightRun(dir);
+    expect(run.status, run.stdout + run.stderr).toBe(1);
+    const findings = [
+      `${PLAYWRIGHT_REPORT}: no test of the project access-audit ran`,
+      "t/main.spec.mjs:3 skipped [desktop-ar]: skipped",
+      "t/main.spec.mjs:4 fixme [desktop-ar]: skipped",
+      "t/main.spec.mjs:5 skipped at run time [desktop-ar]: skipped",
+      "t/main.spec.mjs:6 pinned to fail [desktop-ar]: pinned to fail (test.fail)",
+      "t/main.spec.mjs:10 flaky [desktop-ar]: flaky: failed, then passed on retry",
+      "t/main.spec.mjs:11 fails [desktop-ar]: failed (unexpected)",
+      "t/other.spec.mjs:2 runs [other]: a project this run does not select",
+      `${PLAYWRIGHT_REPORT}: the report's totals (expected 3, unexpected 1, flaky 1, skipped 3) are not 8 tests all passed`,
+    ];
+    expect(proof("e2e", dir)).toEqual([...findings].sort());
+    const { findings: inOrder } = proveRun("e2e", { root: dir });
+    expect(proofCliRun(dir, "e2e")).toEqual([1, "", failed("e2e", 9, formatProofFindings(inOrder))]);
+
+    const broken = plantRoot("proof-playwright-load-error", {
+      "pw.config.mjs": playwrightConfig(E2E_PROJECTS),
+      "t/main.spec.mjs": 'throw new Error("broken at load");\n',
+      "t/audit.spec.mjs": PLAYWRIGHT_OK,
+    });
+    const loadRun = playwrightRun(broken);
+    expect(loadRun.status, loadRun.stdout + loadRun.stderr).toBe(1);
+    expect(proof("e2e", broken)).toEqual(
+      [
+        "t/main.spec.mjs:1: an error outside the tests: Error: broken at load",
+        `${PLAYWRIGHT_REPORT}: the report counts no test`,
+        `${PLAYWRIGHT_REPORT}: no test of the project desktop-ar ran`,
+        `${PLAYWRIGHT_REPORT}: no test of the project access-audit ran`,
+      ].sort(),
+    );
+  }, 120_000);
+
+  it("takes one known run name and nothing else", () => {
+    const dir = plantRoot("proof-usage", {});
+    const usage =
+      "usage: node scripts/ci/required-runs.mjs <unit | integration | e2e | visual | cross-browser>\n";
+    for (const args of [[], ["smoke"], ["unit", "e2e"], ["toString"]])
+      expect(proofCliRun(dir, ...args), args.join(" ")).toEqual([2, "", usage]);
+  });
+
+  /** The variables the two configs read to pick reporters and projects, each restored after a load. */
+  const CONFIG_ENV = [
+    "CI",
+    "V13_E2E_BROWSERS",
+    "V13_E2E_VISUAL",
+    "V13_E2E_BASE_URL",
+    "V13_E2E_TLS_CERT",
+    "V13_E2E_TLS_KEY",
+    "V13_E2E_SESSION_SECRET",
+  ];
+  let loads = 0;
+  /** A config module loaded afresh with only `env` among CONFIG_ENV set. */
+  const loadConfig = async <T>(file: string, env: Record<string, string>): Promise<T> => {
+    for (const k of CONFIG_ENV) vi.stubEnv(k, env[k]);
+    try {
+      const url = `${pathToFileURL(join(ROOT, file)).href}?required-run-proof=${++loads}`;
+      return ((await import(/* @vite-ignore */ url)) as { default: T }).default;
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  };
+  interface VitestConfigShape {
+    test: {
+      reporters: unknown[];
+      outputFile: { junit: string };
+      projects: { test: { name: string; include: string[] } }[];
+    };
+  }
+  interface PlaywrightConfigShape {
+    reporter: unknown;
+    projects: { name: string }[];
+  }
+
+  it("each required job ends with the proof of the run it makes, and each proof names what the job and the configs select", async () => {
+    const input = repositoryInput();
+    const findings = checkProofSteps(input);
+    expect(findings, formatStepFindings(findings)).toEqual([]);
+    expect(PROOF_JOBS.map((j) => j.run).sort()).toEqual(Object.keys(RUNS).sort());
+
+    // The reports are where the configs write them in CI, and a Vitest run's directories are its include globs'.
+    const vitestConfig = await loadConfig<VitestConfigShape>("vitest.config.ts", { CI: "true" });
+    expect(vitestConfig.test.reporters).toContain("junit");
+    expect(vitestConfig.test.outputFile.junit).toBe(VITEST_REPORT);
+    for (const name of ["unit", "integration"]) {
+      const want = RUNS[name]!;
+      const project = vitestConfig.test.projects.find((p) => p.test.name === name)!;
+      const dirs = [...new Set(project.test.include.map((g) => g.slice(0, g.indexOf("/**"))))];
+      expect(want.tool === "vitest" ? [want.project, ...want.roots] : [], name).toEqual([name, ...dirs]);
+    }
+    const playwrightCi = await loadConfig<PlaywrightConfigShape>("playwright.config.ts", { CI: "true" });
+    expect(playwrightCi.reporter).toContainEqual(["json", { outputFile: PLAYWRIGHT_REPORT }]);
+
+    // Each proof names what its job runs: the Vitest project, or the Playwright projects the run selects, from those
+    // the config lists with the job's own V13_E2E_BROWSERS and V13_E2E_VISUAL.
+    for (const j of PROOF_JOBS) {
+      const at = `${j.file} ${j.job}`;
+      const want = RUNS[j.run]!;
+      const runs = findInvocations(input).filter((r) => r.file === j.file && r.job === j.job);
+      expect(runs.length, at).toBeGreaterThan(0);
+      if (want.tool === "vitest") {
+        for (const r of runs) expect([r.tool, ...r.projects], at).toEqual(["vitest", want.project]);
+        continue;
+      }
+      const env: Record<string, string> = { CI: "true" };
+      for (const l of input.workflows.find((w) => w.file === j.file)!.lines)
+        if (
+          l.path.join(" ") === `jobs ${j.job} env ${l.key}` &&
+          /^V13_E2E_(BROWSERS|VISUAL)$/.test(l.key ?? "")
+        )
+          env[l.key!] = l.value ?? "";
+      const listed = (await loadConfig<PlaywrightConfigShape>("playwright.config.ts", env)).projects.map(
+        (p) => p.name,
+      );
+      for (const r of runs) {
+        expect(r.tool, at).toBe("playwright");
+        expect(r.projects.length > 0 ? r.projects : listed, at).toEqual(want.projects);
+      }
+      for (const p of want.projects) expect(listed, at).toContain(p);
+    }
+  }, 60_000);
+
+  /** Planted workflows that pass the static half; each case below changes one thing. */
+  const PROOF_STEP = (run: string) => [
+    "      - name: Required run proof",
+    "        if: always()",
+    `        run: node scripts/ci/required-runs.mjs ${run}`,
+  ];
+  const PROOF_CI = [
+    "name: CI",
+    "on:",
+    "  pull_request:",
+    "jobs:",
+    "  unit:",
+    "    runs-on: ubuntu-24.04",
+    "    steps:",
+    "      - run: pnpm test",
+    ...PROOF_STEP("unit"),
+    "  integration:",
+    "    runs-on: ubuntu-24.04",
+    "    env:",
+    '      V13_DB_TESTS_REQUIRED: "1"',
+    "    steps:",
+    "      - run: pnpm test:db",
+    ...PROOF_STEP("integration"),
+    "  e2e:",
+    "    runs-on: ubuntu-24.04",
+    "    steps:",
+    "      - run: pnpm test:e2e",
+    ...PROOF_STEP("e2e"),
+    "  visual:",
+    "    runs-on: ubuntu-24.04",
+    "    steps:",
+    "      - run: pnpm exec playwright test --project=visual-baseline",
+    ...PROOF_STEP("visual"),
+    "",
+  ];
+  const PROOF_CROSS = [
+    "name: Cross-browser",
+    "on:",
+    "  pull_request:",
+    "jobs:",
+    "  e2e:",
+    "    runs-on: ubuntu-24.04",
+    "    steps:",
+    "      - run: pnpm exec playwright test --project=firefox-ar --project=webkit-ar",
+    ...PROOF_STEP("cross-browser"),
+    "",
+  ];
+  const PROOF_SCRIPTS = {
+    test: { command: "vitest run --project unit", line: 20 },
+    "test:db": { command: "vitest run --project integration", line: 21 },
+    "test:e2e": { command: "playwright test", line: 22 },
+  };
+  /** The static findings as `file:line detail`. */
+  const steps = (ci: readonly string[], cross: readonly string[] = PROOF_CROSS) =>
+    checkProofSteps({
+      workflows: [
+        { file: ".github/workflows/ci.yml", lines: readWorkflow(ci.join("\n")) },
+        { file: ".github/workflows/cross-browser.yml", lines: readWorkflow(cross.join("\n")) },
+      ],
+      scripts: PROOF_SCRIPTS,
+    }).map((f) => `${f.file.replace(".github/workflows/", "")}:${f.line} ${f.detail}`);
+  /** `src` with `count` lines from line `n` (from 1) replaced by `lines`. */
+  const swap = (src: readonly string[], n: number, count: number, ...lines: string[]) => [
+    ...src.slice(0, n - 1),
+    ...lines,
+    ...src.slice(n - 1 + count),
+  ];
+
+  it("a planted change to a proof step, a test job without one, or a start-up variable fails at file:line", () => {
+    expect(steps(PROOF_CI)).toEqual([]);
+    const unit =
+      "the unit job must end with exactly this step: name: Required run proof, if: always(), " +
+      "run: node scripts/ci/required-runs.mjs unit";
+    const proofStep = "        run: node scripts/ci/required-runs.mjs unit";
+
+    // The proof step gone, or any part of it changed or added to.
+    expect(steps(swap(PROOF_CI, 9, 3))).toEqual([`ci.yml:8 ${unit}`]);
+    for (const changed of [
+      swap(PROOF_CI, 11, 1, "        run: node scripts/ci/required-runs.mjs e2e"),
+      swap(PROOF_CI, 10, 1, "        if: success()"),
+      swap(PROOF_CI, 9, 1, "      - name: Proof"),
+      swap(PROOF_CI, 11, 1, proofStep, "        shell: bash"),
+      swap(PROOF_CI, 11, 1, proofStep, "        continue-on-error: true"),
+      swap(PROOF_CI, 11, 1, proofStep, "        working-directory: elsewhere"),
+      swap(PROOF_CI, 11, 1, proofStep, "        env:", "          FOO: bar"),
+      swap(PROOF_CI, 11, 1, "        run: |", "          node scripts/ci/required-runs.mjs unit"),
+    ])
+      expect(steps(changed), changed.slice(8, 13).join("\n")).toEqual([`ci.yml:9 ${unit}`]);
+    // A step after it, a required job gone, and the cross-browser job's proof gone.
+    expect(steps(swap(PROOF_CI, 12, 0, "      - run: echo done"))).toEqual([`ci.yml:12 ${unit}`]);
+    expect(steps(swap(PROOF_CI, 28, 7))).toEqual([
+      'ci.yml:0 the job visual is missing: it runs the required run "visual"',
+    ]);
+    expect(steps(PROOF_CI, swap(PROOF_CROSS, 9, 3))).toEqual([
+      "cross-browser.yml:8 the e2e job must end with exactly this step: name: Required run proof, if: always(), " +
+        "run: node scripts/ci/required-runs.mjs cross-browser",
+    ]);
+    // A job that runs a test is a required job.
+    const smoke = [
+      "  smoke:",
+      "    runs-on: ubuntu-24.04",
+      "    steps:",
+      "      - run: pnpm exec playwright test",
+    ];
+    expect(steps([...PROOF_CI.slice(0, -1), ...smoke, ""])).toEqual([
+      "ci.yml:38 the smoke job runs a test but does not end with the required run proof",
+    ]);
+    // defaults: would give the proof step another shell or working directory.
+    const defaults = ["defaults:", "  run:", "    working-directory: elsewhere"];
+    expect(steps(swap(PROOF_CI, 4, 0, ...defaults))).toEqual([
+      "ci.yml:4 defaults: where a job ends with the proof: its run settings would reach the proof step",
+    ]);
+    expect(steps(swap(PROOF_CI, 7, 0, "    defaults:", "      run:", "        shell: bash"))).toEqual([
+      "ci.yml:7 defaults: where a job ends with the proof: its run settings would reach the proof step",
+    ]);
+
+    // A start-up variable at each env: level; an ordinary name is no finding.
+    const startup = (n: number, name: string) =>
+      `ci.yml:${n} ${name} in env: reaches the shell or node of later steps, the proof's included`;
+    expect(
+      steps(swap(PROOF_CI, 4, 0, "env:", "  BASH_ENV: /tmp/x", '  NEXT_TELEMETRY_DISABLED: "1"')),
+    ).toEqual([startup(5, "BASH_ENV")]);
+    expect(
+      steps(swap(PROOF_CI, 15, 0, "      NODE_OPTIONS: --require ./x.cjs", "      LD_PRELOAD: /tmp/x.so")),
+    ).toEqual([startup(15, "NODE_OPTIONS"), startup(16, "LD_PRELOAD")]);
+    const stepEnv = [
+      "        env:",
+      "          SHELLOPTS: xtrace",
+      "          PATH: /tmp/bin",
+      "          ENV: /tmp/x",
+    ];
+    expect(
+      steps(swap(PROOF_CI, 8, 1, "      - run: pnpm test", ...stepEnv, "          BASHOPTS: extdebug")),
+    ).toEqual([startup(10, "SHELLOPTS"), startup(11, "PATH"), startup(12, "ENV"), startup(13, "BASHOPTS")]);
+    expect(
+      steps(swap(PROOF_CI, 15, 0, '      "BASH_ENV": /tmp/x', "      'NODE_OPTIONS': --require ./x.cjs")),
+    ).toEqual([startup(15, "BASH_ENV"), startup(16, "NODE_OPTIONS")]);
+    // A line whose name cannot be read, and an env: block on one line.
+    const unread = (n: number) =>
+      `ci.yml:${n} a line in an env: block that is not NAME: value, so its name cannot be checked`;
+    expect(steps(swap(PROOF_CI, 15, 0, "      BASH_FUNC_node%%: () { true; }"))).toEqual([unread(15)]);
+    expect(steps(swap(PROOF_CI, 15, 0, "      BASH_ENV : /tmp/x"))).toEqual([unread(15)]);
+    expect(steps(swap(PROOF_CI, 15, 0, "      ? BASH_ENV", "      : /tmp/x"))).toEqual([
+      unread(15),
+      unread(16),
+    ]);
+    expect(steps(swap(PROOF_CI, 15, 0, "      <<: *startup"))).toEqual([unread(15)]);
+    const inline = (n: number) =>
+      `ci.yml:${n} an env: block on one line ({ … } or an alias), so its names cannot be checked`;
+    expect(steps(swap(PROOF_CI, 14, 2, "    env: { BASH_ENV: /tmp/x, V13_DB_TESTS_REQUIRED: '1' }"))).toEqual(
+      [inline(14)],
+    );
+    expect(steps(swap(PROOF_CI, 4, 0, "env: *startup"))).toEqual([inline(4)]);
+    expect(steps(swap(PROOF_CI, 8, 1, "      - run: pnpm test", "        env: { NODE_OPTIONS: x }"))).toEqual(
+      [inline(9)],
+    );
+
+    // $GITHUB_ENV only as `echo "NAME=value" >> "$GITHUB_ENV"`, never a start-up name; $GITHUB_PATH never. The
+    // repository's own form and a shell comment are no finding.
+    expect(
+      steps(
+        swap(
+          PROOF_CI,
+          8,
+          1,
+          "      - run: |",
+          '          echo "NODE_OPTIONS=--require ./x.cjs" >> "$GITHUB_ENV"',
+          '          echo "$NAME=1" >> "$GITHUB_ENV"',
+          "          printf 'X=1\\n' >> \"$GITHUB_ENV\"",
+          '          echo "X=1" | tee -a "$GITHUB_ENV"',
+          '          echo "/tmp/bin" >> "$GITHUB_PATH"',
+          '          echo "V13_E2E_TLS_CERT=$dir/cert.pem" >> "$GITHUB_ENV"',
+          "          # a comment that names $GITHUB_ENV writes nothing",
+          "          pnpm test",
+        ),
+      ),
+    ).toEqual([
+      "ci.yml:9 NODE_OPTIONS through $GITHUB_ENV reaches the shell or node of later steps",
+      'ci.yml:10 write $GITHUB_ENV only as echo "NAME=value" >> "$GITHUB_ENV", one literal name a line',
+      'ci.yml:11 write $GITHUB_ENV only as echo "NAME=value" >> "$GITHUB_ENV", one literal name a line',
+      'ci.yml:12 write $GITHUB_ENV only as echo "NAME=value" >> "$GITHUB_ENV", one literal name a line',
+      "ci.yml:13 $GITHUB_PATH is never written: it would shadow node",
+    ]);
   });
 });
