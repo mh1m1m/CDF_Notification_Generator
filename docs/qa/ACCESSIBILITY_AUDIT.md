@@ -35,8 +35,10 @@ every named manual row passed, and that the manual rows named here exist.
 ## Evidence
 
 CI run [42393111241](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42393111241) on `develop`
-6046ab1, every job green: unit job 128464658939, end-to-end job 128464658963 (the a11y suites run in it). Test counts
-are from `vitest list` and `playwright test --list` on 6046ab1.
+6046ab1, every job green: unit job 128464658939, end-to-end job 128464658963 (the a11y suites run in it). Vitest counts
+are executed tests as the unit job's JUnit report records them (a loop that defines many tests counts each one;
+confirmed by a local CI-mode run on 58b2fa4, where these files are unchanged); Playwright counts are from
+`playwright test --list` on 6046ab1.
 
 | Id | Suite | Tests | What it checks |
 | --- | --- | --- | --- |
@@ -45,11 +47,11 @@ are from `vitest list` and `playwright test --list` on 6046ab1.
 | RF | `tests/a11y/reflow.a11y.spec.ts` | 19 | the six checks of `docs/design/reviews/UX009_TEXT_RESIZE_REFLOW.md` §4 at 200 % and 400 % and with text spacing, ar and en, on S02–S07, S09, S10, S11; each check planted first |
 | KB | `tests/e2e/shell-workspace-menu.spec.ts:50` | 1 | the switcher by keyboard: Enter opens, Escape closes, focus returns |
 | ER | `tests/e2e/scenario-e-notification-draft.spec.ts:164` | 1 | a refused draft shows a generic error in text and focus moves to it |
-| UT | `tests/unit/components/tokens.spec.ts` | 19 | text pairs 4.5:1 and control, focus and indicator borders 3:1, light and dark |
-| UC | `tests/unit/components/controls.spec.ts` | 14 | control border, height (40 px), select chevron, forced colours; table links underlined |
-| UR | `tests/unit/components/reflow.spec.ts` | 6 | the reflow CSS rules of UX-009 |
-| US | `tests/unit/components/shell.spec.tsx` | 32 | shell landmarks, `aria-current`, one `h1`, ar and en |
-| UD | `tests/unit/components/data.spec.tsx` | 41 | status badges distinct without colour, table captions, `aria-sort`, pagination |
+| UT | `tests/unit/components/tokens.spec.ts` | 88 | text pairs 4.5:1 and control, focus and indicator borders 3:1, light and dark |
+| UC | `tests/unit/components/controls.spec.ts` | 121 | control border, height (40 px), select chevron, forced colours; table links underlined |
+| UR | `tests/unit/components/reflow.spec.ts` | 8 | the reflow CSS rules of UX-009 |
+| US | `tests/unit/components/shell.spec.tsx` | 47 | shell landmarks, `aria-current`, one `h1`, ar and en |
+| UD | `tests/unit/components/data.spec.tsx` | 61 | status badges distinct without colour, table captions, `aria-sort`, pagination |
 | UN | `tests/unit/notifications/a11y.spec.ts` | 11 | the generated notice and e-mail HTML: A11Y-01 … A11Y-11 |
 
 **Exploratory probe (local, not committed, not CI evidence).** On 2026-11-07 QA ran axe-core 4.14.0 with the tags
@@ -108,7 +110,7 @@ glyphs (no text); M-18 covers them.
 | 2.4.11 | AA | Focus not obscured (minimum) | RF check 5 (the focused skip link lies inside the viewport) | M-05 | NOT_RUN |  |
 | 2.5.1 | A | Pointer gestures | none | M-14 | NOT_RUN | No path or multipoint gesture found; M-14. |
 | 2.5.2 | A | Pointer cancellation | none | M-14 | NOT_RUN | Native buttons and links only; M-14. |
-| 2.5.3 | A | Label in name | AX-1, AX-2 (label-content-name-mismatch is experimental in axe and not run) | M-06 | NOT_RUN |  |
+| 2.5.3 | A | Label in name | none (axe's `label-content-name-mismatch` is experimental and not run) | M-06 | NOT_RUN |  |
 | 2.5.4 | A | Motion actuation | none | none | NOT_APPLICABLE | Nothing responds to device motion: no `devicemotion` or `deviceorientation` handler. |
 | 2.5.7 | AA | Dragging movements | none | M-14 | NOT_RUN | No drag interaction found; M-14. |
 | 2.5.8 | AA | Target size (minimum) | UC controls at least 40 px tall; probe: target-size passes on every screen (axe `wcag22aa`, not in CI's tags: F-02) | M-14 | NOT_RUN |  |
@@ -127,7 +129,7 @@ glyphs (no text); M-18 covers them.
 | 3.3.1 | A | Error identification | ER (refusals are generic, in text, focused) | M-07 | NOT_RUN |  |
 | 3.3.2 | A | Labels or instructions | AX-1, AX-2 (label rules) on S01, S12 | M-06 | NOT_RUN |  |
 | 3.3.3 | AA | Error suggestion | none | M-07 | NOT_RUN |  |
-| 3.3.4 | AA | Error prevention (legal, financial, data) | none | M-07 | NOT_RUN | Whether a notification draft is a commitment this SC covers is a question for ARCH (Q-01). |
+| 3.3.4 | AA | Error prevention (legal, financial, data) | none | M-07 | NOT_RUN | Q-01, ARCH 7 Nov 2026: in M1 a draft is not a legal commitment (it sends nothing and binds no one), but it adds stored, user-controllable data, so the data clause covers it. M1 has no command to withdraw a draft, so Reversible does not hold; the draft form meets the SC through Checked (input validated, errors shown and correctable before saving), which M-07 verifies. Approval and dispatch, when built, need Checked or Confirmed of their own. |
 | 3.3.7 | A | Redundant entry | none | M-07 | NOT_RUN |  |
 | 3.3.8 | AA | Accessible authentication (minimum) | none | M-16 | NOT_RUN | Persona sign-in asks for no password. `PRODUCTION_SUBSTITUTION_REQUIRED`: the CDF corporate IdP's own sign-in is audited with it. |
 
@@ -144,14 +146,14 @@ Each finding goes to its owner as a backlog row through ARCH (QA does not edit a
 
 | Id | Severity | What | Where | Proposed owner | Status |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | serious (axe) | SC 1.4.3 fails in the dark theme: the "mine" task flag uses `--cdf-indicator-text` (#101820) as text with no fill, 1.1:1 on the case overview's surface (#19212b) and 1.5:1 on the tasks tab (#303841). The probe flagged it in English; the Arabic scans of the same pages did not, which the owner should check. | `app/(platform)/cases/[caseId]/_components/case.module.css` `.flag`, `data-testid="case-task-mine"`, S04 and S06, dark theme | FE (UX for the token choice) | open |
-| F-02 | coverage | CI's axe runs cover S01, S02 (ar, light) and S12 only, without the `wcag22aa` rules (target size, focus not obscured) and without the dark theme; AX-1 counts serious and critical only. F-01 shows what that misses. | `tests/a11y/` | QA: an axe spec over S01–S12 × ar, en × light, dark with `wcag22aa` and every impact; it can land only once F-01 is fixed, unless ARCH allows a tracked exception | proposed (V13-QA-025) |
-| F-03 | coverage | RF does not open S01, S08 (the preview frame) or S12. | `tests/a11y/reflow.a11y.spec.ts` | QA, with F-02 | proposed |
-| Q-01 | question | Is creating a notification draft a commitment SC 3.3.4 covers? Nothing is sent in M1. | — | ARCH | open |
+| F-01 | serious (axe) | SC 1.4.3 fails in the dark theme: the "mine" task flag uses `--cdf-indicator-text` (#101820) as text with no fill, 1.1:1 on the case overview's surface (#19212b) and 1.5:1 on the tasks tab (#303841). The probe flagged it in English; the Arabic scans of the same pages did not, which the owner should check. | `app/(platform)/cases/[caseId]/_components/case.module.css` `.flag`, `data-testid="case-task-mine"`, S04 and S06, dark theme | FE (V13-FE-019; UX for the token) | routed to FE (ARCH, 7 Nov 2026) |
+| F-02 | coverage | CI's axe runs cover S01, S02 (ar, light) and S12 only, without the `wcag22aa` rules (target size, focus not obscured) and without the dark theme; AX-1 counts serious and critical only. F-01 shows what that misses. | `tests/a11y/` | QA (V13-QA-026): an axe spec over S01–S12 × ar, en × light, dark with `wcag22aa` and every impact | approved (ARCH, 7 Nov 2026): no tracked exception; merges after V13-FE-019 |
+| F-03 | coverage | RF does not open S01, S08 (the preview frame) or S12. | `tests/a11y/reflow.a11y.spec.ts` | QA (folded into V13-QA-026) | approved (ARCH, 7 Nov 2026) |
+| Q-01 | question | Is creating a notification draft a commitment SC 3.3.4 covers? Nothing is sent in M1. | — | ARCH | closed (ARCH, 7 Nov 2026): the ruling is in the 3.3.4 row |
 
 ## What this audit does not cover
 
 - Every manual row (`docs/qa/A11Y_MANUAL_CHECKLIST.md`): NOT_RUN until a person at a real screen reader and browser runs
-  it (ARCH's call on who).
+  it: the owner, or a tester the owner names (ARCH, 7 Nov 2026; OPEN_ISSUES OI-059).
 - Real mobile devices and assistive technology on them.
 - The CDF corporate IdP's sign-in and any e-mail client rendering a sent notice.

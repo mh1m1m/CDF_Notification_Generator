@@ -10,8 +10,9 @@ rows and to the automated suites.
 ## Status
 
 **Every row is NOT_RUN.** Carrying out a row needs a person at a real screen reader and browser; this sandbox has
-neither, and a check that was not run is never reported as passed. Who runs it is ARCH's call (ruling §6 on #132: the
-owner, or UX with the owner). QA records the results here.
+neither, and a check that was not run is never reported as passed. Who runs them: the owner, or a tester the owner
+names (ARCH, 7 Nov 2026; OPEN_ISSUES OI-059). UX can help prepare a run but cannot run the rows. QA records the
+results here.
 
 ## How a row is recorded
 

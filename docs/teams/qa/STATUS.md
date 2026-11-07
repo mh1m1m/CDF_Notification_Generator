@@ -236,14 +236,17 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
     widens the page so the next run can route it to its owner.
 
 - V13-QA-018 — branch test/V13-QA-018-a11y-checklist-audit — IN_REVIEW (ARCH): the manual accessibility checklist
-  (`docs/qa/A11Y_MANUAL_CHECKLIST.md`, REQ-A11Y-003; 18 checks over 12 screens in ar and en, 324 rows, every one
+  (`docs/qa/A11Y_MANUAL_CHECKLIST.md`, REQ-A11Y-003; 18 checks over 12 screens in ar and en, 348 rows, every one
   NOT_RUN until a person runs it) and the WCAG 2.2 A/AA audit (`docs/qa/ACCESSIBILITY_AUDIT.md`, REQ-A11Y-014; 55
   criteria, each with its automated suites from CI 42393111241 and its manual rows; no PASS today; 1.4.3 FAIL from
-  F-01; 7 NOT_APPLICABLE with reasons). `tests/unit/qa/a11y-docs.spec.ts` (8 tests) keeps both honest: no result
+  F-01; 8 NOT_APPLICABLE with reasons). `tests/unit/qa/a11y-docs.spec.ts` (8 tests) keeps both honest: no result
   without who, tool and version, and date; every criterion once; the manual mapping cannot drift; no conformance
   claim. Mutations: 8 of 8 caught. A local axe probe (wcag22aa, every impact, light and dark, 48 scans, not committed)
-  found F-01.
+  found F-01. Review round 1 (ARCH CHANGES c222b4d): ARCH's four calls recorded (F-01 to FE as V13-FE-019; F-02 and
+  F-03 approved as V13-QA-026, no tracked exception, after FE-019; manual rows run by the owner or a tester the owner
+  names, OI-059; Q-01 closed with the SC 3.3.4 ruling); counts corrected (348 rows, 8 NOT_APPLICABLE); Vitest counts
+  are executed counts from the unit job's JUnit report (UT 88, UC 121, UR 8, US 47, UD 61, UN 11).
 
 ## Unresolved defects
-- F-01 (found by QA-018's probe, owner FE, to route through ARCH): SC 1.4.3 in the dark theme, the "mine" task flag
-  (`case-task-mine`, `case.module.css` `.flag`) at 1.1:1 and 1.5:1.
+- F-01 (found by QA-018's probe, routed by ARCH to FE as V13-FE-019, UX for the token): SC 1.4.3 in the dark
+  theme, the "mine" task flag (`case-task-mine`, `case.module.css` `.flag`) at 1.1:1 and 1.5:1.
