@@ -34,7 +34,12 @@ import {
   type SkipAllowance,
   testCallLines,
 } from "../critic/leak-suite-guard";
-import { CHROMIUM_ONLY, CHROMIUM_PROJECT, CROSS_BROWSER_PROJECTS } from "../fixtures/browsers";
+import {
+  ACCESS_AUDIT_PROJECT,
+  CHROMIUM_ONLY,
+  CHROMIUM_PROJECT,
+  CROSS_BROWSER_PROJECTS,
+} from "../fixtures/browsers";
 
 const ROOT = process.cwd();
 const read = (file: string) => {
@@ -684,9 +689,11 @@ test.describe("G7: visual baselines are never written by the runner in CI (V13-Q
 // B1 (V13-QA-016): the Firefox and WebKit projects' testIgnore never takes a leak suite away from Chromium. The listing
 // is the runner's own, with both engines selected; nothing is launched, so no Firefox or WebKit is needed here.
 test.describe("B1: Chromium runs every Sentinel spec and leak suite; the engines run none of the Chromium-only ones", () => {
-  // The visual projects are switched off here, so the listing's projects are exactly Chromium and the two engines in
-  // any job that runs this spec.
-  const ALL_ENGINES = { V13_E2E_BROWSERS: CROSS_BROWSER_PROJECTS.join(","), V13_E2E_VISUAL: "" };
+  // The visual projects are switched off and the base URL is the local one here, so in any job that runs this spec the
+  // listing's projects are exactly Chromium, the access audit (Chromium, after it) and the two engines.
+  const LOCAL = { V13_E2E_VISUAL: "", V13_E2E_BASE_URL: "" };
+  const ALL_ENGINES = { ...LOCAL, V13_E2E_BROWSERS: CROSS_BROWSER_PROJECTS.join(",") };
+  const ACCESS_AUDIT_SPEC = "tests/e2e/case-access-audit.spec.ts";
   const sentinelSpecs = readdirSync(join(ROOT, "tests", "sentinel"))
     .filter((f) => f.endsWith(".spec.ts"))
     .map((f) => `tests/sentinel/${f}`);
@@ -700,14 +707,19 @@ test.describe("B1: Chromium runs every Sentinel spec and leak suite; the engines
   test("the real configuration, with both engines selected, is clean", () => {
     expect(sentinelSpecs.length, "the Sentinel specs").toBeGreaterThanOrEqual(6);
     const perProject = filesPerProject(playwrightList([], ALL_ENGINES));
-    expect([...perProject.keys()].sort()).toEqual([CHROMIUM_PROJECT, ...CROSS_BROWSER_PROJECTS].sort());
+    expect([...perProject.keys()].sort()).toEqual(
+      [CHROMIUM_PROJECT, ACCESS_AUDIT_PROJECT, ...CROSS_BROWSER_PROJECTS].sort(),
+    );
+    expect([...perProject.get(ACCESS_AUDIT_PROJECT)!], "the access audit runs its one spec").toEqual([
+      ACCESS_AUDIT_SPEC,
+    ]);
     const v = checkEngineCoverage(perProject, read, coverage);
     expect(v, formatGuardViolations(v)).toEqual([]);
   });
 
   test("without V13_E2E_BROWSERS only Chromium is listed (a plain run needs no other engine)", () => {
-    const perProject = filesPerProject(playwrightList([], { V13_E2E_BROWSERS: "", V13_E2E_VISUAL: "" }));
-    expect([...perProject.keys()]).toEqual([CHROMIUM_PROJECT]);
+    const perProject = filesPerProject(playwrightList([], { ...LOCAL, V13_E2E_BROWSERS: "" }));
+    expect([...perProject.keys()].sort()).toEqual([CHROMIUM_PROJECT, ACCESS_AUDIT_PROJECT].sort());
   });
 
   test("an unknown name in V13_E2E_BROWSERS is refused, never a quiet Chromium-only run", () => {

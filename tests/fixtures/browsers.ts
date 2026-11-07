@@ -16,6 +16,12 @@ export type CrossBrowserProject = (typeof CROSS_BROWSER_PROJECTS)[number];
 export const CHROMIUM_PROJECT = "desktop-ar";
 
 /**
+ * The second Chromium project (V13-QA-022): only tests/e2e/case-access-audit.spec.ts, after desktop-ar, and only when
+ * the run starts the app itself (no V13_E2E_BASE_URL), since it reads the local ledger.
+ */
+export const ACCESS_AUDIT_PROJECT = "access-audit";
+
+/**
  * What the two engines run: specs directly under tests/e2e and tests/a11y. A regular expression on the absolute path,
  * not a glob: Playwright matches a glob such as `e2e/**` at any depth, which would add SEC's tests/security/e2e.
  */

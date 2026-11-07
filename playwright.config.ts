@@ -23,6 +23,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { isLoopbackUrl, LOCAL_DATABASE, localPrimaryPort, V13_APP } from "./scripts/db/lib/migrations.mjs";
 import { DEFAULT_LOCAL_APP_PASSWORD } from "./scripts/db/reset-local.mjs";
 import {
+  ACCESS_AUDIT_PROJECT,
   CHROMIUM_PROJECT,
   crossBrowserProject,
   selectedBrowsers,
@@ -149,7 +150,7 @@ export default defineConfig({
       ? []
       : [
           {
-            name: "access-audit",
+            name: ACCESS_AUDIT_PROJECT,
             testMatch: ACCESS_AUDIT_SPEC,
             dependencies: [CHROMIUM_PROJECT],
             use: {
