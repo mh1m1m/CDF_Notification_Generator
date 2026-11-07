@@ -81,6 +81,12 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
           retention-days: 14
+      # V13-ARCH-020: the runtime proof of this job's required run, last and always. It fails the job unless the run's
+      # own report is there, complete and this run's, and records every test as run and passed
+      # (scripts/ci/required-runs.mjs).
+      - name: Required run proof
+        if: always()
+        run: node scripts/ci/required-runs.mjs unit
 
   integration:
     name: Database integration tests
@@ -145,6 +151,12 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
           retention-days: 14
+      # V13-ARCH-020: the runtime proof of this job's required run, last and always. It fails the job unless the run's
+      # own report is there, complete and this run's, and records every test as run and passed
+      # (scripts/ci/required-runs.mjs).
+      - name: Required run proof
+        if: always()
+        run: node scripts/ci/required-runs.mjs integration
 
   rehearsal:
     # V13-DB-006: the scripted rehearsal of the shared-database procedure (ISOLATION_AND_RECOVERY_PLAN §6 step 0) on a
@@ -246,6 +258,12 @@ jobs:
             playwright-report/
           if-no-files-found: ignore
           retention-days: 14
+      # V13-ARCH-020: the runtime proof of this job's required run, last and always. It fails the job unless the run's
+      # own report is there, complete and this run's, and records every test as run and passed
+      # (scripts/ci/required-runs.mjs).
+      - name: Required run proof
+        if: always()
+        run: node scripts/ci/required-runs.mjs e2e
 
   visual:
     name: Visual baselines (Playwright)
@@ -342,3 +360,9 @@ jobs:
             playwright-report/
           if-no-files-found: ignore
           retention-days: 14
+      # V13-ARCH-020: the runtime proof of this job's required run, last and always. It fails the job unless the run's
+      # own report is there, complete and this run's, and records every test as run and passed
+      # (scripts/ci/required-runs.mjs).
+      - name: Required run proof
+        if: always()
+        run: node scripts/ci/required-runs.mjs visual
