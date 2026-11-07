@@ -3,7 +3,7 @@
 #
 # Runs the `visual-library` project (about 244 images in ar and en, light and dark, desktop, tablet and mobile, with
 # their manifest) on a pull request labelled `visual-library`: when the label is added and on every later push. Its
-# own workflow, as cross-browser.yml, so that adding the label starts it without re-running CI. The images are an
+# own workflow, so that adding the label starts it without re-running CI. The images are an
 # artifact for design reviews and UXQA-05, never baselines: those are compared in ci.yml's `visual` job. The four font
 # packages are the visual job's (docs/DEPENDENCIES.md); library-teardown.ts writes their versions into the manifest.
 #

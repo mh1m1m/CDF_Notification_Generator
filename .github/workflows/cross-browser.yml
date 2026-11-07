@@ -4,8 +4,10 @@
 #
 # Runs the Firefox and WebKit projects (tests/fixtures/browsers.ts: the e2e scenarios and smoke, and tests/a11y; the
 # Sentinel, the Truth Inspector, SEC's browser suites and the Chromium-only specs stay in CI's Chromium e2e job) on every
-# push to develop, and on a pull request labelled `cross-browser`. Schedule and dispatch wait until the workflow is on
-# main (D3). After five green develop runs in a row ARCH makes it a required check on every PR.
+# push to develop and on every pull request. Since V13-ARCH-016, after five green develop runs in a row (1f7b685,
+# 357e574, 2172fca, 119bea6, f0f8437), a green run on a pull request's head is part of ARCH's merge rule
+# (docs/AGENT_TASK_BOARD.md §2 rule 5); the repository has no branch protection (OPEN_ISSUES OI-016). Schedule and
+# dispatch wait until the workflow is on main (D3).
 #
 # Security (SEC's CI rules): `pull_request`, never `pull_request_target`; `contents: read` and no secrets; no event text
 # in any `run:`; the database passwords exist only in the job's container and are deliberately not secret; the
@@ -16,7 +18,6 @@ on:
   push:
     branches: [develop]
   pull_request:
-    types: [labeled, synchronize]
 
 permissions:
   contents: read
@@ -31,7 +32,6 @@ env:
 jobs:
   e2e:
     name: End-to-end in Firefox and WebKit (Playwright)
-    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'cross-browser')
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     services:
