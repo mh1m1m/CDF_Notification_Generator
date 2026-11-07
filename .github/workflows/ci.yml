@@ -62,7 +62,11 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+      # THROWAWAY PROOF (V13-ARCH-020, never merged): `set -n` makes bash read the rest of the step without running
+      # it, so the step ends green and no test runs.
+      - run: |
+          set -n
+          pnpm test
       # The PR quality report (V13-QA-017, REQ-CICD-002): built from this job's own test reports, appended to the
       # step summary and kept in the artifact; inputs come only through env (never interpolated into run:), and
       # connection strings are redacted (tests/report/pr-report.mjs).
@@ -132,7 +136,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:reset
-      - run: pnpm test:db
+      # THROWAWAY PROOF (V13-ARCH-020, never merged): an alias to a wrapper that runs the real tests and always exits
+      # 0. tests/integration/zz-arch020-planted-failure.spec.ts fails, so the run fails while the step ends green.
+      - run: |
+          shopt -s expand_aliases
+          pass() { "$@" || true; }
+          alias pnpm='pass pnpm'
+          pnpm test:db
       # The PR quality report (V13-QA-017, REQ-CICD-002): built from this job's own test reports, appended to the
       # step summary and kept in the artifact; inputs come only through env (never interpolated into run:), and
       # connection strings are redacted (tests/report/pr-report.mjs).
@@ -237,7 +247,10 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       # Builds and starts the app on port 3100 with a session secret generated for this run and V13_DATABASE_URL set to
       # V13_E2E_DATABASE_URL (playwright.config.ts); the app installs its claims key at start (instrumentation.ts).
-      - run: pnpm test:e2e
+      # THROWAWAY PROOF (V13-ARCH-020, never merged): `eval "exit 0"` ends the step green before any test starts.
+      - run: |
+          eval "exit 0"
+          pnpm test:e2e
       # The PR quality report (V13-QA-017, REQ-CICD-002): built from this job's own test reports, appended to the
       # step summary and kept in the artifact; inputs come only through env (never interpolated into run:), and
       # connection strings are redacted (tests/report/pr-report.mjs).
@@ -322,6 +335,8 @@ jobs:
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/visual-baseline.json
         run: |
+          # THROWAWAY PROOF (V13-ARCH-020, never merged): a sourced file that exits 0 ends the step green first.
+          . scripts/ci/arch020-proof-exit.sh
           # "compare" or "candidates"; exits 1, failing the job, when every baseline was deleted (V13-ARCH-015).
           mode="$(node scripts/ci/visual-mode.mjs tests/visual/__screenshots__)"
           if [ "$mode" = compare ]; then

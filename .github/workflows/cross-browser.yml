@@ -80,7 +80,13 @@ jobs:
           echo "V13_E2E_TLS_KEY=$dir/key.pem" >> "$GITHUB_ENV"
       # Only the two engine projects: Chromium already runs every suite in CI's e2e job. No trace is recorded here, so
       # none can reach the artifact.
-      - run: pnpm exec playwright test --project=firefox-ar --project=webkit-ar --trace=off
+      # THROWAWAY PROOF (V13-ARCH-020, never merged): a `pnpm` shadowed on the PATH exits 0 without running a test.
+      - run: |
+          mkdir -p "$RUNNER_TEMP/shadow"
+          printf '#!/bin/sh\nexit 0\n' > "$RUNNER_TEMP/shadow/pnpm"
+          chmod +x "$RUNNER_TEMP/shadow/pnpm"
+          PATH="$RUNNER_TEMP/shadow:$PATH"
+          pnpm exec playwright test --project=firefox-ar --project=webkit-ar --trace=off
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
