@@ -520,9 +520,18 @@ reflow findings come from JSON attachments the a11y specs add when they find som
 `reflow-findings`). The unit, database, e2e and visual jobs run it in an `if: always()` step with every input passed
 through `env` (never `${{ }}` inside `run:`); it appends the report to the job's step summary and writes
 `test-results/pr-report.md` into the job's artifact. A missing input is named, and when none was produced the report
-says its empty sections prove nothing. Connection strings and credentials in URLs are redacted in every cell (SEC's
-rule on #132). It posts no PR comment and uses no token. `tests/unit/report/pr-report.spec.ts` covers the readers, the
-sections, the redaction, a planted Playwright run read through its real JSON report, and the CI wiring.
+says its empty sections prove nothing; an input that is cut short or not valid is named as unreadable instead of
+stopping the report. The job's status reaches it as `PR_REPORT_JOB_STATUS: ${{ job.status }}` in `env:` (the one
+expression the step holds): when no test is listed and the status is not `success`, "Failed tests" says the job failed
+outside the listed tests and points to the log, never "None." Errors outside any test (global setup, the web server, a
+spec file that did not load) come from the Playwright report's top-level `errors` and get their own section. A Vitest
+failure's file:line comes from its first `❯` frame in the test's own file. Credentials are redacted in every cell
+(SEC's rule on #132; ARCH Q2 on #173): connection strings, credentials in URLs, `key=value` forms (libpq
+`password=…`, `PGPASSWORD=…`, any key ending in password, passwd, secret, token or api key), quoted object forms
+(`password: '…'`, `"password":"…"`) and `Bearer`/`Basic` values. It posts no PR comment and uses no token.
+`tests/unit/report/pr-report.spec.ts` covers the readers, the sections, each redaction form, the job-status wording, a
+planted Playwright run read through its real JSON report, a planted run whose spec file does not load, a cut-short
+input, and the CI wiring.
 
 ## 12. Open points for ARCH
 

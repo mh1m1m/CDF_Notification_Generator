@@ -1,6 +1,6 @@
 // The PR quality report builder (V13-QA-017; REQ-CICD-002; docs/qa/M1_OPEN_QA_ROWS_DESIGN.md §10): its readers, its
 // sections, its redaction (SEC #132 rule 4), a planted Playwright run read end to end, and its CI wiring (inputs only
-// through env, never `${{ }}` in `run:`). SYNTHETIC values only.
+// through env, never `${{ }}` in `run:`; the job status the one expression in `env:`). SYNTHETIC values only.
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -31,6 +31,43 @@ describe("redaction and text", () => {
     expect(redact("postgresql://u@h/db")).toBe("postgresql://[redacted]");
     expect(redact("see https://user:secret@example.test/x")).toBe("see https://[redacted]@example.test/x");
     expect(redact("https://example.test/a?b=c")).toBe("https://example.test/a?b=c");
+  });
+
+  // ARCH Q2 and SEC's notes on #173: libpq key=value strings, environment assignments, object forms and HTTP headers
+  it.each([
+    [
+      "libpq keyword string",
+      "connect host=127.0.0.1 user=cdf_v13_app password=local-only-not-a-secret dbname=v13",
+      "connect host=127.0.0.1 user=cdf_v13_app password=[redacted] dbname=v13",
+    ],
+    ["libpq quoted value", "password='local only not a secret' port=5432", "password=[redacted] port=5432"],
+    ["environment assignment", "PGPASSWORD=local-only-not-a-secret psql", "PGPASSWORD=[redacted] psql"],
+    ["spaced assignment", "API_KEY = local-only-not-a-secret;", "API_KEY = [redacted];"],
+    [
+      "object, single quotes",
+      "{ password: 'local-only-not-a-secret', user: 'u' }",
+      "{ password: '[redacted]', user: 'u' }",
+    ],
+    ["JSON", '{"password":"local-only-not-a-secret","user":"u"}', '{"password":"[redacted]","user":"u"}'],
+    ["JSON, spaced", '{ "session_token": "local-only-not-a-secret" }', '{ "session_token": "[redacted]" }'],
+    [
+      "Bearer header",
+      "Authorization: Bearer local-only-not-a-secret.x_y",
+      "Authorization: Bearer [redacted]",
+    ],
+    ["Basic header", "Authorization: Basic bG9jYWw6bm90LWEtc2VjcmV0", "Authorization: Basic [redacted]"],
+  ])("redacts a credential: %s", (_, input, out) => {
+    expect(redact(input)).toBe(out);
+    expect(firstLine(input)).not.toContain("local-only-not-a-secret");
+  });
+
+  it.each([
+    "token: valid",
+    "the session token is valid",
+    "expected password field to be visible",
+    "password: unquoted prose after a colon",
+  ])("leaves prose alone: %s", (text) => {
+    expect(redact(text)).toBe(text);
   });
 
   it("takes the first non-empty line, without colour codes, redacted and cut", () => {
@@ -232,6 +269,28 @@ describe("readPlaywright", () => {
     expect(f.reflowFailures.map((t) => t.where)).toEqual(["tests/a11y/reflow.a11y.spec.ts:208"]);
   });
 
+  it("reads errors outside any test (global setup, a file that did not load) from the report's top-level errors", () => {
+    const g = readPlaywright(
+      {
+        config: { rootDir: join(ROOT, "tests") },
+        suites: [],
+        errors: [
+          {
+            message: `Error: global setup failed: ${URL_WITH_PASSWORD}\n    at setup`,
+            location: { file: join(ROOT, "tests", "e2e", "global-setup.ts"), line: 12, column: 3 },
+          },
+          { message: "Error: Timed out waiting 60000ms from config.webServer." },
+        ],
+      },
+      ROOT,
+    );
+    expect(g.runErrors).toEqual([
+      { where: "tests/e2e/global-setup.ts:12", error: "Error: global setup failed: postgres://[redacted]" },
+      { where: "", error: "Error: Timed out waiting 60000ms from config.webServer." },
+    ]);
+    expect(g.tests).toEqual([]);
+  });
+
   it("groups a screenshot comparison's expected, actual and diff images by snapshot, as repository paths", () => {
     expect(f.shots).toEqual([
       {
@@ -267,6 +326,17 @@ at x</error></testcase>
       },
       { kind: "failed", title: "errors", where: "tests/unit/b.spec.ts", error: "Error: boom" },
     ]);
+  });
+
+  it("takes the line from the first ❯ frame in the test's own file (ARCH INFO on #173)", () => {
+    const xml = `<testsuites><testsuite name="tests/unit/a.spec.ts">
+  <testcase classname="tests/unit/a.spec.ts" name="fails"><failure message="expected 1 to be 2">AssertionError: expected 1 to be 2
+ ❯ lib/helper.ts:7:9
+ ❯ tests/unit/a.spec.ts:41:17
+ ❯ tests/unit/a.spec.ts:90:3
+</failure></testcase>
+</testsuite></testsuites>`;
+    expect(readJUnit(xml).tests[0]?.where).toBe("tests/unit/a.spec.ts:41");
   });
 });
 
@@ -318,6 +388,29 @@ describe("buildReport", () => {
     expect(md).not.toMatch(/postgres:\/\/[^[]/);
   });
 
+  // ARCH Q1 on #173: a job that failed outside a test case never reads as "None."
+  it.each([
+    ["success", "None."],
+    ["failure", "None listed, but **the job failed outside the listed tests**"],
+    ["cancelled", "None listed, but **the job failed outside the listed tests**"],
+    [undefined, "None listed in the reports."],
+  ])("with no failed test and job status %s, Failed tests says %j", (status, text) => {
+    const md = buildReport("Run", emptyFindings(), inputs, status);
+    expect(md).toContain(`### Failed tests (0)\n\n${text}`);
+    if (status) expect(md).toContain(`Job status when the report was built: **${status}**.`);
+    else expect(md).not.toContain("Job status");
+    if (status !== "success") expect(md).not.toMatch(/### Failed tests \(0\)\n\nNone\.$/m);
+  });
+
+  it("lists errors outside tests in their own section", () => {
+    const f = emptyFindings();
+    f.runErrors.push({ where: "tests/e2e/global-setup.ts:12", error: "Error: setup" });
+    const md = buildReport("Run", f, inputs, "failure");
+    expect(md).toContain("### Errors outside tests (1)");
+    expect(md).toContain("| tests/e2e/global-setup.ts:12 | Error: setup |");
+    expect(buildReport("Run", emptyFindings(), inputs, "success")).not.toContain("Errors outside tests");
+  });
+
   it(`caps each section at ${MAX_ROWS} rows and counts the rest`, () => {
     const f = emptyFindings();
     for (let i = 0; i < MAX_ROWS + 7; i += 1)
@@ -347,6 +440,36 @@ describe("buildReport", () => {
     });
     expect(md).toContain("## PR quality report: Unit tests");
     expect(md).toContain("**No test report was produced.**");
+  });
+
+  it("reports a cut-short or invalid input as unreadable instead of throwing (ARCH and SEC INFOs on #173)", () => {
+    const dir = mkdtempSync(join(ROOT, "test-results", "pr-report-"));
+    try {
+      const json = join(dir, "results.json");
+      const xml = join(dir, "junit.xml");
+      writeFileSync(json, JSON.stringify(PLAYWRIGHT_REPORT).slice(0, 200));
+      writeFileSync(
+        xml,
+        `<testsuites><testsuite name="a"><testcase classname="tests/unit/a.spec.ts" name="before the cut"><failure message="m">x</failure></testcase><testcase classname="tests/unit/a.spec.ts" name="cu`,
+      );
+      const md = reportFromEnv(
+        {
+          PR_REPORT_TITLE: "Cut",
+          PR_REPORT_PLAYWRIGHT: json,
+          PR_REPORT_JUNIT: xml,
+          PR_REPORT_JOB_STATUS: "failure",
+        },
+        ROOT,
+      );
+      expect(md).toContain("**No test report was produced.**");
+      expect(md).toMatch(/\*\*Unreadable:\*\* `[^`]+results\.json`, `[^`]+junit\.xml`/);
+      expect(md, "the cases before the cut still show").toContain(
+        "| before the cut | tests/unit/a.spec.ts | m |",
+      );
+      expect(md).toContain("Job status when the report was built: **failure**.");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -405,6 +528,56 @@ describe("end to end: a planted Playwright run read through its real JSON report
   }, 120_000);
 });
 
+describe("end to end: a planted run that fails outside any test", () => {
+  it("a spec file that does not load shows under Errors outside tests, and Failed tests does not say None.", () => {
+    const dir = mkdtempSync(join(ROOT, "test-results", "pr-report-"));
+    try {
+      writeFileSync(
+        join(dir, "broken.spec.ts"),
+        `throw new Error("planted load failure ${URL_WITH_PASSWORD}");\n`,
+      );
+      writeFileSync(
+        join(dir, "pw.config.ts"),
+        'import { defineConfig } from "@playwright/test";\n' +
+          'export default defineConfig({ testDir: ".", outputDir: "out", workers: 1, ' +
+          `reporter: [["json", { outputFile: ${JSON.stringify(join(dir, "results.json"))} }]] });\n`,
+      );
+      const env: NodeJS.ProcessEnv = { ...process.env };
+      delete env.CI;
+      const run = spawnSync(
+        process.execPath,
+        [
+          join(ROOT, "node_modules", "@playwright", "test", "cli.js"),
+          "test",
+          "--config",
+          join(dir, "pw.config.ts"),
+        ],
+        { cwd: ROOT, env, encoding: "utf8", timeout: 120_000 },
+      );
+      expect(run.status, `${run.stdout}${run.stderr}`).toBe(1);
+      const md = reportFromEnv(
+        {
+          PR_REPORT_TITLE: "Planted",
+          PR_REPORT_PLAYWRIGHT: join(dir, "results.json"),
+          PR_REPORT_JOB_STATUS: "failure",
+        },
+        ROOT,
+      );
+      expect(md).toContain("### Failed tests (0)");
+      expect(md).toContain("None listed, but **the job failed outside the listed tests**");
+      // Playwright 1.63 lists the load error, then "No tests found"
+      expect(md).toContain("### Errors outside tests (2)");
+      expect(md).toContain("|  | Error: No tests found |");
+      expect(md).toMatch(
+        /\| test-results\/pr-report-[^/]+\/broken\.spec\.ts:1 \| Error: planted load failure postgres:\/\/\[redacted\]/,
+      );
+      expect(md).not.toContain("local-only-not-a-secret");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
+});
+
 describe("wiring", () => {
   const ci = readFileSync(join(ROOT, ".github", "workflows", "ci.yml"), "utf8");
   const steps = ci.split(/\n(?= {6}- )/).filter((s) => s.includes("node tests/report/pr-report.mjs"));
@@ -418,7 +591,12 @@ describe("wiring", () => {
     ]);
     for (const s of steps) {
       expect(s).toContain("if: always()");
-      expect(s, "no expression anywhere in the step").not.toContain("${{");
+      // ARCH Q1 on #173: the one expression allowed is the job status, and only in env
+      expect(s).toContain("\n          PR_REPORT_JOB_STATUS: ${{ job.status }}\n");
+      expect(
+        s.replaceAll("PR_REPORT_JOB_STATUS: ${{ job.status }}", ""),
+        "no other expression in the step",
+      ).not.toContain("${{");
       expect(s).toContain("PR_REPORT_OUT: test-results/pr-report.md");
       expect(s).toMatch(/\n {8}run: node tests\/report\/pr-report\.mjs\n?$/);
     }

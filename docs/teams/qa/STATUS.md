@@ -118,7 +118,14 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
-- V13-QA-017 — branch test/V13-QA-017-pr-quality-report — IN_REVIEW (ARCH; SEC for the CI hunk): the PR quality
+- V13-QA-017 — #173, branch test/V13-QA-017-pr-quality-report — IN_REVIEW, round 1 fixed (ARCH CHANGES f5fa4c8; SEC
+  accepted the CI hunk): Q1 the job status reaches the report through `env:` (`${{ job.status }}`, the one expression
+  allowed) and "Failed tests" no longer says "None." on a job that failed outside a test; top-level Playwright errors
+  get an "Errors outside tests" section; Q2 key=value, object-form and Bearer/Basic credentials are redacted; INFOs:
+  Vitest file:line from the `❯` frame, cut-short inputs reported as unreadable. Unit 39/39 for the report (planted
+  load-error run included). Mutations, each caught: no not-success wording (3 fail), no key=value redaction (4), no
+  top-level errors (2), no Bearer (2), no JUnit cut check (1), no `❯` line (1), the env line removed (1), another
+  expression in a step (1). First round: the PR quality
   report (REQ-CICD-002, design §10, ruling D4). `tests/report/pr-report.mjs` builds one Markdown report per CI job
   from its own Playwright JSON and Vitest JUnit reports (failed and flaky tests, screenshots, reflow findings, axe
   findings, performance "not measured in M1", fixed corrections) and appends it to the step summary; the a11y specs

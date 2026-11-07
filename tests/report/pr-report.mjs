@@ -58,11 +58,32 @@ export const CORRECTIONS = {
 export const CORRECTION_FALLBACK =
   "No listed correction: record it in docs/design/reviews/UX_BACKLOG.md with its evidence and route it to the owner.";
 
-/** Redacts connection strings and credentials in URLs (SEC #132, rule 4). @param {unknown} text */
+/** Key names whose value is a credential: anything ending in password, passwd, secret, token or api key; pwd. */
+const CREDENTIAL_KEY = "[A-Za-z0-9_]*(?:password|passwd|secret|token|api[_-]?key)|pwd";
+
+/**
+ * Redacts credentials (SEC #132 rule 4; ARCH Q2 on #173): connection strings and credentials in URLs, key=value
+ * forms, quoted object forms and Bearer/Basic authorisation values.
+ * @param {unknown} text
+ */
 export function redact(text) {
-  return String(text)
-    .replace(/\b(postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/[^\s"'`<>]+/gi, "$1://[redacted]")
-    .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/:@"'`<>]+:[^\s@"'`<>]+@/gi, "$1[redacted]@");
+  return (
+    String(text)
+      .replace(/\b(postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/[^\s"'`<>]+/gi, "$1://[redacted]")
+      .replace(/\b([a-z][a-z0-9+.-]*:\/\/)[^\s/:@"'`<>]+:[^\s@"'`<>]+@/gi, "$1[redacted]@")
+      // key=value (libpq keyword strings, environment assignments): password=…, PGPASSWORD=…, token='…'
+      .replace(
+        new RegExp(`\\b(${CREDENTIAL_KEY})(\\s*=\\s*)(?:'[^']*'|"[^"]*"|[^\\s&;,]+)`, "gi"),
+        "$1$2[redacted]",
+      )
+      // object forms with a quoted value: password: '…', "password":"…"
+      .replace(
+        new RegExp(`(["']?)\\b(${CREDENTIAL_KEY})\\1(\\s*:\\s*)(["'])(?:(?!\\4).)*\\4`, "gi"),
+        "$1$2$1$3$4[redacted]$4",
+      )
+      // HTTP authorisation values (SEC's note on #173)
+      .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/g, "$1 [redacted]")
+  );
 }
 
 // eslint-disable-next-line no-control-regex
@@ -94,11 +115,20 @@ export function cell(text) {
  * @typedef {{ title: string, name: string, expected?: string, actual?: string, diff?: string }} ShotRow
  * @typedef {{ page: string, language?: string, condition?: string, check: number | string, detail: string }} ReflowRow
  * @typedef {{ rule: string, impact: string, page: string, nodes: number }} AxeRow
- * @typedef {{ tests: TestRow[], shots: ShotRow[], reflow: ReflowRow[], axe: AxeRow[], reflowFailures: TestRow[] }} Findings
+ * @typedef {{ where: string, error: string }} RunError
+ * @typedef {{ name: string, produced: boolean, unreadable?: boolean }} Input
+ * @typedef {{ tests: TestRow[], shots: ShotRow[], reflow: ReflowRow[], axe: AxeRow[], reflowFailures: TestRow[], runErrors: RunError[] }} Findings
  */
 
 /** @returns {Findings} */
-export const emptyFindings = () => ({ tests: [], shots: [], reflow: [], axe: [], reflowFailures: [] });
+export const emptyFindings = () => ({
+  tests: [],
+  shots: [],
+  reflow: [],
+  axe: [],
+  reflowFailures: [],
+  runErrors: [],
+});
 
 /** @param {string} p @param {string} root */
 const rel = (p, root) => (isAbsolute(p) ? relative(root, p) : p).split("\\").join("/");
@@ -200,6 +230,12 @@ export function readPlaywright(report, root, into = emptyFindings()) {
     for (const child of suite.suites ?? []) walk(child, here);
   };
   for (const s of report?.suites ?? []) walk(s, []);
+  // errors outside any test: global setup, a web server that never started, a spec file that did not load
+  for (const e of report?.errors ?? [])
+    into.runErrors.push({
+      where: e?.location?.file ? `${fileOf(e.location.file)}:${e.location.line ?? 0}` : "",
+      error: firstLine(e?.message ?? e?.value ?? ""),
+    });
   return into;
 }
 
@@ -232,10 +268,14 @@ export function readJUnit(xml, into = emptyFindings()) {
     const tag = m[1] ?? "";
     const file = attr(tag, "file") ?? attr(tag, "classname") ?? "";
     const message = attr(fail[2] ?? "", "message") ?? xmlText(fail[3] ?? "");
+    // the line: the first stack frame in the test's own file (Vitest prints "❯ file:line:col")
+    const frame = [...xmlText(fail[3] ?? "").matchAll(/❯ (\S+?):(\d+):\d+/g)].find((x) =>
+      file ? x[1]?.endsWith(file) || file.endsWith(x[1] ?? "") : true,
+    );
     into.tests.push({
       kind: "failed",
       title: attr(tag, "name") ?? "",
-      where: file,
+      where: frame ? `${file || frame[1]}:${frame[2]}` : file,
       error: firstLine(message),
     });
   }
@@ -253,17 +293,19 @@ function table(header, rows) {
 }
 
 /**
- * Builds the report. `inputs` names each input and whether it was produced, so a missing report never reads as
- * "nothing failed".
- * @param {string} title @param {Findings} f @param {{ name: string, produced: boolean }[]} inputs
+ * Builds the report. `inputs` names each input and whether it was produced (and readable), so a missing report never
+ * reads as "nothing failed". `status` is the job's status so far (GitHub's job.status): when it is not "success" and
+ * no test is listed, the report says the job failed outside the listed tests instead of "None." (ARCH Q1 on #173).
+ * @param {string} title @param {Findings} f @param {Input[]} inputs @param {string} [status]
  */
-export function buildReport(title, f, inputs) {
+export function buildReport(title, f, inputs, status) {
   const out = [`## PR quality report: ${cell(title)}`, ""];
+  const unreadable = inputs.filter((i) => i.produced && i.unreadable);
   const missing = inputs.filter((i) => !i.produced);
   out.push(
     `Built from this job's own test reports (${inputs.map((i) => `\`${cell(i.name)}\``).join(", ") || "none named"}); nothing in it is generated.`,
   );
-  if (missing.length === inputs.length)
+  if (missing.length + unreadable.length === inputs.length)
     out.push(
       "",
       "**No test report was produced.** The job stopped before its tests wrote one, so the empty sections below prove nothing.",
@@ -273,6 +315,13 @@ export function buildReport(title, f, inputs) {
       "",
       `Named but not produced in this run: ${missing.map((i) => `\`${cell(i.name)}\``).join(", ")}.`,
     );
+  if (unreadable.length)
+    out.push(
+      "",
+      `**Unreadable:** ${unreadable.map((i) => `\`${cell(i.name)}\``).join(", ")} (cut short or not valid; a run stopped mid-write?). Its findings below are missing or incomplete.`,
+    );
+  if (status) out.push("", `Job status when the report was built: **${cell(status)}**.`);
+  const failedElsewhere = status !== undefined && status !== "success";
 
   const failed = f.tests.filter((t) => t.kind === "failed");
   const flaky = f.tests.filter((t) => t.kind === "flaky");
@@ -283,8 +332,22 @@ export function buildReport(title, f, inputs) {
           ["Test", "File:line", "First error line"],
           failed.map((t) => [t.title, t.where, t.error]),
         )
-      : "None.",
+      : failedElsewhere
+        ? "None listed, but **the job failed outside the listed tests**: in setup, a file that did not load, or a run-level check (the leak-skip reporter, the database skip guard). The job log has the cause."
+        : status === "success"
+          ? "None."
+          : "None listed in the reports.",
   );
+  if (f.runErrors.length)
+    out.push(
+      "",
+      `### Errors outside tests (${f.runErrors.length})`,
+      "",
+      table(
+        ["Where", "First error line"],
+        f.runErrors.map((e) => [e.where, e.error]),
+      ),
+    );
   if (flaky.length)
     out.push(
       "",
@@ -365,19 +428,30 @@ const paths = (list) =>
  */
 export function reportFromEnv(env, root = process.cwd()) {
   const f = emptyFindings();
-  /** @type {{ name: string, produced: boolean }[]} */
+  /** @type {Input[]} */
   const inputs = [];
-  for (const p of paths(env.PR_REPORT_PLAYWRIGHT)) {
+  /** @param {string} p @param {(text: string) => void} read */
+  const take = (p, read) => {
     const produced = existsSync(p);
-    inputs.push({ name: p, produced });
-    if (produced) readPlaywright(JSON.parse(readFileSync(p, "utf8")), root, f);
-  }
-  for (const p of paths(env.PR_REPORT_JUNIT)) {
-    const produced = existsSync(p);
-    inputs.push({ name: p, produced });
-    if (produced) readJUnit(readFileSync(p, "utf8"), f);
-  }
-  return buildReport(env.PR_REPORT_TITLE?.trim() || "tests", f, inputs);
+    /** @type {Input} */
+    const input = { name: p, produced };
+    inputs.push(input);
+    if (!produced) return;
+    try {
+      read(readFileSync(p, "utf8"));
+    } catch {
+      input.unreadable = true;
+    }
+  };
+  for (const p of paths(env.PR_REPORT_PLAYWRIGHT)) take(p, (t) => readPlaywright(JSON.parse(t), root, f));
+  // a JUnit file cut short still yields the cases before the cut, and is marked unreadable
+  for (const p of paths(env.PR_REPORT_JUNIT))
+    take(p, (t) => {
+      readJUnit(t, f);
+      if (!/<\/testsuites>\s*$/.test(t)) throw new Error("JUnit report cut short");
+    });
+  const status = env.PR_REPORT_JOB_STATUS?.trim() || undefined;
+  return buildReport(env.PR_REPORT_TITLE?.trim() || "tests", f, inputs, status);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
