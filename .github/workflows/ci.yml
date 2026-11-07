@@ -224,9 +224,12 @@ jobs:
     # and their versions printed. While no baseline is committed under tests/visual/__screenshots__/ there is nothing to
     # compare: the run must then fail on the missing snapshots alone, with one candidate image for each and no baseline
     # written (scripts/ci/visual-candidates.mjs, which prints each candidate's sha256), and the candidates go into the
-    # artifact. Once baselines are committed, any difference fails the job. No step writes a baseline: updateSnapshots
-    # is "none" and guard G7 refuses an update flag in any workflow. The visual projects record no trace, video or
-    # failure screenshot (playwright.config.ts `visualUse`).
+    # artifact. Once baselines are committed, any difference fails the job, and so does deleting every baseline:
+    # scripts/ci/visual-mode.mjs refuses candidate mode when the commit's first parent holds baselines (V13-ARCH-015),
+    # which is why the checkout fetches depth 2. No step writes a baseline: updateSnapshots is "none" and guard G7
+    # refuses an update flag in any workflow. The visual projects record no trace, video or failure screenshot
+    # (playwright.config.ts `visualUse`), and the artifact holds only the candidates, the candidate run's JSON report,
+    # the comparison images and the HTML report.
     services:
       postgres:
         image: postgres:17
@@ -249,6 +252,8 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+          # The first parent too: scripts/ci/visual-mode.mjs reads whether it holds baselines.
+          fetch-depth: 2
       - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
       - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
@@ -262,24 +267,33 @@ jobs:
           sudo apt-get install -y -qq --no-install-recommends fonts-liberation fonts-dejavu-core fonts-crosextra-carlito fonts-noto-core
           dpkg-query -W -f='${Package} ${Version}\n' fonts-liberation fonts-dejavu-core fonts-crosextra-carlito fonts-noto-core
       - run: pnpm exec playwright install --with-deps chromium
-      - name: Compare with the committed baselines, or make candidates while none is committed
+      - name: Compare with the committed baselines, or make candidates while none was ever committed
         env:
           PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/visual-baseline.json
         run: |
-          if [ -n "$(find tests/visual/__screenshots__ -name '*.png' -print -quit 2>/dev/null)" ]; then
+          # "compare" or "candidates"; exits 1, failing the job, when every baseline was deleted (V13-ARCH-015).
+          mode="$(node scripts/ci/visual-mode.mjs tests/visual/__screenshots__)"
+          if [ "$mode" = compare ]; then
             pnpm exec playwright test --project=visual-baseline
-          else
+          elif [ "$mode" = candidates ]; then
             # A retry cannot make a missing snapshot exist, so the candidate run makes one attempt per test.
             rc=0
             pnpm exec playwright test --project=visual-baseline --reporter=list,json --retries=0 || rc=$?
             node scripts/ci/visual-candidates.mjs "$rc" test-results/visual-baseline.json test-results/baseline-candidates tests/visual/__screenshots__
+          else
+            echo "visual mode: unexpected output: $mode" >&2
+            exit 1
           fi
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: visual-results
+          # Named paths only (SEC's INFO 2 on #156): candidates, the candidate run's JSON report, the comparison's
+          # expected, actual and diff images, and the HTML report.
           path: |
-            test-results/
+            test-results/baseline-candidates/
+            test-results/visual-baseline.json
+            test-results/playwright/**/*.png
             playwright-report/
           if-no-files-found: ignore
           retention-days: 14
