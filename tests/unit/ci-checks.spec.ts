@@ -26,8 +26,11 @@ import {
   PLAYWRIGHT_REPORT,
   PROOF_JOBS,
   proveRun,
+  retryOptionLines,
   RUNS,
+  VITEST_FAILS,
   VITEST_REPORT,
+  vitestConfigFindings,
 } from "@/scripts/ci/required-runs.mjs";
 import {
   checkTestInvocations,
@@ -1230,7 +1233,7 @@ describe("required run proof (V13-ARCH-020)", () => {
     expect(proofCliRun(dir, "unit")).toEqual([1, "", failed("unit", 1, `  unit: ${gone}`)]);
   }, 120_000);
 
-  it("names each test of a Vitest run that did not run and pass, each file it did not hold or collect, and each pinned to fail", () => {
+  it("names each test of a Vitest run that did not run and pass, each file it did not hold or collect, and each pinned to fail or given a retry", () => {
     const dir = plantRoot("proof-vitest-planted", {
       "vitest.config.mjs": VITEST_CONFIG,
       "tests/unit/mixed.spec.mjs": [
@@ -1252,9 +1255,22 @@ describe("required run proof (V13-ARCH-020)", () => {
         'it("leaves a rejection behind", () => void Promise.reject(new Error("never handled")));',
         "",
       ].join("\n"),
+      // SEC's R1 on #182: a test that fails and then passes on a retry ends "passed" in the JUnit report.
+      "tests/unit/retried.spec.mjs": [
+        'import { describe, expect, it } from "vitest";',
+        "let attempts = 0;",
+        'it("fails once, then passes on its retry", { retry: 2 }, () => expect(++attempts).toBe(2));',
+        "const retry = 1;",
+        'describe("given a retry by shorthand", { retry }, () => it("runs", () => expect(1).toBe(1)));',
+        "// A comment or a string that names { retry: 2 } gives no test a retry:",
+        'it("names { retry: 2 } in its title", () => expect(1).toBe(1));',
+        "",
+      ].join("\n"),
     });
     const run = vitestRun(dir, "unit");
     expect(run.status, run.stdout + run.stderr).toBe(1);
+    const retried =
+      "a `retry` option: the JUnit report records a retried test as passed, even when an attempt failed";
     expect(proof("unit", dir)).toEqual(
       [
         `${VITEST_REPORT}: the report's totals record failures: 3, errors: 1`,
@@ -1269,9 +1285,72 @@ describe("required run proof (V13-ARCH-020)", () => {
         // The JUnit report records the pinned test as passed: only the source shows it.
         `tests/unit/mixed.spec.mjs:7: a test pinned to fail (\`${FAILS}\`), which the JUnit report records as passed`,
         "vitest unhandled errors › Unhandled Rejection: never handled: an error",
+        // The retried test is recorded as passed too: only the source shows it.
+        `tests/unit/retried.spec.mjs:3: ${retried}`,
+        `tests/unit/retried.spec.mjs:5: ${retried}`,
       ].sort(),
     );
+    // Its first attempt failed, yet the report holds the retried test as a passed case with nothing inside.
+    const xml = readFileSync(join(dir, VITEST_REPORT), "utf8");
+    expect(xml).toMatch(
+      /<testcase classname="tests\/unit\/retried\.spec\.mjs" name="fails once, then passes on its retry" time="[\d.]+">\s*<\/testcase>/,
+    );
   }, 120_000);
+
+  it("finds a `retry` option on a test file's syntax tree, never in a comment or a string, and a `retry` or a tag that carries `retry` or `fails` in vitest.config.ts (SEC's R1 on #182)", () => {
+    const source = [
+      'import { describe, it } from "vitest";',
+      'it("a key", { retry: 2 }, () => {});',
+      'describe("a shorthand among others", { timeout: 1, retry, concurrent: true }, () => {});',
+      'it("a quoted key", { "retry": 1 }, () => {});',
+      'it("a computed key", { ["retry"]: 1 }, () => {});',
+      "const o = {}; o.retry = 2;",
+      'it("a getter", { get retry() { return 2; } }, () => {});',
+      "// retry, ordering, and { retry: 2 } in a comment",
+      'it("a title naming { retry: 2 }", () => {});',
+      'const retry = 1; const k = "retry"; it("a key from a variable", { [k]: 1 }, () => {});',
+      'it("a shorthand on its own line", {',
+      "  timeout: 5,",
+      "  retry,",
+      "}, () => {});",
+      "interface Policy { retry: number }",
+      'o["retry"] ||= 1;',
+      "o.retry++;",
+      '--o["retry"];',
+      "if (o.retry === 2 && -o.retry < 0 && o.retries++ > 0) {}",
+    ].join("\n");
+    // Lines 8–10, 15 and 19 give no test a retry: a comment, a string, a plain variable, a type, a read. `[k]` is
+    // indirection.
+    expect(retryOptionLines("probe.spec.ts", source)).toEqual([2, 3, 4, 5, 6, 7, 13, 16, 17, 18]);
+    expect(retryOptionLines("probe.spec.tsx", 'it("t", { retry: 2 }, () => void (<div />));')).toEqual([1]);
+    expect(retryOptionLines("probe.spec.mjs", "export const options = { retry: 1 };")).toEqual([1]);
+
+    // The config: none, a retry of 0 and a tag with neither are the control. At the root or in a project, any other
+    // retry is found, and so is a tag that carries a retry or `fails`: every test that names the tag takes it on.
+    const config = (text: string): unknown => JSON.parse(text);
+    expect(
+      vitestConfigFindings(config('{ "test": { "projects": [{ "test": { "name": "unit" } }] } }')),
+    ).toEqual([]);
+    expect(
+      vitestConfigFindings(
+        config(
+          '{ "test": { "retry": 0, "tags": [{ "name": "db", "timeout": 1000 }, { "name": "slow", "retry": 0, "fails": false }], "projects": [{ "test": { "name": "unit", "retry": 0, "tags": [{ "name": "x" }] } }] } }',
+        ),
+      ),
+    ).toEqual([]);
+    expect(
+      vitestConfigFindings(
+        config(
+          '{ "test": { "retry": 2, "tags": [{ "name": "flaky", "retry": 3 }], "projects": [{ "test": { "name": "unit", "retry": { "count": 1 }, "tags": [{ "name": "known-bug", "fails": true }] } }, { "test": { "name": "integration" } }] } }',
+        ),
+      ),
+    ).toEqual([
+      "test.retry = 2",
+      'test.tags "flaky": retry = 3',
+      'project unit: test.retry = {"count":1}',
+      'project unit: test.tags "known-bug": fails = true',
+    ]);
+  });
 
   // Playwright as CI runs it: the JSON report at PLAYWRIGHT_REPORT, one retry, the projects each job selects.
   const playwrightConfig = (projects: string) =>
@@ -1428,7 +1507,8 @@ describe("required run proof (V13-ARCH-020)", () => {
     test: {
       reporters: unknown[];
       outputFile: { junit: string };
-      projects: { test: { name: string; include: string[] } }[];
+      setupFiles?: string | string[];
+      projects: { test: { name: string; include: string[]; setupFiles?: string | string[] } }[];
     };
   }
   interface PlaywrightConfigShape {
@@ -1445,6 +1525,16 @@ describe("required run proof (V13-ARCH-020)", () => {
     // The reports are where the configs write them in CI, and a Vitest run's directories are its include globs'.
     const vitestConfig = await loadConfig<VitestConfigShape>("vitest.config.ts", { CI: "true" });
     expect(vitestConfig.test.reporters).toContain("junit");
+    // No retry, and no tag that carries one or `fails`: the report would record such a test as passed (SEC's R1 on #182).
+    expect(vitestConfigFindings(vitestConfig)).toEqual([]);
+    // Nor may a setup file, which runs before every test file of its project.
+    const setupFiles = [vitestConfig.test, ...vitestConfig.test.projects.map((p) => p.test)].flatMap(
+      (t) => t.setupFiles ?? [],
+    );
+    for (const file of new Set(setupFiles)) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect([retryOptionLines(file, text), VITEST_FAILS.test(text)], file).toEqual([[], false]);
+    }
     expect(vitestConfig.test.outputFile.junit).toBe(VITEST_REPORT);
     for (const name of ["unit", "integration"]) {
       const want = RUNS[name]!;

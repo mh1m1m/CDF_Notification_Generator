@@ -14,13 +14,21 @@
 // records every test as run and passed: none failed, flaky, skipped, todo or without a result, none pinned to fail
 // (Playwright's `test.fail()`), and no error outside the tests (an unhandled error, a file that does not load). For a
 // Vitest run, every test file under the project's directories must be in the report with at least one test, no other
-// file may be, and no test file may use Vitest's `.fails` (the JUnit report records such a test as passed, so this one
-// rule reads the sources). For a Playwright run, every project the job selects must have tests, and no other project
-// may have run.
+// file may be, and no test file may use Vitest's `.fails` or give a test or suite a `retry` option: the JUnit report
+// records a test pinned to fail, and a retried test that failed and then passed, as passed, so these two rules read the
+// sources (`retry` on TypeScript's syntax tree). ci-checks keeps both out of vitest.config.ts (a `retry`, or a tag that
+// carries `retry` or `fails`, reaches every test that names it) and out of its setup files, and test-invocations bans
+// `--retry`. For a Playwright run, every project the job selects must have tests, and no other project may have run.
 //
-// What it cannot see: a report forged by code that runs in the job (a test, a package script or a pnpm hook can write
-// any file, and an action can export a variable), and `.fails` reached through indirection (`it["fails"]`); review and
-// the static checks stand there.
+// What it cannot see, where review and the static checks stand:
+//   - code that runs in the job (a test, a global setup, a package script, a pnpm hook) can write any file: the report,
+//     this script, or $GITHUB_ENV and $GITHUB_PATH, which reach this step (a NODE_OPTIONS written there at run time can
+//     turn this check's exit code to 0; the workflows' own writes are refused statically, these are not). An action can
+//     also export a variable;
+//   - `.fails` or `retry` reached through indirection (`it["fails"]`, an options object spread in from a helper file,
+//     `Object.defineProperty`). A `.fails` in a comment or a string is reported too: reword it;
+//   - for a Playwright run, the files: a spec file dropped by the config's testMatch, testIgnore or grep passes if its
+//     project still runs a test (playwright.config.ts is pinned in ci-checks and reviewed).
 //
 // Its static half, `checkProofSteps` (run by tests/unit/ci-checks.spec.ts): each required job ends with this step
 // exactly; every job that runs a test is a required job, except visual-library.yml's opt-in library run, which is
@@ -29,6 +37,7 @@
 // $GITHUB_PATH, or gives a required job or its workflow `defaults:` (a shell or working directory for the step). SEC's
 // W0 refuses the flow-style YAML that would hide a key from this reading.
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import { findInvocations, runLines } from "./test-invocations.mjs";
@@ -79,6 +88,107 @@ export const MAX_AHEAD_MS = 5 * 60 * 1000;
 
 /** The test-file name a Vitest run must not pin to fail with: `.fails` (`it.fails`, `test.fails.each`) or `fails: true`. */
 export const VITEST_FAILS = /\.fails\b|\bfails\s*:\s*true\b/;
+
+/** @type {any} TypeScript's compiler, loaded on first use: only a Vitest run's proof reads sources with it. */
+let typescript;
+
+/**
+ * The lines of a Vitest test file that give a test or a suite a `retry` option, read on TypeScript's syntax tree, so a
+ * comment or a string never counts: a member of an object literal named `retry` (a key, quoted or computed from a
+ * literal, a shorthand, a getter or a method), or an assignment, an increment or a decrement of a `.retry` or
+ * `["retry"]` property. Vitest's JUnit report records a test that failed and then passed on a retry as passed, so a
+ * retried test would hide an intermittent failure, the leak a guard exists to catch (SEC's R1 on #182).
+ * @param {string} file the file's path, for its script kind @param {string} text
+ * @returns {number[]} 1-based line numbers, ascending
+ */
+export function retryOptionLines(file, text) {
+  typescript ??= createRequire(import.meta.url)("typescript");
+  const ts = typescript;
+  const kind = file.endsWith(".tsx")
+    ? ts.ScriptKind.TSX
+    : /\.[cm]?ts$/.test(file)
+      ? ts.ScriptKind.TS
+      : file.endsWith(".jsx")
+        ? ts.ScriptKind.JSX
+        : ts.ScriptKind.JS;
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, kind);
+  /** @param {any} node a name or an element access's argument */
+  const literal = (node) =>
+    node && (ts.isIdentifier(node) || ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+      ? node.text
+      : null;
+  /** @param {any} name */
+  const memberName = (name) =>
+    name && ts.isComputedPropertyName(name)
+      ? ts.isIdentifier(name.expression)
+        ? null
+        : literal(name.expression)
+      : literal(name);
+  /** @type {Set<number>} */
+  const lines = new Set();
+  /** @param {any} node */
+  const at = (node) => lines.add(source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1);
+  /** @param {any} target the property an assignment or an update writes */
+  const isRetry = (target) =>
+    (ts.isPropertyAccessExpression(target) && target.name.text === "retry") ||
+    (ts.isElementAccessExpression(target) &&
+      !ts.isIdentifier(target.argumentExpression) &&
+      literal(target.argumentExpression) === "retry");
+  /** @param {any} node */
+  const visit = (node) => {
+    if (ts.isObjectLiteralExpression(node))
+      for (const member of node.properties) if (memberName(member.name) === "retry") at(member);
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
+      isRetry(node.left)
+    )
+      at(node);
+    if (
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      (node.operator === ts.SyntaxKind.PlusPlusToken || node.operator === ts.SyntaxKind.MinusMinusToken) &&
+      isRetry(node.operand)
+    )
+      at(node);
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return [...lines].sort((a, b) => a - b);
+}
+
+/**
+ * Where a loaded Vitest config would let a test that did not pass end passed in the JUnit report, each with its value:
+ * a `retry` at its root or in a project, or a tag (`test.tags`, at the root or in a project) that carries `retry` or
+ * `fails`, which every test that names the tag takes on. CI runs Vitest with none of them (retryOptionLines says why);
+ * a `retry` of 0 and a `fails` of false are none.
+ * @param {any} config the config module's default export
+ * @returns {string[]}
+ */
+export function vitestConfigFindings(config) {
+  /** @type {string[]} */
+  const out = [];
+  /** @param {string} where @param {any} test */
+  const check = (where, test) => {
+    const retry = test?.["retry"];
+    if (retry !== undefined && retry !== 0) out.push(`${where}test.retry = ${JSON.stringify(retry)}`);
+    const tags = test?.["tags"];
+    if (Array.isArray(tags))
+      for (const tag of tags) {
+        const name = `${where}test.tags ${JSON.stringify(tag?.name)}`;
+        if (tag?.retry !== undefined && tag.retry !== 0)
+          out.push(`${name}: retry = ${JSON.stringify(tag.retry)}`);
+        if (tag?.fails) out.push(`${name}: fails = ${JSON.stringify(tag.fails)}`);
+      }
+  };
+  check("", config?.test);
+  const projects = config?.test?.projects;
+  if (Array.isArray(projects))
+    projects.forEach((p, i) => {
+      if (p && typeof p === "object") check(`project ${p.test?.name ?? i}: `, p.test);
+    });
+  return out;
+}
 
 /** The suite Vitest's JUnit reporter lists errors outside the tests under (an unhandled rejection, say). */
 const UNHANDLED = "vitest unhandled errors";
@@ -208,7 +318,7 @@ function staleness(iso, now) {
  * @param {string} name the run's name @param {VitestRun} run
  * @param {JUnitReport} report
  * @param {{ files: readonly string[], missing: readonly string[] }} expected the test files on disk
- * @param {Readonly<Record<string, string>>} sources each expected file's text, for the `.fails` rule
+ * @param {Readonly<Record<string, string>>} sources each expected file's text, for the `.fails` and `retry` rules
  * @param {number} now
  * @returns {ProofFinding[]}
  */
@@ -263,6 +373,12 @@ export function checkVitestReport(name, run, report, expected, sources, now) {
       if (VITEST_FAILS.test(line))
         hit(`${file}:${i + 1}`, "a test pinned to fail (`.fails`), which the JUnit report records as passed");
     });
+  for (const [file, text] of Object.entries(sources))
+    for (const line of retryOptionLines(file, text))
+      hit(
+        `${file}:${line}`,
+        "a `retry` option: the JUnit report records a retried test as passed, even when an attempt failed",
+      );
   return out;
 }
 
