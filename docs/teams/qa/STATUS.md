@@ -118,8 +118,8 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
 | QA-011 mutations: old guard against the new G6 plants; L1 without the unregistered-call check; without the status check; without the file check | fail 13 / 2 / 2 / 1 as expected | | QA-011 |
 
 ## Waiting / next
-- V13-QA-017 — #173, branch test/V13-QA-017-pr-quality-report — IN_REVIEW, round 1 fixed (ARCH CHANGES f5fa4c8; SEC
-  accepted the CI hunk): Q1 the job status reaches the report through `env:` (`${{ job.status }}`, the one expression
+- V13-QA-017 — #173, merged into develop as c8878a7 — COMPLETE (ARCH and SEC ACCEPT 339bd9e; CI 42393411907,
+  Cross-browser 42393411928). Round 1 (ARCH CHANGES f5fa4c8): Q1 the job status reaches the report through `env:` (`${{ job.status }}`, the one expression
   allowed) and "Failed tests" no longer says "None." on a job that failed outside a test; top-level Playwright errors
   get an "Errors outside tests" section; Q2 key=value, object-form and Bearer/Basic credentials are redacted; INFOs:
   Vitest file:line from the `❯` frame, cut-short inputs reported as unreadable. Unit 39/39 for the report (planted
