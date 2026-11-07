@@ -46,11 +46,12 @@ export const FONT_PACKAGES = [
  * size, so a new id of a different glyph width cannot move the mask's edge. The masked deadline likewise: its words
  * count days on the server clock ("in 3 days", "in 13 days", "overdue"), so their width changed from one day to the
  * next and moved My Work's columns and the overview's mask edge (#159's first comparison, run 42372979341, against
- * candidates made six days earlier). It touches nothing that is not masked.
+ * candidates made six days earlier). Its width is in rem, not ch: an overdue deadline is bold, and ch follows the
+ * weight (a due-date shift probe moved the mask by 12 px with ch). It touches nothing that is not masked.
  */
 export const CAPTURE_STYLE =
   '[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; } ' +
-  "[data-deadline-state] { display: inline-block; inline-size: 26ch; white-space: nowrap; overflow: hidden; vertical-align: top; }";
+  "[data-deadline-state] { display: inline-block; inline-size: 14rem; white-space: nowrap; overflow: hidden; vertical-align: top; }";
 
 /**
  * The same for the run-made draft's created time (masked): its text width changes with the time and moved the table's

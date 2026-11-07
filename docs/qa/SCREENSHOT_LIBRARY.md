@@ -12,7 +12,7 @@ for looking only, never baselines (fonts differ by machine).
 
 Matrix: desktop 1280 × 800, tablet 768 × 1024, mobile 360 × 780; ar, en; light, dark. 244 images per run.
 Browser clock fixed at 2026-10-15T09:00:00.000Z; reduced motion; animations disabled; caret hidden; mask colour #FF00FF.
-Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; } [data-deadline-state] { display: inline-block; inline-size: 26ch; white-space: nowrap; overflow: hidden; vertical-align: top; }`
+Capture-only style (masked boxes only): `[data-testid="correlation-id"], [data-testid="case-preview-correlation-id"] { display: inline-block; inline-size: 38ch; } [data-deadline-state] { display: inline-block; inline-size: 14rem; white-space: nowrap; overflow: hidden; vertical-align: top; }`
 
 ## Captured
 
