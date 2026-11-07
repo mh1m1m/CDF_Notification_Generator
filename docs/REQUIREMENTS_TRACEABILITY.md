@@ -93,7 +93,7 @@ Total rows: **448**. By primary source: CLOUD_INIT 17, PROMPT_A 277, PROMPT_B 84
 | QA | Playwright & Visual QA | 76 |
 | SEC | Security & Adversarial Testing | 39 |
 
-### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-027)
+### 3.1 M1 coverage (V13-PROC-012 to V13-PROC-028)
 
 The 280 rows with `Milestone` = M1, counted from this CSV. Their statuses were assessed against the merges up to
 `develop` **`4cc72ec`** (merge of #67, 31 Oct 2026), plus #72 (REQ-SEC-002, REQ-GOV-001), #75 (REQ-ARCH-025) and #77
@@ -104,8 +104,8 @@ V13-PROC-016, the merges from `40af5ef` to `11fad34` (#90, #94, #82, #95) in V13
 `11fad34` to `a0bf765` (#96, #88, #97, #99) in V13-PROC-019, the merges from `373f19c` to `75733ba` (#103,
 #105, #101, #106) in V13-PROC-020, the merges from `75733ba` to `220b9d2` (#98, #108, #109, #111, #110, #107,
 #115, #113) in V13-PROC-023, and the merges from `220b9d2` to `df41474` (#104, #117, #112, #100, #120, #114,
-#118, #119, #116, #124, #122, #123) in V13-PROC-024, and the merges from `df41474` to **`f15ab58`** (#121, #125, #126, #127, #128,
-#129, #132, #133, #130) in V13-PROC-027.
+#118, #119, #116, #124, #122, #123) in V13-PROC-024, and the merges from `df41474` to `f15ab58` (#121, #125, #126, #127, #128,
+#129, #132, #133, #130) in V13-PROC-027, and the merges from `f15ab58` to **`58b2fa4`** (#134, #135, #137, #136, #139, #138, #144, #141, #143, #148, #131, #149, #146, #140, #151, #145, #150, #142, #147, #153, #156, #155, #159, #152, #157, #160, #163, #158, #162, #164, #165, #166, #168, #167, #169, #170, #171, #172, #173, #174, #175) in V13-PROC-028.
 The status of each row comes from merged files only: COMPLETE needs the implementing code and a test that exercises it, both
 merged, with the test named in `Test_ID` and the merge (and its CI run) in `Evidence`; IN_PROGRESS means part of it is
 merged; BLOCKED names its open issue; nothing was taken from a plan or a STATUS line. Two kinds of row follow the Chief
@@ -119,20 +119,20 @@ Architect's rulings on #71:
   found on develop `<sha>`".
 
 COMPLETE rows on QG-02, QG-03 or QG-05, or owned by SEC, were checked by SEC before merge. REQ-SEC-002 and REQ-GOV-001
-are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Merges after `f15ab58` are
+are COMPLETE on SEC-008's repository scans (#72, `afa6684`), at SEC's verdict. Merges after `58b2fa4` are
 assessed in the next pass; owners update their rows meanwhile (§6).
 
 **By status**
 
 | Status | Rows |
 |---|---|
-| COMPLETE | 75 |
-| IN_PROGRESS | 175 |
+| COMPLETE | 86 |
+| IN_PROGRESS | 174 |
 | — of which review-enforced standing rules | 51 |
 | — of which document or configuration evidence only, no test | 43 |
 | BLOCKED | 16 |
 | PRODUCTION_SUBSTITUTION_REQUIRED | 1 |
-| NOT_STARTED | 13 |
+| NOT_STARTED | 3 |
 | **Total** | **280** |
 
 **By owner team**
@@ -140,11 +140,11 @@ assessed in the next pass; owners update their rows meanwhile (§6).
 | Owner team | Rows | COMPLETE | IN_PROGRESS | BLOCKED | PSR | NOT_STARTED |
 |---|---|---|---|---|---|---|
 | ARCH | 105 | 9 | 83 | 12 | 0 | 1 |
-| QA | 51 | 11 | 24 | 4 | 0 | 12 |
-| DB | 33 | 16 | 16 | 0 | 1 | 0 |
+| QA | 51 | 19 | 26 | 4 | 0 | 2 |
+| DB | 33 | 17 | 15 | 0 | 1 | 0 |
 | FE | 31 | 13 | 18 | 0 | 0 | 0 |
 | SEC | 27 | 14 | 13 | 0 | 0 | 0 |
-| UX | 26 | 7 | 19 | 0 | 0 | 0 |
+| UX | 26 | 9 | 17 | 0 | 0 | 0 |
 | PROC | 7 | 5 | 2 | 0 | 0 | 0 |
 
 PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
@@ -157,26 +157,26 @@ PSR = PRODUCTION_SUBSTITUTION_REQUIRED.
 | QG-02 | 29 | 13 | 13 | 3 | 0 | 0 |
 | QG-03 | 32 | 21 | 8 | 2 | 1 | 0 |
 | QG-04 | 11 | 5 | 6 | 0 | 0 | 0 |
-| QG-05 | 18 | 6 | 10 | 1 | 0 | 1 |
-| QG-06 | 23 | 5 | 15 | 2 | 0 | 1 |
-| QG-07 | 18 | 1 | 11 | 0 | 0 | 6 |
+| QG-05 | 18 | 7 | 10 | 1 | 0 | 0 |
+| QG-06 | 23 | 6 | 15 | 2 | 0 | 0 |
+| QG-07 | 18 | 6 | 12 | 0 | 0 | 0 |
 | QG-08 | 17 | 4 | 11 | 0 | 0 | 2 |
-| QG-09 | 7 | 1 | 5 | 0 | 0 | 1 |
-| QG-10 | 4 | 1 | 3 | 0 | 0 | 0 |
+| QG-09 | 7 | 2 | 5 | 0 | 0 | 0 |
+| QG-10 | 4 | 2 | 2 | 0 | 0 | 0 |
 | QG-11 | 14 | 0 | 12 | 2 | 0 | 0 |
 | QG-12 | 15 | 0 | 4 | 10 | 0 | 1 |
 | QG-13 | 15 | 1 | 11 | 3 | 0 | 0 |
 | Gate A | 4 | 0 | 3 | 1 | 0 | 0 |
 | Gate B | 19 | 10 | 6 | 3 | 0 | 0 |
 | Gate C | 23 | 14 | 7 | 2 | 0 | 0 |
-| Gate D | 5 | 0 | 2 | 0 | 0 | 3 |
+| Gate D | 5 | 3 | 2 | 0 | 0 | 0 |
 | Gate E | 16 | 4 | 10 | 0 | 0 | 2 |
-| Gate F | 6 | 1 | 4 | 0 | 0 | 1 |
-| Gate G | 6 | 0 | 4 | 1 | 0 | 1 |
+| Gate F | 6 | 2 | 4 | 0 | 0 | 0 |
+| Gate G | 6 | 1 | 4 | 1 | 0 | 0 |
 | Gate H | 2 | 0 | 2 | 0 | 0 | 0 |
 | Gate I | 5 | 3 | 2 | 0 | 0 | 0 |
 | Gate J | 10 | 0 | 1 | 9 | 0 | 0 |
-| (none) | 110 | 20 | 86 | 2 | 0 | 2 |
+| (none) | 110 | 23 | 85 | 2 | 0 | 0 |
 
 ### 3.2 Superseded wording (Chief Architect)
 
