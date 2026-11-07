@@ -1,6 +1,6 @@
 # QA status — CDF V13 Enterprise (synthetic data only)
 
-Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (base develop b50dea9)
+Updated: 2026-11-07 · Branch: test/V13-QA-026-axe-sweep (base develop 75e2fe2)
 
 ## Completed
 - V13-QA-001 (design) — `docs/qa/TEST_ARCHITECTURE.md` — PR #1 — COMPLETE
@@ -246,7 +246,8 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   F-03 approved as V13-QA-026, no tracked exception, after FE-019; manual rows run by the owner or a tester the owner
   names, OI-059; Q-01 closed with the SC 3.3.4 ruling); counts corrected (348 rows, 8 NOT_APPLICABLE); Vitest counts
   are executed counts from the unit job's JUnit report (UT 88, UC 121, UR 8, US 47, UD 61, UN 11).
-- V13-QA-025 — branch test/V13-QA-025-firefox-sign-in-load — IN_REVIEW (ARCH): the Firefox hang in `signInAs`
+- V13-QA-025 — PR #179 — merged (75e2fe2) — IN_PROGRESS (instrumented; root cause open, OI-060): the Firefox
+  hang in `signInAs`
   (CI 42390906101, 42394923906: `page.goto("/sign-in")` waiting for `load` hit 30 s on attempt 1, passed on retry).
   The failure screenshot shows the page fully painted, so `load` was held by a subresource: the page loads only
   same-origin `/_next/static` chunks and one stylesheet. Firefox cannot be installed in the QA sandbox, so the stalled
@@ -256,7 +257,16 @@ Updated: 2026-11-01 · Branch: docs/V13-QA-013-visual-a11y-crossbrowser-design (
   resource. `tests/e2e/sign-in-stall.spec.ts` holds a script back for the whole test: sign-in still reaches My Work
   and the held path is named; the control has no attachment. Mutations: waiting for `load` again (planted test times
   out), no attachment, finished requests not removed: each caught. Unit 2609/2609, e2e 471 passed.
+- V13-QA-026 — PR #181 — IN_REVIEW (ARCH): QA-018's F-02 and F-03. `tests/a11y/sweep.a11y.spec.ts` runs axe-core
+  4.14.0 with every WCAG A/AA tag (`wcag22aa` included), every impact, on S01–S12 in ar and en, light and dark (48
+  tests; S08 without its sandboxed frame), with 5 planted tests (dark contrast, target size, a minor-impact rule, the
+  frame exclusion, Arabic contrast); Chromium only, since its plants failed in Firefox and WebKit (Cross-browser
+  42400335710). `tests/a11y/reflow.a11y.spec.ts` adds checks 1–4 on S01, S08 and S12 (27 tests).
+  Found: axe-core 4.14.0 does not test contrast on Arabic-script text (its icon-ligature check skips it), which is why
+  F-01 showed in English only; a planted test pins it. With FE-019 reverted, S04 and S06 fail in English dark;
+  dropping `wcag22aa` or counting serious and critical only fails a plant. The audit records AX-3, F-01 fixed
+  (8797649, #180), F-02 and F-03 done. CI 42400335718 on 88eaa1f: e2e 532 passed (AX-3 53, RF 27).
 
 ## Unresolved defects
-- F-01 (found by QA-018's probe, routed by ARCH to FE as V13-FE-019, UX for the token): SC 1.4.3 in the dark
-  theme, the "mine" task flag (`case-task-mine`, `case.module.css` `.flag`) at 1.1:1 and 1.5:1.
+- axe-core 4.14.0 does not test contrast on Arabic-script text; contrast that differs only in Arabic is M-18's
+  (manual, NOT_RUN until the owner or a tester the owner names runs it).

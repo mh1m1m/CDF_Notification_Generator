@@ -13,6 +13,8 @@
 //     pass for ligatures. That is why QA-018's probe found F-01 in English only. Colours come from the same tokens in
 //     both languages, so the English scans of each screen stand for its contrast; UT pins the token pairs and M-18
 //     is the manual check. The last planted test pins this, so a new axe that tests Arabic shows up here.
+// Chromium only (tests/fixtures/browsers.ts CHROMIUM_ONLY): in Firefox and WebKit the planted tests fail, so there the
+// sweep could pass without seeing a fault.
 // Run after `pnpm db:reset`. SYNTHETIC personas and cases only.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
