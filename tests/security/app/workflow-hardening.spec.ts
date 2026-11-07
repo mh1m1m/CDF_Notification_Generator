@@ -1,16 +1,22 @@
-// V13-SEC-015 · GitHub Actions workflow hardening (tests/security/workflow-hardening.ts, rules W0–W6).
+// V13-SEC-015, V13-SEC-016 · GitHub Actions workflow hardening (tests/security/workflow-hardening.ts, rules W0–W7).
 // SYNTHETIC-DATA REFERENCE IMPLEMENTATION. The real workflows must be clean; each rule is proven by a planted negative
 // reported at its file and line, and the reader by its key paths.
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  checkNpmrc,
+  checkTestScripts,
   checkWorkflow,
   checkWorkflowDir,
+  earlyExits,
   formatWorkflowFindings,
+  packageScripts,
   readWorkflow,
+  shellOperators,
   stripComment,
+  W7_CAPTURE,
   workflowFiles,
 } from "../workflow-hardening";
 
@@ -75,7 +81,7 @@ describe("V13-SEC-015: the repository's workflows", () => {
     }
   });
 
-  it("all of them pass W0–W6", () => {
+  it("all of them pass W0–W7", () => {
     const findings = checkWorkflowDir(DIR);
     expect(findings, formatWorkflowFindings(findings)).toEqual([]);
   });
@@ -301,5 +307,434 @@ jobs:
     expect(rules("release.yml", release("tag", "write").replace("github.token", "secrets['X']"))).toEqual([
       "W3:15",
     ]);
+  });
+});
+
+describe("V13-SEC-016 W7: a test run's failure fails its job", () => {
+  // `pnpm test` runs Vitest through package.json, as in the real workflows (findInvocations follows the script).
+  const SCRIPTS = { test: { command: "vitest run --project unit", line: 1 } };
+  const W7 = `name: W7
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo ready
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@${SHA} # v4.2.2
+        with:
+          persist-credentials: false
+      - run: which jq || echo "no jq"
+      - name: Tests
+        run: |
+          echo start | tee start.log
+          pnpm test 2>&1
+      - if: always()
+        run: echo done
+`;
+  const w7 = (src: string, file = "planted.yml") =>
+    checkWorkflow(file, src, SCRIPTS)
+      .filter((f) => f.rule === "W7")
+      .map((f) => f.line);
+  const swap = (from: string, to: string, src = W7) => {
+    expect(src.split(from).length, `exactly one "${from}"`).toBe(2);
+    return src.replace(from, to);
+  };
+  const lineOf = (src: string, needle: string) => src.split("\n").findIndex((l) => l.includes(needle)) + 1;
+
+  it("the control is clean: `||` and a pipe outside the test line, a redirect on it, if: always() on a non-test step", () => {
+    expect(checkWorkflow("planted.yml", W7, SCRIPTS)).toEqual([]);
+  });
+
+  it("finds the test run through package.json: without the script, the same workflow has no test step", () => {
+    const src = swap("          pnpm test 2>&1", "          pnpm test 2>&1 || true");
+    expect(w7(src)).toEqual([lineOf(src, "|| true")]);
+    expect(checkWorkflow("planted.yml", src, {}).filter((f) => f.rule === "W7")).toEqual([]);
+  });
+
+  const cases: [string, string, string, string][] = [
+    // [name, from, to, the text of the line the finding names]
+    [
+      "continue-on-error on the test step",
+      "      - name: Tests\n",
+      "      - name: Tests\n        continue-on-error: true\n",
+      "continue-on-error",
+    ],
+    [
+      "continue-on-error on the test job",
+      "  test:\n    runs-on: ubuntu-24.04\n",
+      "  test:\n    continue-on-error: true\n    runs-on: ubuntu-24.04\n",
+      "continue-on-error",
+    ],
+    [
+      "continue-on-error on any other job",
+      "  prepare:\n    runs-on: ubuntu-24.04\n",
+      "  prepare:\n    continue-on-error: true\n    runs-on: ubuntu-24.04\n",
+      "continue-on-error",
+    ],
+    [
+      "if: on the test step",
+      "      - name: Tests\n",
+      "      - name: Tests\n        if: github.event_name == 'push'\n",
+      "if: github.event_name",
+    ],
+    [
+      "if: always() on the test step",
+      "      - name: Tests\n",
+      "      - name: Tests\n        if: always()\n",
+      "        if: always()",
+    ],
+    [
+      "if: on the test job",
+      "  test:\n    runs-on: ubuntu-24.04\n",
+      "  test:\n    if: false\n    runs-on: ubuntu-24.04\n",
+      "if: false",
+    ],
+    [
+      "if: on a job the test job needs (needs: a)",
+      "  prepare:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo ready\n  test:\n    runs-on: ubuntu-24.04\n",
+      "  prepare:\n    if: false\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo ready\n  test:\n    needs: prepare\n    runs-on: ubuntu-24.04\n",
+      "if: false",
+    ],
+    [
+      "shell: sh on the test step",
+      "      - name: Tests\n",
+      "      - name: Tests\n        shell: sh\n",
+      "shell: sh",
+    ],
+    [
+      "shell: bash {0} (no -e) on the test step",
+      "      - name: Tests\n",
+      "      - name: Tests\n        shell: bash {0}\n",
+      "shell: bash {0}",
+    ],
+    [
+      "defaults.run.shell on the test job",
+      "  test:\n    runs-on: ubuntu-24.04\n",
+      "  test:\n    defaults:\n      run:\n        shell: pwsh\n    runs-on: ubuntu-24.04\n",
+      "shell: pwsh",
+    ],
+    [
+      "defaults.run.shell on the workflow",
+      "jobs:\n",
+      "defaults:\n  run:\n    shell: sh\njobs:\n",
+      "shell: sh",
+    ],
+    ["|| true after the test run", "          pnpm test 2>&1", "          pnpm test 2>&1 || true", "|| true"],
+    [
+      "|| exit 0 after the test run",
+      "          pnpm test 2>&1",
+      "          pnpm test || exit 0",
+      "|| exit 0",
+    ],
+    [
+      "a pipe after the test run, default shell",
+      "          pnpm test 2>&1",
+      "          pnpm test | tee test.log",
+      "| tee test.log",
+    ],
+    [
+      "|& after the test run, default shell",
+      "          pnpm test 2>&1",
+      "          pnpm test |& tee test.log",
+      "|& tee",
+    ],
+    ["the test run in the background", "          pnpm test 2>&1", "          pnpm test &", "pnpm test &"],
+    [
+      "the test run as an if condition",
+      "          pnpm test 2>&1",
+      "          if pnpm test; then echo ok; fi",
+      "if pnpm test",
+    ],
+    ["the test run negated", "          pnpm test 2>&1", "          ! pnpm test", "! pnpm test"],
+    [
+      "the test run as a while condition",
+      "          pnpm test 2>&1",
+      "          while pnpm test; do break; done",
+      "while pnpm test",
+    ],
+    ["set +e before the test run", "          echo start | tee start.log", "          set +e", "set +e"],
+    ["set +o errexit", "          echo start | tee start.log", "          set +o errexit", "set +o errexit"],
+    [
+      "set +o pipefail, even with shell: bash",
+      "          echo start | tee start.log",
+      "          set +o pipefail",
+      "set +o pipefail",
+    ],
+    // R1 on #172: `&&` joins the test run to a command that can end the step first.
+    ["&& on the test line", "          pnpm test 2>&1", "          pnpm test && echo ok", "&& echo ok"],
+    // R4 on #172: anything that can end the step with success before, or instead of, the test run.
+    [
+      '[ -z "$X" ] && exit 0 before the test run',
+      "          echo start | tee start.log",
+      '          [ -z "$X" ] && exit 0',
+      "exit 0",
+    ],
+    [
+      "a bare exit before the test run",
+      "          echo start | tee start.log",
+      "          exit",
+      "          exit",
+    ],
+    [
+      "exec true before the test run",
+      "          echo start | tee start.log",
+      "          exec true",
+      "exec true",
+    ],
+    [
+      "a function that shadows the runner",
+      "          echo start | tee start.log",
+      "          pnpm() { :; }",
+      "pnpm()",
+    ],
+    [
+      "a function keyword definition",
+      "          echo start | tee start.log",
+      "          function pnpm { :; }",
+      "function pnpm",
+    ],
+    ["trap 'exit 0' EXIT", "          echo start | tee start.log", "          trap 'exit 0' EXIT", "trap"],
+    ["return before the test run", "          echo start | tee start.log", "          return 0", "return 0"],
+  ];
+  for (const [name, from, to, at] of cases)
+    it(`${name} → W7 at its line`, () => {
+      const src = swap(from, to);
+      expect(w7(src)).toContain(lineOf(src, at));
+    });
+
+  it("if: on a job the test job needs, in a list and transitively", () => {
+    const base = swap(
+      "  prepare:\n    runs-on: ubuntu-24.04\n",
+      "  prepare:\n    needs: [first]\n    runs-on: ubuntu-24.04\n",
+    )
+      .replace(
+        "  test:\n    runs-on: ubuntu-24.04\n",
+        "  test:\n    needs:\n      - prepare\n    runs-on: ubuntu-24.04\n",
+      )
+      .replace(
+        "jobs:\n",
+        "jobs:\n  first:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo first\n",
+      );
+    expect(w7(base)).toEqual([]);
+    const src = base.replace("  first:\n    runs-on", "  first:\n    if: false\n    runs-on");
+    expect(w7(src)).toEqual([lineOf(src, "if: false")]);
+    // A job no test job needs may have an if:
+    const free =
+      base + "  other:\n    if: false\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo other\n";
+    expect(w7(free)).toEqual([]);
+  });
+
+  it("pipefail on: shell: bash on the step, the job or the workflow, or an earlier set -o pipefail", () => {
+    const piped = swap("          pnpm test 2>&1", "          pnpm test | tee test.log");
+    expect(w7(piped.replace("      - name: Tests\n", "      - name: Tests\n        shell: bash\n"))).toEqual(
+      [],
+    );
+    expect(
+      w7(
+        piped.replace(
+          "  test:\n    runs-on",
+          "  test:\n    defaults:\n      run:\n        shell: bash\n    runs-on",
+        ),
+      ),
+    ).toEqual([]);
+    expect(w7(piped.replace("jobs:\n", "defaults:\n  run:\n    shell: bash\njobs:\n"))).toEqual([]);
+    expect(w7(piped.replace("          echo start | tee start.log", "          set -euo pipefail"))).toEqual(
+      [],
+    );
+    // set -o pipefail after the test line does not count.
+    const late = piped.replace(
+      "          pnpm test | tee test.log",
+      "          pnpm test | tee test.log\n          set -o pipefail",
+    );
+    expect(w7(late)).toEqual([lineOf(late, "| tee test.log")]);
+  });
+
+  it("R4: exit with a non-zero literal status and the words inside quotes are allowed", () => {
+    expect(w7(swap("          echo start | tee start.log", '          [ -n "$X" ] || exit 1'))).toEqual([]);
+    expect(
+      w7(swap("          echo start | tee start.log", '          echo "exit 0; exec true; f() {}"')),
+    ).toEqual([]);
+    expect(earlyExits("exit 2")).toEqual([]);
+    expect(earlyExits("exit $rc")).toEqual(["`exit $rc`"]);
+    expect(earlyExits("exit 0")).toEqual(["`exit 0`"]);
+    expect(earlyExits("echo 'exit 0' && printf exec")).toEqual([]);
+  });
+
+  it("shellOperators: quotes, $( ), comments and redirections are not operators", () => {
+    expect(shellOperators(`pnpm test 2>&1 >&2 &>/dev/null`)).toEqual([]);
+    expect(shellOperators(`echo "a || b | c &" 'x;y' $(a || b) # || c`)).toEqual([]);
+    expect(shellOperators(`a && b || c | d |& e & f; g`)).toEqual(["&&", "||", "|", "|&", "&", ";"]);
+  });
+
+  describe("the reviewed exceptions hold only in their exact form", () => {
+    const CAPTURE = `name: CI
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  visual:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Candidates
+        run: |
+          rc=0
+          pnpm exec playwright test --project=visual-baseline --reporter=list,json --retries=0 || rc=$?
+          node scripts/ci/visual-candidates.mjs "$rc" test-results/visual-baseline.json test-results/baseline-candidates tests/visual/__screenshots__
+`;
+    it("ci.yml's visual candidate capture, handed to the judge on the next line", () => {
+      expect(w7(CAPTURE, "ci.yml")).toEqual([]);
+      const at = lineOf(CAPTURE, "|| rc=$?");
+      expect(w7(CAPTURE, "cross-browser.yml"), "another file").toEqual([at]);
+      expect(w7(CAPTURE.replace("  visual:", "  e2e:"), "ci.yml"), "another job").toEqual([at]);
+      expect(
+        w7(CAPTURE.replace("--retries=0 || rc", "--retries=0 --grep x || rc"), "ci.yml"),
+        "other args",
+      ).toEqual([at]);
+      expect(w7(CAPTURE.replace("|| rc=$?", "|| true"), "ci.yml"), "not a capture").toEqual([at]);
+      const unjudged = CAPTURE.replace(
+        / {10}node scripts\/ci\/visual-candidates.mjs[^\n]*\n/,
+        "          echo no judge\n",
+      );
+      expect(w7(unjudged, "ci.yml"), "the code never reaches the judge").toEqual([at]);
+      const later = CAPTURE.replace(
+        "          node scripts/ci",
+        "          echo between\n          node scripts/ci",
+      );
+      expect(w7(later, "ci.yml"), "the judge not on the next line").toEqual([at]);
+      // R2 on #172: the judge line is compared whole, so nothing may follow it.
+      const judge = W7_CAPTURE.next;
+      for (const tail of [" || true", "; true", " | tee judge.log", " && exit 0"]) {
+        const src = CAPTURE.replace(judge, judge + tail);
+        expect(w7(src, "ci.yml"), `judge${tail}`).toContain(at);
+      }
+      const otherArgs = CAPTURE.replace(judge, judge.replace("tests/visual/__screenshots__", "/tmp"));
+      expect(w7(otherArgs, "ci.yml"), "a judge with other arguments").toEqual([at]);
+    });
+
+    const LIBRARY = `name: Visual library
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  library:
+    if: contains(github.event.pull_request.labels.*.name, 'visual-library')
+    runs-on: ubuntu-24.04
+    steps:
+      - run: pnpm exec playwright test --project=visual-library
+`;
+    it("visual-library.yml's opt-in label if:", () => {
+      expect(w7(LIBRARY, "visual-library.yml")).toEqual([]);
+      const at = lineOf(LIBRARY, "    if:");
+      expect(w7(LIBRARY, "ci.yml"), "another file").toEqual([at]);
+      expect(w7(LIBRARY.replace("  library:", "  e2e:"), "visual-library.yml"), "another job").toEqual([at]);
+      expect(
+        w7(LIBRARY.replace("'visual-library')", "'visual-library') || always()"), "visual-library.yml"),
+        "widened",
+      ).toEqual([at]);
+    });
+  });
+
+  it("checkWorkflowDir reads the repository's package.json two levels up, so W7 follows `pnpm <script>`", () => {
+    const root = mkdtempSync(join(tmpdir(), "v13-w7-"));
+    try {
+      const dir = join(root, ".github", "workflows");
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, "a.yml"), swap("          pnpm test 2>&1", "          pnpm test || true"));
+      expect(checkWorkflowDir(dir).filter((f) => f.rule === "W7")).toEqual([]);
+      writeFileSync(join(root, "package.json"), JSON.stringify({ scripts: { test: "vitest run" } }, null, 2));
+      expect(checkWorkflowDir(dir).map((f) => `${f.rule} ${f.file}`)).toEqual(["W7 a.yml"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  describe("R3: a package script that runs a test (pnpm runs it with sh -c: no -e, no pipefail)", () => {
+    const at = (scripts: Record<string, string>) =>
+      checkTestScripts(
+        Object.fromEntries(Object.entries(scripts).map(([n, c], i) => [n, { command: c, line: i + 10 }])),
+      ).map((f) => `${f.file}:${f.line}`);
+    it("only && may join its commands", () => {
+      expect(at({ test: "vitest run --project unit" })).toEqual([]);
+      expect(at({ test: "pnpm lint && vitest run --project unit" })).toEqual([]);
+      for (const bad of [
+        "vitest run || true",
+        "vitest run; echo done",
+        "vitest run | tee unit.log",
+        "vitest run |& tee unit.log",
+        "vitest run &",
+        "vitest run\necho done",
+        "exit 0 && vitest run",
+        "exec true && vitest run",
+      ])
+        expect(at({ test: bad }), bad).toEqual(["package.json:10"]);
+    });
+    it("follows a nested script, and leaves a script that runs no test alone", () => {
+      // The flaw is in the script that holds it; the one that only calls it is clean.
+      expect(at({ test: "pnpm unit", unit: "vitest run; exit 0" })).toEqual(["package.json:11"]);
+      expect(at({ test: "pnpm unit || true", unit: "vitest run" })).toEqual(["package.json:10"]);
+      expect(at({ lint: "eslint . || true", fmt: "prettier --check . | cat" })).toEqual([]);
+    });
+    it("the repository's scripts are clean", () => {
+      expect(
+        formatWorkflowFindings(checkTestScripts(packageScripts(join(process.cwd(), "package.json")))),
+      ).toBe("(none)");
+    });
+    it("checkWorkflowDir reports them at package.json:line, and .npmrc shell keys at .npmrc:line", () => {
+      const root = mkdtempSync(join(tmpdir(), "v13-w7-scripts-"));
+      try {
+        const dir = join(root, ".github", "workflows");
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(join(dir, "a.yml"), W7);
+        writeFileSync(
+          join(root, "package.json"),
+          JSON.stringify({ scripts: { lint: "eslint .", test: "vitest run || true" } }, null, 2),
+        );
+        expect(checkWorkflowDir(dir).map((f) => `${f.rule} ${f.file}:${f.line}`)).toEqual([
+          "W7 package.json:4",
+        ]);
+        writeFileSync(
+          join(root, ".npmrc"),
+          "engine-strict=true\nscript-shell = /bin/true\n shell-emulator=true\n",
+        );
+        expect(checkNpmrc(join(root, ".npmrc")).map((f) => `${f.file}:${f.line}`)).toEqual([
+          ".npmrc:2",
+          ".npmrc:3",
+        ]);
+        expect(formatWorkflowFindings(checkWorkflowDir(dir))).toContain("W7 .npmrc:2 ");
+        expect(checkNpmrc(join(root, "missing.npmrc"))).toEqual([]);
+        expect(checkNpmrc(join(process.cwd(), ".npmrc")), "the repository's .npmrc").toEqual([]);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it("the real workflows: planting each form in ci.yml's database step is caught there", () => {
+    const dir = join(process.cwd(), ".github", "workflows");
+    const scripts = packageScripts(join(process.cwd(), "package.json"));
+    const ci = readFileSync(join(dir, "ci.yml"), "utf8");
+    const db = "      - run: pnpm test:db\n";
+    expect(ci.split(db).length).toBe(2);
+    for (const to of [
+      "      - run: pnpm test:db || true\n",
+      "      - run: pnpm test:db | tee db.log\n",
+      "      - run: pnpm test:db\n        continue-on-error: true\n",
+      "      - if: false\n        run: pnpm test:db\n",
+      "      - run: pnpm test:db\n        shell: sh\n",
+    ]) {
+      const src = ci.replace(db, to);
+      expect(
+        checkWorkflow("ci.yml", src, scripts).map((f) => f.rule),
+        to,
+      ).toContain("W7");
+    }
   });
 });
