@@ -6,6 +6,8 @@
   gap: var(--cdf-space-1);
   border: 1px solid var(--cdf-indicator-outline);
   color: var(--cdf-indicator-text);
+  /* The indicator text needs its own fill: without it, it fails on the dark surfaces (FE-019). */
+  background-color: var(--cdf-named-access);
   border-radius: 0;
   padding-inline: var(--cdf-space-1);
 }

@@ -7,6 +7,7 @@ Updated: 2026-11-01 07:34 UTC · Branch: feature/V13-FE-016-template-code-wraps 
 Updated: 2026-11-01 05:56 UTC · Branch: feature/V13-FE-014-overview-open-tasks (from develop c3ccac6; #121 FE-013 and #129 DB-022 merged; FE-016 is #131) · Head: see PR
 Updated: 2026-11-01 07:07 UTC · Branch: feature/V13-FE-017-case-access-audit (stacked on #142 DB-023 b231e28, develop 00fac16 merged in; FE-015 is #141, FE-016 is #131) · Head: see PR
 Updated: 2026-11-01 08:53 UTC · Branch: feature/V13-FE-017-case-access-audit (develop 43552f7 merged in; #142 DB-023 merged, base now develop; #131 FE-016 merged) · Head: see PR
+Updated: 2026-11-07 17:40 UTC · Branch: fix/V13-FE-019-dark-mine-flag-contrast (from develop 58b2fa4; #147 FE-017 merged) · Head: see PR
 ## Completed
 - Design and plan for V13-FE-001..006 — `docs/teams/fe/DESIGN.md` (rulings D6, notification detail, CSP, SEC-APP-18 recorded)
 - V13-FE-001 (part 1) — `lib/authz` pre-check, `lib/server` (errors, request context, case read services, case source
@@ -138,7 +139,16 @@ Updated: 2026-11-01 08:53 UTC · Branch: feature/V13-FE-017-case-access-audit (d
   only the recorded read; the draft command's transaction never calls it. Found on a production build and fixed: the
   case tab's document title was built from the case, and Next.js resolves metadata on every link prefetch (7 rows from
   the portfolio alone) and apart from the page (2 rows per page). The title now names the tab only ("Case · Overview",
-  new key `case.documentTitle`); the case number stays on the page — IN_REVIEW (DB, SEC, ARCH).
+  new key `case.documentTitle`); the case number stays on the page — COMPLETE: merged into develop as 6be1802 (#147).
+- V13-FE-018 Draft form reflow in WebKit — no FE PR: FE's `.form > select` fix broke UX's UXB-17 pin (field rules
+  belong to `v13-control`), so it was reverted on the branch (content equal to develop) and moved to UX as V13-UX-018.
+  FE's Chromium measurements stand as the baseline (page 320/320, form 288, select box 16–304, outline solid 3px).
+- V13-FE-019 Dark-theme indicator flag contrast (QA-018 #177 finding F-01, WCAG 1.4.3) — the case "mine" task flag
+  wrote `--cdf-indicator-text` (#101820 in both themes) with no fill: 1.1:1 on the dark overview surface, 1.5:1 on the
+  tasks surface. The same rule, with the same defect, styles the portfolio "restricted" flag (1.5:1 in dark) and the
+  Center's `.flag` (no element uses it today). Each now paints the indicator's own fill `--cdf-named-access`, the pair
+  UX's `.v13-indicator-outline` already uses: 17.89:1 in light and both dark blocks; no new token, no colour literal,
+  light theme unchanged (the fill is white, like the surface it sat on) — IN_REVIEW (QA; UX second for the token).
 
 ## Changed files
 - lib/authz/{actions,index}.ts
@@ -184,6 +194,9 @@ Updated: 2026-11-01 08:53 UTC · Branch: feature/V13-FE-017-case-access-audit (d
   tests/unit/server/{cases,case-workspace,notification-preview}.spec, tests/unit/server/support/{fake-case-source,
   fake-notification-preview}.ts, tests/unit/contracts.spec.ts (the in-memory adapter gains openCase; ARCH path, with
   the contract hunk), tests/integration/fe/{case-access-audit.spec.ts (new),notification-preview.spec.ts}
+- FE-019: app/(platform)/cases/[caseId]/_components/case.module.css, app/(platform)/portfolio/_components/
+  portfolio.module.css, app/(platform)/notifications/_components/center.module.css,
+  tests/unit/server/indicator-flag-contrast.spec.ts (new), docs/teams/fe/STATUS.md
 
 ## Test evidence
 | Command | Result | Counts | Commit |
@@ -271,6 +284,7 @@ Updated: 2026-11-01 08:53 UTC · Branch: feature/V13-FE-017-case-access-audit (d
 | FE-016 after merging develop 818b51c (#141 FE-015; conflict in STATUS.md only, both sides kept; FE-016's code lines identical to 7c604f0, the select keeps `v13-control`): lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 93 files, 2413 / 610 / 365 of 365 | FE-016 head |
 | FE-017 on #142 b231e28 + develop 00fac16: lint, typecheck, format:check / `pnpm test` (case-access-record 29: record first then read in ONE transaction with bound kind/case/notification; V1401/V1404/V1422 → null with no read; V1500, unknown code, no row, two rows, extra column throw; route uses openCase only; preview uses getForCaseRecorded only; case-metadata 9: the title reads nothing, same title for any id) / `pnpm db:reset` + `pnpm test:db` (FE integration case-access-audit 14: one CASE_OPENED row per request on every tab, ids only, metadata {}; second open in the window adds no row and counts; paged request; restricted 0009 one RESTRICTED_CASE_OPENED per request; preview CASE_OPENED + NOTIFICATION_PREVIEW_OPENED; unknown / other-workspace / restricted-unassigned → NOT_FOUND with one id-less COMMAND_REFUSED V1404 and no access row; another case's notification → unavailable, no preview row; malformed ?n= no command; draft transaction writes no access row) / `pnpm db:reset` + `pnpm test:e2e`. Production build (`pnpm build`, `next start`, Playwright, ledger read by the administrator): portfolio + my-work with 7 case links in view and hovered → 0 rows (before the title fix: 7); full load of a case → 1 row, access_window suppressed 0 (before: 2 opens); restricted 0009 full load → 1 row (before: 2); raw requests: document 1, RSC navigation 1, prefetch 0, segment tree 0, segment page 0 (no content); back / forward re-request the page (each counted in the window, no new row). Mutation: openCase without the record fails 13 integration + 4 unit; the preview on the unrecorded read fails 2 integration + 4 unit; the route on getCase fails 13 integration + 6 unit; the title calling the load fails 9 unit | pass | 94 files, 2439 / 649 / 363 of 363 | FE-017 head |
 | FE-017 after merging develop 43552f7 (#142 DB-023, #131 FE-016, #141 FE-015 and others; conflict in STATUS.md only, both sides kept; FE-017's changed lines unchanged): lint, typecheck, format:check / `pnpm test` / `pnpm db:reset` + `pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e` | pass | 95 files, 2452 / 649 / 418 of 418 | FE-017 head |
+| FE-019 on develop 58b2fa4: lint, typecheck, format:check / `pnpm test` (indicator-flag-contrast 9: every FE rule that writes the indicator text is `.flag` and paints `--cdf-named-access`; text on fill >= 4.5:1 in light and both dark blocks; negative: the text alone is below 4.5:1 on dark `--cdf-surface` and `--cdf-surface-subtle`; the fill is >= 3:1 against every dark surface; with the three CSS lines reverted 3 of 9 fail) / `pnpm db:reset` + `V13_DB_TESTS_REQUIRED=1 pnpm test:db` / `pnpm db:reset` + `pnpm test:e2e`. Production build (`pnpm build`, `next start`, Playwright Chromium, light + dark, ar + en, secretary-alpha / investigator-beta / investigator-gamma, every case each sees, overview and tasks): every `case-task-mine` and `portfolio-restricted` computes text rgb(16,24,32) on fill rgb(255,255,255) = 17.89:1, on dark surfaces rgb(25,33,43) and rgb(48,56,65); axe `color-contrast` on portfolio, overview and tasks: 0 violations in all 12 runs | pass | 98 files, 2618 / 649 / 469 of 469 | FE-019 head |
 
 ## Unresolved defects
 - FE-006 part 1 known limit: a Server Action cannot read route params, so the form carries the route case id as a hidden
