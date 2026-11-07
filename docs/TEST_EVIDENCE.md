@@ -147,6 +147,31 @@ advisor GC Review's 4 pre-existing INFO; GC Review production deployment READY, 
   query answered without a question: rows 0000–0005, unchanged. Not resent; 0006, 0007, 0008, the seeds and the
   post-apply checks wait for the owner.
 
+### 2.2 Migrations 0006–0007 — 7 Nov 2026 12:24–13:14 UTC
+
+Runner and procedure as in §2.1. The 24 remaining texts (dry run and apply of `0006`–`0015` and of the two seed files)
+were generated again with `scripts/db/hosted-bundle.mjs` at `develop` `029a22e`; each was byte-identical to the text
+prepared on 1 Nov, and `database/` and `scripts/db/` are unchanged from `029a22e` to `357e574`. The owner wrote
+"proceed" at 12:18 UTC. The connector's question for statements that drop objects does not show in the project
+thread; it shows on the Claude Code page of the Chief Architect's session, where the owner answers it (first at 13:08 UTC).
+
+Before the first migration (12:24–12:26): fingerprint 13 rows identical to the baseline, TOTAL 648
+`40c9efe5697d19552d15f5ef85c2f85f`; history `0000`–`0005`, names and sha256 equal to the `develop` files; GC Review
+counters 32 tables, 109 live rows, ins 116 / upd 50 / del 3, 7 connections; security advisor only GC Review's
+pre-existing WARN `auth_leaked_password_protection`; performance advisor the 27 INFO of 1 Nov (GC Review's 4 and the
+23 of OI-032); GC Review production deployment READY, `/` and `/api/health` 200.
+
+| Migration | Dry run (ROLLBACK) | Apply (COMMIT) | History row sha256 | Fingerprint | Isolation (V13 tables / functions) | Security advisor | Performance advisor | GC Review |
+| --------- | ------------------ | -------------- | ------------------ | ----------- | ---------------------------------- | ---------------- | ------------------- | --------- |
+| 0006 case_workspace_reads | 13:08, no error (sent before at 12:27:10, 12:57:31 and 12:59:33: no answer within 60 s, nothing ran) | 13:08 | `410a833b…b1f2` = header | identical, TOTAL 648 `40c9efe5…` | 27 / 0 / 0 PASS (18 / 31) | no new finding | none new | counters unchanged; READY, `/api/health` 200 |
+| 0007 claims_key_state | 13:10:32, no error (no question: it drops nothing) | 13:11:04 | `a9124b55…dca2` = header | identical | 27 / 0 / 0 PASS (18 / 32) | no new finding | none new | unchanged; READY, `/api/health` 200 |
+
+- "No error" means the text guard passed and the transaction ended as written (ROLLBACK or COMMIT).
+- GC Review's connection count moved between 7 and 10; its table statistics did not change.
+- **0008 waits (OI-034).** Its dry run (byte-identical) was sent at 13:12:51. The question had no answer within 60 s,
+  and nothing ran. Remaining: `0008`–`0015`, the two seed files and the post-apply checks, with ten more confirmations
+  (dry run and apply of 0008, 0009, 0012, 0013 and 0015).
+
 ## 3. Application tests
 
 ### 3.1 V13-ARCH-001 foundation, local run — 28 Oct 2026 ≈ 03:12–03:22 UTC, commit `3756b4e`
@@ -176,7 +201,7 @@ Mutation checks (not committed, each reverted and rebuilt before the final run):
 
 ## 4. CI
 
-Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #26 (V13-DB-006) it has six jobs: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build, end-to-end (Playwright). Since #156 (V13-ARCH-014) a seventh, visual baselines (Playwright), compares the committed baselines or, while none is committed, makes the candidates and passes only through `scripts/ci/visual-candidates.mjs`. On pull requests the Vercel preview is one more check.
+Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #26 (V13-DB-006) it has six jobs: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build, end-to-end (Playwright). Since #156 (V13-ARCH-014) a seventh, visual baselines (Playwright), compares the committed baselines or, while none is committed, makes the candidates and passes only through `scripts/ci/visual-candidates.mjs`; since #160 (V13-ARCH-015) `scripts/ci/visual-mode.mjs` makes that choice from git (the checked-out commit and its first parent) and fails the job when every baseline is deleted (§4.2). Since #152 (V13-QA-016) a second workflow, `.github/workflows/cross-browser.yml`, runs the Firefox and WebKit projects on every push to `develop` and on a PR labelled `cross-browser` (§4.3). On pull requests the Vercel preview is one more check.
 
 | Run                                                                                              | Commit    | Result                                                                                                                                                                                         |
 | ------------------------------------------------------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -185,7 +210,7 @@ Workflow `.github/workflows/ci.yml` (arrives with V13-ARCH-001, PR #6). Since #2
 Every pinned action SHA resolved. Warnings: the pinned versions target Node.js 20 and ran on Node.js 24 (OI-021); the
 dependency cache could not be saved (GitHub service message), which does not affect results.
 
-### 4.1 `develop`: one push run per merge (read from GitHub Actions, 1 Nov 2026 11:31 UTC)
+### 4.1 `develop`: one push run per merge (read from GitHub Actions, 7 Nov 2026 13:52 UTC)
 
 Each merge rests on the PR run named in its merge commit: green CI on the head the independent reviewer accepted. The workflow cancels a running push run when a newer push to the same branch arrives (`concurrency`, `cancel-in-progress: true`), so a merge pushed within a minute of the next one shows a cancelled push run. The next successful push run contains that merge and verifies the combination; it is named in the last column. When `develop` moved after a PR's run, ARCH merges on that run only if `develop` changed none of the PR's files (ARCH ruling, 31 Oct). Since #24, ARCH also runs typecheck, lint, format, unit, test:db and Playwright on the combined tree locally before the merge, because a test already on `develop` can exercise behaviour the PR changes; the counts are in the merge commit and in the last column. A PR run checks out the PR head merged into `develop` as `develop` was when the run started (`refs/pull/<n>/merge`; the checkout step's log names both commits), so a PR run that started after the last `develop` move already covers the merged tree.
 
@@ -344,12 +369,48 @@ Each merge rests on the PR run named in its merge commit: green CI on the head t
 | `f2d013a` | #153 UX-018 | [41300529469](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41300529469) | [41301337238](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301337238) | success (combined tree `6be1802` + #153, equal to `f2d013a`: unit 2,455, test:db 649, e2e 418) |
 | `56a8079` | #156 ARCH-014 | [41300689909](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41300689909) | [41301795889](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301795889) | cancelled; verified by [41301822994](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301822994) (combined tree `f2d013a` + #156, equal to `56a8079`: unit 2,462, test:db 649, e2e 418) |
 | `029a22e` | #155 ARCH-002 | [41299576957](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41299576957) | [41301822994](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301822994) | success (documentation only) |
+| `15f938d` | #159 QA-015 | [42374621104](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42374621104) | [42376385514](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376385514) | success (combined tree `029a22e` + #159, equal to `15f938d`: unit 2,462, test:db 649, e2e 418) |
+| `6083ee4` | #152 QA-016 | [41301912950](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301912950) | [42376944874](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376944874) | cancelled; verified by [42376971847](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376971847) (combined tree `15f938d` + #152, equal to `6083ee4`: unit 2,462, test:db 649, e2e 433) |
+| `1f7b685` | #157 ARCH-002 | [41302412290](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41302412290) | [42376971847](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376971847) | success (documentation only) |
+| `357e574` | #160 ARCH-015 | [42377593193](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42377593193) | [42378248517](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42378248517) | success (combined tree `1f7b685` + #160, equal to `357e574`: unit 2,466, test:db 649, e2e 433) |
 
 Run [41231785638](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41231785638) on `develop` `b5ee5f4`: lint/typecheck/format/db:lint, unit tests, shared-database rehearsal, database integration tests, build and Playwright all succeeded. Test counts are in each PR's evidence and in the job logs; this table records the job outcome only.
 
 ### 4.2 The visual job (V13-ARCH-014), read from GitHub Actions, 1 Nov 2026 11:31 UTC
 
 The `visual` job's PR run on #156 ([41300689909](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41300689909), job 124830780482) and its first `develop` run ([41301822994](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301822994), job 124834450632) found no committed baseline under `tests/visual/__screenshots__/`, ran the nine baseline tests (36 cells), and the candidate check passed: 36 candidates, one PNG per missing snapshot, and nothing written under the baselines folder. Fonts installed (Ubuntu 24.04 archive): fonts-crosextra-carlito 20230309-2, fonts-dejavu-core 2.37-8, fonts-liberation 1:2.1.5-3, fonts-noto-core 20201225-2. The candidates are in the job's artifact `visual-results` (kept 14 days), which a Claude sandbox cannot download (OI-058), so no baseline is committed yet (V13-QA-015).
+
+Read again 7 Nov 2026 13:52 UTC. The 36 baselines landed in #159 (V13-QA-015, `15f938d`), taken unchanged from artifact
+13574858048 of CI run 42374093449 (head `0b40b1a`, job 128408023113, candidate mode) once the owner had opened the
+network (OI-058); #159's merge commit names `97082a3`, the commit before that head, by mistake. Since then the job
+compares: #159's PR run ([42374621104](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42374621104), job 128409566636) and the `develop` runs on `15f938d`
+([42376385514](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376385514), job 128414719685) and `1f7b685` ([42376971847](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376971847), job 128416514933) each ran the nine
+baseline tests against the committed images (9 passed) and made no candidate.
+
+Since #160 (V13-ARCH-015) the job's first step, `scripts/ci/visual-mode.mjs`, decides from git and prints its decision:
+`compare` while the checked-out commit holds a baseline, `candidates` only while neither that commit nor its first
+parent holds one, and otherwise exit 1, which fails the job. #160's PR run ([42377593193](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42377593193), job 128418272427)
+and the `develop` run on `357e574` ([42378248517](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42378248517), job 128420214301) printed
+`visual mode: compare: 36 committed baselines` and passed 9. The throwaway PR #161 deleted all 36 baselines (closed,
+not merged): its run [42377612701](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42377612701) failed at that step (job 128418329898: `refused: the first parent commit
+holds 36 baselines and this commit holds none`), and every other job of that run succeeded.
+
+### 4.3 Firefox and WebKit (V13-QA-016), read from GitHub Actions, 7 Nov 2026 13:52 UTC
+
+Workflow `.github/workflows/cross-browser.yml` (#152), one job, "End-to-end in Firefox and WebKit (Playwright)": the
+projects `firefox-ar` and `webkit-ar` (the e2e scenarios and smoke, and `tests/a11y`; the Sentinel, the Truth
+Inspector, SEC's browser suites and the Chromium-only specs stay in CI's Chromium e2e job). Results are
+Chromium/Firefox/WebKit emulation, never real-device testing.
+
+| Run | Event | Commit | Result |
+| --- | ----- | ------ | ------ |
+| [41301912994](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/41301912994) | PR #152, label `cross-browser` | `93340b5` | success, 154 passed |
+| [42376944803](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376944803) | push | `6083ee4` | cancelled by the next push, 23 s later |
+| [42376971833](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42376971833) | push | `1f7b685` | success, 154 passed |
+| [42378248623](https://github.com/mh1m1m/CDF_Notification_Generator/actions/runs/42378248623) | push | `357e574` | success, 154 passed |
+
+Two green `develop` runs in a row so far. After five, ARCH makes the workflow a required check on every PR and in the
+merge rule (`docs/qa/M1_OPEN_QA_ROWS_DESIGN.md` §9.3).
 
 ## 5. Deployment checks
 
