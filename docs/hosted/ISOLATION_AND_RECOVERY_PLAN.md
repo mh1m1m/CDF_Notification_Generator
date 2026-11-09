@@ -201,6 +201,9 @@ Two limits remain (SEC, reviews of #44 and #47):
 After the run, a catalogue fingerprint of the V13 schema (functions with their bodies and settings, columns,
 constraints, indexes, policies, ACLs, default ACLs, memberships) is compared with the same query on a local database
 built from the same commit. Equal hashes show that what was applied is what was reviewed.
+Both databases should run the same PostgreSQL major version. The hosted project runs 17, where a table owner's ACL
+entry carries the MAINTAIN letter `m`; a local build on 16 lacks it, so until OI-062 is fixed the relations hash
+differs for that reason alone (`docs/TEST_EVIDENCE.md` §2.3 shows the check).
 
 ## 6. Procedure (go / no-go)
 

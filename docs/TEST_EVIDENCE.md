@@ -168,9 +168,85 @@ pre-existing WARN `auth_leaked_password_protection`; performance advisor the 27 
 
 - "No error" means the text guard passed and the transaction ended as written (ROLLBACK or COMMIT).
 - GC Review's connection count moved between 7 and 10; its table statistics did not change.
-- **0008 waits (OI-034).** Its dry run (byte-identical) was sent at 13:12:51. The question had no answer within 60 s,
-  and nothing ran. Remaining: `0008`–`0015`, the two seed files and the post-apply checks, with ten more confirmations
-  (dry run and apply of 0008, 0009, 0012, 0013 and 0015).
+- **0008 waited (OI-034).** Its dry run (byte-identical) was sent at 13:12:51. The question had no answer within 60 s,
+  and nothing ran. The run resumed on 8 Nov and finished on 9 Nov (§2.3).
+
+### 2.3 Migrations 0008–0015, the seeds and the post-apply checks — 8–9 Nov 2026 UTC
+
+Runner and procedure as in §2.1. The texts were generated again with `scripts/db/hosted-bundle.mjs` at `develop`
+`ac5857e` on 7 Nov at 23:49 UTC; all 24 were byte-identical to those of §2.2, and `database/` and `scripts/db/` are
+unchanged from `ac5857e` to `f4594fc`. Every text the server ran was byte-identical to its generated text: each send
+was compared afterwards with the generated files, one comparison per send. The owner answered the connector's question
+for statements that drop objects on the Claude Code page of the Chief Architect's session, for the dry run and the apply
+of 0008, 0009, 0012, 0013 and 0015; 0010, 0011, 0014 and the two seed files drop nothing and raised no question. A send
+whose question had no answer within 60 s did not run, and it was sent again unchanged after the owner's next "go" on
+that page. Nothing was worked around.
+
+Before the resume: fingerprint 13 rows identical to the baseline, TOTAL 648 `40c9efe5697d19552d15f5ef85c2f85f`
+(7 Nov 23:50 and again 8 Nov 04:07); history `0000`–`0007`, each sha256 equal to the `develop` file's (7 Nov 23:51).
+
+| Step | Dry run (ROLLBACK) | Apply (COMMIT) | History row sha256 | Fingerprint | Isolation (V13 tables / functions) | Security advisor | Performance advisor | GC Review |
+| ---- | ------------------ | -------------- | ------------------ | ----------- | ---------------------------------- | ---------------- | ------------------- | --------- |
+| 0008 my_work_case_columns | 8 Nov 07:39:54, no error (sent before on 7 Nov 13:12:51 and on 8 Nov 04:07:49, 04:11:37, 04:18:31 and 04:27:26: no answer within 60 s, nothing ran) | 07:40:33 | `fedb37fa…d4ed` = header | identical, TOTAL 648 `40c9efe5…` | 27 / 0 / 0 PASS (18 / 32) | no new finding | none new | counters unchanged; `/api/health` 200 |
+| 0009 fk_index_review | 08:05:11, no error (sent before at 07:45:34, 07:49:07 and 07:57:05: no answer within 60 s, nothing ran) | 08:05:59 | `1654f061…6208` = header | identical | 27 / 0 / 0 PASS (18 / 32) | no new finding | one fewer: the reshaped index covers `notification_event_notification_fk` | unchanged; 200 |
+| 0010 notification_operations_reads | 08:09:34, no error (no question) | 08:10:16 | `07e251fc…85d2` = header | identical | 27 / 0 / 0 PASS (18 / 34) | no new finding | not read | unchanged; 200 |
+| 0011 case_paged_reads | 08:17:30, no error (no question; the send at 08:12:59 was refused by the text guard, see below) | 08:18:26 | `db74feea…de8d` = header | identical | 27 / 0 / 0 PASS (18 / 38) | no new finding | 2 new `unused_index`: `task_case_page_idx` (0011) and `notification_event_notification_idx` (0009), no traffic yet | unchanged; 200 |
+| 0012 audit_outcome_policy_version | 08:23:29, no error | 9 Nov 06:31:21 (sent before on 8 Nov at 08:25:02, 08:37:42 and 08:49:09: no answer within 60 s, nothing ran) | `66e876ca…e905` = header | identical | 27 / 0 / 0 PASS (19 / 41) | no new finding | not read | unchanged; 200 |
+| 0013 refused_command_audit | 9 Nov 06:36:28, no error | 07:01:01 (sent before at 06:42:44: no answer within 60 s, nothing ran) | `f3b68ae3…cb59` = header | identical | 27 / 0 / 0 PASS (20 / 48) | no new finding | 1 new `unindexed_foreign_keys`: `audit_event_policy_version_fk`, added and accepted by 0012 (first read after 0013) | unchanged; 200 |
+| 0014 case_my_open_tasks_page | 07:05:29, no error (no question) | 07:06:12 | `e35f3cf4…2dfe` = header | identical | 27 / 0 / 0 PASS (20 / 49) | no new finding | 1 new `unused_index`: `task_case_assignee_open_idx` (0014), no traffic yet | unchanged; 200 |
+| 0015 case_access_audit | 07:09:44, no error | 07:11:09 | `2d0ee16a…55ca` = header | identical | 27 / 0 / 0 PASS (21 / 52) | no new finding | none new | unchanged; 200 |
+| Seed `0001_m1_synthetic` | 07:17:12, no error (no question) | 07:17:59 | none (a seed writes no history row); `0000`–`0015` unchanged | identical | 27 / 0 / 0 PASS (21 / 52) | no new finding | none new | unchanged; 200 |
+| Seed `0002_m1_cases` | 07:21:10, no error (no question) | 07:22:29 | none; `0000`–`0015` unchanged | identical | 27 / 0 / 0 PASS (21 / 52) | no new finding | none new | unchanged; 200 |
+
+- "No error" means the text guard passed and the transaction ended as written (ROLLBACK or COMMIT). After each
+  migration the history held one row per applied migration, every sha256 equal to the `develop` file's. Each seed
+  bundle carries the `develop` seed file verbatim and refuses unless the history equals all 16 repository migrations.
+- GC Review's table statistics never changed (32 tables, 109 live rows, ins 116 / upd 50 / del 3); its connection
+  count moved between 7 and 10. Its `/api/health` answered 200 after every step.
+- On 8 Nov at 08:12:59 the first send of 0011's dry run was refused by the text guard (P0001, "the text received
+  differs from the repository text"), so nothing ran: that text had been copied by hand with 31 spaces where the bundle
+  has 26. Every later send was the generated text unchanged.
+- The performance advisor was not read after 0010 and 0012. After the seeds it lists 30 INFO: GC Review's 4 and 26 on
+  V13 tables, 14 `unindexed_foreign_keys` and 12 `unused_index`. The 14 keys are exactly the ones accepted without an
+  index, each with its reason in 0009 (13) or 0012 (`audit_event_policy_version_fk`), which
+  `tests/integration/fk-index-coverage.spec.ts` lists; the unused indexes are expected while the tables have no
+  traffic (OI-032, V13-DB-024).
+
+After the seeds (9 Nov):
+
+| UTC | Check | Script | Result |
+| --- | ----- | ------ | ------ |
+| 07:24:55 | Post-apply hardening checks (V13-SEC-004) | `database/hosted/post_apply_checks.sql`, `develop` text plus the text guard | **PASS**, 0 breaches: P01 21 tables, RLS on every one; P02 no INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES or TRIGGER for `cdf_v13_app`, `cdf_v13_user` or PUBLIC; P03 28 definers, all on the allow-list; P04 52 functions, `search_path` pinned to empty; P05 PUBLIC and 9 API roles hold no privilege; P06 `claims_key` 0 rows; P07 audit chain valid, 2 rows checked (a local build of `f4594fc` holds exactly two audit rows, one per seed file); P08 memberships as designed; P09 276 ACL entries, every grantee a V13 role; P10 live access policy `V13-ACCESS-0015` |
+| 07:25:40 | Isolation checks, once more | `database/hosted/isolation_checks.sql` | **PASS**, 27 / 0 / 0 (21 / 52) |
+| 07:26:45 | V13 catalogue fingerprint (ACTUAL) | `database/hosted/v13_catalog_fingerprint.sql`, `develop` text plus the text guard | TOTAL 464 `538fc1bd…`, compared below |
+
+V13 catalogue, hosted against a fresh build (plan §5.7). EXPECTED is a local build of `develop` `f4594fc` by
+`pnpm db:reset` (16 migrations and the two seed files) on PostgreSQL 16.15; ACTUAL is the hosted project on
+PostgreSQL 17.11.
+
+| Category | Objects | EXPECTED | ACTUAL |
+| -------- | ------- | -------- | ------ |
+| column | 159 | `2da63f85…` | equal |
+| constraint | 143 | `d9bff6b9…` | equal |
+| default_acl | 2 | `99324c7d…` | equal |
+| function | 52 | `eca7821e…` | equal |
+| index | 49 | `d7f144f3…` | equal |
+| membership | 1 | `70522a2f…` | equal |
+| policy | 21 | `2b6ca5e2…` | equal |
+| relation | 22 | `9bb0c2d7…` | **`ff55fe98…`** |
+| role | 3 | `6a275b35…` | equal |
+| schema | 1 | `ef17c54d…` | equal |
+| trigger | 11 | `67dfc80e…` | equal |
+| TOTAL | 464 | `134d4723…` | **`538fc1bd…`** |
+
+- DRIFT: the relation category only (and with it the TOTAL), and in it only the table ACL text.
+- CAUSE: PostgreSQL 17 added the MAINTAIN table privilege, which a table's owner holds by default. On the 13 V13
+  tables with explicit grants the owner's ACL entry therefore reads `cdf_v13_owner=arwdDxtm` on the hosted project and
+  `cdf_v13_owner=arwdDxt` on PostgreSQL 16. Proof: the local fingerprint with only that letter added to the owner's
+  entry gives relation `ff55fe98…` and TOTAL `538fc1bd…`, the hosted values. Every other part of the relation
+  signatures, the grants to `cdf_v13_user` included, is therefore equal, and so are the other ten categories.
+- REMEDIATION: none on the hosted schema, which is the reviewed one. Tooling: the comparison needs an EXPECTED built on
+  PostgreSQL 17, or a fingerprint that leaves out the MAINTAIN letter (OI-062).
 
 ## 3. Application tests
 
