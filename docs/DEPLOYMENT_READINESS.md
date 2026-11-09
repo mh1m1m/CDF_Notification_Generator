@@ -4,7 +4,7 @@
 plus the readiness of the synthetic staging environment. It is not a readiness claim. Production promotion is BLOCKED
 by design (QG-13), and nothing here approves a deployment. Requirement: REQ-DOC-008 (task V13-ARCH-011).
 
-Last updated: **7 Nov 2026 23:57 UTC** (Chief Architect), `develop` `993b6a8`. Facts are taken from
+Last updated: **9 Nov 2026 07:40 UTC** (Chief Architect), `develop` `f4594fc`. Facts are taken from
 `docs/DEPLOYMENT_STATUS.md`, `docs/OPEN_ISSUES.md` and `docs/IMPLEMENTATION_STATUS.md`, each with its own check time.
 
 ## 1. Production promotion gate (ADR-005, QG-13)
@@ -37,8 +37,7 @@ Staging is the `develop` preview behind the staging alias, with synthetic data o
 | Vercel Authentication on every deployment (no custom domain) | COMPLETE | `docs/DEPLOYMENT_STATUS.md` §3 | — |
 | No protection bypass on the staging alias | OPEN | OI-052: one shareable link, taken to be left by the Vercel connector's authenticated fetch, lets its holder past Vercel Authentication until 1 Nov 23:00:52 UTC; its token is not recorded anywhere | Owner |
 | A deployment for every `develop` merge | BLOCKED (intermittent) | OI-038: the free plan's daily limit refuses some builds, so the staging alias can lag `develop` | Owner (plan) |
-| Hosted schema: `0000`–`0007` applied, every per-step check PASS | COMPLETE | `docs/DEPLOYMENT_STATUS.md` §2; `docs/TEST_EVIDENCE.md` §2–§2.2 (fingerprint unchanged, isolation 27 checks, 0 breaches) | — |
-| Hosted schema: `0008`–`0015` and the seed | BLOCKED | OI-034: waits for the owner to answer the Supabase connector's confirmation for statements that drop objects, ten more (dry run and apply of 0008, 0009, 0012, 0013, 0015); never worked around. The question shows on the Claude Code page of the Chief Architect's session, where the owner answered the two for 0006 on 7 Nov; 0008's first question, at 13:12 UTC, had no answer within 60 s | Owner (answers the confirmations), then ARCH |
+| Hosted schema: `0000`–`0015`, the two seed files and the post-apply checks, every per-step check PASS | COMPLETE | `docs/DEPLOYMENT_STATUS.md` §2; `docs/TEST_EVIDENCE.md` §2–§2.3 (fingerprint unchanged, isolation 27 checks, 0 breaches, post-apply checks PASS on 9 Nov); OI-034 resolved | — |
 | Database login for the app | BLOCKED | OI-045: the owner runs `database/hosted/owner_set_app_login.sql` and sets `V13_DATABASE_URL` and `V13_SESSION_SECRET` as sensitive Vercel variables (`docs/hosted/OWNER_STEP_APP_LOGIN.md`). Claude never generates, reads, prints or passes these values | Owner, then ARCH |
 | Pooler host for the app login confirmed from a live connection | NOT_STARTED | OI-007: read from the deployed health endpoint after OI-045 | ARCH |
 | `/api/health` and `/api/health/isolation` PASS from the deployed preview | NOT_STARTED | Last read on 1 Nov at 01:32 UTC on `286eb93`: HTTP 503 `DB_NOT_CONFIGURED` (`docs/DEPLOYMENT_STATUS.md` §3) | ARCH (V13-ARCH-003) |
@@ -46,8 +45,9 @@ Staging is the `develop` preview behind the staging alias, with synthetic data o
 | Branch protection on `main` and `develop` | OPEN | OI-016: none; the GitHub connector cannot set it | Owner |
 | Repository visibility | OPEN | OI-006 and E01 Q3: public, read from the GitHub API on 31 Oct at 23:31 UTC | Owner |
 
-**Result: Gate J (QG-12) IN_PROGRESS.** Previews build and serve behind Vercel Authentication, but staging has no
-database connection until OI-045 and OI-034 are cleared.
+**Result: Gate J (QG-12) IN_PROGRESS.** Previews build and serve behind Vercel Authentication, and the hosted
+schema with the synthetic seed is in place since 9 Nov (OI-034 resolved), but staging has no database connection
+until OI-045 is cleared.
 
 ## 3. What this file never claims
 
