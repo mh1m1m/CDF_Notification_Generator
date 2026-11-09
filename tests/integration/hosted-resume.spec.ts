@@ -1,6 +1,6 @@
-// V13-DB-016 · Rehearsal of the hosted resume: the hosted project stands at 0005 (docs/TEST_EVIDENCE.md §2.1); the
-// Chief Architect will send, through the Supabase connector, the bundles 0006 to 0015 (each dry run,
-// then apply), then seeds 0001 and 0002 (each dry run, then apply). This file runs that exact sequence on the
+// V13-DB-016 · Rehearsal of the hosted resume from 0005: the Chief Architect sent, through the Supabase connector, the
+// bundles 0006 to 0015 (each dry run, then apply), then seeds 0001 and 0002 (each dry run, then apply); done on
+// 9 Nov (docs/TEST_EVIDENCE.md). It stays the rehearsal for any later resume. This file runs that exact sequence on the
 // Supabase-like cluster (tests/integration/support/hosted-sim.ts: non-superuser administrator `postgres`, API roles,
 // foreign schemas) and proves:
 //   - every text is the one scripts/db/hosted-bundle.mjs generates, sent as ONE simple query with a connector-like

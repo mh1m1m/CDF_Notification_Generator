@@ -24,7 +24,8 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
 | `[V13-DB-020]` | `feature/V13-DB-020-audit-outcome-design` | REQ-AUD-005: design note (#115 merged 937cff3, ACCEPT c35d6c1), then migration 0012 on `feature/V13-DB-020-audit-outcome-policy-version` | COMPLETE — 0012 merged with #119 (0bc2542) |
 | `[V13-DB-021]` | `feature/V13-DB-021-refusal-audit`, stacked on DB-020's 0012 branch | REQ-AUD-005: refused commands audited (design note #120, ACCEPTED); migration 0013, adapters and `lib/server` (FE path-owner), SEC suites, `post_apply_checks.sql` P03 (ARCH path) | COMPLETE — #127 merged (94fd0b7), CI green on 321051c |
 | `[V13-DB-022]` | `feature/V13-DB-022-my-open-case-tasks` (#129) | REQ-PERF-003, OI-054: migration 0014, `case_my_open_tasks_page` (the caller's open tasks on one case, paged) | COMPLETE — #129 merged (1e52670), CI 41277398237 6/6 |
-| `[V13-DB-023]` | `feature/V13-DB-023-access-audit-design` | REQ-AUD-001: design note `DB-023_CASE_ACCESS_AUDIT.md` (case opens, restricted opens, notification previews; fail closed; 300 s window DB-PROPOSED); migration 0015 after ACCEPT | IN_PROGRESS — note ACCEPTED (#137); migration 0015 on `feature/V13-DB-023-case-access-audit` |
+| `[V13-DB-023]` | `feature/V13-DB-023-access-audit-design` | REQ-AUD-001: design note `DB-023_CASE_ACCESS_AUDIT.md` (case opens, restricted opens, notification previews; fail closed; 300 s window DB-PROPOSED); migration 0015 after ACCEPT | COMPLETE — note #137 (91eafd3); 0015 #142 merged (43552f7), SEC ACCEPT b231e28, CI 41281040635 6/6; hosted 9 Nov |
+| `[V13-DB-024]` | `feature/V13-DB-024-advisor-review` | OI-032 follow-up: the performance advisor's 26 V13 findings after the hosted resume; no migration 0016 | IN_REVIEW |
 
 ## Completed in PR (a)
 - V13-DB-001 — migration 0001: workspaces, roles, personas (e-mail hidden from the request role; own e-mail via
@@ -217,7 +218,7 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
   PASS, CI 6/6 on 07dc591 (run 41276230713).
 - #127 (0013) merged at 94fd0b7; develop merged into #129. The FE switch to the new read is V13-FE-014.
 
-## In progress: V13-DB-023 (REQ-AUD-001, case access audit)
+## Completed: V13-DB-023 (REQ-AUD-001, case access audit; #142 merged 43552f7)
 - Design note `docs/teams/db/DB-023_CASE_ACCESS_AUDIT.md`: ACCEPTED (SEC 1b32f87, ARCH D1–D6, §9), #137.
 - Migration 0015: `api_record_access(kind, case, notification)` (definer, EXECUTE to `cdf_v13_user` only; 0013 slot,
   `_api_record_access_impl`, wrapper recording V1401/V1404/V1422 as one id-less refused row); `_record_access_row`
@@ -230,11 +231,31 @@ Updated: 2026-11-01 03:40 UTC · Team DB · Reviewer of DB PRs: SEC
   refusal, access checked before the kind, each fails at least one test.
 - Evidence (local, 1 Nov): unit 2340/2340 (89 files), test:db 634/634 (36 files), lint, typecheck, prettier, db:lint
   clean, rollback register 0 findings, shared-database rehearsal PASS.
-- FE wiring (D1–D3, SEC points 1, 4, 5: `openCase` port method in `lib/contracts`, preview's recording read, browser
-  prefetch test) is FE's, after 0015.
+- FE wiring (D1–D3, SEC points 1, 4, 5: `openCase` port method in `lib/contracts`, preview's recording read) is
+  V13-FE-017; the D1 prefetch browser test is QA's. REQ-AUD-001 stays IN_PROGRESS until both land (D6).
+- CI on the merged head b231e28: run 41281040635, 6/6 (test:db 634/634). Two CI fixes on the way: the shape test's
+  catalogue order now `order by p.proname collate "C"` (CI's en_US sort differed from the local C cluster).
+- ARCH's tested tree e8fc79a: unit 2,414, test:db 635 (0 skipped), e2e 418. Hosted: 0015 applied 9 Nov 07:11
+  (dry run, apply, fingerprint identical, isolation PASS; ARCH, #187).
+
+## In review: V13-DB-024 (OI-032 follow-up, performance advisor after the hosted resume)
+- Input: ARCH's advisor read after seeds 0001/0002 on 9 Nov (docs/TEST_EVIDENCE.md, #187): 26 INFO on V13 tables,
+  14 `unindexed_foreign_keys` and 12 `unused_index`. GC Review's own 4 INFO are not ours and stay untouched.
+- 14 `unindexed_foreign_keys`: exactly `ACCEPTED_UNINDEXED` in `tests/integration/fk-index-coverage.spec.ts`, 13 with
+  their reason in 0009 and `audit_event_policy_version_fk` in 0012. Checked against the list; no new key.
+- 12 `unused_index`: exactly the 12 secondary indexes of the schema (the advisor skips primary-key and unique
+  indexes); a fresh 0000–0015 build lists the same 12. Each serves a named read (new
+  `tests/integration/index-review.spec.ts`, which fails on a new secondary index until it is reviewed there). They are
+  unused because the hosted tables have had no traffic; expected, accepted.
+- One real item found beyond the advisor: `persona_workspace_membership_persona_idx (persona_id, workspace_id)` is a
+  leading prefix of `membership_unique (persona_id, workspace_id, role_id, valid_from)`, so it is redundant. Accepted
+  for now, LOW: one small index on a seed-only table; dropping it alone would cost a hosted DROP with the owner's
+  confirmation. It goes with the next migration that changes `persona_workspace_membership`. The spec allows exactly
+  this pair and fails on any other prefix-redundant index (a planted one is caught, rolled back).
+- Decision: no migration 0016 for DB-024. Next free migration stays 0016.
 
 ## Next
-- Next free migration: 0015.
+- Next free migration: 0016.
 
 ## Review given
 - #29 `[V13-SEC-002]`: `REVIEW: ACCEPT ede6f46`, re-confirmed `ACCEPT bc89156` after the develop merge (294/294).
