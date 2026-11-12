@@ -7,7 +7,7 @@ where they differ). Requirement: **REQ-AUD-001** ("record audit events for … c
 restricted information access … and permission changes"; the register's open part reads "case access and permission
 changes not audited yet"). Builds on V13-DB-021 (migration 0013: one command per transaction, `refusal_window`, the
 REFUSED row). Governing: ADR-011 (append-only hash-chained ledger), ADR-017 (attribution from verified claims). The
-migration follows this note (0015 is free). No hosted step: 0013 and 0014 wait behind OI-034.
+migration follows this note (0015 is free). Hosted: 0013–0015 applied on 9 Nov (ARCH, #187).
 
 ## 1. Which reads are recorded
 
